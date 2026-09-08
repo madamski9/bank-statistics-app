@@ -1,0 +1,3 @@
+# Keep raw bank notifications on the device
+
+Raw bank notification text remains on the user's device and is parsed locally because it may contain sensitive financial and identifying information. Text is deleted immediately after confident normalization; uncertain text may remain encrypted for up to 30 days and is deleted after review or expiry. The normalized result is written to an encrypted local queue and synchronized with Convex through the authenticated application when network access and a valid session are available. The backend cannot reparse historical notifications unless the user explicitly reviews and submits a redacted diagnostic sample.
