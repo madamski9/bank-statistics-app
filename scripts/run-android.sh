@@ -12,6 +12,7 @@ RESET='\033[0m'
 
 cleanup() {
   kill "$CONVEX_PID" 2>/dev/null || true
+  pkill -f 'convex-local-backend --port' 2>/dev/null || true
 }
 on_error() {
   printf "\n${RED}${BOLD}✗ Something went wrong${RESET} ${DIM}— see the output above${RESET}\n"
