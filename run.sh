@@ -14,13 +14,13 @@ platform="${1:-}"
 
 case "$platform" in
   ios)
-    exec ./scripts/run-ios.sh
+    exec ./scripts/run-ios.sh "${@:2}"
     ;;
   android)
     exec ./scripts/run-android.sh
     ;;
   *)
-    printf "${RED}${BOLD}Usage:${RESET} ./run.sh ${CYAN}ios${RESET}|${GREEN}android${RESET}\n"
+    printf "${RED}${BOLD}Usage:${RESET} ./run.sh ${CYAN}ios${RESET} [device name or UDID]|${GREEN}android${RESET}\n"
     exit 1
     ;;
 esac
