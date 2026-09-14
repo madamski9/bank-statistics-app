@@ -2,6 +2,8 @@
 
 Expo application for BankStats, using expo-router, Clerk for authentication, and Convex as the backend.
 
+This app requires an Expo development build (`expo run:ios` / `expo run:android`). Expo Go is not a supported runtime — native modules used here (Clerk, secure storage) are not available in it.
+
 ## Setup
 
 1. Install dependencies
