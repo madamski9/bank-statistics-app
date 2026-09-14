@@ -3,14 +3,10 @@ import {
   ingestSyntheticMillenniumNotification,
   listIngestionRecords,
   type IngestionRecord,
+  type StorageDiagnostics,
 } from '@bankstats/ingestion-native';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform } from 'react-native';
-
-interface StorageDiagnostics {
-  cipherVersion: string;
-  databasePath: string;
-}
+import { AppState, Platform } from 'react-native';
 
 export function useIngestionDiagnostics() {
   const [records, setRecords] = useState<IngestionRecord[]>([]);
@@ -82,6 +78,26 @@ export function useIngestionDiagnostics() {
       isActive = false;
     };
   }, []);
+
+  // The Millennium notification automation writes to the outbox from a background App
+  // Intent while this screen may already be mounted from an earlier launch. Without this,
+  // a capture that happened while BankStats was merely backgrounded (not relaunched) never
+  // appears until the next cold start, which reads as "nothing happened".
+  useEffect(() => {
+    if (Platform.OS !== 'ios') {
+      return;
+    }
+
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        void refresh();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [refresh]);
 
   return { error, ingestSynthetic, isLoading, records, refresh, storage };
 }

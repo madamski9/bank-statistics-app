@@ -61,10 +61,15 @@ final class EncryptedOutbox: @unchecked Sendable {
       let configuration = try IngestionConfiguration.current()
       let database = try openDatabase(configuration: configuration)
       defer { sqlite3_close(database) }
-      return [
+      var values: [String: String] = [
         "cipherVersion": try scalar("PRAGMA cipher_version", database: database),
         "databasePath": configuration.databaseURL.path,
       ]
+      // Surfaces whether the background App Intent has fired at all, and whether its last
+      // attempt succeeded, so an empty outbox can be told apart from an automation that
+      // never ran.
+      values.merge(IngestionAttemptLog(configuration: configuration).snapshot()) { _, new in new }
+      return values
     }
   }
 

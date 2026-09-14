@@ -36,6 +36,16 @@ export function IngestionDiagnosticsCard() {
       ) : (
         <Text style={styles.detail}>Brak przechwyconych rekordów</Text>
       )}
+      <Text style={styles.detail}>
+        Ostatnia automatyzacja:{' '}
+        {storage?.lastAttemptAt === undefined
+          ? 'jeszcze nie uruchomiona na tym urządzeniu'
+          : `${new Date(storage.lastAttemptAt).toLocaleString()} · ${
+              storage.lastAttemptOutcome === 'success'
+                ? 'zapisano'
+                : `błąd (${storage.lastAttemptFailureReason ?? 'nieznany'})`
+            }`}
+      </Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <View style={styles.actions}>
         <Pressable disabled={isLoading} onPress={() => void ingestSynthetic()} style={styles.button}>

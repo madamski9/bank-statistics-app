@@ -16,10 +16,20 @@ export interface IngestionRecord {
   status: 'pending';
 }
 
+export interface StorageDiagnostics {
+  cipherVersion: string;
+  databasePath: string;
+  /** ISO 8601 timestamp of the last time the background App Intent ran, success or failure. */
+  lastAttemptAt?: string;
+  lastAttemptOutcome?: 'success' | 'failure';
+  /** A coarse, non-sensitive failure code (e.g. "unsupportedNotification"). Never raw text. */
+  lastAttemptFailureReason?: string;
+}
+
 interface BankStatsIngestionNativeModule {
   ingestSynthetic(): Promise<IngestionRecord>;
   listRecords(): Promise<IngestionRecord[]>;
-  storageDiagnostics(): Promise<{ cipherVersion: string; databasePath: string }>;
+  storageDiagnostics(): Promise<StorageDiagnostics>;
 }
 
 const nativeModule = requireOptionalNativeModule<BankStatsIngestionNativeModule>(
@@ -42,9 +52,6 @@ export function listIngestionRecords(): Promise<IngestionRecord[]> {
   return requireIosModule().listRecords();
 }
 
-export function getIngestionStorageDiagnostics(): Promise<{
-  cipherVersion: string;
-  databasePath: string;
-}> {
+export function getIngestionStorageDiagnostics(): Promise<StorageDiagnostics> {
   return requireIosModule().storageDiagnostics();
 }
