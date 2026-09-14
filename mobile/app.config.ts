@@ -81,6 +81,7 @@ const config: ExpoConfig = {
     ],
     'expo-secure-store',
     ['@clerk/expo', { appleSignIn: false }],
+    '@bankstats/ingestion-native',
     './plugins/withUISceneLifecycle.js',
   ],
   experiments: {
