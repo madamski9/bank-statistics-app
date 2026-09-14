@@ -1,4 +1,4 @@
-import { useOAuth } from '@clerk/clerk-expo';
+import { useOAuth } from '@clerk/expo';
 import { useCallback } from 'react';
 import { Button, StyleSheet, Text, View } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';

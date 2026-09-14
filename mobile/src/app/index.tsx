@@ -1,4 +1,4 @@
-import { SignedIn, SignedOut } from '@clerk/clerk-expo';
+import { Show } from '@clerk/expo';
 
 import { SignInScreen } from '@/features/auth/sign-in-screen';
 import { OverviewScreen } from '@/features/overview/overview-screen';
@@ -6,12 +6,12 @@ import { OverviewScreen } from '@/features/overview/overview-screen';
 export default function Index() {
   return (
     <>
-      <SignedIn>
+      <Show when="signed-in">
         <OverviewScreen />
-      </SignedIn>
-      <SignedOut>
+      </Show>
+      <Show when="signed-out">
         <SignInScreen />
-      </SignedOut>
+      </Show>
     </>
   );
 }
