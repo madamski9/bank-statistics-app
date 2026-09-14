@@ -1,0 +1,29 @@
+name: Mobile CI
+
+on:
+  push:
+    branches: [main]
+    paths: ['mobile/**']
+  pull_request:
+    paths: ['mobile/**']
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - run: bunx tsc --noEmit
+
+      - run: bunx expo lint
+
+      - run: bunx expo-doctor
