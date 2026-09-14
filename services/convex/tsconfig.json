@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ESNext",
+    "lib": ["ESNext", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "types": ["node"],
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "noUncheckedIndexedAccess": true
+  },
+  "include": ["convex"],
+  "exclude": ["convex/_generated"]
+}

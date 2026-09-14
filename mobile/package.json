@@ -3,10 +3,12 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@bankstats/app-config": "workspace:*",
     "@clerk/expo": "^4.6.6",
     "@expo/ui": "~57.0.18",
     "convex": "^1.45.0",
     "expo": "~57.0.22",
+    "expo-application": "~57.0.3",
     "expo-auth-session": "~57.0.12",
     "expo-constants": "~57.0.18",
     "expo-dev-client": "~57.0.19",
@@ -44,7 +46,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "convex:dev": "convex dev"
+    "typecheck": "tsc --noEmit"
   },
   "private": true,
   "trustedDependencies": [

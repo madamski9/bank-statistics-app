@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cd "$(dirname "$0")/../mobile"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 BOLD='\033[1m'
 DIM='\033[2m'
@@ -25,10 +25,11 @@ printf "\n${BOLD}${CYAN}BankStats${RESET} ${BOLD}· iOS${RESET}\n"
 printf "${DIM}────────────────────────${RESET}\n\n"
 
 printf "${YELLOW}▸${RESET} Starting Convex dev server\n"
-bunx convex dev &
+(cd "$ROOT/services/convex" && bunx convex dev) &
 CONVEX_PID=$!
 
 printf "${YELLOW}▸${RESET} Building and launching the iOS app ${DIM}(this can take a while on first run)${RESET}\n\n"
+cd "$ROOT/mobile"
 bunx expo run:ios
 
 printf "\n${GREEN}${BOLD}✓ Running${RESET} ${DIM}— Metro and Convex are live, edit away${RESET}\n"
