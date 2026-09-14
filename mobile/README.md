@@ -34,7 +34,7 @@ Expo application for BankStats, using expo-router, Clerk for authentication, and
 
 ## Day-to-day development
 
-After the native app is installed once via `expo run:ios`/`expo run:android`, start Metro and Convex together:
+After the native app is installed once via `expo run:ios`/`expo run:android`, start Metro and Convex together from the repository root:
 
 ```bash
 ./run.sh
