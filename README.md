@@ -6,8 +6,9 @@ The canonical product and implementation specification is in [docs/PRODUCT-SPEC.
 
 ## Development
 
-After completing the mobile setup, start Metro and Convex from the repository root:
+After completing the mobile setup (see [mobile/README.md](mobile/README.md)), build, install, and run the app together with Convex:
 
 ```bash
-./run.sh
+./run.sh ios
+./run.sh android
 ```

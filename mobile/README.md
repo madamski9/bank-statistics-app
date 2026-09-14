@@ -27,20 +27,23 @@ This app requires an Expo development build (`expo run:ios` / `expo run:android`
    bunx convex dev
    ```
 
-4. Build and install a development build on a simulator/device
+4. Build and install a development build on a simulator/device, and start Convex, in one step, from the repository root
 
    ```bash
-   bunx expo run:ios
-   bunx expo run:android
+   ./run.sh ios
+   ./run.sh android
    ```
 
 ## Day-to-day development
 
-After the native app is installed once via `expo run:ios`/`expo run:android`, start Metro and Convex together from the repository root:
+From the repository root:
 
 ```bash
-./run.sh
+./run.sh ios
+./run.sh android
 ```
+
+Each command starts Convex and runs the native build/launch for that platform. See `../scripts/run-ios.sh` and `../scripts/run-android.sh`.
 
 ## Structure
 

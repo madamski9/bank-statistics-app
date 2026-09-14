@@ -1,27 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONVEX_PID=""
-EXPO_PID=""
+cd "$(dirname "$0")"
 
-cleanup() {
-  if [[ -n "$CONVEX_PID" ]]; then
-    kill "$CONVEX_PID" 2>/dev/null || true
-  fi
-  if [[ -n "$EXPO_PID" ]]; then
-    kill "$EXPO_PID" 2>/dev/null || true
-  fi
-}
+BOLD='\033[1m'
+DIM='\033[2m'
+RED='\033[31m'
+CYAN='\033[36m'
+GREEN='\033[32m'
+RESET='\033[0m'
 
-trap cleanup EXIT INT TERM
+platform="${1:-}"
 
-cd "$PROJECT_ROOT/mobile"
-
-bunx convex dev &
-CONVEX_PID=$!
-
-bunx expo start --dev-client &
-EXPO_PID=$!
-
-wait "$CONVEX_PID" "$EXPO_PID"
+case "$platform" in
+  ios)
+    exec ./scripts/run-ios.sh
+    ;;
+  android)
+    exec ./scripts/run-android.sh
+    ;;
+  *)
+    printf "${RED}${BOLD}Usage:${RESET} ./run.sh ${CYAN}ios${RESET}|${GREEN}android${RESET}\n"
+    exit 1
+    ;;
+esac
