@@ -4,10 +4,12 @@ import { Platform } from 'react-native';
 export interface IngestionRecord {
   id: string;
   bank: 'millennium';
-  direction: 'expense';
+  direction: 'expense' | 'income';
+  transactionType?: 'cardPayment' | 'outgoingTransfer' | 'incomingTransfer';
   amountMinor: number;
   currency: string;
-  merchant: string;
+  merchant?: string;
+  accountName?: string;
   occurredAt: string;
   capturedAt: string;
   sourceApp: string;

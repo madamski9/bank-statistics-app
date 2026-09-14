@@ -4,6 +4,12 @@ import { useIngestionDiagnostics } from './use-ingestion-diagnostics';
 
 export function IngestionDiagnosticsCard() {
   const { error, ingestSynthetic, isLoading, records, storage } = useIngestionDiagnostics();
+  const latestRecord = records[0];
+  const latestRecordTitle =
+    latestRecord?.merchant ??
+    (latestRecord?.transactionType === 'incomingTransfer'
+      ? 'Przelew przychodzący'
+      : 'Przelew wychodzący');
 
   if (Platform.OS !== 'ios') {
     return null;
@@ -15,13 +21,17 @@ export function IngestionDiagnosticsCard() {
       <Text style={styles.detail}>
         SQLCipher {storage?.cipherVersion ?? '—'} · rekordy: {records.length}
       </Text>
-      {records[0] ? (
+      {latestRecord ? (
         <View style={styles.record}>
-          <Text style={styles.merchant}>{records[0].merchant}</Text>
+          <Text style={styles.merchant}>{latestRecordTitle}</Text>
           <Text style={styles.amount}>
-            −{(records[0].amountMinor / 100).toFixed(2)} {records[0].currency}
+            {latestRecord.direction === 'income' ? '+' : '−'}
+            {(latestRecord.amountMinor / 100).toFixed(2)} {latestRecord.currency}
           </Text>
-          <Text style={styles.detail}>Millennium · {records[0].status}</Text>
+          <Text style={styles.detail}>
+            Millennium
+            {latestRecord.accountName ? ` · ${latestRecord.accountName}` : ''} · {latestRecord.status}
+          </Text>
         </View>
       ) : (
         <Text style={styles.detail}>Brak przechwyconych rekordów</Text>

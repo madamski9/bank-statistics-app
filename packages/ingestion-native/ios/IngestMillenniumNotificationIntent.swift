@@ -24,7 +24,8 @@ public struct IngestMillenniumNotificationIntent: AppIntent {
       rawText: notificationText,
       sourceApp: sourceApp
     )
-    return .result(dialog: "Saved \(record.merchant), \(record.amountMinor) minor units")
+    let label = record.merchant ?? record.transactionType ?? "transaction"
+    return .result(dialog: "Saved \(label), \(record.amountMinor) minor units")
   }
 }
 
