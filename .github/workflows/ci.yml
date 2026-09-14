@@ -1,18 +1,15 @@
-name: Mobile CI
+name: CI
 
 on:
   push:
     branches: [main]
-    paths: ['mobile/**']
   pull_request:
-    paths: ['mobile/**']
 
 jobs:
   verify:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: mobile
+    env:
+      EXPO_PUBLIC_APP_ENV: development
     steps:
       - uses: actions/checkout@v4
 
@@ -22,8 +19,11 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      - run: bunx tsc --noEmit
+      - run: bun run typecheck
 
-      - run: bunx expo lint
+      - run: bun test
+
+      - run: bun run lint
 
       - run: bunx expo-doctor
+        working-directory: mobile

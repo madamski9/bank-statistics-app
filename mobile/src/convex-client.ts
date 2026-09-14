@@ -1,5 +1,7 @@
 import { ConvexReactClient } from 'convex/react';
 
-export const convexClient = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
+import { appEnvironment } from '@/app-environment';
+
+export const convexClient = new ConvexReactClient(appEnvironment.convexUrl, {
   unsavedChangesWarning: false,
 });

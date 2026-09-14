@@ -1,0 +1,17 @@
+{
+  "name": "bank-statistics-app",
+  "private": true,
+  "workspaces": [
+    "mobile",
+    "packages/*",
+    "services/*"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "bun run --filter '*' typecheck",
+    "lint": "bun run --filter mobile lint"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3"
+  }
+}
