@@ -1,4 +1,22 @@
-const { withEntitlementsPlist, withInfoPlist, withPodfile } = require('expo/config-plugins');
+const fs = require('fs');
+const path = require('path');
+const {
+  withEntitlementsPlist,
+  withInfoPlist,
+  withPodfile,
+  withXcodeProject,
+  IOSConfig,
+} = require('expo/config-plugins');
+
+const APP_INTENTS_PACKAGE_SOURCE = `import AppIntents
+public import BankStatsIngestion
+
+struct BankStatsAppIntentsPackage: AppIntentsPackage {
+  static var includedPackages: [any AppIntentsPackage.Type] {
+    [BankStatsIngestionAppIntentsPackage.self]
+  }
+}
+`;
 
 function resolveAppGroup(config) {
   const bundleIdentifier = config.ios?.bundleIdentifier;
@@ -32,6 +50,31 @@ function withBankStatsIngestion(config) {
         target,
         (match) => `${match}${dependency}`,
       );
+    }
+
+    return result;
+  });
+
+  config = withXcodeProject(config, (result) => {
+    const platformProjectRoot = result.modRequest.platformProjectRoot;
+    const projectName = IOSConfig.XcodeUtils.getHackyProjectName(
+      result.modRequest.projectRoot,
+      result
+    );
+    const filepath = `${projectName}/BankStatsAppIntentsPackage.swift`;
+    const absoluteFilepath = path.join(platformProjectRoot, filepath);
+    const project = result.modResults;
+    const target = IOSConfig.XcodeUtils.getApplicationNativeTarget({ project, projectName });
+
+    fs.writeFileSync(absoluteFilepath, APP_INTENTS_PACKAGE_SOURCE);
+
+    if (!project.hasFile(filepath)) {
+      IOSConfig.XcodeUtils.addBuildSourceFileToGroup({
+        filepath,
+        groupName: projectName,
+        project,
+        targetUuid: target.uuid,
+      });
     }
 
     return result;
