@@ -29,3 +29,20 @@ Both patch steps assert on the template text they expect and throw if Expo chang
 template change fails the prebuild loudly instead of silently producing an app that cannot launch.
 
 Remove this plugin once Expo's template adopts the scene life cycle upstream.
+
+## `withDisableUserScriptSandboxing.js`
+
+One of expo-dev-launcher's Run Script build phases writes the machine's LAN IP (`ip.txt`) directly
+into the built app bundle, so a physical device knows where to find Metro. Xcode's "User Script
+Sandboxing" (default on since Xcode 15) blocks any Run Script phase from writing paths it didn't
+declare as outputs, and this phase doesn't declare that one, so a device build (not simulator)
+fails with:
+
+```
+Sandbox: bash(...) deny(1) file-write-create .../BankStats.app/ip.txt
+```
+
+This is a known Xcode 15+ incompatibility, not specific to this script. The documented fix is to
+turn sandboxing off (`ENABLE_USER_SCRIPT_SANDBOXING = NO`); it must be set on every build
+configuration, since both the project level and the target level enforce it independently. This
+plugin sets it on every build configuration in the generated Xcode project on each prebuild.

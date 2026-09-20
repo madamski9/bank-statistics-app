@@ -83,6 +83,7 @@ const config: ExpoConfig = {
     ['@clerk/expo', { appleSignIn: false }],
     '@bankstats/ingestion-native',
     './plugins/withUISceneLifecycle.js',
+    './plugins/withDisableUserScriptSandboxing.js',
   ],
   experiments: {
     typedRoutes: true,
