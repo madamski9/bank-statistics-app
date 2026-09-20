@@ -33,6 +33,8 @@ export interface StorageDiagnostics {
 interface BankStatsIngestionNativeModule {
   ingestSynthetic(): Promise<IngestionRecord>;
   ingestSyntheticApplePayTransaction(): Promise<IngestionRecord>;
+  deleteSyntheticRecords?(): Promise<number>;
+  clearRecords?(): Promise<void>;
   listRecords(): Promise<IngestionRecord[]>;
   storageDiagnostics(): Promise<StorageDiagnostics>;
 }
@@ -55,6 +57,34 @@ export function ingestSyntheticMillenniumNotification(): Promise<IngestionRecord
 
 export function ingestSyntheticApplePayTransaction(): Promise<IngestionRecord> {
   return requireIosModule().ingestSyntheticApplePayTransaction();
+}
+
+export function clearIngestionRecords(): Promise<void> {
+  const module = requireIosModule();
+
+  if (typeof module.clearRecords !== 'function') {
+    return Promise.reject(
+      new Error('Clearing the outbox requires a development build that includes clearRecords'),
+    );
+  }
+
+  return module.clearRecords();
+}
+
+export const syntheticSampleMerchant = 'SKLEP TEST';
+
+export function isSyntheticIngestionRecord(record: IngestionRecord): boolean {
+  return record.merchant === syntheticSampleMerchant;
+}
+
+export function deleteSyntheticIngestionRecords(): Promise<number> {
+  const module = requireIosModule();
+
+  if (typeof module.deleteSyntheticRecords !== 'function') {
+    return Promise.resolve(0);
+  }
+
+  return module.deleteSyntheticRecords();
 }
 
 export function listIngestionRecords(): Promise<IngestionRecord[]> {

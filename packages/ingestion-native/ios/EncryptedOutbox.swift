@@ -35,6 +35,41 @@ final class EncryptedOutbox: @unchecked Sendable {
     }
   }
 
+  func clear() throws {
+    try queue.sync {
+      let configuration = try IngestionConfiguration.current()
+      let database = try openDatabase(configuration: configuration)
+      defer { sqlite3_close(database) }
+      try execute("DELETE FROM outbox", database: database)
+      IngestionAttemptLog(configuration: configuration).reset()
+    }
+  }
+
+  func deleteSyntheticRecords() throws -> Int {
+    try queue.sync {
+      let database = try openDatabase()
+      defer { sqlite3_close(database) }
+      let identifiers = try syntheticIdentifiers(database)
+
+      if identifiers.isEmpty {
+        return 0
+      }
+
+      let sql = "DELETE FROM outbox WHERE id = ?"
+      var statement: OpaquePointer?
+      try check(sqlite3_prepare_v2(database, sql, -1, &statement, nil), database)
+      defer { sqlite3_finalize(statement) }
+
+      for identifier in identifiers {
+        try check(sqlite3_reset(statement), database)
+        try check(sqlite3_bind_text(statement, 1, identifier, -1, transient), database)
+        try check(sqlite3_step(statement), database, accepted: [SQLITE_DONE])
+      }
+
+      return identifiers.count
+    }
+  }
+
   func records() throws -> [NormalizedRecord] {
     try queue.sync {
       let database = try openDatabase()
@@ -78,6 +113,36 @@ final class EncryptedOutbox: @unchecked Sendable {
       values.merge(IngestionAttemptLog(configuration: configuration).snapshot()) { _, new in new }
       return values
     }
+  }
+
+  private func syntheticIdentifiers(_ database: OpaquePointer) throws -> [String] {
+    let sql = "SELECT id, payload FROM outbox"
+    var statement: OpaquePointer?
+    try check(sqlite3_prepare_v2(database, sql, -1, &statement, nil), database)
+    defer { sqlite3_finalize(statement) }
+    var identifiers: [String] = []
+
+    var status = sqlite3_step(statement)
+
+    while status == SQLITE_ROW {
+      let length = Int(sqlite3_column_bytes(statement, 1))
+
+      if let identifier = sqlite3_column_text(statement, 0),
+        let bytes = sqlite3_column_blob(statement, 1),
+        let record = try? JSONDecoder().decode(
+          NormalizedRecord.self,
+          from: Data(bytes: bytes, count: length)
+        ),
+        record.merchant == SyntheticSample.merchant
+      {
+        identifiers.append(String(cString: identifier))
+      }
+
+      status = sqlite3_step(statement)
+    }
+
+    try check(status, database, accepted: [SQLITE_DONE])
+    return identifiers
   }
 
   private func openDatabase(configuration: IngestionConfiguration? = nil) throws -> OpaquePointer {

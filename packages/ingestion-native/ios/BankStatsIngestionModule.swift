@@ -6,8 +6,8 @@ public final class BankStatsIngestionModule: Module {
 
     AsyncFunction("ingestSynthetic") { () -> [String: Any] in
       let outcome = try EncryptedOutbox.shared.ingest(
-        rawText: "Płatność kartą: 12,34 PLN w SKLEP TEST.",
-        sourceApp: "com.bankmillennium.mobile"
+        rawText: SyntheticSample.rawText,
+        sourceApp: SyntheticSample.sourceApp
       )
       guard case .record(let record) = outcome else {
         throw IngestionError.unsupportedNotification
@@ -17,13 +17,21 @@ public final class BankStatsIngestionModule: Module {
 
     AsyncFunction("ingestSyntheticApplePayTransaction") { () -> [String: Any] in
       let outcome = try EncryptedOutbox.shared.ingest(
-        rawText: "Bank Millennium S.A.\nSKLEP TEST\n12,34 zł",
-        sourceApp: "com.bankmillennium.mobile"
+        rawText: SyntheticSample.applePayRawText,
+        sourceApp: SyntheticSample.sourceApp
       )
       guard case .record(let record) = outcome else {
         throw IngestionError.unsupportedNotification
       }
       return record.dictionary
+    }
+
+    AsyncFunction("deleteSyntheticRecords") { () -> Int in
+      try EncryptedOutbox.shared.deleteSyntheticRecords()
+    }
+
+    AsyncFunction("clearRecords") {
+      try EncryptedOutbox.shared.clear()
     }
 
     AsyncFunction("listRecords") { () -> [[String: Any]] in
