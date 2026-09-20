@@ -3,13 +3,20 @@ import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-nati
 import { useIngestionDiagnostics } from './use-ingestion-diagnostics';
 
 export function IngestionDiagnosticsCard() {
-  const { error, ingestSynthetic, isLoading, records, storage } = useIngestionDiagnostics();
+  const { error, ingestSynthetic, ingestSyntheticApplePay, isLoading, records, storage } =
+    useIngestionDiagnostics();
   const latestRecord = records[0];
   const latestRecordTitle =
     latestRecord?.merchant ??
     (latestRecord?.transactionType === 'incomingTransfer'
       ? 'Przelew przychodzący'
       : 'Przelew wychodzący');
+  const lastAttemptLabel =
+    storage?.lastAttemptOutcome === 'success'
+      ? 'zapisano'
+      : storage?.lastAttemptOutcome === 'ignored'
+        ? `zignorowano, czeka na Apple Pay (${storage.lastAttemptFailureReason ?? 'nieznany powód'})`
+        : `błąd (${storage?.lastAttemptFailureReason ?? 'nieznany'})`;
 
   if (Platform.OS !== 'ios') {
     return null;
@@ -40,16 +47,19 @@ export function IngestionDiagnosticsCard() {
         Ostatnia automatyzacja:{' '}
         {storage?.lastAttemptAt === undefined
           ? 'jeszcze nie uruchomiona na tym urządzeniu'
-          : `${new Date(storage.lastAttemptAt).toLocaleString()} · ${
-              storage.lastAttemptOutcome === 'success'
-                ? 'zapisano'
-                : `błąd (${storage.lastAttemptFailureReason ?? 'nieznany'})`
-            }`}
+          : `${new Date(storage.lastAttemptAt).toLocaleString()} · ${lastAttemptLabel}`}
       </Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <View style={styles.actions}>
         <Pressable disabled={isLoading} onPress={() => void ingestSynthetic()} style={styles.button}>
-          <Text style={styles.buttonText}>{isLoading ? 'Sprawdzanie…' : 'Dodaj próbkę'}</Text>
+          <Text style={styles.buttonText}>{isLoading ? 'Sprawdzanie…' : 'Millennium'}</Text>
+        </Pressable>
+        <Pressable
+          disabled={isLoading}
+          onPress={() => void ingestSyntheticApplePay()}
+          style={styles.button}
+        >
+          <Text style={styles.buttonText}>{isLoading ? 'Sprawdzanie…' : 'Apple Pay'}</Text>
         </Pressable>
         <Pressable onPress={() => void Linking.openURL('shortcuts://')} style={styles.secondaryButton}>
           <Text style={styles.secondaryButtonText}>Otwórz Skróty</Text>

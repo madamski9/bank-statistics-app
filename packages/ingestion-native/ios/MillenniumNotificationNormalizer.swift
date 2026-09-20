@@ -10,14 +10,36 @@ struct MillenniumNotificationNormalizer {
   private let incomingTransferExpression = try! NSRegularExpression(
     pattern: #"(?i)^przelew przychodzący:\s*kwota:\s*([0-9]+(?:[,.][0-9]{1,2})?)\s*([A-Z]{3}),\s*na rachunek:\s*(.+?),\s*data:\s*([0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{2}:[0-9]{2})$"#
   )
+  // Millennium's real card-payment push (e.g. "Płatność kartą debetową: Kwota: -21,00 PLN,
+  // Karta:Mastercard 360 **** **** **** 6899, Data: ...") never names the merchant — only the
+  // "Portfel" (Wallet) push for the same purchase does. Matching just the word "płatność" anywhere
+  // lets this notification be recognized and deliberately dropped instead of saved twice or
+  // rejected as unsupported.
+  private let genericCardPaymentExpression = try! NSRegularExpression(pattern: #"(?i)płatność"#)
+  // Wallet's own push for a Millennium card reads as three lines — issuer, merchant (with an
+  // optional ", City, Region" suffix), amount — e.g. "Bank Millennium S.A. / Inmedio  Gdańsk,
+  // Pomorskie / 7,49 zł". Whitespace, including the newlines between those lines, is already
+  // collapsed to single spaces before this runs, so it is matched as one line with the merchant
+  // captured lazily up to the trailing amount.
+  private let walletTransactionExpression = try! NSRegularExpression(
+    pattern: #"(?is)^bank millennium s\.a\.?\s+(.+?)\s+([0-9]+(?:[,.][0-9]{1,2})?)\s*zł$"#
+  )
 
-  func normalize(_ rawText: String, sourceApp: String, capturedAt: Date = Date()) throws -> NormalizedRecord {
+  func normalize(_ rawText: String, sourceApp: String, capturedAt: Date = Date()) throws -> NormalizationOutcome {
     let text = rawText
       .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
       .trimmingCharacters(in: .whitespacesAndNewlines)
 
     if let record = cardPayment(text, sourceApp: sourceApp, capturedAt: capturedAt) {
-      return record
+      return .record(record)
+    }
+
+    if let record = walletTransaction(text, sourceApp: sourceApp, capturedAt: capturedAt) {
+      return .record(record)
+    }
+
+    if isGenericCardPayment(text) {
+      return .ignored(reasonCode: "cardPaymentAwaitingApplePay")
     }
 
     if let record = transfer(
@@ -28,7 +50,7 @@ struct MillenniumNotificationNormalizer {
       sourceApp: sourceApp,
       capturedAt: capturedAt
     ) {
-      return record
+      return .record(record)
     }
 
     if let record = transfer(
@@ -39,10 +61,15 @@ struct MillenniumNotificationNormalizer {
       sourceApp: sourceApp,
       capturedAt: capturedAt
     ) {
-      return record
+      return .record(record)
     }
 
     throw IngestionError.unsupportedNotification
+  }
+
+  private func isGenericCardPayment(_ text: String) -> Bool {
+    let range = NSRange(text.startIndex..<text.endIndex, in: text)
+    return genericCardPaymentExpression.firstMatch(in: text, range: range) != nil
   }
 
   private func cardPayment(_ text: String, sourceApp: String, capturedAt: Date) -> NormalizedRecord? {
@@ -65,6 +92,34 @@ struct MillenniumNotificationNormalizer {
       transactionType: "cardPayment",
       amountMinor: amountMinor,
       currency: String(text[currencyRange]).uppercased(),
+      merchant: String(text[merchantRange]).trimmingCharacters(in: .whitespacesAndNewlines),
+      accountName: nil,
+      occurredAt: timestamp,
+      capturedAt: timestamp,
+      sourceApp: sourceApp,
+      status: "pending"
+    )
+  }
+
+  private func walletTransaction(_ text: String, sourceApp: String, capturedAt: Date) -> NormalizedRecord? {
+    let range = NSRange(text.startIndex..<text.endIndex, in: text)
+
+    guard let match = walletTransactionExpression.firstMatch(in: text, range: range),
+      let merchantRange = Range(match.range(at: 1), in: text),
+      let amountRange = Range(match.range(at: 2), in: text),
+      let amountMinor = minorUnits(String(text[amountRange])) else {
+      return nil
+    }
+
+    let timestamp = ISO8601DateFormatter().string(from: capturedAt)
+
+    return NormalizedRecord(
+      id: UUID().uuidString.lowercased(),
+      bank: "millennium",
+      direction: "expense",
+      transactionType: "cardPayment",
+      amountMinor: amountMinor,
+      currency: "PLN",
       merchant: String(text[merchantRange]).trimmingCharacters(in: .whitespacesAndNewlines),
       accountName: nil,
       occurredAt: timestamp,

@@ -19,15 +19,20 @@ export interface IngestionRecord {
 export interface StorageDiagnostics {
   cipherVersion: string;
   databasePath: string;
-  /** ISO 8601 timestamp of the last time the background App Intent ran, success or failure. */
+  /** ISO 8601 timestamp of the last time a background App Intent ran, in any outcome. */
   lastAttemptAt?: string;
-  lastAttemptOutcome?: 'success' | 'failure';
-  /** A coarse, non-sensitive failure code (e.g. "unsupportedNotification"). Never raw text. */
+  /**
+   * 'ignored' means a notification was recognized but deliberately not saved — e.g. Millennium's
+   * own card-payment push, deferred to the matching Apple Pay Wallet transaction.
+   */
+  lastAttemptOutcome?: 'success' | 'ignored' | 'failure';
+  /** A coarse, non-sensitive failure/ignore code (e.g. "cardPaymentAwaitingApplePay"). Never raw text. */
   lastAttemptFailureReason?: string;
 }
 
 interface BankStatsIngestionNativeModule {
   ingestSynthetic(): Promise<IngestionRecord>;
+  ingestSyntheticApplePayTransaction(): Promise<IngestionRecord>;
   listRecords(): Promise<IngestionRecord[]>;
   storageDiagnostics(): Promise<StorageDiagnostics>;
 }
@@ -46,6 +51,10 @@ function requireIosModule(): BankStatsIngestionNativeModule {
 
 export function ingestSyntheticMillenniumNotification(): Promise<IngestionRecord> {
   return requireIosModule().ingestSynthetic();
+}
+
+export function ingestSyntheticApplePayTransaction(): Promise<IngestionRecord> {
+  return requireIosModule().ingestSyntheticApplePayTransaction();
 }
 
 export function listIngestionRecords(): Promise<IngestionRecord[]> {

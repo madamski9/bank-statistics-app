@@ -1,5 +1,6 @@
 import {
   getIngestionStorageDiagnostics,
+  ingestSyntheticApplePayTransaction,
   ingestSyntheticMillenniumNotification,
   listIngestionRecords,
   type IngestionRecord,
@@ -42,6 +43,19 @@ export function useIngestionDiagnostics() {
 
     try {
       await ingestSyntheticMillenniumNotification();
+      await refresh();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : String(caughtError));
+      setIsLoading(false);
+    }
+  }, [refresh]);
+
+  const ingestSyntheticApplePay = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await ingestSyntheticApplePayTransaction();
       await refresh();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : String(caughtError));
@@ -99,5 +113,5 @@ export function useIngestionDiagnostics() {
     };
   }, [refresh]);
 
-  return { error, ingestSynthetic, isLoading, records, refresh, storage };
+  return { error, ingestSynthetic, ingestSyntheticApplePay, isLoading, records, refresh, storage };
 }
