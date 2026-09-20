@@ -7,8 +7,16 @@ final class EncryptedOutbox: @unchecked Sendable {
   private let queue = DispatchQueue(label: "com.bankstats.ingestion.outbox")
   private let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
-  func ingest(rawText: String, sourceApp: String) throws -> NormalizedRecord {
-    let record = try MillenniumNotificationNormalizer().normalize(rawText, sourceApp: sourceApp)
+  func ingest(rawText: String, sourceApp: String) throws -> NormalizationOutcome {
+    let outcome = try MillenniumNotificationNormalizer().normalize(rawText, sourceApp: sourceApp)
+    guard case .record(let record) = outcome else {
+      return outcome
+    }
+    try persist(record)
+    return outcome
+  }
+
+  private func persist(_ record: NormalizedRecord) throws {
     try queue.sync {
       let database = try openDatabase()
       defer { sqlite3_close(database) }
@@ -25,7 +33,6 @@ final class EncryptedOutbox: @unchecked Sendable {
       try check(sqlite3_bind_text(statement, 3, record.capturedAt, -1, transient), database)
       try check(sqlite3_step(statement), database, accepted: [SQLITE_DONE])
     }
-    return record
   }
 
   func clear() throws {

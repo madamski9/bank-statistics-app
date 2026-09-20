@@ -5,10 +5,25 @@ public final class BankStatsIngestionModule: Module {
     Name("BankStatsIngestion")
 
     AsyncFunction("ingestSynthetic") { () -> [String: Any] in
-      try EncryptedOutbox.shared.ingest(
+      let outcome = try EncryptedOutbox.shared.ingest(
         rawText: SyntheticSample.rawText,
         sourceApp: SyntheticSample.sourceApp
-      ).dictionary
+      )
+      guard case .record(let record) = outcome else {
+        throw IngestionError.unsupportedNotification
+      }
+      return record.dictionary
+    }
+
+    AsyncFunction("ingestSyntheticApplePayTransaction") { () -> [String: Any] in
+      let outcome = try EncryptedOutbox.shared.ingest(
+        rawText: SyntheticSample.applePayRawText,
+        sourceApp: SyntheticSample.sourceApp
+      )
+      guard case .record(let record) = outcome else {
+        throw IngestionError.unsupportedNotification
+      }
+      return record.dictionary
     }
 
     AsyncFunction("deleteSyntheticRecords") { () -> Int in

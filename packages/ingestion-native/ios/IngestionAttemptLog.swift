@@ -31,6 +31,15 @@ struct IngestionAttemptLog {
     defaults?.set(reasonCode, forKey: Key.failureReason)
   }
 
+  /// The automation recognized the notification but deliberately did not persist it (e.g. a
+  /// Millennium card-payment push deferred to the matching Apple Pay Wallet transaction). Distinct
+  /// from `failure` so the diagnostics screen doesn't read a working automation as broken.
+  func recordIgnored(_ reasonCode: String, at date: Date = Date()) {
+    defaults?.set(ISO8601DateFormatter().string(from: date), forKey: Key.attemptedAt)
+    defaults?.set("ignored", forKey: Key.outcome)
+    defaults?.set(reasonCode, forKey: Key.failureReason)
+  }
+
   func reset() {
     defaults?.removeObject(forKey: Key.attemptedAt)
     defaults?.removeObject(forKey: Key.outcome)
@@ -43,5 +52,17 @@ struct IngestionAttemptLog {
     values["lastAttemptOutcome"] = defaults?.string(forKey: Key.outcome)
     values["lastAttemptFailureReason"] = defaults?.string(forKey: Key.failureReason)
     return values
+  }
+}
+
+extension IngestionAttemptLog {
+  /// The App Group attempt log is only reachable when ingestion is fully configured. Both
+  /// capture intents (Millennium and Apple Pay) share this best-effort write so a background
+  /// automation still returns/throws its real result even when the App Group is unreachable.
+  static func record(_ write: (IngestionAttemptLog) -> Void) {
+    guard let configuration = try? IngestionConfiguration.current() else {
+      return
+    }
+    write(IngestionAttemptLog(configuration: configuration))
   }
 }
