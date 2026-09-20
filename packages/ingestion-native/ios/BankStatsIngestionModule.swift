@@ -6,9 +6,17 @@ public final class BankStatsIngestionModule: Module {
 
     AsyncFunction("ingestSynthetic") { () -> [String: Any] in
       try EncryptedOutbox.shared.ingest(
-        rawText: "Płatność kartą: 12,34 PLN w SKLEP TEST.",
-        sourceApp: "com.bankmillennium.mobile"
+        rawText: SyntheticSample.rawText,
+        sourceApp: SyntheticSample.sourceApp
       ).dictionary
+    }
+
+    AsyncFunction("deleteSyntheticRecords") { () -> Int in
+      try EncryptedOutbox.shared.deleteSyntheticRecords()
+    }
+
+    AsyncFunction("clearRecords") {
+      try EncryptedOutbox.shared.clear()
     }
 
     AsyncFunction("listRecords") { () -> [[String: Any]] in

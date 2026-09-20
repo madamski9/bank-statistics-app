@@ -31,6 +31,12 @@ struct IngestionAttemptLog {
     defaults?.set(reasonCode, forKey: Key.failureReason)
   }
 
+  func reset() {
+    defaults?.removeObject(forKey: Key.attemptedAt)
+    defaults?.removeObject(forKey: Key.outcome)
+    defaults?.removeObject(forKey: Key.failureReason)
+  }
+
   func snapshot() -> [String: String] {
     var values: [String: String] = [:]
     values["lastAttemptAt"] = defaults?.string(forKey: Key.attemptedAt)
