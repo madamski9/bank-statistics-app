@@ -75,10 +75,13 @@ setup_dev_host() {
 
 warn_on_missing_convex_url() {
   local configured
-  configured="$(grep -hE '^EXPO_PUBLIC_CONVEX_URL=' "$MOBILE_DIR/.env.local" 2>/dev/null | tail -1 | cut -d= -f2-)"
+  # .env.local wins over .env for a var both files set (Expo's own load
+  # order, printed as "env: load .env.local .env") — checking .env.local
+  # alone would warn even when .env supplies it, as it normally does.
+  configured="$(grep -hE '^EXPO_PUBLIC_CONVEX_URL=.+' "$MOBILE_DIR/.env.local" "$MOBILE_DIR/.env" 2>/dev/null | head -1 | cut -d= -f2-)"
 
   if [[ -z "$configured" ]]; then
-    printf "${YELLOW}⚠${RESET}  EXPO_PUBLIC_CONVEX_URL is empty in ${BOLD}mobile/.env.local${RESET} — every screen that reads data will fail\n"
+    printf "${YELLOW}⚠${RESET}  EXPO_PUBLIC_CONVEX_URL is empty in ${BOLD}mobile/.env.local${RESET} and ${BOLD}mobile/.env${RESET} — every screen that reads data will fail\n"
     printf "${DIM}  Paste in the URL 'bunx convex dev' prints, then restart with a cleared cache (bunx expo start -c)${RESET}\n"
   fi
 }

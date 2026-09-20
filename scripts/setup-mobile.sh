@@ -40,11 +40,14 @@ else
 fi
 
 missing=()
-grep -qE '^EXPO_PUBLIC_CONVEX_URL=.+' "$MOBILE_DIR/.env.local" || missing+=("EXPO_PUBLIC_CONVEX_URL")
-grep -qE '^EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_' "$MOBILE_DIR/.env.local" || missing+=("EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY")
+# .env.local wins over .env for a var both files set (Expo's own load order),
+# so a var supplied by .env alone — the normal case for EXPO_PUBLIC_CONVEX_URL
+# once it points at a cloud deployment — must not be reported as missing.
+grep -qE '^EXPO_PUBLIC_CONVEX_URL=.+' "$MOBILE_DIR/.env.local" "$MOBILE_DIR/.env" 2>/dev/null || missing+=("EXPO_PUBLIC_CONVEX_URL")
+grep -qE '^EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_' "$MOBILE_DIR/.env.local" "$MOBILE_DIR/.env" 2>/dev/null || missing+=("EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY")
 
 if [[ ${#missing[@]} -gt 0 ]]; then
-  printf "\n${YELLOW}⚠${RESET}  Still missing in ${BOLD}mobile/.env.local${RESET}: ${YELLOW}%s${RESET}\n" "${missing[*]}"
+  printf "\n${YELLOW}⚠${RESET}  Still missing in ${BOLD}mobile/.env.local${RESET} or ${BOLD}mobile/.env${RESET}: ${YELLOW}%s${RESET}\n" "${missing[*]}"
   printf "${DIM}  · EXPO_PUBLIC_CONVEX_URL — printed by 'bunx convex dev' in services/convex${RESET}\n"
   printf "${DIM}  · EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY — from the Clerk dashboard (pk_test_… outside production)${RESET}\n"
 fi
