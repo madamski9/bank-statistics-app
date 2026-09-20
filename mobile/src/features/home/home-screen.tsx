@@ -58,9 +58,19 @@ export function HomeScreen() {
   }, [period, records]);
 
   const pageIndex = page === 'overview' ? 0 : 1;
+  const alignedWidth = useRef(width);
 
-  /** Keep the visible page aligned when the viewport changes, e.g. on rotation. */
+  /**
+   * Realign only when the viewport itself changes, e.g. on rotation. Reacting to the page as
+   * well would fire an instant scroll in the middle of the animated one a tab tap starts, and
+   * would yank the pager out from under a finger mid-swipe.
+   */
   useEffect(() => {
+    if (alignedWidth.current === width) {
+      return;
+    }
+
+    alignedWidth.current = width;
     pagerRef.current?.scrollTo({ x: pageIndex * width, animated: false });
   }, [pageIndex, width]);
 
