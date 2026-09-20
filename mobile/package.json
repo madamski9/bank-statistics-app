@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "dependencies": {
     "@bankstats/app-config": "workspace:*",
+    "@bankstats/ingestion-native": "workspace:*",
     "@clerk/expo": "^4.6.6",
     "@expo/ui": "~57.0.18",
     "convex": "^1.45.0",

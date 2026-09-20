@@ -1,12 +1,10 @@
 # @bankstats/ingestion-native
 
-The Swift and Kotlin modules that capture bank notifications, normalize them with
-[`@bankstats/parser-rules`](../parser-rules), and write them to the shared encrypted outbox. See
-[ADR 0004](../../docs/adr/0004-use-expo-with-native-platform-modules.md) and
-[ADR 0015](../../docs/adr/0015-use-a-shared-encrypted-local-outbox.md).
+The Expo native module that owns notification ingestion outside the React Native runtime. Its iOS
+App Intent normalizes supported Millennium notifications and persists normalized records in an App
+Group SQLCipher outbox. The JavaScript API exposes synthetic ingestion, stored records, and storage
+diagnostics to the mobile application.
 
-These modules run without an active React Native runtime, which is why they live outside `mobile/`
-and depend only on the shared rule set.
-
-This package is the boundary reserved by issue #1. The iOS App Intent path is proven by issue #2 and
-the Android notification listener by issue #4; the native sources land here as those ship.
+See [ADR 0004](../../docs/adr/0004-use-expo-with-native-platform-modules.md),
+[ADR 0015](../../docs/adr/0015-use-a-shared-encrypted-local-outbox.md), and the
+[iOS 27 notification automation spike](../../docs/spikes/ios-27-notification-automation.md).

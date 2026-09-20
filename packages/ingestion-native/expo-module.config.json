@@ -1,0 +1,8 @@
+{
+  "platforms": ["apple"],
+  "apple": {
+    "podspecPath": "BankStatsIngestion.podspec",
+    "swiftModuleName": "BankStatsIngestion",
+    "modules": ["BankStatsIngestionModule"]
+  }
+}

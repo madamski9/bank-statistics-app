@@ -44,7 +44,9 @@ From the repository root:
 ./run.sh android
 ```
 
-Each command starts Convex and runs the native build/launch for that platform. See `../scripts/run-ios.sh` and `../scripts/run-android.sh`.
+Each command starts Convex and runs the native build/launch for that platform. See `../scripts/run-mobile.sh` (and `../scripts/setup-mobile.sh`, which it runs automatically when dependencies are missing).
+
+Two more platforms are available: `./run.sh web` (browser) and `./run.sh start` (bundler only, once a dev build is already installed).
 
 ## Structure
 

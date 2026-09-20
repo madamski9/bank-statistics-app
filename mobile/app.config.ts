@@ -81,7 +81,9 @@ const config: ExpoConfig = {
     ],
     'expo-secure-store',
     ['@clerk/expo', { appleSignIn: false }],
+    '@bankstats/ingestion-native',
     './plugins/withUISceneLifecycle.js',
+    './plugins/withDisableUserScriptSandboxing.js',
   ],
   experiments: {
     typedRoutes: true,

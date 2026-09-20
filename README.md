@@ -40,6 +40,8 @@ After completing the mobile setup (see [mobile/README.md](mobile/README.md)), bu
 ```bash
 ./run.sh ios
 ./run.sh android
+./run.sh web      # browser, no native modules
+./run.sh start    # bundler only, once a dev build is already installed
 ```
 
 ## Verification
