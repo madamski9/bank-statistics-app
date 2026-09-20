@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { impactLight } from '@/haptics';
+import { project, rubberband } from '@/motion';
 
 import { BubbleSkin } from './bubble-skin';
 import {
@@ -75,18 +76,6 @@ const titles: Record<BubbleKey, string> = {
   income: 'Przychody',
   net: 'Przepływ',
 };
-
-function project(velocity: number, decelerationRate = 0.998): number {
-  'worklet';
-
-  return ((velocity / 1000) * decelerationRate) / (1 - decelerationRate);
-}
-
-function rubberband(overshoot: number, dimension: number, constant = 0.55): number {
-  'worklet';
-
-  return (overshoot * dimension * constant) / (dimension + constant * Math.abs(overshoot));
-}
 
 /** Dragging down unwinds the same value the expansion runs on, so the gesture reverses it. */
 function effectiveProgress(openness: number, dragged: number, viewportHeight: number): number {

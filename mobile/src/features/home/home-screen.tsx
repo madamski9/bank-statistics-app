@@ -11,6 +11,12 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
+import Animated, {
+  ReduceMotion,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { OverviewScreen } from '@/features/overview/overview-screen';
@@ -28,11 +34,15 @@ import {
 } from '@/features/spending-overview/periods';
 import { periodChange, summarizeSpending } from '@/features/spending-overview/spending-summary';
 import { useCapturedSpending } from '@/features/spending-overview/use-captured-spending';
+import { MerchantDetail } from '@/features/merchants/merchant-detail';
+import { MerchantsScreen } from '@/features/merchants/merchants-screen';
+import { rankMerchants, type MerchantSpending } from '@/features/merchants/merchant-summary';
 import { TransactionsScreen } from '@/features/transactions/transactions-screen';
 
 const pages = [
   { key: 'overview', label: 'Przegląd' },
   { key: 'transactions', label: 'Transakcje' },
+  { key: 'merchants', label: 'Sklepy' },
 ] as const;
 
 type PageKey = (typeof pages)[number]['key'];
@@ -41,6 +51,7 @@ type PageKey = (typeof pages)[number]['key'];
  * The persistent shell: Overview and Transactions side by side in a pager, the settings avatar,
  * and the bubble detail on top of both so its expansion is measured against the window.
  */
+
 export function HomeScreen() {
   const { user } = useUser();
   const insets = useSafeAreaInsets();
@@ -49,20 +60,32 @@ export function HomeScreen() {
   const [page, setPage] = useState<PageKey>('overview');
   const [period, setPeriod] = useState<SpendingPeriod>('month');
   const [selection, setSelection] = useState<BubbleSelection | null>(null);
+  const [merchant, setMerchant] = useState<MerchantSpending | null>(null);
+  const [titleOffsets, setTitleOffsets] = useState<Partial<Record<PageKey, number>>>({});
+  const navOffset = useSharedValue(0);
   const { error, isLoading, records } = useCapturedSpending();
 
-  /** The rolling windows are re-anchored to "now" on every data or range change. */
-  const summary = useMemo(
-    () => summarizeSpending(records, periodWindow(period, new Date())),
-    [period, records],
+  /**
+   * One window, shared by every page so the bubbles, the shop ranking and a shop's chart can
+   * never disagree about which days they are describing. `records` is a real dependency: it
+   * re-anchors the rolling window to "now" when fresh captures arrive, which is the only
+   * moment the app learns that time has passed.
+   */
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
+  const spendWindow = useMemo(() => periodWindow(period, new Date()), [period, records]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
+  const previousWindow = useMemo(() => previousPeriodWindow(period, new Date()), [period, records]);
+  const summary = useMemo(() => summarizeSpending(records, spendWindow), [records, spendWindow]);
+  const previousSummary = useMemo(
+    () => (previousWindow === null ? null : summarizeSpending(records, previousWindow)),
+    [previousWindow, records],
   );
-  const previousSummary = useMemo(() => {
-    const window = previousPeriodWindow(period, new Date());
+  const merchants = useMemo(() => rankMerchants(records, spendWindow), [records, spendWindow]);
 
-    return window === null ? null : summarizeSpending(records, window);
-  }, [period, records]);
-
-  const pageIndex = page === 'overview' ? 0 : 1;
+  const pageIndex = Math.max(
+    pages.findIndex((entry) => entry.key === page),
+    0,
+  );
   const alignedWidth = useRef(width);
 
   /**
@@ -82,7 +105,10 @@ export function HomeScreen() {
   const goToPage = useCallback(
     (next: PageKey) => {
       setPage(next);
-      pagerRef.current?.scrollTo({ x: (next === 'overview' ? 0 : 1) * width, animated: true });
+      pagerRef.current?.scrollTo({
+        x: Math.max(pages.findIndex((entry) => entry.key === next), 0) * width,
+        animated: true,
+      });
     },
     [width],
   );
@@ -96,18 +122,45 @@ export function HomeScreen() {
     setSelection(null);
   }, []);
 
+  const handleMerchantClosed = useCallback(() => {
+    setMerchant(null);
+  }, []);
+
+  /**
+   * Three titles at this size do not fit a phone, so the row slides instead of shrinking: the
+   * active one sits in the gutter and its neighbours stay half-visible as an affordance.
+   */
+  useEffect(() => {
+    const offset = titleOffsets[page];
+
+    if (offset === undefined) {
+      return;
+    }
+
+    navOffset.set(
+      withSpring(-offset, { duration: 420, dampingRatio: 0.9, reduceMotion: ReduceMotion.System }),
+    );
+  }, [navOffset, page, titleOffsets]);
+
   /**
    * Fires per frame, but only ever calls setState when the pager crosses the halfway mark, so
    * the tab label tracks the finger at the cost of one render per page change.
    */
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const next: PageKey =
-      event.nativeEvent.contentOffset.x > width / 2 ? 'transactions' : 'overview';
+    const index = Math.min(
+      Math.max(Math.round(event.nativeEvent.contentOffset.x / Math.max(width, 1)), 0),
+      pages.length - 1,
+    );
+    const next = pages[index].key;
 
     if (next !== page) {
       setPage(next);
     }
   };
+
+  const navStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: navOffset.get() }],
+  }));
 
   const expenseChange =
     previousSummary === null
@@ -130,29 +183,39 @@ export function HomeScreen() {
     <View style={styles.screen}>
       <StatusBar style="light" />
 
-      <View accessibilityRole="tablist" style={[styles.nav, { paddingTop: insets.top + 12 }]}>
-        {pages.map((entry) => {
-          const isActive = entry.key === page;
+      <View style={[styles.nav, { paddingTop: insets.top + 12 }]}>
+        <View accessibilityRole="tablist" style={styles.navViewport}>
+          <Animated.View style={[styles.navRow, navStyle]}>
+            {pages.map((entry) => {
+              const isActive = entry.key === page;
 
-          return (
-            <Pressable
-              accessibilityRole="tab"
-              accessibilityState={{ selected: isActive }}
-              hitSlop={8}
-              key={entry.key}
-              onPress={() => goToPage(entry.key)}
-              style={({ pressed }) => [styles.navTab, pressed ? styles.pressed : null]}
-            >
-              <Text
-                maxFontSizeMultiplier={1.4}
-                style={[styles.navLabel, isActive ? styles.navLabelActive : null]}
-              >
-                {entry.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-        <View style={styles.navSpacer} />
+              return (
+                <Pressable
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: isActive }}
+                  hitSlop={8}
+                  key={entry.key}
+                  onLayout={(event) => {
+                    const { x } = event.nativeEvent.layout;
+
+                    setTitleOffsets((current) =>
+                      current[entry.key] === x ? current : { ...current, [entry.key]: x },
+                    );
+                  }}
+                  onPress={() => goToPage(entry.key)}
+                  style={({ pressed }) => [styles.navTab, pressed ? styles.pressed : null]}
+                >
+                  <Text
+                    maxFontSizeMultiplier={1.4}
+                    style={[styles.navLabel, isActive ? styles.navLabelActive : null]}
+                  >
+                    {entry.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </Animated.View>
+        </View>
         <View
           accessibilityLabel={user?.firstName ? `Konto: ${user.firstName}` : 'Konto'}
           accessible
@@ -169,7 +232,7 @@ export function HomeScreen() {
         onScroll={handleScroll}
         pagingEnabled
         ref={pagerRef}
-        scrollEnabled={selection === null}
+        scrollEnabled={selection === null && merchant === null}
         scrollEventThrottle={16}
         showsHorizontalScrollIndicator={false}
         style={styles.pager}
@@ -189,6 +252,16 @@ export function HomeScreen() {
         <View style={{ width }}>
           <TransactionsScreen error={error} isLoading={isLoading} records={records} />
         </View>
+        <View style={{ width }}>
+          <MerchantsScreen
+            error={error}
+            isLoading={isLoading}
+            merchants={merchants}
+            onChangePeriod={setPeriod}
+            onSelectMerchant={setMerchant}
+            period={period}
+          />
+        </View>
       </ScrollView>
 
       {selection !== null ? (
@@ -199,6 +272,15 @@ export function HomeScreen() {
           period={period}
           selection={selection}
           summary={summary}
+        />
+      ) : null}
+
+      {merchant !== null ? (
+        <MerchantDetail
+          merchant={merchant}
+          onClosed={handleMerchantClosed}
+          period={period}
+          spendWindow={spendWindow}
         />
       ) : null}
     </View>
@@ -217,6 +299,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: overviewSpacing.gutter,
     paddingBottom: overviewSpacing.tight,
   },
+  navViewport: {
+    flex: 1,
+    overflow: 'hidden',
+  },
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   navTab: {
     minHeight: 44,
     justifyContent: 'center',
@@ -232,9 +323,6 @@ const styles = StyleSheet.create({
   },
   navLabelActive: {
     color: overviewColors.textPrimary,
-  },
-  navSpacer: {
-    flex: 1,
   },
   avatar: {
     width: 38,

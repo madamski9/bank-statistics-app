@@ -1,0 +1,331 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  Extrapolation,
+  ReduceMotion,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { scheduleOnRN } from 'react-native-worklets';
+
+import { formatAmount, formatShare } from '@/features/spending-overview/formatting';
+import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
+import { periodOption, type PeriodWindow, type SpendingPeriod } from '@/features/spending-overview/periods';
+import { formatDayHeading, formatTime } from '@/features/transactions/format-date';
+import { impactLight } from '@/haptics';
+import { project, rubberband } from '@/motion';
+
+import { DailySpendChart } from './daily-spend-chart';
+import { bucketSizeFor, bucketSpending, type MerchantSpending } from './merchant-summary';
+
+interface MerchantDetailProps {
+  merchant: MerchantSpending;
+  spendWindow: PeriodWindow;
+  period: SpendingPeriod;
+  /** Called once the sheet has finished leaving, so it can unmount. */
+  onClosed: () => void;
+}
+
+export function MerchantDetail({
+  merchant,
+  spendWindow,
+  period,
+  onClosed,
+}: MerchantDetailProps) {
+  const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const translateY = useSharedValue(height);
+  const dragContext = useSharedValue(0);
+  const [selectedBucket, setSelectedBucket] = useState<string | null>(null);
+
+  const buckets = useMemo(
+    () => bucketSpending(merchant.records, spendWindow, bucketSizeFor(period)),
+    [merchant.records, period, spendWindow],
+  );
+
+  useEffect(() => {
+    translateY.set(
+      withSpring(0, { duration: 420, dampingRatio: 0.88, reduceMotion: ReduceMotion.System }),
+    );
+  }, [translateY]);
+
+  const requestClose = useCallback(() => {
+    impactLight();
+    translateY.set(
+      withSpring(
+        height,
+        {
+          duration: 320,
+          dampingRatio: 1,
+          overshootClamping: true,
+          reduceMotion: ReduceMotion.System,
+        },
+        (finished) => {
+          if (finished) {
+            scheduleOnRN(onClosed);
+          }
+        },
+      ),
+    );
+  }, [height, onClosed, translateY]);
+
+  /** On the header only, so the history below keeps its own scrolling. */
+  const pan = useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetY([-12, 12])
+        .onStart(() => {
+          dragContext.set(translateY.get());
+        })
+        .onUpdate((event) => {
+          const next = dragContext.get() + event.translationY;
+
+          translateY.set(next >= 0 ? next : rubberband(next, height));
+        })
+        .onEnd((event) => {
+          const projected = translateY.get() + project(event.velocityY);
+
+          if (projected > height * 0.25) {
+            scheduleOnRN(requestClose);
+            return;
+          }
+
+          translateY.set(
+            withSpring(0, {
+              duration: 360,
+              dampingRatio: 0.8,
+              velocity: event.velocityY,
+              reduceMotion: ReduceMotion.System,
+            }),
+          );
+        }),
+    [dragContext, height, requestClose, translateY],
+  );
+
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.get() }],
+  }));
+  const scrimStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(translateY.get(), [0, height], [1, 0], Extrapolation.CLAMP),
+  }));
+
+  const option = periodOption(period);
+
+  return (
+    <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+      <Animated.View pointerEvents="none" style={[styles.scrim, scrimStyle]} />
+      <Animated.View
+        style={[styles.sheet, { paddingTop: insets.top + 6 }, sheetStyle]}
+      >
+        <GestureDetector gesture={pan}>
+          <Animated.View style={styles.header}>
+            <View accessibilityElementsHidden importantForAccessibility="no" style={styles.handle} />
+            <View style={styles.titleRow}>
+              <View style={styles.titleBlock}>
+                <Text maxFontSizeMultiplier={1.5} numberOfLines={1} style={styles.title}>
+                  {merchant.name}
+                </Text>
+                {merchant.location !== undefined ? (
+                  <Text maxFontSizeMultiplier={1.5} numberOfLines={1} style={styles.location}>
+                    {merchant.location}
+                  </Text>
+                ) : null}
+              </View>
+              <Pressable
+                accessibilityHint="Wraca do listy sklepów"
+                accessibilityLabel={`Zamknij ${merchant.name}`}
+                accessibilityRole="button"
+                hitSlop={10}
+                onPress={requestClose}
+                style={({ pressed }) => [styles.close, pressed ? styles.pressed : null]}
+              >
+                <Text maxFontSizeMultiplier={1.4} style={styles.closeLabel}>
+                  Zamknij
+                </Text>
+              </Pressable>
+            </View>
+
+            <Text
+              adjustsFontSizeToFit
+              maxFontSizeMultiplier={1.4}
+              minimumFontScale={0.6}
+              numberOfLines={1}
+              style={styles.total}
+            >
+              {formatAmount(merchant.totalMinor, merchant.currency)}
+            </Text>
+            <Text maxFontSizeMultiplier={1.5} style={styles.meta}>
+              {option.label} · {merchant.count}{' '}
+              {merchant.count === 1 ? 'zakup' : merchant.count < 5 ? 'zakupy' : 'zakupów'} · średnio{' '}
+              {formatAmount(merchant.averageMinor, merchant.currency)} ·{' '}
+              {formatShare(merchant.share)} wydatków
+            </Text>
+          </Animated.View>
+        </GestureDetector>
+
+        <ScrollView
+          contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 32 }]}
+          indicatorStyle="white"
+        >
+          {buckets.length > 0 ? (
+            <DailySpendChart
+              buckets={buckets}
+              currency={merchant.currency}
+              onSelect={setSelectedBucket}
+              selectedKey={selectedBucket}
+            />
+          ) : null}
+
+          <View style={styles.history}>
+            <Text maxFontSizeMultiplier={1.5} style={styles.historyTitle}>
+              Historia
+            </Text>
+            {merchant.records.map((record) => {
+              const occurredAt = new Date(record.occurredAt);
+
+              return (
+                <View
+                  accessible
+                  accessibilityLabel={`${formatDayHeading(occurredAt, new Date())}, ${formatTime(occurredAt)}, ${formatAmount(record.amountMinor, record.currency)}`}
+                  key={record.id}
+                  style={styles.historyRow}
+                >
+                  <Text maxFontSizeMultiplier={1.5} style={styles.historyDate}>
+                    {formatDayHeading(occurredAt, new Date())}
+                    <Text style={styles.historyTime}> · {formatTime(occurredAt)}</Text>
+                  </Text>
+                  <Text maxFontSizeMultiplier={1.5} style={styles.historyAmount}>
+                    − {formatAmount(record.amountMinor, record.currency)}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        </ScrollView>
+      </Animated.View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  scrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: overviewColors.scrim,
+  },
+  sheet: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: overviewColors.background,
+  },
+  header: {
+    gap: 6,
+    paddingHorizontal: overviewSpacing.gutter,
+    paddingBottom: overviewSpacing.row,
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    alignSelf: 'center',
+    marginBottom: 10,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  titleBlock: {
+    flexShrink: 1,
+    gap: 1,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: -0.4,
+    color: overviewColors.textPrimary,
+  },
+  location: {
+    fontSize: 13,
+    color: overviewColors.textSecondary,
+  },
+  close: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingLeft: 12,
+  },
+  closeLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: overviewColors.textPrimary,
+  },
+  pressed: {
+    opacity: 0.6,
+  },
+  total: {
+    fontSize: 38,
+    fontWeight: '700',
+    letterSpacing: -1.2,
+    color: overviewColors.textPrimary,
+  },
+  meta: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: overviewColors.textSecondary,
+  },
+  body: {
+    gap: overviewSpacing.section,
+    paddingHorizontal: overviewSpacing.gutter,
+    paddingTop: overviewSpacing.tight,
+  },
+  history: {
+    gap: 2,
+  },
+  historyTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 6,
+    color: overviewColors.textPrimary,
+  },
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingVertical: 9,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: overviewColors.hairline,
+  },
+  historyDate: {
+    fontSize: 15,
+    color: overviewColors.textPrimary,
+  },
+  historyTime: {
+    fontSize: 13,
+    color: overviewColors.textSecondary,
+  },
+  historyAmount: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: overviewColors.textPrimary,
+  },
+});
