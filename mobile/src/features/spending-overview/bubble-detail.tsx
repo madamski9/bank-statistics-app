@@ -15,6 +15,7 @@ import Animated, {
   Extrapolation,
   ReduceMotion,
   interpolate,
+  useAnimatedReaction,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -111,6 +112,9 @@ export function BubbleDetail({
   const progress = useSharedValue(0);
   const drag = useSharedValue(0);
   const dragContext = useSharedValue(0);
+  /** Starts where the tapped bubble's rebound left it, so the film takes over without a jump. */
+  const pop = useSharedValue(1.11);
+  const [contentReady, setContentReady] = useState(false);
   const [amountAnchor, setAmountAnchor] = useState<{ x: number; y: number; scale: number } | null>(
     null,
   );
@@ -126,11 +130,26 @@ export function BubbleDetail({
   useEffect(() => {
     progress.set(
       withDelay(
-        reducedMotion ? 0 : 90,
+        reducedMotion ? 0 : 60,
         withSpring(1, { ...overviewMotion.transition, reduceMotion: ReduceMotion.System }),
       ),
     );
-  }, [progress, reducedMotion]);
+    pop.set(withSpring(1, { ...overviewMotion.settle, reduceMotion: ReduceMotion.System }));
+  }, [pop, progress, reducedMotion]);
+
+  /**
+   * The breakdown is the expensive half of this screen — a list, its icons and the switcher.
+   * Mounting it in the same frame as the tap is what made the transition hitch, so it waits
+   * until the expansion is visibly under way and then fades in where it always did.
+   */
+  useAnimatedReaction(
+    () => progress.get() > 0.25,
+    (started, previous) => {
+      if (started && previous !== true) {
+        scheduleOnRN(setContentReady, true);
+      }
+    },
+  );
 
   const requestClose = useCallback(() => {
     impactLight();
@@ -184,7 +203,7 @@ export function BubbleDetail({
       transform: [
         { translateX: centerOffsetX * value },
         { translateY: centerOffsetY * value + drag.get() * 0.25 },
-        { scale: 1 + (coverScale - 1) * value },
+        { scale: (1 + (coverScale - 1) * value) * pop.get() },
       ],
       opacity: interpolate(value, [0, 0.06], [0, 1], Extrapolation.CLAMP),
     };
@@ -355,6 +374,8 @@ export function BubbleDetail({
           indicatorStyle="white"
           style={styles.list}
         >
+          {contentReady ? (
+            <>
           {key === 'net' ? (
             <View style={styles.netBlock}>
               <Text maxFontSizeMultiplier={1.6} style={styles.explainer}>
@@ -435,6 +456,8 @@ export function BubbleDetail({
             <Text maxFontSizeMultiplier={1.6} style={styles.footnote}>
               Dane z: {summary.accounts.join(', ')}
             </Text>
+          ) : null}
+            </>
           ) : null}
         </ScrollView>
       </Animated.View>

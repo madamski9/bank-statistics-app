@@ -1,6 +1,6 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { SymbolView } from 'expo-symbols';
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { Platform, SectionList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -85,7 +85,7 @@ function buildSections(records: IngestionRecord[], reference: Date): DaySection[
 }
 
 /** The plain log behind the Overview: every captured transaction, newest first. */
-export function TransactionsScreen({ records, error, isLoading }: TransactionsScreenProps) {
+function TransactionsScreenComponent({ records, error, isLoading }: TransactionsScreenProps) {
   const insets = useSafeAreaInsets();
   const sections = useMemo(() => buildSections(records, new Date()), [records]);
 
@@ -165,6 +165,9 @@ export function TransactionsScreen({ records, error, isLoading }: TransactionsSc
     />
   );
 }
+
+/** Memoised: swiping the pager re-renders the shell once per crossing, not this list. */
+export const TransactionsScreen = memo(TransactionsScreenComponent);
 
 const styles = StyleSheet.create({
   list: {

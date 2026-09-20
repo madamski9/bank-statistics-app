@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { memo, useCallback, useEffect, useRef } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -36,14 +36,14 @@ interface GlassBubbleProps {
   accessibilityLabel: string;
   /** Staggers the idle drift so the three bubbles never breathe in unison. */
   driftSeed: number;
-  onSelect: (origin: BubbleOrigin) => void;
+  onSelect: (key: BubbleKey, origin: BubbleOrigin) => void;
 }
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-export function GlassBubble({
+function GlassBubbleComponent({
   tint,
   size,
   label,
@@ -55,6 +55,7 @@ export function GlassBubble({
 }: GlassBubbleProps) {
   const reducedMotion = useReducedMotion();
   const containerRef = useRef<View>(null);
+  const origin = useRef<BubbleOrigin>({ x: 0, y: 0, size });
   const scale = useSharedValue(1);
   const squash = useSharedValue(0);
   const driftX = useSharedValue(0);
@@ -89,7 +90,14 @@ export function GlassBubble({
   const pushIn = useCallback(() => {
     scale.set(withSpring(0.93, { ...overviewMotion.pushIn, reduceMotion: ReduceMotion.System }));
     squash.set(withSpring(1, { ...overviewMotion.pushIn, reduceMotion: ReduceMotion.System }));
-  }, [scale, squash]);
+    /**
+     * Measured on press-in, not on the tap: measureInWindow is a round trip to native, and on
+     * the tap it sits in front of the transition. By lift-off the answer is already here.
+     */
+    containerRef.current?.measureInWindow((x, y, measuredWidth, measuredHeight) => {
+      origin.current = { x: x + measuredWidth / 2, y: y + measuredHeight / 2, size };
+    });
+  }, [origin, scale, size, squash]);
 
   /** Release: overshoot, then a long loose wobble — a film rebounding, not a button. */
   const release = useCallback(
@@ -119,11 +127,8 @@ export function GlassBubble({
   const handlePress = useCallback(() => {
     release(true);
     impactLight();
-    /** The measured frame carries the press transform, so only its centre is trusted. */
-    containerRef.current?.measureInWindow((x, y, measuredWidth, measuredHeight) => {
-      onSelect({ x: x + measuredWidth / 2, y: y + measuredHeight / 2, size });
-    });
-  }, [onSelect, release, size]);
+    onSelect(tint, origin.current);
+  }, [onSelect, origin, release, tint]);
 
   const bubbleStyle = useAnimatedStyle(() => {
     const currentScale = scale.get();
@@ -160,6 +165,7 @@ export function GlassBubble({
       <Animated.View style={[styles.bubble, bubbleStyle]}>
         {/* iOS only paints a shadow for a layer that has a background, hence the tinted disc. */}
         <View
+          shouldRasterizeIOS
           style={[
             styles.glow,
             {
@@ -249,3 +255,9 @@ const styles = StyleSheet.create({
     color: overviewColors.textSecondary,
   },
 });
+
+/**
+ * Memoised: selecting a bubble or crossing a page boundary re-renders the shell, and nothing
+ * about that should rebuild three bubbles' worth of gradient layers mid-transition.
+ */
+export const GlassBubble = memo(GlassBubbleComponent);

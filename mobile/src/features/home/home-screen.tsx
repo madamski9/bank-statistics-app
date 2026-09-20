@@ -1,6 +1,6 @@
 import { useUser } from '@clerk/expo';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -15,7 +15,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { OverviewScreen } from '@/features/overview/overview-screen';
 import { BubbleDetail, type BubbleSelection } from '@/features/spending-overview/bubble-detail';
-import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
+import type { BubbleOrigin } from '@/features/spending-overview/glass-bubble';
+import {
+  overviewColors,
+  overviewSpacing,
+  type BubbleKey,
+} from '@/features/spending-overview/overview-theme';
 import {
   periodWindow,
   previousPeriodWindow,
@@ -74,10 +79,22 @@ export function HomeScreen() {
     pagerRef.current?.scrollTo({ x: pageIndex * width, animated: false });
   }, [pageIndex, width]);
 
-  const goToPage = (next: PageKey) => {
-    setPage(next);
-    pagerRef.current?.scrollTo({ x: (next === 'overview' ? 0 : 1) * width, animated: true });
-  };
+  const goToPage = useCallback(
+    (next: PageKey) => {
+      setPage(next);
+      pagerRef.current?.scrollTo({ x: (next === 'overview' ? 0 : 1) * width, animated: true });
+    },
+    [width],
+  );
+
+  /** Stable, so memoised OverviewScreen survives a selection or a page change untouched. */
+  const handleSelectBubble = useCallback((key: BubbleKey, origin: BubbleOrigin) => {
+    setSelection({ key, origin });
+  }, []);
+
+  const handleDetailClosed = useCallback(() => {
+    setSelection(null);
+  }, []);
 
   /**
    * Fires per frame, but only ever calls setState when the pager crosses the halfway mark, so
@@ -164,7 +181,7 @@ export function HomeScreen() {
             hasData={records.length > 0}
             isLoading={isLoading}
             onChangePeriod={setPeriod}
-            onSelectBubble={(key, origin) => setSelection({ key, origin })}
+            onSelectBubble={handleSelectBubble}
             period={period}
             summary={summary}
           />
@@ -178,7 +195,7 @@ export function HomeScreen() {
         <BubbleDetail
           change={selectedChange}
           onChangePeriod={setPeriod}
-          onClosed={() => setSelection(null)}
+          onClosed={handleDetailClosed}
           period={period}
           selection={selection}
           summary={summary}

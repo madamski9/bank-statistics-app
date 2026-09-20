@@ -69,7 +69,7 @@ export function BubbleField({ bubbles, onSelect }: BubbleFieldProps) {
                   caption={bubble.caption}
                   driftSeed={index}
                   label={bubble.label}
-                  onSelect={(origin) => onSelect(bubble.key, origin)}
+                  onSelect={onSelect}
                   size={diameter}
                   tint={bubble.key}
                   value={bubble.value}

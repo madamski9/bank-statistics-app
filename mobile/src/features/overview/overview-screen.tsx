@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -32,7 +33,7 @@ interface OverviewScreenProps {
   hasData: boolean;
 }
 
-export function OverviewScreen({
+function OverviewScreenComponent({
   summary,
   expenseChange,
   period,
@@ -157,6 +158,9 @@ export function OverviewScreen({
     </View>
   );
 }
+
+/** Memoised so a selection or a page change never rebuilds the bubble field. */
+export const OverviewScreen = memo(OverviewScreenComponent);
 
 const styles = StyleSheet.create({
   page: {
