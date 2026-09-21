@@ -76,6 +76,7 @@ function namedExpenses(records: IngestionRecord[], window: PeriodWindow): Ingest
   return records.filter(
     (record) =>
       record.direction === 'expense' &&
+      record.transactionType !== 'outgoingTransfer' &&
       record.merchant !== undefined &&
       record.merchant.trim() !== '' &&
       !Number.isNaN(occurredMs(record)) &&

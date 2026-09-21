@@ -42,8 +42,14 @@ const identity = resolveLaneIdentity();
 
 const config: ExpoConfig = {
   name: 'BankStats',
-  slug: 'bankstats',
+  slug: 'bank-statistics-app',
   version: '1.0.0',
+  runtimeVersion: {
+    policy: 'appVersion',
+  },
+  updates: {
+    url: 'https://u.expo.dev/c5ceea5a-b064-465d-a7a7-8d01043d28c7',
+  },
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   scheme: identity.scheme,
@@ -88,6 +94,11 @@ const config: ExpoConfig = {
   experiments: {
     typedRoutes: true,
     reactCompiler: true,
+  },
+  extra: {
+    eas: {
+      projectId: 'c5ceea5a-b064-465d-a7a7-8d01043d28c7',
+    },
   },
 };
 

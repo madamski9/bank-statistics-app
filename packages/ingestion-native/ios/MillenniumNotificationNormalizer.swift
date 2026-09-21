@@ -26,6 +26,7 @@ struct MillenniumNotificationNormalizer {
   struct Amount {
     let minor: Int
     let currency: String
+    let isCurrencyRecognized: Bool
   }
 
   func normalize(
@@ -99,12 +100,13 @@ struct MillenniumNotificationNormalizer {
 
     let prefix = Range(match.range(at: 1), in: text).map { String(text[$0]) }
     let suffix = Range(match.range(at: 3), in: text).map { String(text[$0]) }
+    let symbol = suffix ?? prefix
 
-    guard let symbol = suffix ?? prefix else {
-      return nil
-    }
-
-    return Amount(minor: minor, currency: currencyCode(symbol))
+    return Amount(
+      minor: minor,
+      currency: symbol.map(currencyCode) ?? "PLN",
+      isCurrencyRecognized: symbol != nil
+    )
   }
 
   private func currencyCode(_ symbol: String) -> String {
@@ -173,7 +175,9 @@ struct MillenniumNotificationNormalizer {
       occurredAt: timestamp,
       capturedAt: timestamp,
       sourceApp: sourceApp,
-      status: "pending"
+      status: "pending",
+      origin: NormalizedRecordOrigin.capture,
+      review: amount.isCurrencyRecognized ? nil : ReviewReason.currency
     )
   }
 

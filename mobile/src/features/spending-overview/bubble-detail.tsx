@@ -30,6 +30,7 @@ import { impactLight } from '@/haptics';
 import { project, rubberband } from '@/motion';
 
 import { BubbleSkin } from './bubble-skin';
+import type { BubbleSelection } from './bubble-selection';
 import {
   formatAmount,
   formatChange,
@@ -37,16 +38,10 @@ import {
   formatSignedAmount,
   formatTransactionCount,
 } from './formatting';
-import type { BubbleOrigin } from './glass-bubble';
 import { bubbleTints, overviewColors, overviewMotion, type BubbleKey } from './overview-theme';
 import { periodOption, type SpendingPeriod } from './periods';
 import { RangeSwitcher } from './range-switcher';
 import type { SpendingSource, SpendingSourceKind, SpendingSummary } from './spending-summary';
-
-export interface BubbleSelection {
-  key: BubbleKey;
-  origin: BubbleOrigin;
-}
 
 interface BubbleDetailProps {
   selection: BubbleSelection;

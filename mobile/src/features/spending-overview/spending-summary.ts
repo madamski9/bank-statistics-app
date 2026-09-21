@@ -33,6 +33,7 @@ const maximumSources = 6;
 
 const bankNames: Record<IngestionRecord['bank'], string> = {
   millennium: 'Millennium',
+  manual: 'Wpis ręczny',
 };
 
 const transactionTypeLabels: Record<SpendingSourceKind, string> = {

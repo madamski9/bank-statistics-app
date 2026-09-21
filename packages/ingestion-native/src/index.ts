@@ -1,19 +1,30 @@
 import { requireOptionalNativeModule } from 'expo-modules-core';
 import { Platform } from 'react-native';
 
+export type IngestionRecordSource = 'millennium' | 'manual';
+
+export type IngestionRecordOrigin = 'capture' | 'manual';
+
+export type IngestionRecordStatus = 'pending' | 'posted' | 'reversed';
+
+export type IngestionReviewReason = 'amount' | 'currency' | 'direction' | 'merchant';
+
 export interface IngestionRecord {
   id: string;
-  bank: 'millennium';
+  bank: IngestionRecordSource;
   direction: 'expense' | 'income';
   transactionType?: 'cardPayment' | 'outgoingTransfer' | 'incomingTransfer';
   amountMinor: number;
   currency: string;
   merchant?: string;
   accountName?: string;
+  category?: string;
   occurredAt: string;
   capturedAt: string;
   sourceApp: string;
-  status: 'pending';
+  status: IngestionRecordStatus;
+  origin?: IngestionRecordOrigin;
+  review?: IngestionReviewReason;
 }
 
 export interface StorageDiagnostics {
@@ -35,6 +46,8 @@ interface BankStatsIngestionNativeModule {
   ingestSyntheticApplePayTransaction(): Promise<IngestionRecord>;
   deleteSyntheticRecords?(): Promise<number>;
   clearRecords?(): Promise<void>;
+  saveRecord?(record: IngestionRecord): Promise<IngestionRecord>;
+  deleteRecord?(id: string): Promise<number>;
   listRecords(): Promise<IngestionRecord[]>;
   storageDiagnostics(): Promise<StorageDiagnostics>;
 }
@@ -74,7 +87,7 @@ export function clearIngestionRecords(): Promise<void> {
 export const syntheticSampleMerchant = 'SKLEP TEST';
 
 export function isSyntheticIngestionRecord(record: IngestionRecord): boolean {
-  return record.merchant === syntheticSampleMerchant;
+  return record.merchant === syntheticSampleMerchant && record.origin !== 'manual';
 }
 
 export function deleteSyntheticIngestionRecords(): Promise<number> {
@@ -85,6 +98,30 @@ export function deleteSyntheticIngestionRecords(): Promise<number> {
   }
 
   return module.deleteSyntheticRecords();
+}
+
+export function saveIngestionRecord(record: IngestionRecord): Promise<IngestionRecord> {
+  const module = requireIosModule();
+
+  if (typeof module.saveRecord !== 'function') {
+    return Promise.reject(
+      new Error('Saving a transaction requires a development build that includes saveRecord'),
+    );
+  }
+
+  return module.saveRecord(record);
+}
+
+export function deleteIngestionRecord(id: string): Promise<number> {
+  const module = requireIosModule();
+
+  if (typeof module.deleteRecord !== 'function') {
+    return Promise.reject(
+      new Error('Deleting a transaction requires a development build that includes deleteRecord'),
+    );
+  }
+
+  return module.deleteRecord(id);
 }
 
 export function listIngestionRecords(): Promise<IngestionRecord[]> {

@@ -14,6 +14,7 @@ export const overviewColors = {
   textSecondary: '#8E8E93',
   /** Decoration only (rims, tracks); never carries text or meaning. */
   textDisabled: '#48484A',
+  caution: '#FFC46B',
   positive: '#34E39B',
   negative: '#FF5C7A',
   scrim: '#000000',
