@@ -1,4 +1,5 @@
 import { useUser } from '@clerk/expo';
+import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -20,6 +21,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { accountInitial } from '@/features/profile/account-identity';
 import { IngestionDiagnosticsCard } from '@/features/ingestion-diagnostics/ingestion-diagnostics-card';
 import { OverviewScreen } from '@/features/overview/overview-screen';
 import { BubbleDetail, type BubbleSelection } from '@/features/spending-overview/bubble-detail';
@@ -39,6 +41,7 @@ import { useCapturedSpending } from '@/features/spending-overview/use-captured-s
 import { MerchantDetail } from '@/features/merchants/merchant-detail';
 import { MerchantsScreen } from '@/features/merchants/merchants-screen';
 import { rankMerchants, type MerchantSpending } from '@/features/merchants/merchant-summary';
+import { ProfileScreen } from '@/features/profile/profile-screen';
 import { TransactionsScreen } from '@/features/transactions/transactions-screen';
 
 const pages = [
@@ -48,6 +51,7 @@ const pages = [
 ] as const;
 
 type PageKey = (typeof pages)[number]['key'];
+type SheetKey = 'profile' | 'diagnostics';
 
 /**
  * The persistent shell: Overview and Transactions side by side in a pager, the settings avatar,
@@ -63,7 +67,7 @@ export function HomeScreen() {
   const [period, setPeriod] = useState<SpendingPeriod>('month');
   const [selection, setSelection] = useState<BubbleSelection | null>(null);
   const [merchant, setMerchant] = useState<MerchantSpending | null>(null);
-  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
+  const [activeSheet, setActiveSheet] = useState<SheetKey | null>(null);
   const [titleOffsets, setTitleOffsets] = useState<Partial<Record<PageKey, number>>>({});
   const navOffset = useSharedValue(0);
   const { error, isLoading, records } = useCapturedSpending();
@@ -178,9 +182,7 @@ export function HomeScreen() {
           ? periodChange(summary.incomeMinor, previousSummary.incomeMinor)
           : periodChange(summary.netMinor, previousSummary.netMinor);
 
-  const initial = (user?.firstName ?? user?.primaryEmailAddress?.emailAddress ?? '?')
-    .slice(0, 1)
-    .toUpperCase();
+  const initial = accountInitial(user);
 
   return (
     <View style={styles.screen}>
@@ -220,16 +222,20 @@ export function HomeScreen() {
           </Animated.View>
         </View>
         <Pressable
-          accessibilityHint="Otwiera diagnostykę przechwytywania powiadomień"
+          accessibilityHint="Otwiera profil i ustawienia konta"
           accessibilityLabel={user?.firstName ? `Konto: ${user.firstName}` : 'Konto'}
           accessibilityRole="button"
           hitSlop={8}
-          onPress={() => setIsDiagnosticsOpen(true)}
+          onPress={() => setActiveSheet('profile')}
           style={({ pressed }) => [styles.avatar, pressed ? styles.pressed : null]}
         >
-          <Text maxFontSizeMultiplier={1.3} style={styles.avatarInitial}>
-            {initial}
-          </Text>
+          {user?.imageUrl ? (
+            <Image accessible={false} contentFit="cover" source={user.imageUrl} style={styles.avatarImage} />
+          ) : (
+            <Text maxFontSizeMultiplier={1.3} style={styles.avatarInitial}>
+              {initial}
+            </Text>
+          )}
         </Pressable>
       </View>
 
@@ -292,28 +298,35 @@ export function HomeScreen() {
 
       <Modal
         animationType="slide"
-        onRequestClose={() => setIsDiagnosticsOpen(false)}
+        onRequestClose={() => setActiveSheet(null)}
         presentationStyle="pageSheet"
-        visible={isDiagnosticsOpen}
+        visible={activeSheet !== null}
       >
-        <View style={styles.sheet}>
-          <View style={styles.sheetHeader}>
-            <Text maxFontSizeMultiplier={1.4} style={styles.sheetTitle}>
-              Diagnostyka
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              hitSlop={8}
-              onPress={() => setIsDiagnosticsOpen(false)}
-              style={({ pressed }) => [styles.sheetClose, pressed ? styles.pressed : null]}
-            >
-              <Text maxFontSizeMultiplier={1.3} style={styles.sheetCloseLabel}>
-                Gotowe
+        {activeSheet === 'profile' ? (
+          <ProfileScreen
+            onClose={() => setActiveSheet(null)}
+            onOpenDiagnostics={() => setActiveSheet('diagnostics')}
+          />
+        ) : (
+          <View style={styles.sheet}>
+            <View style={styles.sheetHeader}>
+              <Text maxFontSizeMultiplier={1.4} style={styles.sheetTitle}>
+                Diagnostyka
               </Text>
-            </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                hitSlop={8}
+                onPress={() => setActiveSheet(null)}
+                style={({ pressed }) => [styles.sheetClose, pressed ? styles.pressed : null]}
+              >
+                <Text maxFontSizeMultiplier={1.3} style={styles.sheetCloseLabel}>
+                  Gotowe
+                </Text>
+              </Pressable>
+            </View>
+            <IngestionDiagnosticsCard />
           </View>
-          <IngestionDiagnosticsCard />
-        </View>
+        )}
       </Modal>
     </View>
   );
@@ -363,6 +376,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 19,
     backgroundColor: overviewColors.surfacePressed,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   avatarInitial: {
     fontSize: 15,
