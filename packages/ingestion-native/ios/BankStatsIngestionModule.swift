@@ -6,7 +6,8 @@ public final class BankStatsIngestionModule: Module {
 
     AsyncFunction("ingestSynthetic") { () -> [String: Any] in
       let outcome = try EncryptedOutbox.shared.ingest(
-        rawText: SyntheticSample.rawText,
+        subtitle: SyntheticSample.millennium.subtitle,
+        body: SyntheticSample.millennium.body,
         sourceApp: SyntheticSample.sourceApp
       )
       guard case .record(let record) = outcome else {
@@ -17,7 +18,8 @@ public final class BankStatsIngestionModule: Module {
 
     AsyncFunction("ingestSyntheticApplePayTransaction") { () -> [String: Any] in
       let outcome = try EncryptedOutbox.shared.ingest(
-        rawText: SyntheticSample.applePayRawText,
+        subtitle: SyntheticSample.applePay.subtitle,
+        body: SyntheticSample.applePay.body,
         sourceApp: SyntheticSample.sourceApp
       )
       guard case .record(let record) = outcome else {

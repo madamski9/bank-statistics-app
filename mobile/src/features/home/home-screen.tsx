@@ -2,6 +2,7 @@ import { useUser } from '@clerk/expo';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,6 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { IngestionDiagnosticsCard } from '@/features/ingestion-diagnostics/ingestion-diagnostics-card';
 import { OverviewScreen } from '@/features/overview/overview-screen';
 import { BubbleDetail, type BubbleSelection } from '@/features/spending-overview/bubble-detail';
 import type { BubbleOrigin } from '@/features/spending-overview/glass-bubble';
@@ -61,6 +63,7 @@ export function HomeScreen() {
   const [period, setPeriod] = useState<SpendingPeriod>('month');
   const [selection, setSelection] = useState<BubbleSelection | null>(null);
   const [merchant, setMerchant] = useState<MerchantSpending | null>(null);
+  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
   const [titleOffsets, setTitleOffsets] = useState<Partial<Record<PageKey, number>>>({});
   const navOffset = useSharedValue(0);
   const { error, isLoading, records } = useCapturedSpending();
@@ -216,15 +219,18 @@ export function HomeScreen() {
             })}
           </Animated.View>
         </View>
-        <View
+        <Pressable
+          accessibilityHint="Otwiera diagnostykę przechwytywania powiadomień"
           accessibilityLabel={user?.firstName ? `Konto: ${user.firstName}` : 'Konto'}
-          accessible
-          style={styles.avatar}
+          accessibilityRole="button"
+          hitSlop={8}
+          onPress={() => setIsDiagnosticsOpen(true)}
+          style={({ pressed }) => [styles.avatar, pressed ? styles.pressed : null]}
         >
           <Text maxFontSizeMultiplier={1.3} style={styles.avatarInitial}>
             {initial}
           </Text>
-        </View>
+        </Pressable>
       </View>
 
       <ScrollView
@@ -283,6 +289,32 @@ export function HomeScreen() {
           spendWindow={spendWindow}
         />
       ) : null}
+
+      <Modal
+        animationType="slide"
+        onRequestClose={() => setIsDiagnosticsOpen(false)}
+        presentationStyle="pageSheet"
+        visible={isDiagnosticsOpen}
+      >
+        <View style={styles.sheet}>
+          <View style={styles.sheetHeader}>
+            <Text maxFontSizeMultiplier={1.4} style={styles.sheetTitle}>
+              Diagnostyka
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={() => setIsDiagnosticsOpen(false)}
+              style={({ pressed }) => [styles.sheetClose, pressed ? styles.pressed : null]}
+            >
+              <Text maxFontSizeMultiplier={1.3} style={styles.sheetCloseLabel}>
+                Gotowe
+              </Text>
+            </Pressable>
+          </View>
+          <IngestionDiagnosticsCard />
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -336,6 +368,33 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: overviewColors.textPrimary,
+  },
+  sheet: {
+    flex: 1,
+    gap: overviewSpacing.tight,
+    paddingHorizontal: overviewSpacing.gutter,
+    paddingTop: overviewSpacing.gutter,
+    backgroundColor: overviewColors.background,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sheetTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: -0.6,
+    color: overviewColors.textPrimary,
+  },
+  sheetClose: {
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  sheetCloseLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: overviewColors.textSecondary,
   },
   pager: {
     flex: 1,

@@ -16,25 +16,39 @@ struct MillenniumNotificationNormalizer {
   // lets this notification be recognized and deliberately dropped instead of saved twice or
   // rejected as unsupported.
   private let genericCardPaymentExpression = try! NSRegularExpression(pattern: #"(?i)płatność"#)
-  // Wallet's own push for a Millennium card reads as three lines — issuer, merchant (with an
-  // optional ", City, Region" suffix), amount — e.g. "Bank Millennium S.A. / Inmedio  Gdańsk,
-  // Pomorskie / 7,49 zł". Whitespace, including the newlines between those lines, is already
-  // collapsed to single spaces before this runs, so it is matched as one line with the merchant
-  // captured lazily up to the trailing amount.
-  private let walletTransactionExpression = try! NSRegularExpression(
-    pattern: #"(?is)^bank millennium s\.a\.?\s+(.+?)\s+([0-9]+(?:[,.][0-9]{1,2})?)\s*zł$"#
+  private let standaloneAmountExpression = try! NSRegularExpression(
+    pattern: #"(?i)^(?:(\p{Sc})\s*)?[-−]?\s*((?:[0-9]{1,3}(?:\s[0-9]{3})+|[0-9]+)(?:[,.][0-9]{1,2})?)\s*(zł|zl|\p{Sc}|[A-Z]{3})?$"#
+  )
+  private let merchantLocationExpression = try! NSRegularExpression(
+    pattern: #"(?i)\s+[^,]+,\s*(?:dolnośląskie|kujawsko-pomorskie|lubelskie|lubuskie|łódzkie|małopolskie|mazowieckie|opolskie|podkarpackie|podlaskie|pomorskie|śląskie|świętokrzyskie|warmińsko-mazurskie|wielkopolskie|zachodniopomorskie)$"#
   )
 
-  func normalize(_ rawText: String, sourceApp: String, capturedAt: Date = Date()) throws -> NormalizationOutcome {
-    let text = rawText
-      .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
-      .trimmingCharacters(in: .whitespacesAndNewlines)
+  struct Amount {
+    let minor: Int
+    let currency: String
+  }
 
-    if let record = cardPayment(text, sourceApp: sourceApp, capturedAt: capturedAt) {
-      return .record(record)
+  func normalize(
+    subtitle: String,
+    body: String,
+    sourceApp: String,
+    capturedAt: Date = Date()
+  ) throws -> NormalizationOutcome {
+    let merchant = collapseWhitespace(subtitle)
+    let text = collapseWhitespace(body)
+
+    if !merchant.isEmpty, let amount = standaloneAmount(text) {
+      return .record(
+        walletTransaction(
+          merchant: merchant,
+          amount: amount,
+          sourceApp: sourceApp,
+          capturedAt: capturedAt
+        )
+      )
     }
 
-    if let record = walletTransaction(text, sourceApp: sourceApp, capturedAt: capturedAt) {
+    if let record = cardPayment(text, sourceApp: sourceApp, capturedAt: capturedAt) {
       return .record(record)
     }
 
@@ -67,9 +81,100 @@ struct MillenniumNotificationNormalizer {
     throw IngestionError.unsupportedNotification
   }
 
+  private func collapseWhitespace(_ value: String) -> String {
+    value
+      .replacingOccurrences(of: #"[^\S ]+"#, with: " ", options: .regularExpression)
+      .replacingOccurrences(of: #" {2,}"#, with: "  ", options: .regularExpression)
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+  }
+
+  private func standaloneAmount(_ text: String) -> Amount? {
+    let range = NSRange(text.startIndex..<text.endIndex, in: text)
+
+    guard let match = standaloneAmountExpression.firstMatch(in: text, range: range),
+      let digitsRange = Range(match.range(at: 2), in: text),
+      let minor = minorUnits(String(text[digitsRange])) else {
+      return nil
+    }
+
+    let prefix = Range(match.range(at: 1), in: text).map { String(text[$0]) }
+    let suffix = Range(match.range(at: 3), in: text).map { String(text[$0]) }
+
+    guard let symbol = suffix ?? prefix else {
+      return nil
+    }
+
+    return Amount(minor: minor, currency: currencyCode(symbol))
+  }
+
+  private func currencyCode(_ symbol: String) -> String {
+    switch symbol.lowercased() {
+    case "zł", "zl": return "PLN"
+    case "€": return "EUR"
+    case "$": return "USD"
+    case "£": return "GBP"
+    case "¥": return "JPY"
+    case "₣": return "CHF"
+    default: return symbol.uppercased()
+    }
+  }
+
+  private func merchantName(_ value: String) -> String {
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    if let separator = trimmed.range(of: "  ") {
+      let name = String(trimmed[trimmed.startIndex..<separator.lowerBound])
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+
+      if !name.isEmpty, isLocationSuffix(String(trimmed[separator.lowerBound...])) {
+        return name
+      }
+    }
+
+    let range = NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)
+
+    guard let match = merchantLocationExpression.firstMatch(in: trimmed, range: range),
+      let suffix = Range(match.range, in: trimmed),
+      suffix.lowerBound != trimmed.startIndex else {
+      return trimmed
+    }
+
+    return String(trimmed[trimmed.startIndex..<suffix.lowerBound])
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+  }
+
+  private func isLocationSuffix(_ text: String) -> Bool {
+    let range = NSRange(text.startIndex..<text.endIndex, in: text)
+    return merchantLocationExpression.firstMatch(in: text, range: range) != nil
+  }
+
   private func isGenericCardPayment(_ text: String) -> Bool {
     let range = NSRange(text.startIndex..<text.endIndex, in: text)
     return genericCardPaymentExpression.firstMatch(in: text, range: range) != nil
+  }
+
+  private func walletTransaction(
+    merchant: String,
+    amount: Amount,
+    sourceApp: String,
+    capturedAt: Date
+  ) -> NormalizedRecord {
+    let timestamp = ISO8601DateFormatter().string(from: capturedAt)
+
+    return NormalizedRecord(
+      id: UUID().uuidString.lowercased(),
+      bank: "millennium",
+      direction: "expense",
+      transactionType: "cardPayment",
+      amountMinor: amount.minor,
+      currency: amount.currency,
+      merchant: merchantName(merchant),
+      accountName: nil,
+      occurredAt: timestamp,
+      capturedAt: timestamp,
+      sourceApp: sourceApp,
+      status: "pending"
+    )
   }
 
   private func cardPayment(_ text: String, sourceApp: String, capturedAt: Date) -> NormalizedRecord? {
@@ -92,35 +197,7 @@ struct MillenniumNotificationNormalizer {
       transactionType: "cardPayment",
       amountMinor: amountMinor,
       currency: String(text[currencyRange]).uppercased(),
-      merchant: String(text[merchantRange]).trimmingCharacters(in: .whitespacesAndNewlines),
-      accountName: nil,
-      occurredAt: timestamp,
-      capturedAt: timestamp,
-      sourceApp: sourceApp,
-      status: "pending"
-    )
-  }
-
-  private func walletTransaction(_ text: String, sourceApp: String, capturedAt: Date) -> NormalizedRecord? {
-    let range = NSRange(text.startIndex..<text.endIndex, in: text)
-
-    guard let match = walletTransactionExpression.firstMatch(in: text, range: range),
-      let merchantRange = Range(match.range(at: 1), in: text),
-      let amountRange = Range(match.range(at: 2), in: text),
-      let amountMinor = minorUnits(String(text[amountRange])) else {
-      return nil
-    }
-
-    let timestamp = ISO8601DateFormatter().string(from: capturedAt)
-
-    return NormalizedRecord(
-      id: UUID().uuidString.lowercased(),
-      bank: "millennium",
-      direction: "expense",
-      transactionType: "cardPayment",
-      amountMinor: amountMinor,
-      currency: "PLN",
-      merchant: String(text[merchantRange]).trimmingCharacters(in: .whitespacesAndNewlines),
+      merchant: merchantName(String(text[merchantRange])),
       accountName: nil,
       occurredAt: timestamp,
       capturedAt: timestamp,
@@ -175,7 +252,10 @@ struct MillenniumNotificationNormalizer {
   }
 
   private func minorUnits(_ value: String) -> Int? {
-    let parts = value.replacingOccurrences(of: ",", with: ".").split(separator: ".")
+    let parts = value
+      .replacingOccurrences(of: #"\s"#, with: "", options: .regularExpression)
+      .replacingOccurrences(of: ",", with: ".")
+      .split(separator: ".")
 
     guard !parts.isEmpty, parts.count <= 2, let whole = Int(parts[0]) else {
       return nil

@@ -17,7 +17,28 @@ synthetic input button for simulator and development-build verification.
 Millennium's card-payment push never names the merchant (only "Płatność kartą debetową: Kwota:
 ..."), so `Capture Millennium Notification` recognizes that shape and deliberately discards it
 rather than saving a poorer-detail duplicate. The merchant name comes from Wallet's own push for
-the same purchase instead (e.g. "Bank Millennium S.A. / Inmedio Gdańsk, Pomorskie / 7,49 zł").
+the same purchase instead.
+
+Observed on device, a Wallet push is three separate notification fields, not one body:
+
+| Field | Value |
+| --- | --- |
+| Title | `Bank Millennium S.A.` |
+| Subtitle | `Lidl  Gdańsk, Pomorskie` |
+| Body | `5,08 zł` |
+
+A bank push fills only the body, with a whole sentence. That difference in shape — not in wording,
+and not in currency — is what the intent reads: it takes the subtitle and the body as two separate
+parameters, and a subtitle alongside a body that is *nothing but an amount* is a Wallet
+transaction. A payment abroad keeps working because the currency is read out of that field rather
+than being what identifies it, and it is recorded instead of being assumed to be PLN.
+
+One automation therefore stays enough, which is what the onboarding needs: one trigger listing
+Wallet plus whichever banks the user monitors, one action, two variables mapped once.
+
+The subtitle also appends the payment's location after a double space. That suffix is stripped when
+it ends in one of the sixteen voivodeships, so the same shop in two cities does not rank as two
+shops. A foreign location has no such marker and stays part of the merchant name.
 
 There is no public API to read another app's notification content or Wallet's transaction history
 directly (`PKPassLibrary` exposes enrolled cards, not a transaction feed) — this still has to go
@@ -51,8 +72,13 @@ Shortcuts app, but it must not claim that it created or enabled the automation.
 1. Install and launch a BankStats development build once so iOS indexes its App Intent.
 2. Open Shortcuts and create a new shortcut named `BankStats — Millennium`.
 3. Add the BankStats action `Capture Millennium Notification`.
-4. Set `Notification Text` to the notification's content (the dynamic "Treść" variable) and leave
-   `Source App` as `com.bankmillennium.mobile`.
+4. Map `Notification Subtitle` to the trigger's **Podtytuł** variable and `Notification Body` to
+   its **Treść**, and leave `Source App` as `pl.millenniumbank.bankmillennium`.
+
+   Both must be mapped. A bank push has no subtitle and a Wallet push needs both, so mapping only
+   the body captures transfers while silently losing every Apple Pay payment — the failure this
+   step exists to prevent. `Source App` is recorded as provenance and matches nothing, so its
+   value never affects capture.
 5. Add the `Notification` automation trigger.
 6. As the notification source, select both `Millennium` and `Portfel` (Wallet) — the trigger
    accepts more than one app, matching on either.
@@ -64,8 +90,15 @@ Shortcuts app, but it must not claim that it created or enabled the automation.
    - Trigger a real or synthetic Millennium debit push containing just "Płatność..." with no
      merchant; confirm it does *not* appear as a record, and the diagnostic card's last-attempt
      status reads `ignored` rather than `failure`.
-   - Trigger the matching Wallet push for the same card (e.g. "Bank Millennium S.A. / SKLEP TEST /
-     12,34 zł"); confirm it *does* appear as a record with the merchant name.
+   - Trigger the matching Wallet push for the same card (subtitle `SKLEP TEST  Gdańsk, Pomorskie`,
+     body `12,34 zł`); confirm it *does* appear as a record whose merchant reads `SKLEP TEST` with
+     the location stripped.
+
+The diagnostic card lives behind the account avatar on the home screen. Its last-attempt line is
+what separates the three failures from each other: no timestamp means the automation never ran,
+`ignored` means Millennium's push arrived but Wallet's did not, and `failure` means Wallet's push
+arrived in a shape the normalizer could not read — most often because the subtitle was left
+unmapped.
 
 ## Validation record
 
