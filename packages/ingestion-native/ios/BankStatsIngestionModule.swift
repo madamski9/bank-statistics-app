@@ -36,6 +36,16 @@ public final class BankStatsIngestionModule: Module {
       try EncryptedOutbox.shared.clear()
     }
 
+    AsyncFunction("saveRecord") { (input: TransactionInput) -> [String: Any] in
+      let record = input.normalized()
+      try EncryptedOutbox.shared.save(record)
+      return record.dictionary
+    }
+
+    AsyncFunction("deleteRecord") { (id: String) -> Int in
+      try EncryptedOutbox.shared.delete(id: id)
+    }
+
     AsyncFunction("listRecords") { () -> [[String: Any]] in
       try EncryptedOutbox.shared.records().map(\.dictionary)
     }

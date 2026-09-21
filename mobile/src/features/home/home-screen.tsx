@@ -1,7 +1,7 @@
 import { useUser } from '@clerk/expo';
 import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -24,7 +24,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { accountInitial } from '@/features/profile/account-identity';
 import { IngestionDiagnosticsCard } from '@/features/ingestion-diagnostics/ingestion-diagnostics-card';
 import { OverviewScreen } from '@/features/overview/overview-screen';
-import { BubbleDetail, type BubbleSelection } from '@/features/spending-overview/bubble-detail';
+import { BubbleDetail } from '@/features/spending-overview/bubble-detail';
+import {
+  bubbleSelectionReducer,
+  initialBubbleSelection,
+} from '@/features/spending-overview/bubble-selection';
 import type { BubbleOrigin } from '@/features/spending-overview/glass-bubble';
 import {
   overviewColors,
@@ -42,6 +46,7 @@ import { MerchantDetail } from '@/features/merchants/merchant-detail';
 import { MerchantsScreen } from '@/features/merchants/merchants-screen';
 import { rankMerchants, type MerchantSpending } from '@/features/merchants/merchant-summary';
 import { ProfileScreen } from '@/features/profile/profile-screen';
+import { affectsStatistics } from '@/features/transactions/transaction-record';
 import { TransactionsScreen } from '@/features/transactions/transactions-screen';
 
 const pages = [
@@ -65,12 +70,16 @@ export function HomeScreen() {
   const pagerRef = useRef<ScrollView>(null);
   const [page, setPage] = useState<PageKey>('overview');
   const [period, setPeriod] = useState<SpendingPeriod>('month');
-  const [selection, setSelection] = useState<BubbleSelection | null>(null);
+  const [{ selection, revision }, dispatchSelection] = useReducer(
+    bubbleSelectionReducer,
+    initialBubbleSelection,
+  );
   const [merchant, setMerchant] = useState<MerchantSpending | null>(null);
   const [activeSheet, setActiveSheet] = useState<SheetKey | null>(null);
   const [titleOffsets, setTitleOffsets] = useState<Partial<Record<PageKey, number>>>({});
   const navOffset = useSharedValue(0);
-  const { error, isLoading, records } = useCapturedSpending();
+  const { error, isLoading, records, refresh } = useCapturedSpending();
+  const countedRecords = useMemo(() => records.filter(affectsStatistics), [records]);
 
   /**
    * One window, shared by every page so the bubbles, the shop ranking and a shop's chart can
@@ -82,12 +91,18 @@ export function HomeScreen() {
   const spendWindow = useMemo(() => periodWindow(period, new Date()), [period, records]);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
   const previousWindow = useMemo(() => previousPeriodWindow(period, new Date()), [period, records]);
-  const summary = useMemo(() => summarizeSpending(records, spendWindow), [records, spendWindow]);
-  const previousSummary = useMemo(
-    () => (previousWindow === null ? null : summarizeSpending(records, previousWindow)),
-    [previousWindow, records],
+  const summary = useMemo(
+    () => summarizeSpending(countedRecords, spendWindow),
+    [countedRecords, spendWindow],
   );
-  const merchants = useMemo(() => rankMerchants(records, spendWindow), [records, spendWindow]);
+  const previousSummary = useMemo(
+    () => (previousWindow === null ? null : summarizeSpending(countedRecords, previousWindow)),
+    [countedRecords, previousWindow],
+  );
+  const merchants = useMemo(
+    () => rankMerchants(countedRecords, spendWindow),
+    [countedRecords, spendWindow],
+  );
 
   const pageIndex = Math.max(
     pages.findIndex((entry) => entry.key === page),
@@ -122,12 +137,12 @@ export function HomeScreen() {
 
   /** Stable, so memoised OverviewScreen survives a selection or a page change untouched. */
   const handleSelectBubble = useCallback((key: BubbleKey, origin: BubbleOrigin) => {
-    setSelection({ key, origin });
+    dispatchSelection({ type: 'select', selection: { key, origin } });
   }, []);
 
   const handleDetailClosed = useCallback(() => {
-    setSelection(null);
-  }, []);
+    dispatchSelection({ type: 'closed', revision });
+  }, [revision]);
 
   const handleMerchantClosed = useCallback(() => {
     setMerchant(null);
@@ -240,6 +255,7 @@ export function HomeScreen() {
       </View>
 
       <ScrollView
+        canCancelContentTouches
         horizontal
         onScroll={handleScroll}
         pagingEnabled
@@ -262,7 +278,12 @@ export function HomeScreen() {
           />
         </View>
         <View style={{ width }}>
-          <TransactionsScreen error={error} isLoading={isLoading} records={records} />
+          <TransactionsScreen
+            error={error}
+            isLoading={isLoading}
+            onChanged={refresh}
+            records={records}
+          />
         </View>
         <View style={{ width }}>
           <MerchantsScreen
@@ -279,6 +300,7 @@ export function HomeScreen() {
       {selection !== null ? (
         <BubbleDetail
           change={selectedChange}
+          key={revision}
           onChangePeriod={setPeriod}
           onClosed={handleDetailClosed}
           period={period}

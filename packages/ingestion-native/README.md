@@ -18,8 +18,14 @@ whichever text arrives:
   made in. The location suffix after the double space is stripped from the merchant when it ends in
   a voivodeship.
 
+A Wallet push whose body carries an amount with no currency symbol is still captured, as a Review
+Item flagged `currency`: the transaction reaches the timeline but stays out of statistics until the
+user confirms the currency.
+
 Records persist in an App Group SQLCipher outbox. The JavaScript API exposes synthetic ingestion
-for both notification shapes, stored records, and storage diagnostics to the mobile application.
+for both notification shapes, stored records, storage diagnostics, and writes — `saveIngestionRecord`
+(insert or replace by identifier, used for manual transactions, corrections and review decisions)
+and `deleteIngestionRecord` — to the mobile application.
 
 See [ADR 0004](../../docs/adr/0004-use-expo-with-native-platform-modules.md),
 [ADR 0015](../../docs/adr/0015-use-a-shared-encrypted-local-outbox.md), and the

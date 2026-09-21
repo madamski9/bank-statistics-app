@@ -1,5 +1,17 @@
 import Foundation
 
+enum NormalizedRecordOrigin {
+  static let capture = "capture"
+  static let manual = "manual"
+}
+
+enum ReviewReason {
+  static let amount = "amount"
+  static let currency = "currency"
+  static let direction = "direction"
+  static let merchant = "merchant"
+}
+
 struct NormalizedRecord: Codable, Sendable {
   let id: String
   let bank: String
@@ -13,6 +25,9 @@ struct NormalizedRecord: Codable, Sendable {
   let capturedAt: String
   let sourceApp: String
   let status: String
+  var origin: String? = nil
+  var review: String? = nil
+  var category: String? = nil
 
   var dictionary: [String: Any] {
     var value: [String: Any] = [
@@ -25,11 +40,14 @@ struct NormalizedRecord: Codable, Sendable {
       "capturedAt": capturedAt,
       "sourceApp": sourceApp,
       "status": status,
+      "origin": origin ?? "capture",
     ]
 
     value["transactionType"] = transactionType
     value["merchant"] = merchant
     value["accountName"] = accountName
+    value["review"] = review
+    value["category"] = category
 
     return value
   }

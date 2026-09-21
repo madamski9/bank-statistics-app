@@ -1,9 +1,19 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { SymbolView } from 'expo-symbols';
-import { memo, useMemo } from 'react';
-import { Platform, SectionList, StyleSheet, Text, View } from 'react-native';
+import { memo, useCallback, useMemo, useState } from 'react';
+import {
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  SectionList,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { impactLight } from '@/haptics';
 import { formatAmount } from '@/features/spending-overview/formatting';
 import {
   overviewColors,
@@ -12,11 +22,23 @@ import {
 import type { SpendingSourceKind } from '@/features/spending-overview/spending-summary';
 
 import { dayKey, formatDayHeading, formatTime } from './format-date';
+import { confirmedRecord } from './manual-transaction';
+import { TransactionEditor } from './transaction-editor';
+import {
+  affectsStatistics,
+  isManualTransaction,
+  transactionBadge,
+  transactionContext,
+  transactionKind,
+  transactionTitle,
+} from './transaction-record';
+import { useTransactionWrites } from './use-transaction-writes';
 
 interface TransactionsScreenProps {
   records: IngestionRecord[];
   error: string | null;
   isLoading: boolean;
+  onChanged: () => void | Promise<void>;
 }
 
 interface DaySection {
@@ -25,6 +47,10 @@ interface DaySection {
   totalMinor: number;
   currency: string;
   data: IngestionRecord[];
+}
+
+interface EditorTarget {
+  record: IngestionRecord | null;
 }
 
 const sourceSymbols = {
@@ -37,17 +63,6 @@ const sourceSymbols = {
   },
   other: { ios: 'square.grid.2x2.fill', android: 'grid_view', web: 'grid_view' },
 } as const satisfies Record<SpendingSourceKind, { ios: string; android: string; web: string }>;
-
-const typeLabels: Record<SpendingSourceKind, string> = {
-  cardPayment: 'Płatność kartą',
-  outgoingTransfer: 'Przelew wychodzący',
-  incomingTransfer: 'Przelew przychodzący',
-  other: 'Inna transakcja',
-};
-
-function recordKind(record: IngestionRecord): SpendingSourceKind {
-  return record.transactionType ?? 'other';
-}
 
 function buildSections(records: IngestionRecord[], reference: Date): DaySection[] {
   const sections = new Map<string, DaySection>();
@@ -64,13 +79,17 @@ function buildSections(records: IngestionRecord[], reference: Date): DaySection[
 
     const key = dayKey(occurredAt);
     const existing = sections.get(key);
-    const signedMinor = record.direction === 'income' ? record.amountMinor : -record.amountMinor;
+    const countedMinor = !affectsStatistics(record)
+      ? 0
+      : record.direction === 'income'
+        ? record.amountMinor
+        : -record.amountMinor;
 
     if (existing === undefined) {
       sections.set(key, {
         key,
         title: formatDayHeading(occurredAt, reference),
-        totalMinor: signedMinor,
+        totalMinor: countedMinor,
         currency: record.currency,
         data: [record],
       });
@@ -78,16 +97,72 @@ function buildSections(records: IngestionRecord[], reference: Date): DaySection[
     }
 
     existing.data.push(record);
-    existing.totalMinor += signedMinor;
+    existing.totalMinor += countedMinor;
   }
 
   return [...sections.values()];
 }
 
 /** The plain log behind the Overview: every captured transaction, newest first. */
-function TransactionsScreenComponent({ records, error, isLoading }: TransactionsScreenProps) {
+function TransactionsScreenComponent({
+  records,
+  error,
+  isLoading,
+  onChanged,
+}: TransactionsScreenProps) {
   const insets = useSafeAreaInsets();
   const sections = useMemo(() => buildSections(records, new Date()), [records]);
+  const [editor, setEditor] = useState<EditorTarget | null>(null);
+  const { clearError, error: writeError, isWriting, remove, save } = useTransactionWrites(onChanged);
+
+  const closeEditor = useCallback(() => {
+    clearError();
+    setEditor(null);
+  }, [clearError]);
+
+  const handleSubmit = useCallback(
+    (record: IngestionRecord) => {
+      void save(record).then((saved) => {
+        if (saved) {
+          closeEditor();
+        }
+      });
+    },
+    [closeEditor, save],
+  );
+
+  const handleConfirm = useCallback(() => {
+    const target = editor?.record;
+
+    if (target === null || target === undefined) {
+      return;
+    }
+
+    handleSubmit(confirmedRecord(target));
+  }, [editor, handleSubmit]);
+
+  const handleDelete = useCallback(() => {
+    const target = editor?.record;
+
+    if (target === null || target === undefined) {
+      return;
+    }
+
+    Alert.alert('Usunąć transakcję?', 'Tej operacji nie można cofnąć.', [
+      { style: 'cancel', text: 'Anuluj' },
+      {
+        style: 'destructive',
+        text: 'Usuń',
+        onPress: () => {
+          void remove(target.id).then((removed) => {
+            if (removed) {
+              closeEditor();
+            }
+          });
+        },
+      },
+    ]);
+  }, [closeEditor, editor, remove]);
 
   const emptyMessage =
     error !== null
@@ -96,73 +171,160 @@ function TransactionsScreenComponent({ records, error, isLoading }: Transactions
         ? 'Przechwytywanie powiadomień działa na razie tylko na iOS.'
         : isLoading
           ? 'Wczytywanie…'
-          : 'Nie przechwycono jeszcze żadnej transakcji. Skonfiguruj automatyzację powiadomień w aplikacji Skróty.';
+          : 'Nie przechwycono jeszcze żadnej transakcji. Skonfiguruj automatyzację powiadomień w aplikacji Skróty albo dodaj transakcję ręcznie.';
 
   return (
-    <SectionList
-      ListEmptyComponent={
-        <Text
-          maxFontSizeMultiplier={1.6}
-          style={[styles.empty, error !== null ? styles.error : null]}
-        >
-          {emptyMessage}
-        </Text>
-      }
-      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
-      indicatorStyle="white"
-      keyExtractor={(record) => record.id}
-      renderItem={({ item }) => {
-        const occurredAt = new Date(item.occurredAt);
-        const isIncome = item.direction === 'income';
-        const label = item.merchant ?? typeLabels[recordKind(item)];
-        const amount = `${isIncome ? '+' : '−'}${formatAmount(item.amountMinor, item.currency)}`;
-
-        return (
-          <View
-            accessible
-            accessibilityLabel={`${label}, ${amount}, ${formatTime(occurredAt)}`}
-            style={styles.row}
+    <View style={styles.screen}>
+      <SectionList
+        ListEmptyComponent={
+          <Text
+            maxFontSizeMultiplier={1.6}
+            style={[styles.empty, error !== null ? styles.error : null]}
           >
-            <View style={styles.icon}>
-              <SymbolView
-                name={sourceSymbols[recordKind(item)]}
-                size={17}
-                tintColor={overviewColors.textSecondary}
-              />
-            </View>
-            <View style={styles.body}>
-              <Text maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.label}>
-                {label}
-              </Text>
-              <Text maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.meta}>
-                {formatTime(occurredAt)}
-                {item.accountName !== undefined ? ` · ${item.accountName}` : ''}
-              </Text>
-            </View>
-            <Text
-              maxFontSizeMultiplier={1.6}
-              style={[styles.amount, isIncome ? styles.amountIncome : null]}
+            {emptyMessage}
+          </Text>
+        }
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 96 }]}
+        indicatorStyle="white"
+        keyExtractor={(record) => record.id}
+        renderItem={({ item }) => {
+          const occurredAt = new Date(item.occurredAt);
+          const isIncome = item.direction === 'income';
+          const isCounted = affectsStatistics(item);
+          const badge = transactionBadge(item);
+          const label = transactionTitle(item);
+          const context = transactionContext(item);
+          const amount = `${isIncome ? '+' : '−'}${formatAmount(item.amountMinor, item.currency)}`;
+
+          return (
+            <Pressable
+              accessibilityHint="Otwiera szczegóły transakcji"
+              accessibilityLabel={[
+                label,
+                amount,
+                context,
+                formatTime(occurredAt),
+                badge?.label,
+              ]
+                .filter((part) => part !== undefined)
+                .join(', ')}
+              accessibilityRole="button"
+              onPress={() => setEditor({ record: item })}
+              style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
             >
-              {amount}
+              <View style={styles.icon}>
+                <SymbolView
+                  name={sourceSymbols[transactionKind(item)]}
+                  size={17}
+                  tintColor={overviewColors.textSecondary}
+                />
+              </View>
+              <View style={styles.body}>
+                <View style={styles.labelRow}>
+                  <Text maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.label}>
+                    {label}
+                  </Text>
+                  {badge !== null ? (
+                    <View
+                      style={[
+                        styles.badge,
+                        badge.tone === 'caution' ? styles.badgeCaution : styles.badgeNeutral,
+                      ]}
+                    >
+                      <Text
+                        maxFontSizeMultiplier={1.3}
+                        style={[
+                          styles.badgeLabel,
+                          badge.tone === 'caution'
+                            ? styles.badgeLabelCaution
+                            : styles.badgeLabelNeutral,
+                        ]}
+                      >
+                        {badge.label}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+                <Text maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.meta}>
+                  {formatTime(occurredAt)} · {context}
+                </Text>
+              </View>
+              <Text
+                maxFontSizeMultiplier={1.6}
+                style={[
+                  styles.amount,
+                  isIncome ? styles.amountIncome : null,
+                  isCounted ? null : styles.amountHeld,
+                ]}
+              >
+                {amount}
+              </Text>
+            </Pressable>
+          );
+        }}
+        renderSectionHeader={({ section }) => (
+          <View style={styles.sectionHeader}>
+            <Text maxFontSizeMultiplier={1.6} style={styles.sectionTitle}>
+              {section.title}
+            </Text>
+            <Text maxFontSizeMultiplier={1.6} style={styles.sectionTotal}>
+              {section.totalMinor < 0 ? '−' : '+'}
+              {formatAmount(section.totalMinor, section.currency)}
             </Text>
           </View>
-        );
-      }}
-      renderSectionHeader={({ section }) => (
-        <View style={styles.sectionHeader}>
-          <Text maxFontSizeMultiplier={1.6} style={styles.sectionTitle}>
-            {section.title}
-          </Text>
-          <Text maxFontSizeMultiplier={1.6} style={styles.sectionTotal}>
-            {section.totalMinor < 0 ? '−' : '+'}
-            {formatAmount(section.totalMinor, section.currency)}
-          </Text>
-        </View>
-      )}
-      sections={sections}
-      stickySectionHeadersEnabled
-      style={styles.list}
-    />
+        )}
+        sections={sections}
+        stickySectionHeadersEnabled
+        style={styles.list}
+      />
+
+      <Pressable
+        accessibilityHint="Otwiera formularz ręcznej transakcji"
+        accessibilityLabel="Dodaj transakcję"
+        accessibilityRole="button"
+        hitSlop={8}
+        onPress={() => {
+          impactLight();
+          setEditor({ record: null });
+        }}
+        style={({ pressed }) => [
+          styles.addButton,
+          { bottom: insets.bottom + 24 },
+          pressed ? styles.pressed : null,
+        ]}
+      >
+        <SymbolView
+          name={{ ios: 'plus', android: 'add', web: 'add' }}
+          size={19}
+          tintColor={overviewColors.background}
+        />
+      </Pressable>
+
+      <Modal
+        animationType="slide"
+        backdropColor={overviewColors.background}
+        onRequestClose={closeEditor}
+        presentationStyle="pageSheet"
+        visible={editor !== null}
+      >
+        {editor !== null ? (
+          <TransactionEditor
+            isWriting={isWriting}
+            key={editor.record?.id ?? 'new'}
+            onCancel={closeEditor}
+            onConfirm={editor.record?.review === undefined ? undefined : handleConfirm}
+            onDelete={
+              editor.record !== null && isManualTransaction(editor.record)
+                ? handleDelete
+                : undefined
+            }
+            onSubmit={handleSubmit}
+            record={editor.record}
+            writeError={writeError}
+          />
+        ) : null}
+      </Modal>
+    </View>
   );
 }
 
@@ -170,6 +332,9 @@ function TransactionsScreenComponent({ records, error, isLoading }: Transactions
 export const TransactionsScreen = memo(TransactionsScreenComponent);
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
   list: {
     flex: 1,
   },
@@ -199,7 +364,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    marginHorizontal: -8,
+    paddingHorizontal: 8,
     paddingVertical: 10,
+    borderRadius: 14,
+  },
+  rowPressed: {
+    backgroundColor: overviewColors.surface,
   },
   icon: {
     width: 34,
@@ -215,10 +386,37 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   label: {
+    flexShrink: 1,
     fontSize: 15,
     fontWeight: '500',
     color: overviewColors.textPrimary,
+  },
+  badge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 7,
+  },
+  badgeCaution: {
+    backgroundColor: 'rgba(255, 196, 107, 0.16)',
+  },
+  badgeNeutral: {
+    backgroundColor: overviewColors.surfacePressed,
+  },
+  badgeLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  badgeLabelCaution: {
+    color: overviewColors.caution,
+  },
+  badgeLabelNeutral: {
+    color: overviewColors.textSecondary,
   },
   meta: {
     fontSize: 12,
@@ -232,6 +430,22 @@ const styles = StyleSheet.create({
   },
   amountIncome: {
     color: overviewColors.positive,
+  },
+  amountHeld: {
+    color: overviewColors.textSecondary,
+  },
+  addButton: {
+    position: 'absolute',
+    right: overviewSpacing.gutter,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 22,
+    backgroundColor: overviewColors.textPrimary,
+  },
+  pressed: {
+    opacity: 0.6,
   },
   empty: {
     paddingTop: overviewSpacing.section,

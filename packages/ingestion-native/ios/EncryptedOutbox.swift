@@ -20,11 +20,29 @@ final class EncryptedOutbox: @unchecked Sendable {
     return outcome
   }
 
+  func save(_ record: NormalizedRecord) throws {
+    try persist(record)
+  }
+
+  func delete(id: String) throws -> Int {
+    try queue.sync {
+      let database = try openDatabase()
+      defer { sqlite3_close(database) }
+      let sql = "DELETE FROM outbox WHERE id = ?"
+      var statement: OpaquePointer?
+      try check(sqlite3_prepare_v2(database, sql, -1, &statement, nil), database)
+      defer { sqlite3_finalize(statement) }
+      try check(sqlite3_bind_text(statement, 1, id, -1, transient), database)
+      try check(sqlite3_step(statement), database, accepted: [SQLITE_DONE])
+      return Int(sqlite3_changes(database))
+    }
+  }
+
   private func persist(_ record: NormalizedRecord) throws {
     try queue.sync {
       let database = try openDatabase()
       defer { sqlite3_close(database) }
-      let sql = "INSERT INTO outbox (id, payload, captured_at) VALUES (?, ?, ?)"
+      let sql = "INSERT OR REPLACE INTO outbox (id, payload, captured_at) VALUES (?, ?, ?)"
       var statement: OpaquePointer?
       try check(sqlite3_prepare_v2(database, sql, -1, &statement, nil), database)
       defer { sqlite3_finalize(statement) }
@@ -137,7 +155,8 @@ final class EncryptedOutbox: @unchecked Sendable {
           NormalizedRecord.self,
           from: Data(bytes: bytes, count: length)
         ),
-        record.merchant == SyntheticSample.merchant
+        record.merchant == SyntheticSample.merchant,
+        record.origin != NormalizedRecordOrigin.manual
       {
         identifiers.append(String(cString: identifier))
       }
