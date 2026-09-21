@@ -8,21 +8,26 @@ public struct IngestMillenniumNotificationIntent: AppIntent {
   )
   public static let supportedModes: IntentModes = .background
 
-  @Parameter(title: "Notification Text")
-  public var notificationText: String
+  @Parameter(title: "Notification Subtitle")
+  public var notificationSubtitle: String
+
+  @Parameter(title: "Notification Body")
+  public var notificationBody: String
 
   @Parameter(title: "Source App")
   public var sourceApp: String
 
   public init() {
-    notificationText = ""
-    sourceApp = "com.bankmillennium.mobile"
+    notificationSubtitle = ""
+    notificationBody = ""
+    sourceApp = "pl.millenniumbank.bankmillennium"
   }
 
   public func perform() async throws -> some IntentResult & ProvidesDialog {
     do {
       let outcome = try EncryptedOutbox.shared.ingest(
-        rawText: notificationText,
+        subtitle: notificationSubtitle,
+        body: notificationBody,
         sourceApp: sourceApp
       )
       switch outcome {

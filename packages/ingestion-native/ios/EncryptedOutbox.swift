@@ -7,8 +7,12 @@ final class EncryptedOutbox: @unchecked Sendable {
   private let queue = DispatchQueue(label: "com.bankstats.ingestion.outbox")
   private let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
-  func ingest(rawText: String, sourceApp: String) throws -> NormalizationOutcome {
-    let outcome = try MillenniumNotificationNormalizer().normalize(rawText, sourceApp: sourceApp)
+  func ingest(subtitle: String, body: String, sourceApp: String) throws -> NormalizationOutcome {
+    let outcome = try MillenniumNotificationNormalizer().normalize(
+      subtitle: subtitle,
+      body: body,
+      sourceApp: sourceApp
+    )
     guard case .record(let record) = outcome else {
       return outcome
     }
