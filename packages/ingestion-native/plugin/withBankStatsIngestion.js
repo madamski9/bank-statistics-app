@@ -44,11 +44,31 @@ function withBankStatsIngestion(config) {
   config = withPodfile(config, (result) => {
     const target = /target '[^']+' do\n/;
     const dependency = "  pod 'SQLCipher', '~> 4.10.0', :modular_headers => true\n";
+    const postInstall = `  post_install do |installer|\n`;
+    const sqlCipherDefinitionsFix = `    installer.aggregate_targets.each do |aggregate_target|
+      aggregate_target.xcconfigs.each do |configuration_name, xcconfig|
+        definitions = xcconfig.attributes['GCC_PREPROCESSOR_DEFINITIONS']
+        next unless definitions
+        xcconfig.attributes['GCC_PREPROCESSOR_DEFINITIONS'] = definitions
+          .split
+          .reject { |definition| ['_SQLITE3_H_=1', '_FTS5_H=1', '_SQLITE3RTREE_H_=1'].include?(definition) }
+          .join(' ')
+        xcconfig.save_as(aggregate_target.xcconfig_path(configuration_name))
+      end
+    end
+`;
 
     if (!result.modResults.contents.includes(dependency)) {
       result.modResults.contents = result.modResults.contents.replace(
         target,
         (match) => `${match}${dependency}`,
+      );
+    }
+
+    if (!result.modResults.contents.includes(sqlCipherDefinitionsFix)) {
+      result.modResults.contents = result.modResults.contents.replace(
+        postInstall,
+        `${postInstall}${sqlCipherDefinitionsFix}`,
       );
     }
 
