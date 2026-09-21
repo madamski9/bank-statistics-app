@@ -2,13 +2,13 @@ import { memo, useCallback, useEffect, useRef } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
+  cancelAnimation,
   ReduceMotion,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withDelay,
   withRepeat,
-  withSequence,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
@@ -18,13 +18,14 @@ import { impactLight } from '@/haptics';
 import { BubbleSkin } from './bubble-skin';
 import { bubbleTints, overviewColors, overviewMotion, type BubbleKey } from './overview-theme';
 
-const EASE_IN_OUT = Easing.bezier(0.77, 0, 0.175, 1);
+const EASE_IN_OUT = Easing.inOut(Easing.sin);
 
-/** Where a bubble sits on screen, handed to the detail so it can expand from exactly there. */
 export interface BubbleOrigin {
   x: number;
   y: number;
   size: number;
+  scaleX: number;
+  scaleY: number;
 }
 
 interface GlassBubbleProps {
@@ -34,7 +35,6 @@ interface GlassBubbleProps {
   value: string;
   caption?: string;
   accessibilityLabel: string;
-  /** Staggers the idle drift so the three bubbles never breathe in unison. */
   driftSeed: number;
   onSelect: (key: BubbleKey, origin: BubbleOrigin) => void;
 }
@@ -55,9 +55,9 @@ function GlassBubbleComponent({
 }: GlassBubbleProps) {
   const reducedMotion = useReducedMotion();
   const containerRef = useRef<View>(null);
-  const origin = useRef<BubbleOrigin>({ x: 0, y: 0, size });
   const scale = useSharedValue(1);
   const squash = useSharedValue(0);
+  const illumination = useSharedValue(0);
   const driftX = useSharedValue(0);
   const driftY = useSharedValue(0);
 
@@ -85,50 +85,44 @@ function GlassBubbleComponent({
         ),
       ),
     );
+    return () => {
+      cancelAnimation(driftX);
+      cancelAnimation(driftY);
+    };
   }, [amplitude, driftSeed, driftX, driftY, reducedMotion]);
 
   const pushIn = useCallback(() => {
-    scale.set(withSpring(0.93, { ...overviewMotion.pushIn, reduceMotion: ReduceMotion.System }));
+    illumination.set(withTiming(1, { duration: 90, reduceMotion: ReduceMotion.System }));
+    if (reducedMotion) {
+      return;
+    }
+    scale.set(withSpring(0.92, { ...overviewMotion.pushIn, reduceMotion: ReduceMotion.System }));
     squash.set(withSpring(1, { ...overviewMotion.pushIn, reduceMotion: ReduceMotion.System }));
-    /**
-     * Measured on press-in, not on the tap: measureInWindow is a round trip to native, and on
-     * the tap it sits in front of the transition. By lift-off the answer is already here.
-     */
-    containerRef.current?.measureInWindow((x, y, measuredWidth, measuredHeight) => {
-      origin.current = { x: x + measuredWidth / 2, y: y + measuredHeight / 2, size };
-    });
-  }, [origin, scale, size, squash]);
+  }, [illumination, reducedMotion, scale, squash]);
 
-  /** Release: overshoot, then a long loose wobble — a film rebounding, not a button. */
-  const release = useCallback(
-    (committed: boolean) => {
-      scale.set(
-        withSequence(
-          withSpring(committed ? 1.11 : 1.04, {
-            ...overviewMotion.rebound,
-            reduceMotion: ReduceMotion.System,
-          }),
-          withSpring(1, { ...overviewMotion.settle, reduceMotion: ReduceMotion.System }),
-        ),
-      );
-      squash.set(
-        withSequence(
-          withSpring(committed ? -0.9 : -0.4, {
-            ...overviewMotion.rebound,
-            reduceMotion: ReduceMotion.System,
-          }),
-          withSpring(0, { ...overviewMotion.settle, reduceMotion: ReduceMotion.System }),
-        ),
-      );
-    },
-    [scale, squash],
-  );
+  const release = useCallback(() => {
+    illumination.set(withTiming(0, { duration: 260, reduceMotion: ReduceMotion.System }));
+    scale.set(withSpring(1, { ...overviewMotion.rebound, reduceMotion: ReduceMotion.System }));
+    squash.set(withSpring(0, { ...overviewMotion.rebound, reduceMotion: ReduceMotion.System }));
+  }, [illumination, scale, squash]);
 
   const handlePress = useCallback(() => {
-    release(true);
     impactLight();
-    onSelect(tint, origin.current);
-  }, [onSelect, origin, release, tint]);
+    containerRef.current?.measureInWindow((x, y, measuredWidth, measuredHeight) => {
+      if (measuredWidth <= 0 || measuredHeight <= 0) {
+        return;
+      }
+      const currentScale = scale.get();
+      const currentSquash = squash.get();
+      onSelect(tint, {
+        x: x + measuredWidth / 2 + driftX.get(),
+        y: y + measuredHeight / 2 + driftY.get(),
+        size,
+        scaleX: currentScale * (1 + currentSquash * 0.065),
+        scaleY: currentScale * (1 - currentSquash * 0.065),
+      });
+    });
+  }, [driftX, driftY, onSelect, scale, size, squash, tint]);
 
   const bubbleStyle = useAnimatedStyle(() => {
     const currentScale = scale.get();
@@ -138,11 +132,15 @@ function GlassBubbleComponent({
       transform: [
         { translateX: driftX.get() },
         { translateY: driftY.get() },
-        { scaleX: currentScale * (1 + currentSquash * 0.07) },
-        { scaleY: currentScale * (1 - currentSquash * 0.07) },
+        { scaleX: currentScale * (1 + currentSquash * 0.065) },
+        { scaleY: currentScale * (1 - currentSquash * 0.065) },
       ],
     };
   });
+
+  const illuminationStyle = useAnimatedStyle(() => ({
+    opacity: illumination.get() * 0.75,
+  }));
 
   const valueFontSize = clamp(size * 0.145, 13, 34);
   const labelFontSize = clamp(size * 0.056, 10, 13);
@@ -154,18 +152,16 @@ function GlassBubbleComponent({
       accessibilityRole="button"
       onPress={handlePress}
       onPressIn={pushIn}
-      onPressOut={() => release(false)}
+      onPressOut={release}
       pressRetentionOffset={16}
       ref={containerRef}
       style={({ pressed }) => [
         { width: size, height: size },
-        pressed ? styles.pressed : null,
+        pressed && reducedMotion ? styles.pressed : null,
       ]}
     >
       <Animated.View style={[styles.bubble, bubbleStyle]}>
-        {/* iOS only paints a shadow for a layer that has a background, hence the tinted disc. */}
         <View
-          shouldRasterizeIOS
           style={[
             styles.glow,
             {
@@ -183,6 +179,20 @@ function GlassBubbleComponent({
           ]}
         />
         <BubbleSkin size={size} tint={tint} />
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              borderRadius: size / 2,
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.55)',
+              experimental_backgroundImage:
+                'radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.08) 42%, rgba(255, 255, 255, 0) 72%)',
+            },
+            illuminationStyle,
+          ]}
+        />
         <View style={[styles.content, { paddingHorizontal: size * 0.14 }]}>
           <Text
             maxFontSizeMultiplier={1.2}
@@ -226,7 +236,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  /** Reduced-motion users get this instead of the rebound. */
   pressed: {
     opacity: 0.82,
   },
@@ -256,8 +265,4 @@ const styles = StyleSheet.create({
   },
 });
 
-/**
- * Memoised: selecting a bubble or crossing a page boundary re-renders the shell, and nothing
- * about that should rebuild three bubbles' worth of gradient layers mid-transition.
- */
 export const GlassBubble = memo(GlassBubbleComponent);

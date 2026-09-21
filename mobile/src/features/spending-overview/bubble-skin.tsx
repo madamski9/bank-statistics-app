@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { bubbleTints, type BubbleKey } from './overview-theme';
@@ -7,19 +8,6 @@ interface BubbleSkinProps {
   tint: BubbleKey;
 }
 
-/**
- * The soap-film look, built from stacked radial gradients: a body that is nearly empty in the
- * middle, two off-centre colour bands that catch opposite edges, iridescent washes, a specular
- * highlight and the light that bounces back off the far wall of the film. Gradients are used
- * rather than a blur because `filter: blur` is Android-only in RN 0.86.
- *
- * Every band is drawn from a gradient circle whose centre sits off the bubble's own centre, so
- * each one lands as an uneven arc instead of an even ring — an even ring reads as an outline.
- */
-/**
- * A washed-out version of the film's own colour: white enough to read as a glass edge, tinted
- * enough that it never looks like a drawn outline.
- */
 function glassEdge(rgb: string, whiteness: number, alpha: number): string {
   const channels = rgb.split(',').map((channel) => Number(channel.trim()));
   const washed = channels.map((channel) => Math.round(channel + (255 - channel) * whiteness));
@@ -27,10 +15,12 @@ function glassEdge(rgb: string, whiteness: number, alpha: number): string {
   return `rgba(${washed.join(', ')}, ${alpha})`;
 }
 
-export function BubbleSkin({ size, tint }: BubbleSkinProps) {
+function BubbleSkinComponent({ size: displaySize, tint }: BubbleSkinProps) {
+  const renderScale = 1.5;
+  const size = displaySize * renderScale;
   const { rgb, rgbSecondary } = bubbleTints[tint];
   const radius = size / 2;
-  const highlight = { width: size * 0.36, height: size * 0.24, borderRadius: size * 0.18 };
+  const highlight = { width: size * 0.36, height: size * 0.18, borderRadius: size * 0.18 };
   const bounce = { width: size * 0.62, height: size * 0.3, borderRadius: size * 0.31 };
   const sparkle = { width: size * 0.12, height: size * 0.09, borderRadius: size * 0.06 };
 
@@ -40,40 +30,67 @@ export function BubbleSkin({ size, tint }: BubbleSkinProps) {
   ];
 
   return (
-    <View pointerEvents="none" style={[styles.clip, { borderRadius: radius }]}>
+    <View
+      pointerEvents="none"
+      style={[
+        styles.clip,
+        {
+          width: size,
+          height: size,
+          left: (displaySize - size) / 2,
+          top: (displaySize - size) / 2,
+          borderRadius: radius,
+          transform: [{ scale: 1 / renderScale }],
+        },
+      ]}
+    >
       <View
         style={layer(
-          `radial-gradient(circle at 50% 50%, rgba(${rgb}, 0.07) 0%, rgba(${rgb}, 0.03) 44%, rgba(${rgb}, 0.12) 72%, rgba(${rgb}, 0.30) 88%, rgba(${rgb}, 0.16) 96%, rgba(${rgb}, 0) 100%)`,
+          `radial-gradient(circle at 48% 44%, rgba(${rgb}, 0.07) 0%, rgba(${rgb}, 0.025) 46%, rgba(${rgb}, 0.12) 72%, rgba(${rgb}, 0.36) 90%, rgba(${rgb}, 0.62) 97%, rgba(${rgb}, 0.18) 100%)`,
         )}
       />
       <View
         style={layer(
-          `radial-gradient(circle at 62% 66%, rgba(${rgb}, 0) 58%, rgba(${rgb}, 0.50) 84%, rgba(${rgb}, 0) 100%)`,
+          `radial-gradient(circle at 62% 66%, rgba(${rgb}, 0) 58%, rgba(${rgb}, 0.58) 84%, rgba(${rgb}, 0) 100%)`,
         )}
       />
       <View
         style={layer(
-          `radial-gradient(circle at 36% 32%, rgba(${rgbSecondary}, 0) 56%, rgba(${rgbSecondary}, 0.46) 82%, rgba(${rgbSecondary}, 0) 100%)`,
+          `radial-gradient(circle at 36% 32%, rgba(${rgbSecondary}, 0) 56%, rgba(${rgbSecondary}, 0.52) 82%, rgba(${rgbSecondary}, 0) 100%)`,
         )}
       />
       <View
         style={layer(
-          'radial-gradient(circle at 22% 18%, rgba(140, 210, 255, 0.34) 0%, rgba(140, 210, 255, 0) 54%)',
+          'radial-gradient(circle at 22% 18%, rgba(180, 225, 255, 0.24) 0%, rgba(140, 210, 255, 0) 48%)',
         )}
       />
       <View
         style={layer(
-          'radial-gradient(circle at 82% 84%, rgba(255, 150, 230, 0.30) 0%, rgba(255, 150, 230, 0) 52%)',
+          'radial-gradient(circle at 82% 84%, rgba(255, 180, 230, 0.20) 0%, rgba(255, 150, 230, 0) 46%)',
         )}
       />
-      {/* Light that crossed the bubble and bounced off the far wall. */}
+      <View
+        style={layer(
+          'radial-gradient(ellipse at 36% 26%, rgba(255, 255, 255, 0.20) 0%, rgba(255, 255, 255, 0.06) 32%, rgba(255, 255, 255, 0) 58%)',
+        )}
+      />
+      <View
+        style={layer(
+          'radial-gradient(ellipse at 66% 62%, rgba(0, 0, 0, 0) 28%, rgba(0, 0, 0, 0.24) 65%, rgba(0, 0, 0, 0) 88%)',
+        )}
+      />
+      <View
+        style={layer(
+          'radial-gradient(ellipse at 42% 38%, rgba(255, 255, 255, 0) 64%, rgba(255, 255, 255, 0.06) 77%, rgba(255, 255, 255, 0.72) 86%, rgba(255, 255, 255, 0.12) 89%, rgba(255, 255, 255, 0) 93%)',
+        )}
+      />
       <View
         style={[
           styles.lit,
           bounce,
           { left: size * 0.19, top: size * 0.62 },
           {
-            experimental_backgroundImage: `radial-gradient(ellipse at 50% 50%, rgba(${rgbSecondary}, 0.30) 0%, rgba(${rgbSecondary}, 0.08) 52%, rgba(${rgbSecondary}, 0) 76%)`,
+            experimental_backgroundImage: `radial-gradient(ellipse at 50% 50%, rgba(${rgbSecondary}, 0.48) 0%, rgba(${rgbSecondary}, 0.08) 52%, rgba(${rgbSecondary}, 0) 76%)`,
           },
         ]}
       />
@@ -85,7 +102,7 @@ export function BubbleSkin({ size, tint }: BubbleSkinProps) {
           { left: size * 0.16, top: size * 0.13 },
           {
             experimental_backgroundImage:
-              'radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.18) 46%, rgba(255, 255, 255, 0) 72%)',
+              'radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.78) 18%, rgba(255, 255, 255, 0.22) 38%, rgba(255, 255, 255, 0) 72%)',
           },
         ]}
       />
@@ -104,7 +121,11 @@ export function BubbleSkin({ size, tint }: BubbleSkinProps) {
       <View
         style={[
           styles.edge,
-          { borderRadius: radius, borderColor: glassEdge(rgb, 0.62, 0.55) },
+          {
+            borderRadius: radius,
+            borderColor: glassEdge(rgb, 0.88, 0.5),
+            borderWidth: StyleSheet.hairlineWidth * renderScale,
+          },
         ]}
       />
     </View>
@@ -116,8 +137,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    right: 0,
-    bottom: 0,
     overflow: 'hidden',
   },
   lit: {
@@ -132,7 +151,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    /** A hairline is one physical pixel and disappears into the anti-aliased edge. */
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
   },
 });
+
+export const BubbleSkin = memo(BubbleSkinComponent);

@@ -8,19 +8,20 @@ import {
   Text,
   View,
   useWindowDimensions,
-  type LayoutChangeEvent,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
+  Easing,
   ReduceMotion,
+  cancelAnimation,
   interpolate,
   useAnimatedReaction,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withDelay,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -53,7 +54,6 @@ interface BubbleDetailProps {
   change: number | null;
   period: SpendingPeriod;
   onChangePeriod: (period: SpendingPeriod) => void;
-  /** Called once the collapse animation has finished, so the overlay can unmount. */
   onClosed: () => void;
 }
 
@@ -77,16 +77,6 @@ const titles: Record<BubbleKey, string> = {
   net: 'Przepływ',
 };
 
-/** Dragging down unwinds the same value the expansion runs on, so the gesture reverses it. */
-function effectiveProgress(openness: number, dragged: number, viewportHeight: number): number {
-  'worklet';
-
-  return (
-    openness *
-    (1 - interpolate(dragged, [0, viewportHeight * 0.6], [0, 0.85], Extrapolation.CLAMP))
-  );
-}
-
 export function BubbleDetail({
   selection,
   summary,
@@ -101,12 +91,9 @@ export function BubbleDetail({
   const progress = useSharedValue(0);
   const drag = useSharedValue(0);
   const dragContext = useSharedValue(0);
-  /** Starts where the tapped bubble's rebound left it, so the film takes over without a jump. */
-  const pop = useSharedValue(1.11);
+  const dismissal = useSharedValue(0);
+  const closing = useSharedValue(false);
   const [contentReady, setContentReady] = useState(false);
-  const [amountAnchor, setAmountAnchor] = useState<{ x: number; y: number; scale: number } | null>(
-    null,
-  );
 
   const { key, origin } = selection;
   const tint = bubbleTints[key];
@@ -118,13 +105,9 @@ export function BubbleDetail({
 
   useEffect(() => {
     progress.set(
-      withDelay(
-        reducedMotion ? 0 : 60,
-        withSpring(1, { ...overviewMotion.transition, reduceMotion: ReduceMotion.System }),
-      ),
+      withSpring(1, { ...overviewMotion.transition, reduceMotion: ReduceMotion.System }),
     );
-    pop.set(withSpring(1, { ...overviewMotion.settle, reduceMotion: ReduceMotion.System }));
-  }, [pop, progress, reducedMotion]);
+  }, [progress]);
 
   /**
    * The breakdown is the expensive half of this screen — a list, its icons and the switcher.
@@ -141,26 +124,43 @@ export function BubbleDetail({
   );
 
   const requestClose = useCallback(() => {
+    if (closing.get()) {
+      return;
+    }
+    closing.set(true);
     impactLight();
-    drag.set(withSpring(0, overviewMotion.dismiss));
-    progress.set(
-      withSpring(0, { ...overviewMotion.dismiss, reduceMotion: ReduceMotion.System }, (finished) => {
-        if (finished) {
-          scheduleOnRN(onClosed);
-        }
-      }),
+    cancelAnimation(progress);
+    cancelAnimation(drag);
+    dismissal.set(
+      withTiming(
+        1,
+        {
+          duration: overviewMotion.exitDuration,
+          easing: Easing.out(Easing.cubic),
+          reduceMotion: ReduceMotion.System,
+        },
+        (finished) => {
+          if (finished) {
+            scheduleOnRN(onClosed);
+          }
+        },
+      ),
     );
-  }, [drag, onClosed, progress]);
+  }, [closing, dismissal, drag, onClosed, progress]);
 
   /** Attached to the header only, so the breakdown list keeps its own scroll gesture. */
   const pan = useMemo(
     () =>
       Gesture.Pan()
         .activeOffsetY([-12, 12])
+        .failOffsetX([-20, 20])
         .onStart(() => {
           dragContext.set(drag.get());
         })
         .onUpdate((event) => {
+          if (dismissal.get() > 0) {
+            return;
+          }
           const next = dragContext.get() + event.translationY;
 
           drag.set(next >= 0 ? next : rubberband(next, height));
@@ -181,18 +181,36 @@ export function BubbleDetail({
               reduceMotion: ReduceMotion.System,
             }),
           );
+        })
+        .onFinalize((_event, success) => {
+          if (!success && dismissal.get() === 0) {
+            drag.set(withSpring(0, { ...overviewMotion.dismiss, reduceMotion: ReduceMotion.System }));
+          }
         }),
-    [drag, dragContext, height, requestClose],
+    [dismissal, drag, dragContext, height, requestClose],
   );
 
+  const overlayStyle = useAnimatedStyle(() => ({
+    opacity:
+      (1 - dismissal.get()) *
+      interpolate(drag.get(), [0, height * 0.6], [1, 0.35], Extrapolation.CLAMP),
+    transform: reducedMotion
+      ? []
+      : [
+          { translateY: drag.get() * 0.45 + dismissal.get() * 18 },
+          { scale: 1 - dismissal.get() * 0.025 },
+        ],
+  }));
+
   const filmStyle = useAnimatedStyle(() => {
-    const value = effectiveProgress(progress.get(), drag.get(), height);
+    const value = progress.get();
 
     return {
       transform: [
         { translateX: centerOffsetX * value },
-        { translateY: centerOffsetY * value + drag.get() * 0.25 },
-        { scale: (1 + (coverScale - 1) * value) * pop.get() },
+        { translateY: centerOffsetY * value },
+        { scaleX: interpolate(value, [0, 1], [origin.scaleX, coverScale]) },
+        { scaleY: interpolate(value, [0, 1], [origin.scaleY, coverScale]) },
       ],
       opacity: interpolate(value, [0, 0.06], [0, 1], Extrapolation.CLAMP),
     };
@@ -200,7 +218,7 @@ export function BubbleDetail({
 
   const scrimStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
-      effectiveProgress(progress.get(), drag.get(), height),
+      progress.get(),
       [0, 0.5],
       [0, 1],
       Extrapolation.CLAMP,
@@ -213,7 +231,7 @@ export function BubbleDetail({
    */
   const skinStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
-      effectiveProgress(progress.get(), drag.get(), height),
+      progress.get(),
       [0, 0.55],
       [1, 0.1],
       Extrapolation.CLAMP,
@@ -221,45 +239,13 @@ export function BubbleDetail({
   }));
 
   const contentStyle = useAnimatedStyle(() => {
-    const value = effectiveProgress(progress.get(), drag.get(), height);
+    const value = progress.get();
 
     return {
-      opacity: interpolate(value, [0.45, 0.95], [0, 1], Extrapolation.CLAMP),
-      transform: [{ translateY: drag.get() * 0.9 }],
+      opacity: interpolate(value, [0.25, 0.85], [0, 1], Extrapolation.CLAMP),
+      transform: [{ translateY: reducedMotion ? 0 : (1 - value) * 16 }],
     };
   });
-
-  /** The amount flies from the middle of the bubble to its anchored position in the header. */
-  const amountStyle = useAnimatedStyle(() => {
-    const value = effectiveProgress(progress.get(), drag.get(), height);
-    const fromX = amountAnchor === null ? 0 : origin.x - amountAnchor.x;
-    const fromY = amountAnchor === null ? 0 : origin.y - amountAnchor.y;
-    const fromScale = amountAnchor?.scale ?? 1;
-
-    return {
-      transform: [
-        { translateX: interpolate(value, [0, 1], [fromX, 0]) },
-        { translateY: interpolate(value, [0, 1], [fromY, 0]) },
-        { scale: interpolate(value, [0, 1], [fromScale, 1]) },
-      ],
-    };
-  });
-
-  /** Header coordinates are relative to the content box, so lift them into window space. */
-  const handleAmountLayout = (event: LayoutChangeEvent) => {
-    const { x, y, width: amountWidth, height: amountHeight } = event.nativeEvent.layout;
-    const next = {
-      x: x + horizontalPadding + amountWidth / 2,
-      y: y + insets.top + 6 + amountHeight / 2,
-      scale: (origin.size * 0.145) / detailAmountFontSize,
-    };
-
-    setAmountAnchor((current) =>
-      current !== null && current.x === next.x && current.y === next.y && current.scale === next.scale
-        ? current
-        : next,
-    );
-  };
 
   const option = periodOption(period);
   const amountMinor =
@@ -273,7 +259,11 @@ export function BubbleDetail({
   const sources: SpendingSource[] = key === 'income' ? summary.incomeSources : summary.sources;
 
   return (
-    <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+    <Animated.View
+      accessibilityViewIsModal
+      onAccessibilityEscape={requestClose}
+      style={[StyleSheet.absoluteFill, overlayStyle]}
+    >
       <Animated.View pointerEvents="none" style={[styles.scrim, scrimStyle]} />
       <Animated.View
         pointerEvents="none"
@@ -324,7 +314,7 @@ export function BubbleDetail({
               </Pressable>
             </View>
 
-            <Animated.View onLayout={handleAmountLayout} style={[styles.amountBlock, amountStyle]}>
+            <View style={styles.amountBlock}>
               <Text
                 adjustsFontSizeToFit
                 maxFontSizeMultiplier={1.4}
@@ -334,7 +324,7 @@ export function BubbleDetail({
               >
                 {amount}
               </Text>
-            </Animated.View>
+            </View>
 
             <View style={styles.metaRow}>
               <Text maxFontSizeMultiplier={1.6} style={styles.meta}>
@@ -450,7 +440,7 @@ export function BubbleDetail({
           ) : null}
         </ScrollView>
       </Animated.View>
-    </View>
+    </Animated.View>
   );
 }
 

@@ -59,12 +59,10 @@ export const overviewSpacing = {
 
 export const overviewMotion = {
   /** Finger lands: the film dents in. */
-  pushIn: { duration: 260, dampingRatio: 0.9 },
+  pushIn: { duration: 110, dampingRatio: 1 },
   /** Finger leaves: it springs past its resting size before settling. */
-  rebound: { duration: 320, dampingRatio: 0.5 },
-  /** The long, loose wobble that follows the rebound. */
-  settle: { duration: 1100, dampingRatio: 0.3 },
-  /** Opening and closing the detail. */
-  transition: { duration: 460, dampingRatio: 0.86 },
+  rebound: { duration: 460, dampingRatio: 0.55 },
+  transition: { duration: 420, dampingRatio: 1, overshootClamping: true },
+  exitDuration: 200,
   dismiss: { duration: 320, dampingRatio: 1, overshootClamping: true },
 } as const;
