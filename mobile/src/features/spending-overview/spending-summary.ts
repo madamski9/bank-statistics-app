@@ -1,5 +1,8 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 
+import type { CategorizationRule } from '@/features/classification/categorization-rule';
+import { classifyTransaction } from '@/features/classification/classify-transaction';
+
 import { isWithinWindow, windowDays, type PeriodWindow } from './periods';
 
 export type SpendingSourceKind = NonNullable<IngestionRecord['transactionType']> | 'other';
@@ -67,25 +70,32 @@ function sourceKind(record: IngestionRecord): SpendingSourceKind {
   return record.transactionType ?? 'other';
 }
 
-function sourceLabel(record: IngestionRecord): string {
-  return record.merchant ?? transactionTypeLabels[sourceKind(record)];
+function sourceName(record: IngestionRecord, rules: CategorizationRule[]): string | null {
+  const classified = classifyTransaction(record, rules);
+
+  return classified.merchantName ?? classified.counterpartyName ?? null;
 }
 
 function accountLabel(record: IngestionRecord): string {
   return `${bankNames[record.bank]} · ${record.accountName ?? 'Konto główne'}`;
 }
 
-function groupSources(records: IngestionRecord[], total: number): SpendingSource[] {
+function groupSources(
+  records: IngestionRecord[],
+  total: number,
+  rules: CategorizationRule[],
+): SpendingSource[] {
   const sourcesByKey = new Map<string, SpendingSource>();
 
   for (const record of records) {
-    const key = record.merchant ?? sourceKind(record);
+    const name = sourceName(record, rules);
+    const key = name ?? sourceKind(record);
     const existing = sourcesByKey.get(key);
 
     if (existing === undefined) {
       sourcesByKey.set(key, {
         key,
-        label: sourceLabel(record),
+        label: name ?? transactionTypeLabels[sourceKind(record)],
         kind: sourceKind(record),
         amountMinor: record.amountMinor,
         share: 0,
@@ -139,6 +149,7 @@ function earliestTimestamp(records: IngestionRecord[]): number | null {
 export function summarizeSpending(
   records: IngestionRecord[],
   window: PeriodWindow,
+  rules: CategorizationRule[] = [],
 ): SpendingSummary {
   const withinPeriod = records.filter((record) => isWithinWindow(record.occurredAt, window));
   const currency = dominantCurrency(withinPeriod);
@@ -154,7 +165,7 @@ export function summarizeSpending(
   const incomes = counted.filter((record) => record.direction === 'income');
   const expenseMinor = expenses.reduce((sum, record) => sum + record.amountMinor, 0);
   const incomeMinor = incomes.reduce((sum, record) => sum + record.amountMinor, 0);
-  const sources = groupSources(expenses, expenseMinor);
+  const sources = groupSources(expenses, expenseMinor, rules);
   const days = windowDays(window, earliestTimestamp(records));
 
   return {
@@ -167,7 +178,7 @@ export function summarizeSpending(
     dailyExpenseMinor: Math.round(expenseMinor / days),
     largestExpense: sources.find((source) => source.key !== 'remainder') ?? null,
     sources,
-    incomeSources: groupSources(incomes, incomeMinor),
+    incomeSources: groupSources(incomes, incomeMinor, rules),
     accounts,
     skippedCurrencies,
   };

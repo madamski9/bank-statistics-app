@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { impactLight, selectionChanged } from '@/haptics';
+import { categoryOptions, uncategorizedLabel } from '@/features/classification/categories';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 
 import {
@@ -33,7 +34,7 @@ interface TransactionEditorProps {
   isWriting: boolean;
   writeError: string | null;
   onCancel: () => void;
-  onSubmit: (record: IngestionRecord) => void;
+  onSubmit: (record: IngestionRecord, options: { rememberCategory: boolean }) => void;
   onConfirm?: () => void;
   onDelete?: () => void;
 }
@@ -57,6 +58,7 @@ export function TransactionEditor({
     record === null ? emptyDraft(new Date()) : draftFromRecord(record),
   );
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [rememberCategory, setRememberCategory] = useState(false);
   const prompt = record?.review === undefined ? null : reviewPrompt(record.review);
   const title = record === null ? 'Nowa transakcja' : prompt === null ? 'Edycja' : 'Do sprawdzenia';
   const error = validationError ?? writeError;
@@ -76,7 +78,9 @@ export function TransactionEditor({
     }
 
     impactLight();
-    onSubmit(recordFromDraft(draft, { record, now: new Date() }));
+    onSubmit(recordFromDraft(draft, { record, now: new Date() }), {
+      rememberCategory: rememberCategory && draft.category !== '' && draft.name.trim() !== '',
+    });
   };
 
   return (
@@ -246,6 +250,67 @@ export function TransactionEditor({
           />
         </View>
 
+        <View style={styles.categories}>
+          <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
+            Kategoria
+          </Text>
+          <View style={styles.chips}>
+            {[{ id: '', label: uncategorizedLabel }, ...categoryOptions].map((option) => {
+              const isActive = option.id === draft.category;
+
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isActive }}
+                  key={option.id === '' ? 'none' : option.id}
+                  onPress={() => {
+                    selectionChanged();
+                    update({ category: option.id });
+
+                    if (option.id === '') {
+                      setRememberCategory(false);
+                    }
+                  }}
+                  style={({ pressed }) => [
+                    styles.chip,
+                    isActive ? styles.chipActive : null,
+                    pressed ? styles.pressed : null,
+                  ]}
+                >
+                  <Text
+                    maxFontSizeMultiplier={1.3}
+                    style={[styles.chipLabel, isActive ? styles.chipLabelActive : null]}
+                  >
+                    {option.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {draft.category !== '' && draft.name.trim() !== '' ? (
+            <Pressable
+              accessibilityRole="switch"
+              accessibilityState={{ checked: rememberCategory }}
+              onPress={() => {
+                selectionChanged();
+                setRememberCategory((current) => !current);
+              }}
+              style={({ pressed }) => [styles.remember, pressed ? styles.pressed : null]}
+            >
+              <View style={[styles.checkbox, rememberCategory ? styles.checkboxOn : null]}>
+                {rememberCategory ? (
+                  <Text maxFontSizeMultiplier={1.2} style={styles.checkmark}>
+                    ✓
+                  </Text>
+                ) : null}
+              </View>
+              <Text maxFontSizeMultiplier={1.4} style={styles.rememberLabel}>
+                Zapamiętaj tę kategorię dla „{draft.name.trim()}”. Reguła zostaje na tym urządzeniu.
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+
         <View style={styles.card}>
           <EditorField
             keyboardType="numbers-and-punctuation"
@@ -323,6 +388,65 @@ function EditorField({
 }
 
 const styles = StyleSheet.create({
+  categories: {
+    gap: 10,
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: overviewColors.textSecondary,
+  },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    minHeight: 34,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    borderRadius: 17,
+    backgroundColor: overviewColors.surface,
+  },
+  chipActive: {
+    backgroundColor: overviewColors.surfacePressed,
+  },
+  chipLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: overviewColors.textSecondary,
+  },
+  chipLabelActive: {
+    color: overviewColors.textPrimary,
+  },
+  remember: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: 44,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6,
+    backgroundColor: overviewColors.surface,
+  },
+  checkboxOn: {
+    backgroundColor: overviewColors.surfacePressed,
+  },
+  checkmark: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: overviewColors.textPrimary,
+  },
+  rememberLabel: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    color: overviewColors.textSecondary,
+  },
   screen: {
     flex: 1,
     backgroundColor: overviewColors.background,

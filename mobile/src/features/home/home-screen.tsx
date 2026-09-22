@@ -21,6 +21,12 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import {
+  groupSpending,
+  type SpendingDimension,
+  type SpendingGroup,
+} from '@/features/classification/spending-groups';
+import { useCategorizationRules } from '@/features/classification/use-categorization-rules';
 import { accountInitial } from '@/features/profile/account-identity';
 import { IngestionDiagnosticsCard } from '@/features/ingestion-diagnostics/ingestion-diagnostics-card';
 import { OverviewScreen } from '@/features/overview/overview-screen';
@@ -44,7 +50,6 @@ import { periodChange, summarizeSpending } from '@/features/spending-overview/sp
 import { useCapturedSpending } from '@/features/spending-overview/use-captured-spending';
 import { MerchantDetail } from '@/features/merchants/merchant-detail';
 import { MerchantsScreen } from '@/features/merchants/merchants-screen';
-import { rankMerchants, type MerchantSpending } from '@/features/merchants/merchant-summary';
 import { ProfileScreen } from '@/features/profile/profile-screen';
 import { affectsStatistics } from '@/features/transactions/transaction-record';
 import { TransactionsScreen } from '@/features/transactions/transactions-screen';
@@ -74,11 +79,13 @@ export function HomeScreen() {
     bubbleSelectionReducer,
     initialBubbleSelection,
   );
-  const [merchant, setMerchant] = useState<MerchantSpending | null>(null);
+  const [group, setGroup] = useState<SpendingGroup | null>(null);
+  const [dimension, setDimension] = useState<SpendingDimension>('merchant');
   const [activeSheet, setActiveSheet] = useState<SheetKey | null>(null);
   const [titleOffsets, setTitleOffsets] = useState<Partial<Record<PageKey, number>>>({});
   const navOffset = useSharedValue(0);
   const { error, isLoading, records, refresh } = useCapturedSpending();
+  const { remember, rules } = useCategorizationRules();
   const countedRecords = useMemo(() => records.filter(affectsStatistics), [records]);
 
   /**
@@ -92,16 +99,19 @@ export function HomeScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
   const previousWindow = useMemo(() => previousPeriodWindow(period, new Date()), [period, records]);
   const summary = useMemo(
-    () => summarizeSpending(countedRecords, spendWindow),
-    [countedRecords, spendWindow],
+    () => summarizeSpending(countedRecords, spendWindow, rules),
+    [countedRecords, rules, spendWindow],
   );
   const previousSummary = useMemo(
-    () => (previousWindow === null ? null : summarizeSpending(countedRecords, previousWindow)),
-    [countedRecords, previousWindow],
+    () =>
+      previousWindow === null
+        ? null
+        : summarizeSpending(countedRecords, previousWindow, rules),
+    [countedRecords, previousWindow, rules],
   );
-  const merchants = useMemo(
-    () => rankMerchants(countedRecords, spendWindow),
-    [countedRecords, spendWindow],
+  const groups = useMemo(
+    () => groupSpending(countedRecords, { window: spendWindow, rules, dimension }),
+    [countedRecords, dimension, rules, spendWindow],
   );
 
   const pageIndex = Math.max(
@@ -144,8 +154,8 @@ export function HomeScreen() {
     dispatchSelection({ type: 'closed', revision });
   }, [revision]);
 
-  const handleMerchantClosed = useCallback(() => {
-    setMerchant(null);
+  const handleGroupClosed = useCallback(() => {
+    setGroup(null);
   }, []);
 
   /**
@@ -260,7 +270,7 @@ export function HomeScreen() {
         onScroll={handleScroll}
         pagingEnabled
         ref={pagerRef}
-        scrollEnabled={selection === null && merchant === null}
+        scrollEnabled={selection === null && group === null}
         scrollEventThrottle={16}
         showsHorizontalScrollIndicator={false}
         style={styles.pager}
@@ -282,16 +292,20 @@ export function HomeScreen() {
             error={error}
             isLoading={isLoading}
             onChanged={refresh}
+            onRememberRule={remember}
             records={records}
+            rules={rules}
           />
         </View>
         <View style={{ width }}>
           <MerchantsScreen
+            dimension={dimension}
             error={error}
+            groups={groups}
             isLoading={isLoading}
-            merchants={merchants}
+            onChangeDimension={setDimension}
             onChangePeriod={setPeriod}
-            onSelectMerchant={setMerchant}
+            onSelectGroup={setGroup}
             period={period}
           />
         </View>
@@ -309,10 +323,10 @@ export function HomeScreen() {
         />
       ) : null}
 
-      {merchant !== null ? (
+      {group !== null ? (
         <MerchantDetail
-          merchant={merchant}
-          onClosed={handleMerchantClosed}
+          group={group}
+          onClosed={handleGroupClosed}
           period={period}
           spendWindow={spendWindow}
         />

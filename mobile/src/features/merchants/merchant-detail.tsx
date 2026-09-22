@@ -19,6 +19,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import type { SpendingGroup } from '@/features/classification/spending-groups';
 import { formatAmount, formatShare } from '@/features/spending-overview/formatting';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { periodOption, type PeriodWindow, type SpendingPeriod } from '@/features/spending-overview/periods';
@@ -27,10 +28,11 @@ import { impactLight } from '@/haptics';
 import { project, rubberband } from '@/motion';
 
 import { DailySpendChart } from './daily-spend-chart';
-import { bucketSizeFor, bucketSpending, type MerchantSpending } from './merchant-summary';
+import { transactionCount } from './group-counts';
+import { bucketSizeFor, bucketSpending } from './merchant-summary';
 
 interface MerchantDetailProps {
-  merchant: MerchantSpending;
+  group: SpendingGroup;
   spendWindow: PeriodWindow;
   period: SpendingPeriod;
   /** Called once the sheet has finished leaving, so it can unmount. */
@@ -38,7 +40,7 @@ interface MerchantDetailProps {
 }
 
 export function MerchantDetail({
-  merchant,
+  group,
   spendWindow,
   period,
   onClosed,
@@ -50,8 +52,8 @@ export function MerchantDetail({
   const [selectedBucket, setSelectedBucket] = useState<string | null>(null);
 
   const buckets = useMemo(
-    () => bucketSpending(merchant.records, spendWindow, bucketSizeFor(period)),
-    [merchant.records, period, spendWindow],
+    () => bucketSpending(group.records, spendWindow, bucketSizeFor(period)),
+    [group.records, period, spendWindow],
   );
 
   useEffect(() => {
@@ -134,17 +136,17 @@ export function MerchantDetail({
             <View style={styles.titleRow}>
               <View style={styles.titleBlock}>
                 <Text maxFontSizeMultiplier={1.5} numberOfLines={1} style={styles.title}>
-                  {merchant.name}
+                  {group.name}
                 </Text>
-                {merchant.location !== undefined ? (
+                {group.subtitle !== undefined ? (
                   <Text maxFontSizeMultiplier={1.5} numberOfLines={1} style={styles.location}>
-                    {merchant.location}
+                    {group.subtitle}
                   </Text>
                 ) : null}
               </View>
               <Pressable
-                accessibilityHint="Wraca do listy sklepów"
-                accessibilityLabel={`Zamknij ${merchant.name}`}
+                accessibilityHint="Wraca do listy"
+                accessibilityLabel={`Zamknij ${group.name}`}
                 accessibilityRole="button"
                 hitSlop={10}
                 onPress={requestClose}
@@ -163,13 +165,12 @@ export function MerchantDetail({
               numberOfLines={1}
               style={styles.total}
             >
-              {formatAmount(merchant.totalMinor, merchant.currency)}
+              {formatAmount(group.totalMinor, group.currency)}
             </Text>
             <Text maxFontSizeMultiplier={1.5} style={styles.meta}>
-              {option.label} · {merchant.count}{' '}
-              {merchant.count === 1 ? 'zakup' : merchant.count < 5 ? 'zakupy' : 'zakupów'} · średnio{' '}
-              {formatAmount(merchant.averageMinor, merchant.currency)} ·{' '}
-              {formatShare(merchant.share)} wydatków
+              {option.label} · {transactionCount(group.count, group.dimension)} · średnio{' '}
+              {formatAmount(group.averageMinor, group.currency)} ·{' '}
+              {formatShare(group.share)} wydatków
             </Text>
           </Animated.View>
         </GestureDetector>
@@ -181,7 +182,7 @@ export function MerchantDetail({
           {buckets.length > 0 ? (
             <DailySpendChart
               buckets={buckets}
-              currency={merchant.currency}
+              currency={group.currency}
               onSelect={setSelectedBucket}
               selectedKey={selectedBucket}
             />
@@ -191,7 +192,7 @@ export function MerchantDetail({
             <Text maxFontSizeMultiplier={1.5} style={styles.historyTitle}>
               Historia
             </Text>
-            {merchant.records.map((record) => {
+            {group.records.map((record) => {
               const occurredAt = new Date(record.occurredAt);
 
               return (

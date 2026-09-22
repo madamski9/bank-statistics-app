@@ -153,3 +153,26 @@ describe('confirmedRecord', () => {
     expect(record.review).toBeUndefined();
   });
 });
+
+describe('category corrections', () => {
+  const now = new Date(2026, 8, 21, 9, 30);
+
+  test('carries a corrected category onto the transaction without touching the amount', () => {
+    const draft = { ...draftFromRecord(captured), category: 'eatingOut' };
+    const record = recordFromDraft(draft, { record: captured, now });
+
+    expect(record.category).toBe('eatingOut');
+    expect(record.amountMinor).toBe(captured.amountMinor);
+  });
+
+  test('reads back the category the transaction already carries', () => {
+    expect(draftFromRecord({ ...captured, category: 'groceries' }).category).toBe('groceries');
+    expect(draftFromRecord(captured).category).toBe('');
+  });
+
+  test('leaves a transaction uncategorized when the user picked nothing', () => {
+    const draft = { ...emptyDraft(now), amount: '19,99', name: 'Lidl' };
+
+    expect(recordFromDraft(draft, { now }).category).toBeUndefined();
+  });
+});

@@ -10,6 +10,7 @@ export interface TransactionDraft {
   amount: string;
   currency: string;
   name: string;
+  category: string;
   accountName: string;
   date: string;
   time: string;
@@ -62,6 +63,7 @@ export function emptyDraft(now: Date): TransactionDraft {
     amount: '',
     currency: 'PLN',
     name: '',
+    category: '',
     accountName: '',
     date: formatDraftDate(now),
     time: formatDraftTime(now),
@@ -80,6 +82,7 @@ export function draftFromRecord(record: IngestionRecord): TransactionDraft {
     amount: `${units},${fraction}`,
     currency: record.currency,
     name: record.merchant ?? '',
+    category: record.category ?? '',
     accountName: record.accountName ?? '',
     date: formatDraftDate(moment),
     time: formatDraftTime(moment),
@@ -188,6 +191,7 @@ export function recordFromDraft(
     amountMinor,
     currency: draft.currency.trim().toUpperCase(),
     merchant: optional(draft.name),
+    category: optional(draft.category),
     accountName: optional(draft.accountName),
     occurredAt: moment.toISOString(),
   };
