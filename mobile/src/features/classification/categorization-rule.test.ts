@@ -4,6 +4,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   categoryFromRules,
   privateRuleFor,
+  supportsCategoryRule,
   upsertRule,
   type CategorizationRule,
 } from './categorization-rule';
@@ -71,5 +72,22 @@ describe('upsertRule', () => {
     );
 
     expect(rules).toHaveLength(2);
+  });
+});
+
+describe('rules and the labels shops actually arrive under', () => {
+  test('matches a later purchase at the branch the rule was saved from', () => {
+    const rule = privateRuleFor('Latto Gelato Gdańsk, Pomorskie', 'eatingOut');
+
+    expect(categoryFromRules(record({ merchant: 'Latto Gelato Gdańsk, Pomorskie' }), [rule])).toBe(
+      'eatingOut',
+    );
+    expect(categoryFromRules(record({ merchant: 'Latto Gelato' }), [rule])).toBe('eatingOut');
+  });
+
+  test('knows a shop can carry a rule and a person cannot', () => {
+    expect(supportsCategoryRule({ kind: 'cardPayment', name: 'Lidl' })).toBe(true);
+    expect(supportsCategoryRule({ kind: 'outgoingTransfer', name: 'Jan Kowalski' })).toBe(false);
+    expect(supportsCategoryRule({ kind: 'cardPayment', name: '  ' })).toBe(false);
   });
 });

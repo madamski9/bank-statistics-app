@@ -9,7 +9,7 @@ function attempt(run: () => Promise<void>): void {
   try {
     void run().catch(() => undefined);
   } catch {
-    // Ignored on purpose — see above.
+    // Ignored on purpose - see above.
   }
 }
 

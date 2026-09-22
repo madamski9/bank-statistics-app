@@ -1,4 +1,4 @@
-/** Where a flick would come to rest — Apple's exponential decay, not v²/2a. */
+/** Where a flick would come to rest - Apple's exponential decay, not v²/2a. */
 export function project(velocity: number, decelerationRate = 0.998): number {
   'worklet';
 

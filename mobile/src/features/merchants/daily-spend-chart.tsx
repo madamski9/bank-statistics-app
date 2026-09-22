@@ -31,7 +31,7 @@ function tickIndexes(count: number): Set<number> {
 }
 
 /**
- * One series, so one colour for every bar — colouring each bar by its own height would
+ * One series, so one colour for every bar - colouring each bar by its own height would
  * re-encode the length that is already the whole point of a bar. Emphasis is reserved for
  * the bar the reader picked, and the value is read out once above the plot rather than
  * stamped on every bar.

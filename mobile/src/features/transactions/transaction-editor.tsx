@@ -14,7 +14,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { impactLight, selectionChanged } from '@/haptics';
-import { categoryOptions, uncategorizedLabel } from '@/features/classification/categories';
+import {
+  categoryOptions,
+  uncategorizedCategory,
+  uncategorizedLabel,
+} from '@/features/classification/categories';
+import { supportsCategoryRule } from '@/features/classification/categorization-rule';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 
 import {
@@ -62,6 +67,13 @@ export function TransactionEditor({
   const prompt = record?.review === undefined ? null : reviewPrompt(record.review);
   const title = record === null ? 'Nowa transakcja' : prompt === null ? 'Edycja' : 'Do sprawdzenia';
   const error = validationError ?? writeError;
+  const canRemember =
+    draft.category !== '' &&
+    draft.category !== uncategorizedCategory &&
+    supportsCategoryRule({
+      kind: draft.kind === 'other' ? undefined : draft.kind,
+      name: draft.name,
+    });
 
   const update = useCallback((patch: Partial<TransactionDraft>) => {
     setValidationError(null);
@@ -79,7 +91,7 @@ export function TransactionEditor({
 
     impactLight();
     onSubmit(recordFromDraft(draft, { record, now: new Date() }), {
-      rememberCategory: rememberCategory && draft.category !== '' && draft.name.trim() !== '',
+      rememberCategory: rememberCategory && canRemember,
     });
   };
 
@@ -255,19 +267,19 @@ export function TransactionEditor({
             Kategoria
           </Text>
           <View style={styles.chips}>
-            {[{ id: '', label: uncategorizedLabel }, ...categoryOptions].map((option) => {
+            {[{ id: uncategorizedCategory, label: uncategorizedLabel }, ...categoryOptions].map((option) => {
               const isActive = option.id === draft.category;
 
               return (
                 <Pressable
                   accessibilityRole="button"
                   accessibilityState={{ selected: isActive }}
-                  key={option.id === '' ? 'none' : option.id}
+                  key={option.id}
                   onPress={() => {
                     selectionChanged();
                     update({ category: option.id });
 
-                    if (option.id === '') {
+                    if (option.id === uncategorizedCategory) {
                       setRememberCategory(false);
                     }
                   }}
@@ -287,7 +299,7 @@ export function TransactionEditor({
               );
             })}
           </View>
-          {draft.category !== '' && draft.name.trim() !== '' ? (
+          {canRemember ? (
             <Pressable
               accessibilityRole="switch"
               accessibilityState={{ checked: rememberCategory }}

@@ -1,7 +1,7 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 
 import { categoryFromRules, type CategorizationRule } from './categorization-rule';
-import { categoryLabel, suggestedCategory } from './categories';
+import { categoryLabel, suggestedCategory, uncategorizedCategory } from './categories';
 import { resolveMerchant } from './merchant-alias';
 import { classifyParty, type PartyKind } from './party';
 
@@ -25,11 +25,12 @@ export function classifyTransaction(
 ): ClassifiedTransaction {
   const party = classifyParty(record);
   const bankLabel = record.merchant?.replace(/\s+/gu, ' ').trim();
+  const isClearedByUser = record.category === uncategorizedCategory;
 
   if (party.kind !== 'merchant' || party.name === undefined) {
-    const category =
-      record.category ??
-      (party.kind === 'counterparty' ? transferCategory : undefined);
+    const category = isClearedByUser
+      ? undefined
+      : (record.category ?? (party.kind === 'counterparty' ? transferCategory : undefined));
 
     return {
       partyKind: party.kind,
@@ -42,11 +43,12 @@ export function classifyTransaction(
   }
 
   const merchant = resolveMerchant(party.name);
-  const category =
-    record.category ??
-    categoryFromRules(record, rules) ??
-    suggestedCategory(merchant.name) ??
-    undefined;
+  const category = isClearedByUser
+    ? undefined
+    : (record.category ??
+      categoryFromRules(record, rules) ??
+      suggestedCategory(merchant.name) ??
+      undefined);
 
   return {
     partyKind: 'merchant',

@@ -7,6 +7,8 @@ export interface CategoryOption {
 
 export const uncategorizedLabel = 'Bez kategorii';
 
+export const uncategorizedCategory = 'uncategorized';
+
 export const categoryOptions: CategoryOption[] = [
   { id: 'groceries', label: 'Zakupy spożywcze' },
   { id: 'eatingOut', label: 'Jedzenie na mieście' },
@@ -84,7 +86,7 @@ export function suggestedCategory(merchantName: string): string | null {
 }
 
 export function categoryLabel(category: string | undefined): string {
-  if (category === undefined || category.trim() === '') {
+  if (category === undefined || category.trim() === '' || category === uncategorizedCategory) {
     return uncategorizedLabel;
   }
 

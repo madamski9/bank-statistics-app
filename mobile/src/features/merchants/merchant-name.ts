@@ -12,7 +12,7 @@ export interface MerchantName {
  *
  * Splitting them matters for more than tidiness: the same shop shows up both ways ("adidas"
  * and "adidas Gdańsk, Pomorskie"), and grouping on the raw line would file one chain under
- * two names — and under as many names as it has branches.
+ * two names - and under as many names as it has branches.
  *
  * The name is matched greedily, so the city takes the shortest match and a shop whose own
  * name ends in a place ("Murall Gdańsk Gdańsk, Pomorskie") keeps it. The cost of that choice

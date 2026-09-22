@@ -105,7 +105,7 @@ export function BubbleDetail({
   }, [progress]);
 
   /**
-   * The breakdown is the expensive half of this screen — a list, its icons and the switcher.
+   * The breakdown is the expensive half of this screen - a list, its icons and the switcher.
    * Mounting it in the same frame as the tap is what made the transition hitch, so it waits
    * until the expansion is visibly under way and then fades in where it always did.
    */

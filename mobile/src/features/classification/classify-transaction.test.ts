@@ -2,6 +2,7 @@ import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { describe, expect, test } from 'bun:test';
 
 import { privateRuleFor } from './categorization-rule';
+import { uncategorizedCategory } from './categories';
 import { classifyTransaction } from './classify-transaction';
 
 function record(overrides: Partial<IngestionRecord> = {}): IngestionRecord {
@@ -63,5 +64,26 @@ describe('classifyTransaction', () => {
     expect(classified.counterpartyName).toBe('Jan Kowalski');
     expect(classified.merchantName).toBeUndefined();
     expect(classified.category).toBe('transfers');
+  });
+});
+
+describe('an explicit "no category" correction', () => {
+  test('is not overruled by the catalog or by a private rule', () => {
+    const cleared = record({ category: uncategorizedCategory });
+    const rules = [privateRuleFor('Żabka', 'eatingOut')];
+
+    expect(classifyTransaction(cleared, rules).category).toBeUndefined();
+    expect(classifyTransaction(cleared, rules).isUncategorized).toBe(true);
+    expect(classifyTransaction(cleared, rules).categoryName).toBe('Bez kategorii');
+  });
+
+  test('also holds for a personal transfer', () => {
+    const transfer = record({
+      transactionType: 'outgoingTransfer',
+      merchant: 'Jan Kowalski',
+      category: uncategorizedCategory,
+    });
+
+    expect(classifyTransaction(transfer, []).category).toBeUndefined();
   });
 });

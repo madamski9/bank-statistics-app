@@ -51,24 +51,33 @@ function looksLikePersonName(name: string): boolean {
   );
 }
 
-export function classifyParty(record: IngestionRecord): Party {
-  const raw = record.merchant?.replace(/\s+/gu, ' ').trim() ?? '';
+export interface PartyFields {
+  kind: IngestionRecord['transactionType'];
+  name: string | undefined;
+}
+
+export function classifyPartyFields({ kind, name }: PartyFields): Party {
+  const raw = name?.replace(/\s+/gu, ' ').trim() ?? '';
 
   if (raw === '') {
     return { kind: 'unknown' };
   }
 
-  if (transferTypes.includes(record.transactionType)) {
+  if (transferTypes.includes(kind)) {
     return { kind: 'counterparty', name: raw };
   }
 
-  if (record.transactionType === undefined && looksLikePersonName(raw)) {
+  if (kind === undefined && looksLikePersonName(raw)) {
     return { kind: 'counterparty', name: raw };
   }
 
-  const { name, location } = splitMerchant(raw);
+  const merchant = splitMerchant(raw);
 
-  return location === undefined
-    ? { kind: 'merchant', name }
-    : { kind: 'merchant', name, location };
+  return merchant.location === undefined
+    ? { kind: 'merchant', name: merchant.name }
+    : { kind: 'merchant', name: merchant.name, location: merchant.location };
+}
+
+export function classifyParty(record: IngestionRecord): Party {
+  return classifyPartyFields({ kind: record.transactionType, name: record.merchant });
 }

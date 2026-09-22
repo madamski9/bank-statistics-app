@@ -34,7 +34,7 @@ export function formatSignedCompactAmount(minor: number, currency: string): stri
   return `${minor < 0 ? minusSign : '+'}${formatCompactAmount(minor, currency)}`;
 }
 
-/** Magnitude only — the direction is carried by the caret and its colour. */
+/** Magnitude only - the direction is carried by the caret and its colour. */
 export function formatChange(change: number): string {
   return `${Math.abs(change * 100).toFixed(1).replace('.', ',')}${nonBreakingSpace}%`;
 }

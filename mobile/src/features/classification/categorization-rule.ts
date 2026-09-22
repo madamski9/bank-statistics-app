@@ -1,7 +1,8 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 
-import { classifyParty } from './party';
+import { classifyParty, classifyPartyFields, type PartyFields } from './party';
 import { resolveMerchant } from './merchant-alias';
+import { splitMerchant } from '@/features/merchants/merchant-name';
 
 export interface CategorizationRule {
   merchantKey: string;
@@ -10,8 +11,12 @@ export interface CategorizationRule {
   scope: 'private';
 }
 
+export function supportsCategoryRule(fields: PartyFields): boolean {
+  return classifyPartyFields(fields).kind === 'merchant';
+}
+
 export function privateRuleFor(merchantLabel: string, category: string): CategorizationRule {
-  const merchant = resolveMerchant(merchantLabel);
+  const merchant = resolveMerchant(splitMerchant(merchantLabel).name);
 
   return {
     merchantKey: merchant.key,
