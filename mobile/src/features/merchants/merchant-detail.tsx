@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import type { SpendingGroup } from '@/features/classification/spending-groups';
+import type { GroupLimit } from '@/features/alerts/group-limit';
 import { formatAmount, formatShare } from '@/features/spending-overview/formatting';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { periodOption, type PeriodWindow, type SpendingPeriod } from '@/features/spending-overview/periods';
@@ -33,6 +34,8 @@ import { bucketSizeFor, bucketSpending } from './merchant-summary';
 
 interface MerchantDetailProps {
   group: SpendingGroup;
+  limit: GroupLimit | null;
+  onEditLimit: () => void;
   spendWindow: PeriodWindow;
   period: SpendingPeriod;
   /** Called once the sheet has finished leaving, so it can unmount. */
@@ -41,6 +44,8 @@ interface MerchantDetailProps {
 
 export function MerchantDetail({
   group,
+  limit,
+  onEditLimit,
   spendWindow,
   period,
   onClosed,
@@ -179,6 +184,47 @@ export function MerchantDetail({
           contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 32 }]}
           indicatorStyle="white"
         >
+          <Pressable
+            accessibilityHint={
+              limit === null ? 'Otwiera ustawienie limitu' : 'Otwiera ustawienia limitu'
+            }
+            accessibilityRole="button"
+            onPress={onEditLimit}
+            style={({ pressed }) => [styles.limit, pressed ? styles.pressed : null]}
+          >
+            {limit === null ? (
+              <Text maxFontSizeMultiplier={1.5} style={styles.limitLabel}>
+                Ustaw limit miesięczny
+              </Text>
+            ) : (
+              <>
+                <View style={styles.limitHeading}>
+                  <Text maxFontSizeMultiplier={1.5} style={styles.limitLabel}>
+                    Limit {limit.periodLabel}
+                  </Text>
+                  <Text maxFontSizeMultiplier={1.5} style={styles.limitAmount}>
+                    {formatAmount(limit.amountMinor, limit.currency)} z{' '}
+                    {formatAmount(limit.targetMinor, limit.currency)}
+                  </Text>
+                </View>
+                <View style={styles.track}>
+                  <View
+                    style={[
+                      styles.fill,
+                      {
+                        width: `${Math.min(Math.max(limit.share * 100, 2), 100)}%`,
+                        backgroundColor:
+                          limit.share >= 1
+                            ? overviewColors.negative
+                            : overviewColors.textSecondary,
+                      },
+                    ]}
+                  />
+                </View>
+              </>
+            )}
+          </Pressable>
+
           {buckets.length > 0 ? (
             <DailySpendChart
               buckets={buckets}
@@ -220,6 +266,38 @@ export function MerchantDetail({
 }
 
 const styles = StyleSheet.create({
+  limit: {
+    gap: 8,
+    marginHorizontal: overviewSpacing.gutter,
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: overviewColors.surface,
+  },
+  limitHeading: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  limitLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: overviewColors.textPrimary,
+  },
+  limitAmount: {
+    fontSize: 14,
+    color: overviewColors.textSecondary,
+  },
+  track: {
+    height: 5,
+    overflow: 'hidden',
+    borderRadius: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.10)',
+  },
+  fill: {
+    height: '100%',
+    borderRadius: 3,
+  },
   scrim: {
     position: 'absolute',
     top: 0,

@@ -10,10 +10,11 @@ import { overviewColors, overviewSpacing } from '@/features/spending-overview/ov
 
 interface ProfileScreenProps {
   onClose: () => void;
+  onOpenAlerts: () => void;
   onOpenDiagnostics: () => void;
 }
 
-export function ProfileScreen({ onClose, onOpenDiagnostics }: ProfileScreenProps) {
+export function ProfileScreen({ onClose, onOpenAlerts, onOpenDiagnostics }: ProfileScreenProps) {
   const insets = useSafeAreaInsets();
   const { user } = useUser();
   const { signOut } = useClerk();
@@ -111,6 +112,34 @@ export function ProfileScreen({ onClose, onOpenDiagnostics }: ProfileScreenProps
             APLIKACJA
           </Text>
           <View style={styles.card}>
+            <Pressable
+              accessibilityHint="Otwiera limity wydatków i powiadomienia"
+              accessibilityRole="button"
+              onPress={onOpenAlerts}
+              style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
+            >
+              <View accessibilityElementsHidden importantForAccessibility="no" style={styles.rowIcon}>
+                <SymbolView
+                  name={{
+                    ios: 'bell.badge',
+                    android: 'notifications',
+                    web: 'notifications',
+                  }}
+                  size={18}
+                  tintColor={overviewColors.textSecondary}
+                />
+              </View>
+              <Text maxFontSizeMultiplier={1.4} style={styles.actionLabel}>
+                Limity i alerty
+              </Text>
+              <SymbolView
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+                name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+                size={17}
+                tintColor={overviewColors.textDisabled}
+              />
+            </Pressable>
             <Pressable
               accessibilityHint="Otwiera stan przechwytywania powiadomień bankowych"
               accessibilityRole="button"
