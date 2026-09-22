@@ -72,3 +72,24 @@ describe('alertMessage', () => {
     expect(scopeLabel({ kind: 'category', id: 'groceries' })).toBe('Zakupy spożywcze');
   });
 });
+
+describe('wording follows the metric the rule watches', () => {
+  test('an income goal is not announced as a spending limit', () => {
+    const goal = rule({ metric: 'income', scope: { kind: 'all' } });
+
+    expect(alertMessage(goal, raised(0.8, 40_000)).title).toBe('Blisko celu przychodów');
+    expect(alertMessage(goal, raised(1, 50_000)).title).toBe('Cel przychodów osiągnięty');
+    expect(alertMessage(goal, raised(1, 50_000)).body).toBe(
+      'Przychody w tym miesiącu: 500,00 zł przy progu 500,00 zł.',
+    );
+  });
+
+  test('a net flow rule talks about the balance', () => {
+    const balance = rule({ metric: 'netFlow', scope: { kind: 'all' } });
+
+    expect(alertMessage(balance, raised(1, 50_000)).title).toBe('Próg bilansu osiągnięty');
+    expect(alertMessage(balance, raised(1, 50_000)).body).toBe(
+      'Bilans w tym miesiącu: 500,00 zł przy progu 500,00 zł.',
+    );
+  });
+});

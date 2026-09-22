@@ -4,7 +4,7 @@ import { isWithinWindow, type PeriodWindow } from '@/features/spending-overview/
 import { affectsStatistics } from '@/features/transactions/transaction-record';
 
 import { type CategorizationRule } from './categorization-rule';
-import { uncategorizedLabel } from './categories';
+import { uncategorizedCategory } from './categories';
 import { classifyTransaction, type ClassifiedTransaction } from './classify-transaction';
 
 export type SpendingDimension = 'merchant' | 'counterparty' | 'category';
@@ -59,7 +59,7 @@ function seedFor(
       : null;
   }
 
-  return { key: classified.category ?? uncategorizedLabel, name: classified.categoryName };
+  return { key: classified.category ?? uncategorizedCategory, name: classified.categoryName };
 }
 
 export function groupSpending(

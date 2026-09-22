@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { alertWindow } from './alert-period';
+import { alertWindow, previousAlertWindow } from './alert-period';
 
 describe('alertWindow', () => {
   test('a month runs from the first of the calendar month', () => {
@@ -40,5 +40,32 @@ describe('alertWindow', () => {
     );
 
     expect(past.endMs).toBeLessThan(new Date(2026, 8, 22).getTime());
+  });
+});
+
+describe('previousAlertWindow', () => {
+  test('a month steps back to the month that has just closed', () => {
+    const window = previousAlertWindow({ kind: 'month' }, new Date(2026, 8, 22));
+
+    expect(window.key).toBe('month:2026-08');
+    expect(window.endMs).toBe(new Date(2026, 8, 1).getTime());
+  });
+
+  test('a week steps back to the previous Monday', () => {
+    const window = previousAlertWindow({ kind: 'week' }, new Date(2026, 8, 22));
+
+    expect(window.key).toBe('week:2026-09-14');
+  });
+
+  test('a year steps back one year', () => {
+    expect(previousAlertWindow({ kind: 'year' }, new Date(2026, 8, 22)).key).toBe('year:2025');
+  });
+
+  test('a one-time interval has no previous run', () => {
+    const period = { kind: 'custom', startMs: 10, endMs: 20 } as const;
+
+    expect(previousAlertWindow(period, new Date(2026, 8, 22))).toEqual(
+      alertWindow(period, new Date(2026, 8, 22)),
+    );
   });
 });

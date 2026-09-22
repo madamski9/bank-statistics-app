@@ -1,10 +1,11 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
+import { uncategorizedCategory } from '@/features/classification/categories';
 import { classifyTransaction } from '@/features/classification/classify-transaction';
 import { affectsStatistics } from '@/features/transactions/transaction-record';
 
-import { alertWindow, type AlertWindow } from './alert-period';
+import { alertWindow, previousAlertWindow, type AlertWindow } from './alert-period';
 import type { AlertRule, AlertScope } from './alert-rule';
 
 export interface EvaluationContext {
@@ -51,18 +52,28 @@ function matchesScope(
     );
   }
 
-  return classified.category === scope.id;
+  return scope.id === uncategorizedCategory
+    ? classified.isUncategorized
+    : classified.category === scope.id;
 }
+
+export const reportingCurrency = 'PLN';
 
 export function alertProgress(
   rule: AlertRule,
   records: IngestionRecord[],
   { reference, rules }: EvaluationContext,
 ): AlertProgress {
-  const window = alertWindow(rule.period, reference);
+  const window =
+    rule.condition === 'missingIncome'
+      ? previousAlertWindow(rule.period, reference)
+      : alertWindow(rule.period, reference);
   const counted = records.filter(
     (record) =>
-      affectsStatistics(record) && isWithin(record, window) && matchesScope(record, rule.scope, rules),
+      record.currency === reportingCurrency &&
+      affectsStatistics(record) &&
+      isWithin(record, window) &&
+      matchesScope(record, rule.scope, rules),
   );
 
   const sumOf = (direction: IngestionRecord['direction']) =>
@@ -84,6 +95,6 @@ export function alertProgress(
     targetMinor: rule.targetMinor,
     share: rule.targetMinor === 0 ? 0 : amountMinor / rule.targetMinor,
     window,
-    currency: counted[0]?.currency ?? 'PLN',
+    currency: reportingCurrency,
   };
 }

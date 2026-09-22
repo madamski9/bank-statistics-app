@@ -63,3 +63,22 @@ export function alertWindow(period: AlertPeriod, reference: Date): AlertWindow {
     endMs: end.getTime(),
   };
 }
+
+export function previousAlertWindow(period: AlertPeriod, reference: Date): AlertWindow {
+  if (period.kind === 'custom') {
+    return alertWindow(period, reference);
+  }
+
+  const current = alertWindow(period, reference);
+  const start = new Date(current.startMs);
+
+  if (period.kind === 'week') {
+    start.setDate(start.getDate() - 7);
+  } else if (period.kind === 'month') {
+    start.setMonth(start.getMonth() - 1);
+  } else {
+    start.setFullYear(start.getFullYear() - 1);
+  }
+
+  return alertWindow(period, start);
+}

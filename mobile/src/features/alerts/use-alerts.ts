@@ -39,8 +39,10 @@ export function useAlerts({
   notifier = expoAlertNotifier,
 }: AlertsOptions): AlertsState {
   const [rules, setRules] = useState<AlertRule[]>([]);
+  const [runCount, setRunCount] = useState(0);
   const sent = useRef<string[]>([]);
   const isRunning = useRef(false);
+  const missedRun = useRef(false);
 
   useEffect(() => {
     let isActive = true;
@@ -60,7 +62,13 @@ export function useAlerts({
   }, [storage]);
 
   useEffect(() => {
-    if (isRunning.current || activeRules(rules).length === 0 || records.length === 0) {
+    if (activeRules(rules).length === 0 || records.length === 0) {
+      return;
+    }
+
+    if (isRunning.current) {
+      missedRun.current = true;
+
       return;
     }
 
@@ -82,8 +90,13 @@ export function useAlerts({
       })
       .finally(() => {
         isRunning.current = false;
+
+        if (missedRun.current) {
+          missedRun.current = false;
+          setRunCount((current) => current + 1);
+        }
       });
-  }, [categorizationRules, notifier, records, rules, storage]);
+  }, [categorizationRules, notifier, records, rules, runCount, storage]);
 
   const save = useCallback(
     async (rule: AlertRule) => {

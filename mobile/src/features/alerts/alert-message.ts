@@ -3,7 +3,7 @@ import { formatAmount } from '@/features/spending-overview/formatting';
 
 import type { RaisedAlert } from './alert-delivery';
 import type { AlertPeriod } from './alert-period';
-import type { AlertRule, AlertScope } from './alert-rule';
+import type { AlertMetric, AlertRule, AlertScope } from './alert-rule';
 
 export interface AlertMessage {
   title: string;
@@ -33,7 +33,25 @@ export function scopeLabel(scope: AlertScope): string {
   return 'wszystkie wydatki';
 }
 
-function titleScope(scope: AlertScope): string {
+const metricNouns: Record<AlertMetric, string> = {
+  expense: 'Wydatki',
+  income: 'Przychody',
+  netFlow: 'Bilans',
+};
+
+const metricSubjects: Record<AlertMetric, string> = {
+  expense: 'limitu',
+  income: 'celu przychodów',
+  netFlow: 'progu bilansu',
+};
+
+const metricSubjectsReached: Record<AlertMetric, string> = {
+  expense: 'Limit',
+  income: 'Cel przychodów',
+  netFlow: 'Próg bilansu',
+};
+
+function titleScope(scope: AlertScope, metric: AlertMetric): string {
   if (scope.kind === 'merchant') {
     return ` w ${scope.name}`;
   }
@@ -46,7 +64,7 @@ function titleScope(scope: AlertScope): string {
     return ` w kategorii ${categoryLabel(scope.id)}`;
   }
 
-  return ' wydatków';
+  return metric === 'expense' ? ' wydatków' : '';
 }
 
 export function alertMessage(rule: AlertRule, alert: RaisedAlert): AlertMessage {
@@ -61,17 +79,20 @@ export function alertMessage(rule: AlertRule, alert: RaisedAlert): AlertMessage 
     };
   }
 
+  const noun = metricNouns[rule.metric];
+  const boundary = rule.metric === 'expense' ? 'limicie' : 'progu';
+
   if (alert.share >= 1) {
     return {
-      title: `Limit${titleScope(rule.scope)} osiągnięty`,
-      body: `Wydatki ${period}: ${reached} przy limicie ${target}.`,
+      title: `${metricSubjectsReached[rule.metric]}${titleScope(rule.scope, rule.metric)} osiągnięty`,
+      body: `${noun} ${period}: ${reached} przy ${boundary} ${target}.`,
     };
   }
 
   const remaining = formatAmount(Math.max(alert.targetMinor - alert.amountMinor, 0), alert.currency);
 
   return {
-    title: `Blisko limitu${titleScope(rule.scope)}`,
-    body: `Wydatki ${period}: ${reached} z ${target}. Zostało ${remaining}.`,
+    title: `Blisko ${metricSubjects[rule.metric]}${titleScope(rule.scope, rule.metric)}`,
+    body: `${noun} ${period}: ${reached} z ${target}. Zostało ${remaining}.`,
   };
 }

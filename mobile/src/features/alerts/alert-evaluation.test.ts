@@ -108,3 +108,41 @@ describe('alertProgress', () => {
     );
   });
 });
+
+describe('alertProgress corner cases the rule builder can produce', () => {
+  test('a missing-income rule looks at the period that has just closed', () => {
+    const missing = rule({
+      metric: 'income',
+      condition: 'missingIncome',
+      scope: { kind: 'all' },
+      targetMinor: 300_000,
+    });
+    const august = record({
+      direction: 'income',
+      transactionType: 'incomingTransfer',
+      merchant: undefined,
+      amountMinor: 300_000,
+      occurredAt: new Date(2026, 7, 10, 10, 0).toISOString(),
+    });
+
+    const progress = alertProgress(missing, [august], { reference, rules: [] });
+
+    expect(progress.window.key).toBe('month:2026-08');
+    expect(progress.amountMinor).toBe(300_000);
+  });
+
+  test('a limit on uncategorized spending counts the uncategorized transactions', () => {
+    const uncategorized = rule({ scope: { kind: 'category', id: 'uncategorized' } });
+    const records = [record({ merchant: 'Latto Gelato', amountMinor: 2500 }), record()];
+
+    expect(alertProgress(uncategorized, records, { reference, rules: [] }).amountMinor).toBe(2500);
+  });
+
+  test('counts only the reporting currency, so a euro purchase cannot pass as złoty', () => {
+    const inEuro = record({ currency: 'EUR', amountMinor: 90_000 });
+    const progress = alertProgress(rule(), [record(), inEuro], { reference, rules: [] });
+
+    expect(progress.amountMinor).toBe(1000);
+    expect(progress.currency).toBe('PLN');
+  });
+});
