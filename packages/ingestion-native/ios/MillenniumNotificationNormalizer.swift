@@ -1,17 +1,18 @@
 import Foundation
 
 struct MillenniumNotificationNormalizer {
+  private static let groupedAmountPattern = #"(?:[0-9]{1,3}(?:\s[0-9]{3})+|[0-9]+)(?:[,.][0-9]{1,2})?"#
   private let cardPaymentExpression = try! NSRegularExpression(
-    pattern: #"(?i)^płatność kartą:?\s*([0-9]+(?:[,.][0-9]{1,2})?)\s*([A-Z]{3})\s+(?:w|u)\s+(.+?)\.?$"#
+    pattern: #"(?i)^płatność kartą:?\s*("# + groupedAmountPattern + #")\s*([A-Z]{3})\s+(?:w|u)\s+(.+?)\.?$"#
   )
   private let outgoingTransferExpression = try! NSRegularExpression(
-    pattern: #"(?i)^przelew wychodzący:\s*kwota:\s*([0-9]+(?:[,.][0-9]{1,2})?)\s*([A-Z]{3}),\s*z rachunku:\s*(.+?),\s*data:\s*([0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{2}:[0-9]{2})$"#
+    pattern: #"(?i)^przelew wychodzący:\s*kwota:\s*("# + groupedAmountPattern + #")\s*([A-Z]{3}),\s*z rachunku:\s*(.+?),\s*data:\s*([0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{2}:[0-9]{2})$"#
   )
   private let incomingTransferExpression = try! NSRegularExpression(
-    pattern: #"(?i)^przelew przychodzący:\s*kwota:\s*([0-9]+(?:[,.][0-9]{1,2})?)\s*([A-Z]{3}),\s*na rachunek:\s*(.+?),\s*data:\s*([0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{2}:[0-9]{2})$"#
+    pattern: #"(?i)^przelew przychodzący:\s*kwota:\s*("# + groupedAmountPattern + #")\s*([A-Z]{3}),\s*na rachunek:\s*(.+?),\s*data:\s*([0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{2}:[0-9]{2})$"#
   )
   // Millennium's real card-payment push (e.g. "Płatność kartą debetową: Kwota: -21,00 PLN,
-  // Karta:Mastercard 360 **** **** **** 6899, Data: ...") never names the merchant — only the
+  // Karta:Mastercard 360 **** **** **** 6899, Data: ...") never names the merchant - only the
   // "Portfel" (Wallet) push for the same purchase does. Matching just the word "płatność" anywhere
   // lets this notification be recognized and deliberately dropped instead of saved twice or
   // rejected as unsupported.
