@@ -53,3 +53,5 @@ bun run lint
 ```
 
 The same checks run in GitHub Actions on every pull request.
+
+By NikkO and Maciuś
