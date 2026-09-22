@@ -391,9 +391,9 @@ export function HomeScreen() {
 
       <Modal
         animationType="slide"
-        onRequestClose={() => setAlertEditor(null)}
+        onRequestClose={() => (alertEditor === null ? setActiveSheet(null) : setAlertEditor(null))}
         presentationStyle="pageSheet"
-        visible={alertEditor !== null}
+        visible={activeSheet !== null || alertEditor !== null}
       >
         {alertEditor !== null ? (
           <AlertRuleSheet
@@ -405,16 +405,7 @@ export function HomeScreen() {
             rule={alertEditor.rule}
             scope={alertEditor.scope}
           />
-        ) : null}
-      </Modal>
-
-      <Modal
-        animationType="slide"
-        onRequestClose={() => setActiveSheet(null)}
-        presentationStyle="pageSheet"
-        visible={activeSheet !== null}
-      >
-        {activeSheet === 'profile' ? (
+        ) : activeSheet === 'profile' ? (
           <ProfileScreen
             onClose={() => setActiveSheet(null)}
             onOpenAlerts={() => setActiveSheet('alerts')}
