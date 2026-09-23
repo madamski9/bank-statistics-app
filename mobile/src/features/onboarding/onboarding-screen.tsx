@@ -66,6 +66,8 @@ const banks = [
 ] as const;
 
 const stepCount = 5;
+const millenniumShortcutUrl =
+  'https://www.icloud.com/shortcuts/3e16ea95fa2f488baffd3cb3b8bf9763';
 
 function pendingReturnKey(userId: string): string {
   return `bankstats.onboarding.shortcuts-return.v1.${userId}`;
@@ -177,14 +179,14 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
     leftApp.current = false;
 
     try {
-      await Linking.openURL('shortcuts://create-shortcut');
+      await Linking.openURL(millenniumShortcutUrl);
     } catch {
       launchedShortcuts.current = false;
       if (userId != null) {
         void SecureStore.deleteItemAsync(pendingReturnKey(userId));
       }
       setError(
-        'Nie udało się otworzyć aplikacji Skróty. Otwórz ją ręcznie i dodaj akcję BankStats.',
+        'Nie udało się otworzyć skrótu Millennium. Spróbuj ponownie.',
       );
     }
   }, [selectedBanks, userId]);
@@ -209,7 +211,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
       : step === 3
         ? 'Przejdź do konfiguracji'
         : step === 4
-          ? 'Stwórz skrót w Skrótach'
+          ? 'Dodaj skrót Millennium'
           : step === stepCount
             ? 'Przejdź do aplikacji'
             : 'Dalej';
@@ -741,7 +743,7 @@ function BanksSetup({
       <SectionHeading
         eyebrow="KONFIGURACJA SKRÓTÓW"
         title="Wybierz banki do konfiguracji"
-        description="Zaznacz bank, a potem otwórz Skróty. Na razie automatyczne przechwytywanie działa dla Millennium."
+        description="Zaznacz bank, a potem dodaj gotowy skrót Millennium. Na razie automatyczne przechwytywanie działa tylko dla tego banku."
       />
       <View style={styles.bankList}>
         {banks.map((bank) => {
@@ -794,21 +796,20 @@ function BanksSetup({
         })}
       </View>
       <View style={styles.stepsCard}>
-        <Text style={styles.stepsTitle}>W aplikacji Skróty</Text>
+        <Text style={styles.stepsTitle}>Jak uruchomić przechwytywanie</Text>
         <Text style={styles.stepsLine}>
-          1. Dodaj akcję „Capture Millennium Notification” z BankStats.
+          1. Otwórz udostępniony skrót i dodaj go do aplikacji Skróty.
         </Text>
         <Text style={styles.stepsLine}>
-          2. Przypisz „Podtytuł” i „Treść” powiadomienia do pól akcji.
+          2. Utwórz automatyzację dla powiadomień Millennium i Portfela Apple.
         </Text>
         <Text style={styles.stepsLine}>
-          3. Dodaj automatyzację powiadomień Millennium i Portfela Apple, a
-          następnie ją zatwierdź.
+          3. W automatyzacji uruchom dodany skrót i zatwierdź ją.
         </Text>
       </View>
       <Text style={styles.smallNote}>
-        Przycisk otworzy edytor Skrótów. iOS wymaga, abyś dodał akcję i
-        zatwierdził automatyzację samodzielnie.
+        Przycisk otworzy gotowy skrót Millennium. Dodanie skrótu i włączenie
+        automatyzacji wymagają Twojego potwierdzenia.
       </Text>
     </View>
   );
