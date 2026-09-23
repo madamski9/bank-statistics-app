@@ -20,7 +20,7 @@ The product must be explicit that it reconstructs cash flow from observed bank n
 
 BankStats is a minimalist React Native mobile application for iOS and Android. It captures notifications from supported banking applications, interprets them locally, stores normalized transactions in an encrypted local outbox, and synchronizes only normalized data to Convex. Clerk provides authentication and RevenueCat manages Premium entitlements.
 
-The initial release supports Millennium, mBank, and Revolut. iOS uses an automation configured in Apple's Shortcuts application to pass selected banking notifications into a BankStats App Intent. Android uses Notification Access and a Notification Listener Service restricted to explicitly supported banking applications.
+The current iOS capture path supports Millennium. mBank, Revolut, and PKO BP appear as upcoming banks until their notification parsers and capture paths are verified. iOS uses an automation configured in Apple's Shortcuts application to pass selected banking notifications into a BankStats App Intent. Android uses Notification Access and a Notification Listener Service restricted to explicitly supported banking applications.
 
 The home view uses three glass-like bubbles for Expenses, Income, and Net Flow. Selecting a bubble smoothly expands it beyond the viewport so the user appears to enter it, revealing detailed charts and breakdowns. The experience follows the restraint and clarity associated with Trade Republic without copying its screens or identity.
 
@@ -138,7 +138,7 @@ BankStats earns revenue through an optional Premium subscription. The free produ
 ### Supported activity
 
 - The MVP recognizes card payments, BLIK payments, incoming transfers, outgoing transfers, ATM withdrawals, refunds, bank fees, interest, manual entries, and an `other` fallback.
-- Millennium, mBank, and Revolut are the initial Supported Banks.
+- Millennium is the first enabled Supported Bank. mBank, Revolut, and PKO BP remain unavailable in setup until their capture paths are implemented and verified.
 - Capture accepts only explicitly allowlisted application identifiers for enabled Supported Banks.
 - The data model retains both occurrence and capture timestamps in UTC plus the source timezone and local calendar date.
 - Monetary amounts use integer minor units and ISO currency codes. Floating-point values are prohibited for money.
@@ -270,11 +270,11 @@ BankStats earns revenue through an optional Premium subscription. The free produ
 - Clerk provides custom minimalist Sign in with Apple, Google sign-in, and email-code authentication.
 - RevenueCat manages App Store and Google Play purchases and maps them to the stable Clerk-backed internal identity.
 - Convex mirrors the current entitlement and enforces server-side Premium limits.
-- The initial price is 14.99 PLN monthly or 99.99 PLN yearly.
+- The planned price is 9.99 PLN monthly or 99.99 PLN yearly. Purchases remain unavailable until RevenueCat integration is complete.
 - The product offers a 14-day trial only after at least 15 real Transactions have been captured or the user intentionally chooses a Premium feature.
 - There is no lifetime purchase in the initial release.
-- The free product includes all supported-bank capture, full transaction history, manual changes, review and corrections, monthly statistics, basic Merchant and Category statistics, one active Alert Rule, one basic widget, multi-device sync, and CSV/JSON export.
-- Premium includes unlimited Alert Rules, advanced comparisons and analytics, custom Categories and future Categorization Rules, configurable widgets, and polished or scheduled reports.
+- The free product includes capture for enabled Supported Banks, manual changes, review and corrections, spending charts and statistics for up to one month, one active Alert Rule, one basic widget, multi-device sync, and CSV/JSON export. Stored transactions remain available for synchronization and export.
+- Premium includes unlimited Alert Rules, longer spending and chart ranges, advanced comparisons and analytics, a shared account, custom Categories and future Categorization Rules, configurable widgets, and polished or scheduled reports.
 - The product does not show advertising, sell financial data, or promote loans for commission.
 - A visible restore-purchases action is available. The application silently synchronizes known purchases after authentication where platform policy permits.
 - Store subscriptions use the configured free trial and a 16-day Apple billing grace period.
@@ -340,7 +340,7 @@ Before public launch, the parser corpus must demonstrate at least 98% accuracy f
 - Bank credential collection, bank login, account aggregation, and Open Banking are permanently out of scope.
 - A true, current, or available bank-account balance is permanently out of scope.
 - Financial advice, credit scoring, investment advice, payment initiation, and lending are out of scope.
-- Banks beyond Millennium, mBank, and Revolut are outside the MVP.
+- Banks beyond the currently implemented Millennium capture path remain unavailable until their parsers and capture paths are verified.
 - Receipt scanning and OCR are outside the MVP.
 - Bank statement and file import are outside the MVP.
 - A consumer web application is outside the MVP.
