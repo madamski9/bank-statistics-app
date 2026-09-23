@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { CategorizationRule } from '@/features/classification/categorization-rule';
 import { impactLight } from '@/haptics';
 import { formatAmount } from '@/features/spending-overview/formatting';
 import {
@@ -36,9 +37,11 @@ import { useTransactionWrites } from './use-transaction-writes';
 
 interface TransactionsScreenProps {
   records: IngestionRecord[];
+  rules: CategorizationRule[];
   error: string | null;
   isLoading: boolean;
   onChanged: () => void | Promise<void>;
+  onRememberRule: (merchantLabel: string, category: string) => Promise<void>;
 }
 
 interface DaySection {
@@ -106,9 +109,11 @@ function buildSections(records: IngestionRecord[], reference: Date): DaySection[
 /** The plain log behind the Overview: every captured transaction, newest first. */
 function TransactionsScreenComponent({
   records,
+  rules,
   error,
   isLoading,
   onChanged,
+  onRememberRule,
 }: TransactionsScreenProps) {
   const insets = useSafeAreaInsets();
   const sections = useMemo(() => buildSections(records, new Date()), [records]);
@@ -121,14 +126,27 @@ function TransactionsScreenComponent({
   }, [clearError]);
 
   const handleSubmit = useCallback(
-    (record: IngestionRecord) => {
-      void save(record).then((saved) => {
-        if (saved) {
-          closeEditor();
+    (record: IngestionRecord, { rememberCategory } = { rememberCategory: false }) => {
+      void save(record).then(async (saved) => {
+        if (!saved) {
+          return;
         }
+
+        if (rememberCategory && record.merchant !== undefined && record.category !== undefined) {
+          try {
+            await onRememberRule(record.merchant, record.category);
+          } catch {
+            Alert.alert(
+              'Nie zapisano reguły',
+              'Kategoria tej transakcji została zapisana, ale reguły na przyszłość nie udało się zachować na tym urządzeniu.',
+            );
+          }
+        }
+
+        closeEditor();
       });
     },
-    [closeEditor, save],
+    [closeEditor, onRememberRule, save],
   );
 
   const handleConfirm = useCallback(() => {
@@ -192,7 +210,7 @@ function TransactionsScreenComponent({
           const isIncome = item.direction === 'income';
           const isCounted = affectsStatistics(item);
           const badge = transactionBadge(item);
-          const label = transactionTitle(item);
+          const label = transactionTitle(item, rules);
           const context = transactionContext(item);
           const amount = `${isIncome ? '+' : '−'}${formatAmount(item.amountMinor, item.currency)}`;
 

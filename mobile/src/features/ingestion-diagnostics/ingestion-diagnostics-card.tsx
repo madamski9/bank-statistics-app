@@ -26,7 +26,7 @@ export function IngestionDiagnosticsCard() {
     <View style={styles.card}>
       <Text style={styles.title}>Diagnostyka przechwytywania iOS</Text>
       <Text style={styles.detail}>
-        SQLCipher {storage?.cipherVersion ?? '—'} · rekordy: {records.length}
+        SQLCipher {storage?.cipherVersion ?? '-'} · rekordy: {records.length}
       </Text>
       {latestRecord ? (
         <View style={styles.record}>

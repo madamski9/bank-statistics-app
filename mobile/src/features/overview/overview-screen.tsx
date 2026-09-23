@@ -20,7 +20,7 @@ import { periodOption, type SpendingPeriod } from '@/features/spending-overview/
 import { RangeSwitcher } from '@/features/spending-overview/range-switcher';
 import type { SpendingSummary } from '@/features/spending-overview/spending-summary';
 
-const unavailableValue = '—';
+const unavailableValue = '-';
 
 interface OverviewScreenProps {
   summary: SpendingSummary;

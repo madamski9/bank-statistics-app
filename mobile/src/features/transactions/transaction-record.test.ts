@@ -43,7 +43,7 @@ describe('affectsStatistics', () => {
 
     expect(blocksStatistics(uncategorized)).toBe(false);
     expect(affectsStatistics(uncategorized)).toBe(true);
-    expect(transactionTitle(uncategorized)).toBe('Płatność kartą');
+    expect(transactionTitle(uncategorized, [])).toBe('Płatność kartą');
   });
 
   test('drops a reversed transaction', () => {
@@ -70,5 +70,23 @@ describe('transactionContext', () => {
       'Millennium · Konto osobiste',
     );
     expect(transactionContext(record({ bank: 'manual', origin: 'manual' }))).toBe('Wpis ręczny');
+  });
+});
+
+describe('transactionTitle', () => {
+  test('shows the canonical shop rather than the raw bank label', () => {
+    expect(transactionTitle(record({ merchant: 'ZABKA NANO Z7423' }), [])).toBe('Żabka');
+  });
+
+  test('falls back to the category when no party is named', () => {
+    expect(transactionTitle(record({ merchant: undefined, category: 'groceries' }), [])).toBe(
+      'Zakupy spożywcze',
+    );
+  });
+
+  test('names the person behind a transfer', () => {
+    const transfer = record({ transactionType: 'outgoingTransfer', merchant: 'Jan Kowalski' });
+
+    expect(transactionTitle(transfer, [])).toBe('Jan Kowalski');
   });
 });

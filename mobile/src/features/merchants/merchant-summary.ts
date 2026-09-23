@@ -1,23 +1,6 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 
-import { isWithinWindow, type PeriodWindow, type SpendingPeriod } from '@/features/spending-overview/periods';
-
-import { merchantKey, splitMerchant } from './merchant-name';
-
-export interface MerchantSpending {
-  key: string;
-  name: string;
-  location?: string;
-  totalMinor: number;
-  count: number;
-  /** Fraction of all named spending in the window. */
-  share: number;
-  averageMinor: number;
-  lastOccurredMs: number;
-  currency: string;
-  /** Newest first, for the history list. */
-  records: IngestionRecord[];
-}
+import type { PeriodWindow, SpendingPeriod } from '@/features/spending-overview/periods';
 
 export type BucketSize = 'day' | 'week' | 'month';
 
@@ -66,70 +49,6 @@ const longMonths = [
 
 function occurredMs(record: IngestionRecord): number {
   return new Date(record.occurredAt).getTime();
-}
-
-/**
- * Shops only. A transfer carries no merchant, and listing it here as "Inne" would put a
- * category into a ranking of places.
- */
-function namedExpenses(records: IngestionRecord[], window: PeriodWindow): IngestionRecord[] {
-  return records.filter(
-    (record) =>
-      record.direction === 'expense' &&
-      record.transactionType !== 'outgoingTransfer' &&
-      record.merchant !== undefined &&
-      record.merchant.trim() !== '' &&
-      !Number.isNaN(occurredMs(record)) &&
-      isWithinWindow(record.occurredAt, window),
-  );
-}
-
-export function rankMerchants(
-  records: IngestionRecord[],
-  window: PeriodWindow,
-): MerchantSpending[] {
-  const expenses = namedExpenses(records, window);
-  const byKey = new Map<string, MerchantSpending>();
-
-  for (const record of expenses) {
-    const { name, location } = splitMerchant(record.merchant ?? '');
-    const key = merchantKey(name);
-    const existing = byKey.get(key);
-    const occurred = occurredMs(record);
-
-    if (existing === undefined) {
-      byKey.set(key, {
-        key,
-        name,
-        location,
-        totalMinor: record.amountMinor,
-        count: 1,
-        share: 0,
-        averageMinor: record.amountMinor,
-        lastOccurredMs: occurred,
-        currency: record.currency,
-        records: [record],
-      });
-      continue;
-    }
-
-    existing.totalMinor += record.amountMinor;
-    existing.count += 1;
-    existing.records.push(record);
-    existing.location = existing.location ?? location;
-    existing.lastOccurredMs = Math.max(existing.lastOccurredMs, occurred);
-  }
-
-  const total = expenses.reduce((sum, record) => sum + record.amountMinor, 0);
-  const ranked = [...byKey.values()].sort((left, right) => right.totalMinor - left.totalMinor);
-
-  for (const merchant of ranked) {
-    merchant.share = total === 0 ? 0 : merchant.totalMinor / total;
-    merchant.averageMinor = Math.round(merchant.totalMinor / merchant.count);
-    merchant.records.sort((left, right) => occurredMs(right) - occurredMs(left));
-  }
-
-  return ranked;
 }
 
 /** Keep the bar count readable: a year of days would be 365 slivers. */
@@ -188,7 +107,7 @@ function bucketLabels(start: Date, size: BucketSize): { label: string; spokenLab
 }
 
 /**
- * Every bucket in the window, including the empty ones — a gap in spending is information,
+ * Every bucket in the window, including the empty ones - a gap in spending is information,
  * and dropping it would make the axis lie about time.
  */
 export function bucketSpending(

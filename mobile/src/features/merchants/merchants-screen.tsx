@@ -2,57 +2,43 @@ import { memo } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { SpendingDimension, SpendingGroup } from '@/features/classification/spending-groups';
 import { formatAmount, formatShare } from '@/features/spending-overview/formatting';
 import { bubbleTints, overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { periodOption, type SpendingPeriod } from '@/features/spending-overview/periods';
 import { RangeSwitcher } from '@/features/spending-overview/range-switcher';
 
-import type { MerchantSpending } from './merchant-summary';
+import { DimensionSwitcher } from './dimension-switcher';
+import { groupCount, transactionCount } from './group-counts';
 
 interface MerchantsScreenProps {
-  merchants: MerchantSpending[];
+  groups: SpendingGroup[];
+  dimension: SpendingDimension;
+  onChangeDimension: (dimension: SpendingDimension) => void;
   period: SpendingPeriod;
   onChangePeriod: (period: SpendingPeriod) => void;
-  onSelectMerchant: (merchant: MerchantSpending) => void;
+  onSelectGroup: (group: SpendingGroup) => void;
   error: string | null;
   isLoading: boolean;
 }
 
-function polishPlural(count: number, one: string, few: string, many: string): string {
-  if (count === 1) {
-    return one;
-  }
+const emptyByDimension: Record<SpendingDimension, string> = {
+  merchant:
+    'Brak sklepów w tym okresie. Nazwy sklepów przychodzą z powiadomień Portfela - wybierz Max, aby zobaczyć wszystko.',
+  counterparty:
+    'Brak przelewów do osób w tym okresie. Przelew z nazwą odbiorcy trafi tutaj, a nie do statystyk sklepów.',
+  category:
+    'Brak wydatków w tym okresie. Kategoria pojawi się, gdy transakcja zostanie rozpoznana lub poprawiona.',
+};
 
-  const lastDigit = count % 10;
-  const lastTwoDigits = count % 100;
-  const takesFew = lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14);
-
-  return takesFew ? few : many;
-}
-
-function shopCount(count: number): string {
-  return `${count} ${polishPlural(count, 'sklep', 'sklepy', 'sklepów')}`;
-}
-
-function purchaseCount(count: number): string {
-  if (count === 1) {
-    return '1 zakup';
-  }
-
-  const lastDigit = count % 10;
-  const lastTwoDigits = count % 100;
-  const takesPluralNominative =
-    lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14);
-
-  return `${count} ${takesPluralNominative ? 'zakupy' : 'zakupów'}`;
-}
-
-/** Where the money actually goes: every shop the Wallet pushes named, biggest spend first. */
+/** Where the money actually goes: shops, people and categories, biggest spend first. */
 function MerchantsScreenComponent({
-  merchants,
+  groups,
+  dimension,
+  onChangeDimension,
   period,
   onChangePeriod,
-  onSelectMerchant,
+  onSelectGroup,
   error,
   isLoading,
 }: MerchantsScreenProps) {
@@ -67,22 +53,23 @@ function MerchantsScreenComponent({
         ? 'Przechwytywanie powiadomień działa na razie tylko na iOS.'
         : isLoading
           ? 'Wczytywanie…'
-          : `Brak sklepów w okresie „${option.label}”. Nazwy sklepów przychodzą z powiadomień Portfela — wybierz Max, aby zobaczyć wszystko.`;
+          : emptyByDimension[dimension];
 
   return (
     <View style={styles.page}>
       <View style={styles.header}>
         <Text maxFontSizeMultiplier={1.6} style={styles.context}>
-          {shopCount(merchants.length)} · {option.label}
+          {groupCount(groups.length, dimension)} · {option.label}
         </Text>
         <RangeSwitcher onChange={onChangePeriod} period={period} />
+        <DimensionSwitcher dimension={dimension} onChange={onChangeDimension} />
       </View>
 
       <ScrollView
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 24 }]}
         indicatorStyle="white"
       >
-        {merchants.length === 0 ? (
+        {groups.length === 0 ? (
           <Text
             maxFontSizeMultiplier={1.6}
             style={[styles.empty, error !== null ? styles.error : null]}
@@ -90,13 +77,13 @@ function MerchantsScreenComponent({
             {emptyMessage}
           </Text>
         ) : (
-          merchants.map((merchant, index) => (
+          groups.map((group, index) => (
             <Pressable
               accessibilityHint="Otwiera historię i wykres wydatków"
-              accessibilityLabel={`${index + 1}. ${merchant.name}, ${formatAmount(merchant.totalMinor, merchant.currency)}, ${purchaseCount(merchant.count)}, ${formatShare(merchant.share)} wydatków`}
+              accessibilityLabel={`${index + 1}. ${group.name}, ${formatAmount(group.totalMinor, group.currency)}, ${transactionCount(group.count, dimension)}, ${formatShare(group.share)} wydatków`}
               accessibilityRole="button"
-              key={merchant.key}
-              onPress={() => onSelectMerchant(merchant)}
+              key={group.key}
+              onPress={() => onSelectGroup(group)}
               style={({ pressed }) => [styles.row, pressed ? styles.pressed : null]}
             >
               <Text maxFontSizeMultiplier={1.3} style={styles.rank}>
@@ -105,10 +92,10 @@ function MerchantsScreenComponent({
               <View style={styles.body}>
                 <View style={styles.heading}>
                   <Text maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.name}>
-                    {merchant.name}
+                    {group.name}
                   </Text>
                   <Text maxFontSizeMultiplier={1.6} style={styles.amount}>
-                    {formatAmount(merchant.totalMinor, merchant.currency)}
+                    {formatAmount(group.totalMinor, group.currency)}
                   </Text>
                 </View>
                 <View style={styles.track}>
@@ -116,15 +103,15 @@ function MerchantsScreenComponent({
                     style={[
                       styles.fill,
                       {
-                        width: `${Math.max(merchant.share * 100, 2)}%`,
+                        width: `${Math.max(group.share * 100, 2)}%`,
                         backgroundColor: tint.film,
                       },
                     ]}
                   />
                 </View>
                 <Text maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.meta}>
-                  {purchaseCount(merchant.count)} · {formatShare(merchant.share)} wydatków
-                  {merchant.location !== undefined ? ` · ${merchant.location}` : ''}
+                  {transactionCount(group.count, dimension)} · {formatShare(group.share)} wydatków
+                  {group.subtitle !== undefined ? ` · ${group.subtitle}` : ''}
                 </Text>
               </View>
             </Pressable>

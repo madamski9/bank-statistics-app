@@ -10,7 +10,7 @@ export const overviewColors = {
   surfacePressed: '#17171A',
   hairline: 'rgba(255, 255, 255, 0.09)',
   textPrimary: '#FFFFFF',
-  /** 6.4:1 on black — the lightest grey that still passes as body text. */
+  /** 6.4:1 on black - the lightest grey that still passes as body text. */
   textSecondary: '#8E8E93',
   /** Decoration only (rims, tracks); never carries text or meaning. */
   textDisabled: '#48484A',
@@ -29,7 +29,7 @@ export interface BubbleTint {
   rgb: string;
   /**
    * The second band. A real soap film splits light into two visible bands, and on black a
-   * single hue at low alpha just reads as muddy — the pair is what makes it look like glass.
+   * single hue at low alpha just reads as muddy - the pair is what makes it look like glass.
    */
   rgbSecondary: string;
 }

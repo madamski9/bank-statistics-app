@@ -1,5 +1,7 @@
 import type { IngestionRecord, IngestionReviewReason } from '@bankstats/ingestion-native';
 
+import type { CategorizationRule } from '@/features/classification/categorization-rule';
+import { classifyTransaction } from '@/features/classification/classify-transaction';
 import type { SpendingSourceKind } from '@/features/spending-overview/spending-summary';
 
 export type TransactionBadgeTone = 'caution' | 'neutral';
@@ -52,8 +54,20 @@ export function transactionKind(record: IngestionRecord): SpendingSourceKind {
   return record.transactionType ?? 'other';
 }
 
-export function transactionTitle(record: IngestionRecord): string {
-  return record.merchant ?? record.category ?? typeLabels[transactionKind(record)];
+export function transactionTitle(record: IngestionRecord, rules: CategorizationRule[]): string {
+  const classified = classifyTransaction(record, rules);
+
+  if (classified.merchantName !== undefined) {
+    return classified.merchantName;
+  }
+
+  if (classified.counterpartyName !== undefined) {
+    return classified.counterpartyName;
+  }
+
+  return classified.isUncategorized
+    ? typeLabels[transactionKind(record)]
+    : classified.categoryName;
 }
 
 export function transactionContext(record: IngestionRecord): string {

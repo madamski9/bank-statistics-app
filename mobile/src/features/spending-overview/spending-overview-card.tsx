@@ -178,7 +178,7 @@ export function SpendingOverviewCard() {
 
       {summary.skippedCurrencies.length > 0 ? (
         <Text style={styles.footnote}>
-          Pominięto transakcje w walutach {summary.skippedCurrencies.join(', ')} — przeliczanie na{' '}
+          Pominięto transakcje w walutach {summary.skippedCurrencies.join(', ')} - przeliczanie na{' '}
           {summary.currency} dojdzie później.
         </Text>
       ) : null}
