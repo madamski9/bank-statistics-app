@@ -8,13 +8,27 @@
  * @module
  */
 
+import type * as crons from "../crons.js";
+import type * as devices from "../devices.js";
+import type * as financialAccounts from "../financialAccounts.js";
+import type * as owner from "../owner.js";
+import type * as syncedRows from "../syncedRows.js";
+import type * as transactions from "../transactions.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
 
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  crons: typeof crons;
+  devices: typeof devices;
+  financialAccounts: typeof financialAccounts;
+  owner: typeof owner;
+  syncedRows: typeof syncedRows;
+  transactions: typeof transactions;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.

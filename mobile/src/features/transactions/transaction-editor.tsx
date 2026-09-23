@@ -20,6 +20,8 @@ import {
   uncategorizedLabel,
 } from '@/features/classification/categories';
 import { supportsCategoryRule } from '@/features/classification/categorization-rule';
+import { AccountPicker } from '@/features/financial-accounts/account-picker';
+import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 
 import {
@@ -36,6 +38,8 @@ import { reviewPrompt } from './transaction-record';
 
 interface TransactionEditorProps {
   record: IngestionRecord | null;
+  accounts: FinancialAccount[];
+  onCreateAccount: (name: string) => Promise<FinancialAccount>;
   isWriting: boolean;
   writeError: string | null;
   onCancel: () => void;
@@ -51,6 +55,8 @@ const directions: { value: TransactionDirection; label: string }[] = [
 
 export function TransactionEditor({
   record,
+  accounts,
+  onCreateAccount,
   isWriting,
   writeError,
   onCancel,
@@ -65,6 +71,7 @@ export function TransactionEditor({
   const [validationError, setValidationError] = useState<string | null>(null);
   const [rememberCategory, setRememberCategory] = useState(false);
   const prompt = record?.review === undefined ? null : reviewPrompt(record.review);
+  const isManual = record === null || record.origin === 'manual';
   const title = record === null ? 'Nowa transakcja' : prompt === null ? 'Edycja' : 'Do sprawdzenia';
   const error = validationError ?? writeError;
   const canRemember =
@@ -90,7 +97,7 @@ export function TransactionEditor({
     }
 
     impactLight();
-    onSubmit(recordFromDraft(draft, { record, now: new Date() }), {
+    onSubmit(recordFromDraft(draft, { record, now: new Date(), accounts }), {
       rememberCategory: rememberCategory && canRemember,
     });
   };
@@ -253,14 +260,32 @@ export function TransactionEditor({
             placeholder="Sklep, osoba lub opis"
             value={draft.name}
           />
-          <View style={styles.separator} />
-          <EditorField
-            label="Konto"
-            onChangeText={(accountName) => update({ accountName })}
-            placeholder="Konto główne"
-            value={draft.accountName}
-          />
+          {isManual ? null : (
+            <>
+              <View style={styles.separator} />
+              <View accessible style={styles.field}>
+                <Text maxFontSizeMultiplier={1.4} style={styles.fieldLabel}>
+                  Konto
+                </Text>
+                <Text maxFontSizeMultiplier={1.4} numberOfLines={1} style={styles.fieldValue}>
+                  {record?.accountName ?? 'Konto ogólne banku'}
+                </Text>
+              </View>
+            </>
+          )}
         </View>
+
+        {isManual ? (
+          <AccountPicker
+            accounts={accounts}
+            onCreate={async (name) => {
+              const account = await onCreateAccount(name);
+              update({ accountId: account.id });
+            }}
+            onSelect={(accountId) => update({ accountId })}
+            selectedId={draft.accountId}
+          />
+        ) : null}
 
         <View style={styles.categories}>
           <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
@@ -616,6 +641,11 @@ const styles = StyleSheet.create({
   fieldLabel: {
     width: 92,
     fontSize: 14,
+    color: overviewColors.textSecondary,
+  },
+  fieldValue: {
+    flex: 1,
+    fontSize: 16,
     color: overviewColors.textSecondary,
   },
   fieldInput: {

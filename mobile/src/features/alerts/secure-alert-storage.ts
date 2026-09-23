@@ -11,3 +11,7 @@ export const secureAlertStorage: AlertStorage = {
   read: (key) => SecureStore.getItemAsync(keys[key]),
   write: (key, value) => SecureStore.setItemAsync(keys[key], value),
 };
+
+export async function clearAlertStorage(): Promise<void> {
+  await Promise.all(Object.values(keys).map((key) => SecureStore.deleteItemAsync(key)));
+}

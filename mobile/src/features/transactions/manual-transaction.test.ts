@@ -90,7 +90,6 @@ describe('recordFromDraft', () => {
       kind: 'incomingTransfer' as const,
       amount: '250,50',
       name: '  Zwrot podatku  ',
-      accountName: '',
     };
 
     const record = recordFromDraft(draft, { now, random: () => 0.5 });
@@ -102,9 +101,53 @@ describe('recordFromDraft', () => {
     expect(record.transactionType).toBe('incomingTransfer');
     expect(record.amountMinor).toBe(25_050);
     expect(record.merchant).toBe('Zwrot podatku');
-    expect(record.accountName).toBeUndefined();
+    expect(record.accountId).toBe('general-manual');
+    expect(record.accountName).toBe('Gotówka i inne');
     expect(record.review).toBeUndefined();
     expect(new Date(record.occurredAt).getHours()).toBe(9);
+  });
+
+  test('files a manual transaction under the Financial Account the user picked', () => {
+    const shared = { id: 'account-shared', bank: 'manual' as const, name: 'Wspólne', isGeneral: false };
+    const draft = { ...emptyDraft(now), amount: '1200', accountId: shared.id };
+
+    const record = recordFromDraft(draft, { now, accounts: [shared] });
+
+    expect(record.accountId).toBe('account-shared');
+    expect(record.accountName).toBe('Wspólne');
+  });
+
+  test('reopens a manual transaction on its account, and an older one on the general account', () => {
+    const manualRecord = recordFromDraft(
+      { ...emptyDraft(now), amount: '5', accountId: 'account-shared' },
+      { now, accounts: [{ id: 'account-shared', bank: 'manual', name: 'Wspólne', isGeneral: false }] },
+    );
+
+    expect(draftFromRecord(manualRecord).accountId).toBe('account-shared');
+    expect(draftFromRecord({ ...manualRecord, accountId: undefined }).accountId).toBe('general-manual');
+  });
+
+  test('keeps an edited transaction on an account this device does not know yet', () => {
+    const original = recordFromDraft(
+      { ...emptyDraft(now), amount: '5', accountId: 'account-remote' },
+      { now, accounts: [{ id: 'account-remote', bank: 'manual', name: 'Z iPada', isGeneral: false }] },
+    );
+
+    const edited = recordFromDraft(
+      { ...draftFromRecord(original), amount: '6' },
+      { record: original, now },
+    );
+
+    expect(edited.accountId).toBe('account-remote');
+    expect(edited.accountName).toBe('Z iPada');
+  });
+
+  test('leaves the account of a captured transaction as the bank reported it', () => {
+    const withAccount = { ...captured, accountName: 'Konto 360' };
+    const record = recordFromDraft(draftFromRecord(withAccount), { record: withAccount, now });
+
+    expect(record.accountName).toBe('Konto 360');
+    expect(record.accountId).toBeUndefined();
   });
 
   test('keeps the identity of the edited transaction and clears its review', () => {
