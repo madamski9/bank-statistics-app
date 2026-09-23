@@ -57,6 +57,7 @@ const config: ExpoConfig = {
   ios: {
     icon: './assets/expo.icon',
     bundleIdentifier: identity.bundleIdentifier,
+    deploymentTarget: '17.0',
     infoPlist: {
       CFBundleDisplayName: identity.displayName,
     },
@@ -89,6 +90,45 @@ const config: ExpoConfig = {
     'expo-notifications',
     ['@clerk/expo', { appleSignIn: false }],
     '@bankstats/ingestion-native',
+    [
+      'expo-widgets',
+      {
+        bundleIdentifier: `${identity.bundleIdentifier}.widgets`,
+        groupIdentifier: `group.${identity.bundleIdentifier}.ingestion`,
+        widgets: [
+          {
+            name: 'SpendingWidget',
+            displayName: 'Wydatki',
+            description: 'Wydatki w tym miesiącu, limity bliskie końca i sklepy, w których wydajesz najwięcej.',
+            ios: {
+              supportedFamilies: [
+                'systemSmall',
+                'systemMedium',
+                'accessoryRectangular',
+                'accessoryInline',
+              ],
+              configuration: {
+                title: 'Wydatki',
+                description: 'Wybierz ekran, od którego zaczyna widżet.',
+                parameters: {
+                  startScreen: {
+                    title: 'Ekran startowy',
+                    type: 'enum',
+                    default: 'month',
+                    values: [
+                      { name: 'Ten miesiąc', value: 'month' },
+                      { name: 'Uważaj na limit', value: 'watch' },
+                      { name: 'Limity', value: 'limits' },
+                      { name: 'Sklepy', value: 'shops' },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
+    ],
     './plugins/withUISceneLifecycle.js',
     './plugins/withDisableUserScriptSandboxing.js',
   ],

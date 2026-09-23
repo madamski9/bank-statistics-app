@@ -66,6 +66,7 @@ import { ProfileScreen } from '@/features/profile/profile-screen';
 import { useCloudSync } from '@/features/sync/use-cloud-sync';
 import { affectsStatistics } from '@/features/transactions/transaction-record';
 import { TransactionsScreen } from '@/features/transactions/transactions-screen';
+import { useSpendingWidget } from '@/features/widgets/use-spending-widget';
 
 const pages = [
   { key: 'overview', label: 'Przegląd' },
@@ -145,6 +146,12 @@ export function HomeScreen() {
     [countedRecords, dimension, rules, spendWindow],
   );
   const alerts = useAlerts({ records: countedRecords, categorizationRules: rules });
+  useSpendingWidget({
+    isReady: !isLoading && error === null,
+    records,
+    alertRules: alerts.rules,
+    categorizationRules: rules,
+  });
   const alertMerchants = useMemo(() => merchantOptions(countedRecords, rules), [countedRecords, rules]);
   const selectedLimit = useMemo(
     () =>
