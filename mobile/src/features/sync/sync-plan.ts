@@ -1,12 +1,14 @@
-import type { api } from '@bankstats/convex/convex/_generated/api';
-import type { IngestionRecord } from '@bankstats/ingestion-native';
-import type { FunctionArgs, FunctionReturnType } from 'convex/server';
+export interface Versioned {
+  revision: number;
+  deleted: boolean;
+}
 
-export type PushedChange = FunctionArgs<typeof api.transactions.push>['changes'][number];
-
-export type TransactionChange = Omit<PushedChange, 'revision' | 'deleted'>;
-
-export type RemoteTransaction = FunctionReturnType<typeof api.transactions.list>[number];
+export interface SyncCodec<Item, Change extends { clientId: string }> {
+  includes: (item: Item) => boolean;
+  idOf: (item: Item) => string;
+  toChange: (item: Item) => Change;
+  fromChange: (change: Change) => Item;
+}
 
 export interface LedgerEntry {
   revision: number;
@@ -15,66 +17,29 @@ export interface LedgerEntry {
 
 export type SyncLedger = Record<string, LedgerEntry>;
 
-export interface SyncPlan {
-  saveLocally: IngestionRecord[];
+export interface SyncPlan<Item, Change> {
+  saveLocally: Item[];
   removeLocally: string[];
-  push: PushedChange[];
+  push: (Change & Versioned)[];
   pulledLedger: SyncLedger;
   ledger: SyncLedger;
 }
 
-interface SyncInput {
-  local: IngestionRecord[];
-  remote: RemoteTransaction[];
+interface SyncInput<Item, Change> {
+  local: Item[];
+  remote: (Change & Versioned)[];
   ledger: SyncLedger;
   now: number;
 }
 
-function withoutUndefined<Shape extends object>(shape: Shape): Shape {
+export function withoutUndefined<Shape extends object>(shape: Shape): Shape {
   return Object.fromEntries(
     Object.entries(shape).filter(([, value]) => value !== undefined),
   ) as Shape;
 }
 
-export function changeFromRecord(record: IngestionRecord): TransactionChange {
-  return withoutUndefined({
-    clientId: record.id,
-    bank: record.bank,
-    origin: 'manual',
-    direction: record.direction,
-    transactionType: record.transactionType,
-    amountMinor: record.amountMinor,
-    currency: record.currency,
-    merchant: record.merchant,
-    category: record.category,
-    accountName: record.accountName,
-    occurredAt: record.occurredAt,
-    capturedAt: record.capturedAt,
-    status: record.status,
-  });
-}
-
-function recordFromRemote(remote: RemoteTransaction): IngestionRecord {
-  return withoutUndefined({
-    id: remote.clientId,
-    bank: remote.bank === 'millennium' ? 'millennium' : 'manual',
-    direction: remote.direction,
-    transactionType: remote.transactionType,
-    amountMinor: remote.amountMinor,
-    currency: remote.currency,
-    merchant: remote.merchant,
-    category: remote.category,
-    accountName: remote.accountName,
-    occurredAt: remote.occurredAt,
-    capturedAt: remote.capturedAt,
-    sourceApp: 'manual',
-    status: remote.status,
-    origin: 'manual',
-  });
-}
-
-export function fingerprint(record: IngestionRecord): string {
-  const serialized = JSON.stringify(Object.entries(changeFromRecord(record)).sort());
+export function fingerprintOf(change: object): string {
+  const serialized = JSON.stringify(Object.entries(withoutUndefined(change)).sort());
   let hash = 0x811c9dc5;
 
   for (let index = 0; index < serialized.length; index += 1) {
@@ -84,15 +49,16 @@ export function fingerprint(record: IngestionRecord): string {
   return `${serialized.length.toString(36)}-${hash.toString(36)}`;
 }
 
-export function planSync({ local, remote, ledger, now }: SyncInput): SyncPlan {
+export function planSync<Item, Change extends { clientId: string }>(
+  { local, remote, ledger, now }: SyncInput<Item, Change>,
+  codec: SyncCodec<Item, Change>,
+): SyncPlan<Item, Change> {
   const localById = new Map(
-    local.filter((record) => record.origin === 'manual').map((record) => [record.id, record]),
+    local.filter(codec.includes).map((item) => [codec.idOf(item), item]),
   );
-  const remoteById = new Map(
-    remote.filter((change) => change.origin === 'manual').map((change) => [change.clientId, change]),
-  );
+  const remoteById = new Map(remote.map((change) => [change.clientId, change]));
   const clientIds = new Set([...localById.keys(), ...remoteById.keys(), ...Object.keys(ledger)]);
-  const plan: SyncPlan = {
+  const plan: SyncPlan<Item, Change> = {
     saveLocally: [],
     removeLocally: [],
     push: [],
@@ -101,17 +67,19 @@ export function planSync({ local, remote, ledger, now }: SyncInput): SyncPlan {
   };
 
   for (const clientId of clientIds) {
-    const localRecord = localById.get(clientId);
+    const localItem = localById.get(clientId);
     const remoteChange = remoteById.get(clientId);
     const entry = ledger[clientId];
-    const localFingerprint = localRecord === undefined ? null : fingerprint(localRecord);
-    const remoteRecord =
-      remoteChange === undefined || remoteChange.deleted ? undefined : recordFromRemote(remoteChange);
-    const remoteFingerprint = remoteRecord === undefined ? null : fingerprint(remoteRecord);
+    const localFingerprint =
+      localItem === undefined ? null : fingerprintOf(codec.toChange(localItem));
+    const remoteItem =
+      remoteChange === undefined || remoteChange.deleted ? undefined : codec.fromChange(remoteChange);
+    const remoteFingerprint =
+      remoteItem === undefined ? null : fingerprintOf(codec.toChange(remoteItem));
 
     const localChanged =
       entry === undefined
-        ? localRecord !== undefined && remoteChange === undefined
+        ? localItem !== undefined && remoteChange === undefined
         : localFingerprint !== entry.fingerprint;
     const remoteChanged =
       remoteChange !== undefined &&
@@ -130,10 +98,10 @@ export function planSync({ local, remote, ledger, now }: SyncInput): SyncPlan {
     }
 
     if (remoteChanged && !localChanged) {
-      if (remoteRecord === undefined) {
+      if (remoteItem === undefined) {
         plan.removeLocally.push(clientId);
       } else {
-        plan.saveLocally.push(remoteRecord);
+        plan.saveLocally.push(remoteItem);
       }
 
       const pulled = { revision: remoteChange.revision, fingerprint: remoteFingerprint };
@@ -143,7 +111,7 @@ export function planSync({ local, remote, ledger, now }: SyncInput): SyncPlan {
     }
 
     if (!localChanged) {
-      if (remoteChange === undefined && localRecord === undefined && entry?.fingerprint === null) {
+      if (remoteChange === undefined && localItem === undefined && entry?.fingerprint === null) {
         delete plan.pulledLedger[clientId];
         delete plan.ledger[clientId];
       }
@@ -151,7 +119,7 @@ export function planSync({ local, remote, ledger, now }: SyncInput): SyncPlan {
       continue;
     }
 
-    const source = localRecord ?? remoteRecord;
+    const source = localItem ?? remoteItem;
 
     if (source === undefined) {
       delete plan.pulledLedger[clientId];
@@ -165,7 +133,7 @@ export function planSync({ local, remote, ledger, now }: SyncInput): SyncPlan {
       (remoteChange?.revision ?? 0) + 1,
     );
 
-    plan.push.push({ ...changeFromRecord(source), revision, deleted: localRecord === undefined });
+    plan.push.push({ ...codec.toChange(source), revision, deleted: localItem === undefined });
     plan.ledger[clientId] = { revision, fingerprint: localFingerprint };
   }
 

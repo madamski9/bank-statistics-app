@@ -1,5 +1,11 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 
+import {
+  generalManualAccountId,
+  withGeneralAccounts,
+  type FinancialAccount,
+} from '@/features/financial-accounts/financial-account';
+
 export type TransactionDirection = IngestionRecord['direction'];
 
 export type TransactionKind = NonNullable<IngestionRecord['transactionType']> | 'other';
@@ -11,7 +17,7 @@ export interface TransactionDraft {
   currency: string;
   name: string;
   category: string;
-  accountName: string;
+  accountId: string;
   date: string;
   time: string;
 }
@@ -64,7 +70,7 @@ export function emptyDraft(now: Date): TransactionDraft {
     currency: 'PLN',
     name: '',
     category: '',
-    accountName: '',
+    accountId: generalManualAccountId,
     date: formatDraftDate(now),
     time: formatDraftTime(now),
   };
@@ -83,7 +89,7 @@ export function draftFromRecord(record: IngestionRecord): TransactionDraft {
     currency: record.currency,
     name: record.merchant ?? '',
     category: record.category ?? '',
-    accountName: record.accountName ?? '',
+    accountId: record.origin === 'manual' ? (record.accountId ?? generalManualAccountId) : '',
     date: formatDraftDate(moment),
     time: formatDraftTime(moment),
   };
@@ -161,11 +167,28 @@ interface DraftContext {
   record?: IngestionRecord | null;
   now: Date;
   random?: () => number;
+  accounts?: FinancialAccount[];
+}
+
+function accountFields(
+  draft: TransactionDraft,
+  base: Pick<IngestionRecord, 'origin' | 'accountId' | 'accountName'>,
+  accounts: FinancialAccount[],
+): Pick<IngestionRecord, 'accountId' | 'accountName'> {
+  if (base.origin !== 'manual') {
+    return { accountId: base.accountId, accountName: base.accountName };
+  }
+
+  const account =
+    accounts.find((candidate) => candidate.id === draft.accountId) ??
+    withGeneralAccounts(accounts).find((candidate) => candidate.id === generalManualAccountId);
+
+  return { accountId: account?.id, accountName: account?.name };
 }
 
 export function recordFromDraft(
   draft: TransactionDraft,
-  { record = null, now, random = Math.random }: DraftContext,
+  { record = null, now, random = Math.random, accounts = withGeneralAccounts([]) }: DraftContext,
 ): IngestionRecord {
   const amountMinor = parseAmountMinor(draft.amount);
   const moment = parseDraftMoment(draft.date, draft.time);
@@ -192,7 +215,7 @@ export function recordFromDraft(
     currency: draft.currency.trim().toUpperCase(),
     merchant: optional(draft.name),
     category: optional(draft.category),
-    accountName: optional(draft.accountName),
+    ...accountFields(draft, base, accounts),
     occurredAt: moment.toISOString(),
   };
 }

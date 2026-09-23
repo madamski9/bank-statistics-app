@@ -17,6 +17,7 @@ export interface IngestionRecord {
   amountMinor: number;
   currency: string;
   merchant?: string;
+  accountId?: string;
   accountName?: string;
   category?: string;
   occurredAt: string;

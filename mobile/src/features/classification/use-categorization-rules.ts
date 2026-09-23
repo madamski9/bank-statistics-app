@@ -11,6 +11,10 @@ const secureStorage: RuleStorage = {
   write: (value) => SecureStore.setItemAsync(storageKey, value),
 };
 
+export function clearCategorizationRules(): Promise<void> {
+  return SecureStore.deleteItemAsync(storageKey);
+}
+
 export interface CategorizationRules {
   rules: CategorizationRule[];
   remember: (merchantLabel: string, category: string) => Promise<void>;

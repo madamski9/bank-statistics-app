@@ -7,7 +7,7 @@ const crons = cronJobs();
 crons.daily(
   'forget tombstones past their retention',
   { hourUTC: 3, minuteUTC: 0 },
-  internal.transactions.purgeExpiredTombstones,
+  internal.syncedRows.purgeExpiredTombstones,
 );
 
 export default crons;

@@ -55,10 +55,11 @@ import {
 } from '@/features/spending-overview/periods';
 import { periodChange, summarizeSpending } from '@/features/spending-overview/spending-summary';
 import { useCapturedSpending } from '@/features/spending-overview/use-captured-spending';
+import { useFinancialAccounts } from '@/features/financial-accounts/use-financial-accounts';
 import { MerchantDetail } from '@/features/merchants/merchant-detail';
 import { MerchantsScreen } from '@/features/merchants/merchants-screen';
 import { ProfileScreen } from '@/features/profile/profile-screen';
-import { useTransactionSync } from '@/features/sync/use-transaction-sync';
+import { useCloudSync } from '@/features/sync/use-cloud-sync';
 import { affectsStatistics } from '@/features/transactions/transaction-record';
 import { TransactionsScreen } from '@/features/transactions/transactions-screen';
 
@@ -98,7 +99,17 @@ export function HomeScreen() {
   const [titleOffsets, setTitleOffsets] = useState<Partial<Record<PageKey, number>>>({});
   const navOffset = useSharedValue(0);
   const { error, isLoading, records, refresh } = useCapturedSpending();
-  useTransactionSync({ records, refresh });
+  const financialAccounts = useFinancialAccounts();
+  const { reload: reloadAccounts } = financialAccounts;
+  const refreshAfterPull = useCallback(
+    () => Promise.all([refresh(), reloadAccounts()]).then(() => undefined),
+    [refresh, reloadAccounts],
+  );
+  const syncStatus = useCloudSync({
+    records,
+    accounts: financialAccounts.accounts,
+    onPulled: refreshAfterPull,
+  });
   const { remember, rules } = useCategorizationRules();
   const [alertEditor, setAlertEditor] = useState<AlertEditor | null>(null);
   const countedRecords = useMemo(() => records.filter(affectsStatistics), [records]);
@@ -346,9 +357,11 @@ export function HomeScreen() {
         </View>
         <View style={{ width }}>
           <TransactionsScreen
+            accounts={financialAccounts.accounts}
             error={error}
             isLoading={isLoading}
             onChanged={refresh}
+            onCreateAccount={financialAccounts.create}
             onRememberRule={remember}
             records={records}
             rules={rules}
@@ -412,6 +425,7 @@ export function HomeScreen() {
             onClose={() => setActiveSheet(null)}
             onOpenAlerts={() => setActiveSheet('alerts')}
             onOpenDiagnostics={() => setActiveSheet('diagnostics')}
+            syncStatus={syncStatus}
           />
         ) : activeSheet === 'alerts' ? (
           <AlertsScreen

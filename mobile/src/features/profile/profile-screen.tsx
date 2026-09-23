@@ -1,20 +1,27 @@
 import { useClerk, useUser } from '@clerk/expo';
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { accountInitial } from '@/features/profile/account-identity';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
+import { syncStatusLabel, type SyncStatus } from '@/features/sync/sync-status';
 
 interface ProfileScreenProps {
   onClose: () => void;
   onOpenAlerts: () => void;
   onOpenDiagnostics: () => void;
+  syncStatus: SyncStatus;
 }
 
-export function ProfileScreen({ onClose, onOpenAlerts, onOpenDiagnostics }: ProfileScreenProps) {
+export function ProfileScreen({
+  onClose,
+  onOpenAlerts,
+  onOpenDiagnostics,
+  syncStatus,
+}: ProfileScreenProps) {
   const insets = useSafeAreaInsets();
   const { user } = useUser();
   const { signOut } = useClerk();
@@ -24,6 +31,14 @@ export function ProfileScreen({ onClose, onOpenAlerts, onOpenDiagnostics }: Prof
   const email = user?.primaryEmailAddress?.emailAddress ?? 'Brak adresu e-mail';
   const name = user?.fullName ?? user?.firstName ?? 'Twoje konto';
   const initial = accountInitial(user);
+  const [now, setNow] = useState(() => Date.now());
+  const syncLabel = syncStatusLabel(syncStatus, now);
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 60_000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSignOut = useCallback(async () => {
     setError(null);
@@ -101,6 +116,32 @@ export function ProfileScreen({ onClose, onOpenAlerts, onOpenDiagnostics }: Prof
                 </Text>
                 <Text maxFontSizeMultiplier={1.5} numberOfLines={1} style={styles.rowValue}>
                   {email}
+                </Text>
+              </View>
+            </View>
+            <View
+              accessible
+              accessibilityLabel={`Synchronizacja: ${syncLabel}`}
+              accessibilityLiveRegion="polite"
+              style={styles.row}
+            >
+              <View accessibilityElementsHidden importantForAccessibility="no" style={styles.rowIcon}>
+                <SymbolView
+                  name={{
+                    ios: 'arrow.triangle.2.circlepath',
+                    android: 'sync',
+                    web: 'sync',
+                  }}
+                  size={17}
+                  tintColor={overviewColors.textSecondary}
+                />
+              </View>
+              <View style={styles.rowCopy}>
+                <Text maxFontSizeMultiplier={1.4} style={styles.rowLabel}>
+                  Synchronizacja
+                </Text>
+                <Text maxFontSizeMultiplier={1.5} style={styles.rowValue}>
+                  {syncLabel}
                 </Text>
               </View>
             </View>

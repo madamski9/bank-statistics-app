@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
+import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
 import { impactLight } from '@/haptics';
 import { formatAmount } from '@/features/spending-overview/formatting';
 import {
@@ -37,6 +38,8 @@ import { useTransactionWrites } from './use-transaction-writes';
 
 interface TransactionsScreenProps {
   records: IngestionRecord[];
+  accounts: FinancialAccount[];
+  onCreateAccount: (name: string) => Promise<FinancialAccount>;
   rules: CategorizationRule[];
   error: string | null;
   isLoading: boolean;
@@ -109,6 +112,8 @@ function buildSections(records: IngestionRecord[], reference: Date): DaySection[
 /** The plain log behind the Overview: every captured transaction, newest first. */
 function TransactionsScreenComponent({
   records,
+  accounts,
+  onCreateAccount,
   rules,
   error,
   isLoading,
@@ -327,9 +332,11 @@ function TransactionsScreenComponent({
       >
         {editor !== null ? (
           <TransactionEditor
+            accounts={accounts}
             isWriting={isWriting}
             key={editor.record?.id ?? 'new'}
             onCancel={closeEditor}
+            onCreateAccount={onCreateAccount}
             onConfirm={editor.record?.review === undefined ? undefined : handleConfirm}
             onDelete={
               editor.record !== null && isManualTransaction(editor.record)

@@ -23,6 +23,7 @@ function lunch(overrides: Record<string, unknown> = {}) {
     amountMinor: 3450,
     currency: 'PLN',
     merchant: 'Bistro',
+    accountId: 'general-manual',
     occurredAt: '2026-09-20T12:30:00.000Z',
     capturedAt: '2026-09-20T12:31:00.000Z',
     status: 'posted' as const,
@@ -185,6 +186,23 @@ describe('transactions', () => {
     ).rejects.toThrow();
   });
 
+  test('rejects a manual transaction without a Financial Account', async () => {
+    const { user } = await signedIn(alice, 'phone');
+
+    await expect(
+      user.mutation(api.transactions.push, {
+        installationId: 'phone',
+        changes: [lunch({ accountId: undefined })],
+      }),
+    ).rejects.toThrow();
+    await expect(
+      user.mutation(api.transactions.push, {
+        installationId: 'phone',
+        changes: [lunch({ accountId: ' ' })],
+      }),
+    ).rejects.toThrow();
+  });
+
   test('forgets a tombstone 90 days after the removal and keeps younger ones', async () => {
     const { backend, user } = await signedIn(alice, 'phone');
     await user.mutation(api.transactions.push, {
@@ -204,7 +222,7 @@ describe('transactions', () => {
       await ctx.db.patch(old!._id, { deletedAt: Date.now() - 91 * dayMs });
     });
 
-    await backend.mutation(internal.transactions.purgeExpiredTombstones, {});
+    await backend.mutation(internal.syncedRows.purgeExpiredTombstones, {});
     const remaining = await user.query(api.transactions.list, {});
 
     expect(remaining.map((row) => row.clientId).sort()).toEqual(['manual-kept', 'manual-recent']);

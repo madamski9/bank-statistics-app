@@ -22,3 +22,11 @@ export const fileLedgerStorage: LedgerStorage = {
     file.write(value);
   },
 };
+
+export function clearLedger(): void {
+  const file = ledgerFile();
+
+  if (file.exists) {
+    file.delete();
+  }
+}

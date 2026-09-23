@@ -10,40 +10,50 @@ import { useConvex, useConvexAuth, useQuery } from 'convex/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 
+import {
+  loadAccounts,
+  removeAccount,
+  upsertAccount,
+} from '@/features/financial-accounts/account-storage';
+import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
+import { secureAccountStorage } from '@/features/financial-accounts/secure-account-storage';
+
 import { fileLedgerStorage } from './file-ledger-storage';
 import { loadInstallationId } from './installation-id';
 import { claimDevice, runSync, type SyncPorts } from './sync-runner';
+import type { SyncStatus } from './sync-status';
+
+const retryDelayMs = 30_000;
+const triggerDebounceMs = 250;
 
 interface Registration {
   userId: string;
   installationId: string;
 }
 
-interface TransactionSyncOptions {
+interface CloudSyncOptions {
   records: IngestionRecord[];
-  refresh: () => void | Promise<void>;
+  accounts: FinancialAccount[];
+  onPulled: () => void | Promise<void>;
 }
 
-export function useTransactionSync({ records, refresh }: TransactionSyncOptions): void {
+export function useCloudSync({ records, accounts, onPulled }: CloudSyncOptions): SyncStatus {
   const convex = useConvex();
   const { isAuthenticated } = useConvexAuth();
   const { userId } = useAuth();
   const [registration, setRegistration] = useState<Registration | null>(null);
+  const [status, setStatus] = useState<SyncStatus>({ state: 'waiting', lastSyncedAt: null });
+  const [isConnected, setIsConnected] = useState(
+    () => convex.connectionState().isWebSocketConnected,
+  );
   const isSupported = Platform.OS === 'ios';
   const installationId =
     registration !== null && registration.userId === userId ? registration.installationId : null;
   const isReady = isSupported && isAuthenticated && installationId !== null;
-  const remote = useQuery(api.transactions.list, isReady ? {} : 'skip');
+  const remoteTransactions = useQuery(api.transactions.list, isReady ? {} : 'skip');
+  const remoteAccounts = useQuery(api.financialAccounts.list, isReady ? {} : 'skip');
   const isRunning = useRef(false);
   const isRerunNeeded = useRef(false);
-
-  useEffect(() => {
-    if (!isSupported || userId == null) {
-      return;
-    }
-
-    void claimDevice(fileLedgerStorage, userId).catch(() => undefined);
-  }, [isSupported, userId]);
 
   useEffect(() => {
     if (!isSupported || !isAuthenticated || userId == null) {
@@ -65,7 +75,11 @@ export function useTransactionSync({ records, refresh }: TransactionSyncOptions)
           setRegistration({ userId, installationId: id });
         }
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (isActive) {
+          setStatus((current) => ({ ...current, state: 'failed' }));
+        }
+      });
 
     return () => {
       isActive = false;
@@ -83,17 +97,32 @@ export function useTransactionSync({ records, refresh }: TransactionSyncOptions)
     }
 
     isRunning.current = true;
+    setStatus((current) => ({ ...current, state: 'syncing' }));
 
     const ports: SyncPorts = {
       ownerId: userId,
-      outbox: {
-        list: listIngestionRecords,
-        save: saveIngestionRecord,
-        remove: deleteIngestionRecord,
+      transactions: {
+        local: {
+          list: listIngestionRecords,
+          save: saveIngestionRecord,
+          remove: deleteIngestionRecord,
+        },
+        cloud: {
+          list: () => convex.query(api.transactions.list, {}),
+          push: (changes) => convex.mutation(api.transactions.push, { installationId, changes }),
+        },
       },
-      cloud: {
-        list: () => convex.query(api.transactions.list, {}),
-        push: (changes) => convex.mutation(api.transactions.push, { installationId, changes }),
+      accounts: {
+        local: {
+          list: () => loadAccounts(secureAccountStorage),
+          save: (account) => upsertAccount(secureAccountStorage, account),
+          remove: (id) => removeAccount(secureAccountStorage, id),
+        },
+        cloud: {
+          list: () => convex.query(api.financialAccounts.list, {}),
+          push: (changes) =>
+            convex.mutation(api.financialAccounts.push, { installationId, changes }),
+        },
       },
       ledger: fileLedgerStorage,
       now: Date.now,
@@ -105,24 +134,41 @@ export function useTransactionSync({ records, refresh }: TransactionSyncOptions)
         const { pulled } = await runSync(ports);
 
         if (pulled > 0) {
-          await refresh();
+          await onPulled();
         }
       } while (isRerunNeeded.current);
+
+      setStatus({ state: 'synced', lastSyncedAt: Date.now() });
     } catch {
       isRerunNeeded.current = false;
+      setStatus((current) => ({ ...current, state: 'failed' }));
     } finally {
       isRunning.current = false;
     }
-  }, [convex, installationId, isReady, refresh, userId]);
+  }, [convex, installationId, isReady, onPulled, userId]);
 
   useEffect(() => {
-    void synchronize();
-  }, [records, remote, synchronize]);
+    const timeout = setTimeout(() => void synchronize(), triggerDebounceMs);
+
+    return () => clearTimeout(timeout);
+  }, [accounts, records, remoteAccounts, remoteTransactions, synchronize]);
+
+  useEffect(() => {
+    if (status.state !== 'failed') {
+      return;
+    }
+
+    const timeout = setTimeout(() => void synchronize(), retryDelayMs);
+
+    return () => clearTimeout(timeout);
+  }, [status.state, synchronize]);
 
   useEffect(() => {
     let wasConnected = convex.connectionState().isWebSocketConnected;
 
     const unsubscribe = convex.subscribeToConnectionState(({ isWebSocketConnected }) => {
+      setIsConnected(isWebSocketConnected);
+
       if (isWebSocketConnected && !wasConnected) {
         void synchronize();
       }
@@ -141,4 +187,10 @@ export function useTransactionSync({ records, refresh }: TransactionSyncOptions)
       subscription.remove();
     };
   }, [convex, synchronize]);
+
+  if (!isConnected && status.state !== 'syncing') {
+    return { state: 'offline', lastSyncedAt: status.lastSyncedAt };
+  }
+
+  return status;
 }

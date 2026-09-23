@@ -1,8 +1,12 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { describe, expect, test } from 'bun:test';
 
-import type { PushedChange, RemoteTransaction } from './sync-plan';
+import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
+
+import type { RemoteAccount } from './account-codec';
+import type { Versioned } from './sync-plan';
 import { claimDevice, runSync, type SyncPorts } from './sync-runner';
+import type { RemoteTransaction } from './transaction-codec';
 
 function manual(id: string, overrides: Partial<IngestionRecord> = {}): IngestionRecord {
   return {
@@ -11,6 +15,7 @@ function manual(id: string, overrides: Partial<IngestionRecord> = {}): Ingestion
     direction: 'expense',
     amountMinor: 3450,
     currency: 'PLN',
+    accountId: 'general-manual',
     occurredAt: '2026-09-20T12:30:00.000Z',
     capturedAt: '2026-09-20T12:31:00.000Z',
     sourceApp: 'manual',
@@ -20,40 +25,50 @@ function manual(id: string, overrides: Partial<IngestionRecord> = {}): Ingestion
   };
 }
 
-function createCloud() {
-  const stored = new Map<string, RemoteTransaction>();
-  let isOnline = true;
+function createTable<Change extends { clientId: string } & Versioned>(isOnline: () => boolean) {
+  const stored = new Map<string, Change>();
 
   return {
     stored,
+    list: async () => {
+      if (!isOnline()) {
+        throw new Error('offline');
+      }
+
+      return [...stored.values()];
+    },
+    push: async (changes: Change[]) => {
+      if (!isOnline()) {
+        throw new Error('offline');
+      }
+
+      for (const change of changes) {
+        const existing = stored.get(change.clientId);
+
+        if (existing === undefined || change.revision > existing.revision) {
+          stored.set(change.clientId, change);
+        }
+      }
+    },
+  };
+}
+
+function createCloud() {
+  let online = true;
+  const transactions = createTable<RemoteTransaction>(() => online);
+  const accounts = createTable<RemoteAccount>(() => online);
+
+  return {
+    stored: transactions.stored,
+    storedAccounts: accounts.stored,
     goOffline: () => {
-      isOnline = false;
+      online = false;
     },
     goOnline: () => {
-      isOnline = true;
+      online = true;
     },
-    port: {
-      list: async () => {
-        if (!isOnline) {
-          throw new Error('offline');
-        }
-
-        return [...stored.values()];
-      },
-      push: async (changes: PushedChange[]) => {
-        if (!isOnline) {
-          throw new Error('offline');
-        }
-
-        for (const change of changes) {
-          const existing = stored.get(change.clientId);
-
-          if (existing === undefined || change.revision > existing.revision) {
-            stored.set(change.clientId, change);
-          }
-        }
-      },
-    },
+    transactions: { list: transactions.list, push: transactions.push },
+    accounts: { list: accounts.list, push: accounts.push },
   };
 }
 
@@ -63,21 +78,36 @@ function createDevice(
   ownerId = 'user_alice',
 ) {
   const outbox = new Map(records.map((record) => [record.id, record]));
+  const accounts = new Map<string, FinancialAccount>();
   const ledger: { value: string | null } = { value: null };
   let clock = 1_800_000_000_000;
 
   const ports: SyncPorts = {
     ownerId,
-    outbox: {
-      list: async () => [...outbox.values()],
-      save: async (record) => {
-        outbox.set(record.id, record);
+    transactions: {
+      local: {
+        list: async () => [...outbox.values()],
+        save: async (record) => {
+          outbox.set(record.id, record);
+        },
+        remove: async (id) => {
+          outbox.delete(id);
+        },
       },
-      remove: async (id) => {
-        outbox.delete(id);
-      },
+      cloud: cloud.transactions,
     },
-    cloud: cloud.port,
+    accounts: {
+      local: {
+        list: async () => [...accounts.values()],
+        save: async (account) => {
+          accounts.set(account.id, account);
+        },
+        remove: async (id) => {
+          accounts.delete(id);
+        },
+      },
+      cloud: cloud.accounts,
+    },
     ledger: {
       read: async () => ledger.value,
       write: async (value) => {
@@ -91,7 +121,7 @@ function createDevice(
     },
   };
 
-  return { outbox, ledger, ports };
+  return { outbox, accounts, ledger, ports };
 }
 
 describe('runSync', () => {
@@ -132,16 +162,15 @@ describe('runSync', () => {
   test('does not mark a change as sent when the push fails', async () => {
     const cloud = createCloud();
     const phone = createDevice(cloud, [manual('manual-lunch')]);
-    const push = cloud.port.push;
-    phone.ports.cloud = {
-      list: cloud.port.list,
+    phone.ports.transactions.cloud = {
+      list: cloud.transactions.list,
       push: async () => {
         throw new Error('network');
       },
     };
 
     await expect(runSync(phone.ports)).rejects.toThrow('network');
-    phone.ports.cloud = { list: cloud.port.list, push };
+    phone.ports.transactions.cloud = cloud.transactions;
     const retry = await runSync(phone.ports);
 
     expect(retry.pushed).toBe(1);
@@ -194,7 +223,11 @@ describe('runSync', () => {
     await runSync(phone.ports);
 
     phone.outbox.set('manual-offline', manual('manual-offline'));
-    const bobSession = { ...phone.ports, ownerId: 'user_bob', cloud: bobCloud.port };
+    const bobSession = {
+      ...phone.ports,
+      ownerId: 'user_bob',
+      transactions: { ...phone.ports.transactions, cloud: bobCloud.transactions },
+    };
     const result = await runSync(bobSession);
 
     expect(result).toEqual({ pushed: 0, pulled: 0, isForeignDevice: true });
@@ -212,5 +245,23 @@ describe('runSync', () => {
     const bobSession = { ...phone.ports, ownerId: 'user_bob' };
     expect((await runSync(bobSession)).isForeignDevice).toBe(true);
     expect(cloud.stored.size).toBe(0);
+  });
+
+  test('brings an account added on one device to another, together with its transaction', async () => {
+    const cloud = createCloud();
+    const phone = createDevice(cloud, [manual('manual-rent', { accountId: 'account-shared' })]);
+    const tablet = createDevice(cloud);
+    phone.accounts.set('account-shared', {
+      id: 'account-shared',
+      bank: 'manual',
+      name: 'Wspólne',
+      isGeneral: false,
+    });
+
+    await runSync(phone.ports);
+    await runSync(tablet.ports);
+
+    expect(tablet.accounts.get('account-shared')?.name).toBe('Wspólne');
+    expect(tablet.outbox.get('manual-rent')?.accountId).toBe('account-shared');
   });
 });
