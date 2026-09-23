@@ -58,6 +58,7 @@ import { useCapturedSpending } from '@/features/spending-overview/use-captured-s
 import { MerchantDetail } from '@/features/merchants/merchant-detail';
 import { MerchantsScreen } from '@/features/merchants/merchants-screen';
 import { ProfileScreen } from '@/features/profile/profile-screen';
+import { useTransactionSync } from '@/features/sync/use-transaction-sync';
 import { affectsStatistics } from '@/features/transactions/transaction-record';
 import { TransactionsScreen } from '@/features/transactions/transactions-screen';
 
@@ -97,6 +98,7 @@ export function HomeScreen() {
   const [titleOffsets, setTitleOffsets] = useState<Partial<Record<PageKey, number>>>({});
   const navOffset = useSharedValue(0);
   const { error, isLoading, records, refresh } = useCapturedSpending();
+  useTransactionSync({ records, refresh });
   const { remember, rules } = useCategorizationRules();
   const [alertEditor, setAlertEditor] = useState<AlertEditor | null>(null);
   const countedRecords = useMemo(() => records.filter(affectsStatistics), [records]);
