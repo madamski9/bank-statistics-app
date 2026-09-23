@@ -62,6 +62,21 @@ function seedFor(
   return { key: classified.category ?? uncategorizedCategory, name: classified.categoryName };
 }
 
+export interface PartyGroupReference {
+  dimension: Exclude<SpendingDimension, 'category'>;
+  key: string;
+}
+
+export function partyGroupReference(classified: ClassifiedTransaction): PartyGroupReference | null {
+  if (classified.partyKind === 'unknown') {
+    return null;
+  }
+
+  const seed = seedFor(classified, classified.partyKind);
+
+  return seed === null ? null : { dimension: classified.partyKind, key: seed.key };
+}
+
 export function groupSpending(
   records: IngestionRecord[],
   { window, rules, dimension }: GroupingOptions,

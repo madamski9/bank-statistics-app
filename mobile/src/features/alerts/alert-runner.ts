@@ -2,7 +2,7 @@ import type { IngestionRecord } from '@bankstats/ingestion-native';
 
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
 
-import { alertsToRaise } from './alert-delivery';
+import { alertsToRaise, sentKey } from './alert-delivery';
 import { alertProgress } from './alert-evaluation';
 import { alertMessage, type AlertMessage } from './alert-message';
 import type { AlertRule } from './alert-rule';
@@ -46,6 +46,13 @@ export async function runAlerts(
     try {
       await notifier.present(alertMessage(rule, alert));
       delivered.push(alert.key);
+      if (rule.condition === 'threshold') {
+        delivered.push(
+          ...rule.thresholdShares
+            .filter((share) => share < alert.share)
+            .map((share) => sentKey(rule, alert.periodKey, share)),
+        );
+      }
     } catch {
       continue;
     }

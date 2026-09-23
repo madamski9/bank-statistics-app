@@ -78,7 +78,7 @@ export function groupLimit(
     amountMinor: progress.amountMinor,
     targetMinor: progress.targetMinor,
     share: progress.share,
-    currency: progress.currency === 'PLN' ? group.currency : progress.currency,
+    currency: progress.currency,
     periodLabel: periodLabels[rule.period.kind],
   };
 }

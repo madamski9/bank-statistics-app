@@ -1,5 +1,4 @@
 import { useUser } from '@clerk/expo';
-import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
@@ -27,6 +26,7 @@ import type { AlertRule, AlertScope } from '@/features/alerts/alert-rule';
 import { AlertsScreen } from '@/features/alerts/alerts-screen';
 import { requestAlertPermission } from '@/features/alerts/expo-alert-notifier';
 import { groupLimit, ruleForScope, scopeForGroup } from '@/features/alerts/group-limit';
+import { merchantOptions } from '@/features/alerts/merchant-options';
 import { useAlerts } from '@/features/alerts/use-alerts';
 import {
   groupSpending,
@@ -53,7 +53,11 @@ import {
   previousPeriodWindow,
   type SpendingPeriod,
 } from '@/features/spending-overview/periods';
-import { periodChange, summarizeSpending } from '@/features/spending-overview/spending-summary';
+import {
+  periodChange,
+  summarizeSpending,
+  type SpendingSource,
+} from '@/features/spending-overview/spending-summary';
 import { useCapturedSpending } from '@/features/spending-overview/use-captured-spending';
 import { useFinancialAccounts } from '@/features/financial-accounts/use-financial-accounts';
 import { MerchantDetail } from '@/features/merchants/merchant-detail';
@@ -75,6 +79,7 @@ type SheetKey = 'profile' | 'diagnostics' | 'alerts';
 interface AlertEditor {
   scope: AlertScope;
   rule: AlertRule | null;
+  isScopeLocked?: boolean;
 }
 
 /**
@@ -140,6 +145,7 @@ export function HomeScreen() {
     [countedRecords, dimension, rules, spendWindow],
   );
   const alerts = useAlerts({ records: countedRecords, categorizationRules: rules });
+  const alertMerchants = useMemo(() => merchantOptions(countedRecords, rules), [countedRecords, rules]);
   const selectedLimit = useMemo(
     () =>
       group === null
@@ -163,7 +169,7 @@ export function HomeScreen() {
 
     const scope = scopeForGroup(group);
 
-    setAlertEditor({ scope, rule: ruleForScope(alerts.rules, scope) });
+    setAlertEditor({ scope, rule: ruleForScope(alerts.rules, scope), isScopeLocked: true });
   }, [alerts.rules, group]);
 
   const handleSaveAlert = useCallback(
@@ -221,6 +227,26 @@ export function HomeScreen() {
   const handleDetailClosed = useCallback(() => {
     dispatchSelection({ type: 'closed', revision });
   }, [revision]);
+
+  const handleSelectSource = useCallback(
+    (source: SpendingSource) => {
+      if (source.group === null) {
+        return;
+      }
+
+      const { dimension: sourceDimension, key } = source.group;
+      const match = groupSpending(countedRecords, {
+        window: spendWindow,
+        rules,
+        dimension: sourceDimension,
+      }).find((candidate) => candidate.key === key);
+
+      if (match !== undefined) {
+        setGroup(match);
+      }
+    },
+    [countedRecords, rules, spendWindow],
+  );
 
   const handleGroupClosed = useCallback(() => {
     setGroup(null);
@@ -322,13 +348,9 @@ export function HomeScreen() {
           onPress={() => setActiveSheet('profile')}
           style={({ pressed }) => [styles.avatar, pressed ? styles.pressed : null]}
         >
-          {user?.imageUrl ? (
-            <Image accessible={false} contentFit="cover" source={user.imageUrl} style={styles.avatarImage} />
-          ) : (
-            <Text maxFontSizeMultiplier={1.3} style={styles.avatarInitial}>
-              {initial}
-            </Text>
-          )}
+          <Text maxFontSizeMultiplier={1.3} style={styles.avatarInitial}>
+            {initial}
+          </Text>
         </Pressable>
       </View>
 
@@ -375,6 +397,7 @@ export function HomeScreen() {
             isLoading={isLoading}
             onChangeDimension={setDimension}
             onChangePeriod={setPeriod}
+            onCreateLimit={() => setAlertEditor({ scope: { kind: 'all' }, rule: null })}
             onSelectGroup={setGroup}
             period={period}
           />
@@ -387,6 +410,7 @@ export function HomeScreen() {
           key={revision}
           onChangePeriod={setPeriod}
           onClosed={handleDetailClosed}
+          onSelectSource={handleSelectSource}
           period={period}
           selection={selection}
           summary={summary}
@@ -413,6 +437,8 @@ export function HomeScreen() {
         {alertEditor !== null ? (
           <AlertRuleSheet
             isFirstRule={alerts.rules.length === 0}
+            isScopeLocked={alertEditor.isScopeLocked === true}
+            merchants={alertMerchants}
             onCancel={() => setAlertEditor(null)}
             onDelete={alertEditor.rule === null ? undefined : handleDeleteAlert}
             onRequestPermission={requestAlertPermission}
@@ -504,10 +530,6 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     backgroundColor: overviewColors.surfacePressed,
     overflow: 'hidden',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
   },
   avatarInitial: {
     fontSize: 15,

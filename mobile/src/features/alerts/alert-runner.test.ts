@@ -90,6 +90,39 @@ describe('runAlerts', () => {
     expect(sent).toEqual(alreadySent);
   });
 
+  test('one large purchase gives one notification and records both crossed thresholds', async () => {
+    const sink = notifier();
+    const sent = await runAlerts([rule()], [record(60_000)], {
+      reference,
+      rules: [],
+      sent: [],
+      notifier: sink.notifier,
+    });
+
+    expect(sink.presented).toHaveLength(1);
+    expect(sink.presented[0].title).toBe('Limit w Żabka osiągnięty');
+    expect(sent).toHaveLength(2);
+  });
+
+  test('a changed limit can notify again within the same month', async () => {
+    const sink = notifier();
+    const first = await runAlerts([rule()], [record(41_000)], {
+      reference,
+      rules: [],
+      sent: [],
+      notifier: sink.notifier,
+    });
+    const sent = await runAlerts([rule({ targetMinor: 60_000 })], [record(50_000)], {
+      reference,
+      rules: [],
+      sent: first,
+      notifier: sink.notifier,
+    });
+
+    expect(sink.presented).toHaveLength(2);
+    expect(sent).toHaveLength(2);
+  });
+
   test('keeps the ledger untouched when the device refuses notifications', async () => {
     const sink = notifier(false);
     const sent = await runAlerts([rule()], [record(60_000)], {
@@ -134,7 +167,7 @@ describe('runAlerts', () => {
       },
     };
 
-    const sent = await runAlerts([rule()], [record(60_000)], {
+    const sent = await runAlerts([rule(), rule({ id: 'rule-2' })], [record(60_000)], {
       reference,
       rules: [],
       sent: [],
@@ -142,6 +175,6 @@ describe('runAlerts', () => {
     });
 
     expect(presented).toHaveLength(1);
-    expect(sent).toHaveLength(1);
+    expect(sent).toHaveLength(2);
   });
 });

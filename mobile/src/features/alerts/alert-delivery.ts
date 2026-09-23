@@ -11,8 +11,16 @@ export interface RaisedAlert {
   periodKey: string;
 }
 
-export function sentKey(ruleId: string, periodKey: string, share: number): string {
-  return `${ruleId}|${periodKey}|${share}`;
+export function sentKey(rule: AlertRule, periodKey: string, share: number): string {
+  return JSON.stringify([
+    rule.id,
+    periodKey,
+    rule.metric,
+    rule.scope,
+    rule.condition,
+    rule.targetMinor,
+    share,
+  ]);
 }
 
 export function alertsToRaise(
@@ -26,7 +34,7 @@ export function alertsToRaise(
   }
 
   const raise = (share: number): RaisedAlert => ({
-    key: sentKey(rule.id, progress.window.key, share),
+    key: sentKey(rule, progress.window.key, share),
     ruleId: rule.id,
     share,
     amountMinor: progress.amountMinor,
@@ -47,8 +55,12 @@ export function alertsToRaise(
     return sent.includes(alert.key) ? [] : [alert];
   }
 
-  return rule.thresholdShares
+  const pending = rule.thresholdShares
     .filter((share) => progress.amountMinor >= Math.round(rule.targetMinor * share))
     .map(raise)
     .filter((alert) => !sent.includes(alert.key));
+
+  return pending.length === 0
+    ? []
+    : [pending.reduce((highest, alert) => (alert.share > highest.share ? alert : highest))];
 }

@@ -56,7 +56,7 @@ struct NormalizedRecord: Codable, Sendable {
 }
 
 /// A bank notification can normalize to a record, or it can be recognized-but-intentionally-
-/// dropped — Millennium's own card-payment push never carries a merchant name, so it is deferred
+/// dropped - Millennium's own card-payment push never carries a merchant name, so it is deferred
 /// to the Apple Pay Wallet transaction (captured separately, with the merchant) rather than saved
 /// as a second, poorer-detail record for the same purchase.
 enum NormalizationOutcome {

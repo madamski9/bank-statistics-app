@@ -13,7 +13,7 @@ enum SyntheticSample {
     subtitle: "",
     body: "Płatność kartą: 12,34 PLN w SKLEP TEST."
   )
-  /// The Apple Pay/Wallet push for the same purchase — this is the one that becomes a record.
+  /// The Apple Pay/Wallet push for the same purchase - this is the one that becomes a record.
   /// Shaped exactly like the real one, location suffix and amount-only body included, so
   /// exercising it proves the path an actual payment takes rather than a tidier one it never
   /// produces.

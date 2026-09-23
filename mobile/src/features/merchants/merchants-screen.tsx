@@ -1,3 +1,4 @@
+import { SymbolView } from 'expo-symbols';
 import { memo } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +18,7 @@ interface MerchantsScreenProps {
   onChangeDimension: (dimension: SpendingDimension) => void;
   period: SpendingPeriod;
   onChangePeriod: (period: SpendingPeriod) => void;
+  onCreateLimit: () => void;
   onSelectGroup: (group: SpendingGroup) => void;
   error: string | null;
   isLoading: boolean;
@@ -38,6 +40,7 @@ function MerchantsScreenComponent({
   onChangeDimension,
   period,
   onChangePeriod,
+  onCreateLimit,
   onSelectGroup,
   error,
   isLoading,
@@ -58,9 +61,29 @@ function MerchantsScreenComponent({
   return (
     <View style={styles.page}>
       <View style={styles.header}>
-        <Text maxFontSizeMultiplier={1.6} style={styles.context}>
-          {groupCount(groups.length, dimension)} · {option.label}
-        </Text>
+        <View style={styles.contextRow}>
+          <Text maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.context}>
+            {groupCount(groups.length, dimension)} · {option.label}
+          </Text>
+          <Pressable
+            accessibilityHint="Otwiera formularz wyboru sklepu i kwoty limitu"
+            accessibilityLabel="Ustaw limit sklepu"
+            accessibilityRole="button"
+            hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
+            onPress={onCreateLimit}
+            style={({ pressed }) => [styles.limitAction, pressed ? styles.limitActionPressed : null]}
+          >
+            <SymbolView
+              name={{ ios: 'plus', android: 'add', web: 'add' }}
+              size={12}
+              tintColor={overviewColors.textPrimary}
+              weight="semibold"
+            />
+            <Text maxFontSizeMultiplier={1.3} style={styles.limitActionLabel}>
+              Limit
+            </Text>
+          </Pressable>
+        </View>
         <RangeSwitcher onChange={onChangePeriod} period={period} />
         <DimensionSwitcher dimension={dimension} onChange={onChangeDimension} />
       </View>
@@ -132,9 +155,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: overviewSpacing.gutter,
     gap: overviewSpacing.tight,
   },
+  contextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   context: {
+    flexShrink: 1,
     fontSize: 13,
     color: overviewColors.textSecondary,
+  },
+  limitAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minHeight: 32,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: overviewColors.hairline,
+    backgroundColor: overviewColors.surfacePressed,
+  },
+  limitActionPressed: {
+    opacity: 0.6,
+  },
+  limitActionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: overviewColors.textPrimary,
   },
   list: {
     gap: 4,

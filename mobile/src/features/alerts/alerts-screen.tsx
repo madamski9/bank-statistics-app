@@ -8,6 +8,7 @@ import { impactLight } from '@/haptics';
 import type { AlertProgress } from './alert-evaluation';
 import { scopeLabel } from './alert-message';
 import type { AlertRule } from './alert-rule';
+import { LimitProgressBar } from './limit-progress-bar';
 
 export interface AlertRuleProgress {
   rule: AlertRule;
@@ -81,18 +82,22 @@ export function AlertsScreen({ entries, onClose, onCreate, onEdit }: AlertsScree
                   {formatAmount(progress.amountMinor, progress.currency)}
                 </Text>
               </View>
-              <View style={styles.track}>
-                <View
-                  style={[
-                    styles.fill,
-                    {
-                      width: `${Math.min(Math.max(progress.share * 100, 2), 100)}%`,
-                      backgroundColor:
-                        progress.share >= 1 ? overviewColors.negative : overviewColors.textSecondary,
-                    },
-                  ]}
-                />
-              </View>
+              {rule.metric === 'expense' ? (
+                <LimitProgressBar share={progress.share} />
+              ) : (
+                <View style={styles.track}>
+                  <View
+                    style={[
+                      styles.fill,
+                      {
+                        width: `${Math.min(Math.max(progress.share * 100, 2), 100)}%`,
+                        backgroundColor:
+                          progress.share >= 1 ? overviewColors.negative : overviewColors.textSecondary,
+                      },
+                    ]}
+                  />
+                </View>
+              )}
               <Text maxFontSizeMultiplier={1.5} style={styles.cardMeta}>
                 {metricLabels[rule.metric]} · {formatAmount(rule.targetMinor, progress.currency)}{' '}
                 {periodLabels[rule.period.kind]} · {formatShare(Math.min(progress.share, 1))}
@@ -111,7 +116,7 @@ export function AlertsScreen({ entries, onClose, onCreate, onEdit }: AlertsScree
           style={({ pressed }) => [styles.create, pressed ? styles.pressed : null]}
         >
           <Text maxFontSizeMultiplier={1.4} style={styles.createLabel}>
-            Dodaj limit wszystkich wydatków
+            Dodaj limit
           </Text>
         </Pressable>
       </ScrollView>

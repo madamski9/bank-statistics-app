@@ -73,6 +73,7 @@ export function alertProgress(
       record.currency === reportingCurrency &&
       affectsStatistics(record) &&
       isWithin(record, window) &&
+      occurredMs(record) <= reference.getTime() &&
       matchesScope(record, rule.scope, rules),
   );
 

@@ -58,6 +58,12 @@ describe('alertProgress', () => {
     );
   });
 
+  test('leaves out future transactions even when they fall in the current month', () => {
+    const future = record({ occurredAt: new Date(2026, 8, 25, 10, 0).toISOString(), amountMinor: 90_000 });
+
+    expect(alertProgress(rule(), [record(), future], { reference, rules: [] }).amountMinor).toBe(1000);
+  });
+
   test('leaves out a transaction that is still held back from statistics', () => {
     const held = record({ review: 'amount', amountMinor: 90_000 });
     const reversed = record({ status: 'reversed', amountMinor: 90_000 });
