@@ -50,12 +50,37 @@ describe('planSync', () => {
     expect(result.ledger[lunch.id]).toEqual({ revision: now, fingerprint: fingerprint(lunch) });
   });
 
-  test('leaves captured transactions to their own synchronization', () => {
-    const captured = manual({ id: 'capture-1', bank: 'millennium', origin: 'capture' });
+  test('pushes captured transactions with their source and review state', () => {
+    const captured = manual({
+      id: 'capture-1',
+      bank: 'millennium',
+      origin: 'capture',
+      accountId: undefined,
+      sourceApp: 'com.apple.Passbook',
+      review: 'currency',
+    });
 
     const result = plan({ local: [captured], remote: [], ledger: {}, now });
 
-    expect(result.push).toEqual([]);
+    expect(result.push).toEqual([{ ...changeFromRecord(captured), revision: now, deleted: false }]);
+    expect(result.push[0]).toMatchObject({
+      bank: 'millennium',
+      origin: 'capture',
+      sourceApp: 'com.apple.Passbook',
+      review: 'currency',
+    });
+    expect(result.push[0]).not.toHaveProperty('accountId');
+  });
+
+  test('does not upload synthetic captured transactions', () => {
+    const synthetic = manual({
+      id: 'capture-test',
+      bank: 'millennium',
+      origin: 'capture',
+      merchant: 'SKLEP TEST',
+    });
+
+    expect(plan({ local: [synthetic], remote: [], ledger: {}, now }).push).toEqual([]);
   });
 
   test('does nothing when both sides still match the last synchronization', () => {
