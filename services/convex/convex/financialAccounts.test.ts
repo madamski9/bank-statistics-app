@@ -41,7 +41,7 @@ describe('financialAccounts', () => {
     await expect(
       backend.mutation(api.financialAccounts.push, { installationId: 'phone', changes: [savings()] }),
     ).rejects.toThrow();
-    await expect(backend.query(api.financialAccounts.list, {})).rejects.toThrow();
+    await expect(backend.query(api.financialAccounts.list, { installationId: 'phone' })).rejects.toThrow();
   });
 
   test('reads an account back on another device of the same user, once per client id', async () => {
@@ -52,7 +52,7 @@ describe('financialAccounts', () => {
     const tablet = backend.withIdentity(alice);
     await tablet.mutation(api.devices.register, { installationId: 'tablet', platform: 'ios' });
 
-    expect(await tablet.query(api.financialAccounts.list, {})).toEqual([savings()]);
+    expect(await tablet.query(api.financialAccounts.list, { installationId: 'tablet' })).toEqual([savings()]);
   });
 
   test('keeps a renamed general account under its fixed id', async () => {
@@ -64,7 +64,7 @@ describe('financialAccounts', () => {
       changes: [{ ...general, name: 'Konto osobiste', revision: 2 }],
     });
 
-    const [stored] = await user.query(api.financialAccounts.list, {});
+    const [stored] = await user.query(api.financialAccounts.list, { installationId: 'phone' });
 
     expect(stored).toMatchObject({ clientId: 'general-millennium', name: 'Konto osobiste' });
   });
@@ -76,14 +76,14 @@ describe('financialAccounts', () => {
     const other = backend.withIdentity(bob);
     await other.mutation(api.devices.register, { installationId: 'phone', platform: 'ios' });
 
-    expect(await other.query(api.financialAccounts.list, {})).toEqual([]);
+    expect(await other.query(api.financialAccounts.list, { installationId: 'phone' })).toEqual([]);
 
     await other.mutation(api.financialAccounts.push, {
       installationId: 'phone',
       changes: [savings({ name: 'Przejęte', revision: 9 })],
     });
 
-    expect((await user.query(api.financialAccounts.list, {}))[0]).toMatchObject({
+    expect((await user.query(api.financialAccounts.list, { installationId: 'phone' }))[0]).toMatchObject({
       name: 'Oszczędnościowe',
     });
   });

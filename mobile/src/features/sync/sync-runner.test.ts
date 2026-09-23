@@ -204,16 +204,32 @@ describe('runSync', () => {
     expect(phone.outbox.get('manual-lunch')?.merchant).toBe('Bistro');
   });
 
-  test('starts over from an unreadable ledger without duplicating anything', async () => {
+  test('treats an unreadable ledger as a device it cannot vouch for', async () => {
     const cloud = createCloud();
     const phone = createDevice(cloud, [manual('manual-lunch')]);
     await runSync(phone.ports);
 
     phone.ledger.value = '{not json';
+    phone.outbox.set('manual-later', manual('manual-later'));
     const result = await runSync(phone.ports);
 
-    expect(result).toEqual({ pushed: 0, pulled: 0, isForeignDevice: false });
+    expect(result).toEqual({ pushed: 0, pulled: 0, isForeignDevice: true });
+    expect(await claimDevice(phone.ports.ledger, 'user_alice')).toBe(false);
     expect(cloud.stored.size).toBe(1);
+  });
+
+  test('treats a ledger that cannot be read at all the same way', async () => {
+    const cloud = createCloud();
+    const phone = createDevice(cloud, [manual('manual-lunch')]);
+    phone.ports.ledger = {
+      read: async () => {
+        throw new Error('locked');
+      },
+      write: async () => undefined,
+    };
+
+    expect(await claimDevice(phone.ports.ledger, 'user_alice')).toBe(false);
+    expect((await runSync(phone.ports)).isForeignDevice).toBe(true);
   });
 
   test('refuses to carry the transactions of one user into the cloud of another', async () => {

@@ -16,7 +16,7 @@ import {
   upsertAccount,
 } from '@/features/financial-accounts/account-storage';
 import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
-import { secureAccountStorage } from '@/features/financial-accounts/secure-account-storage';
+import { fileAccountStorage } from '@/features/financial-accounts/file-account-storage';
 
 import { fileLedgerStorage } from './file-ledger-storage';
 import { loadInstallationId } from './installation-id';
@@ -50,8 +50,9 @@ export function useCloudSync({ records, accounts, onPulled }: CloudSyncOptions):
   const installationId =
     registration !== null && registration.userId === userId ? registration.installationId : null;
   const isReady = isSupported && isAuthenticated && installationId !== null;
-  const remoteTransactions = useQuery(api.transactions.list, isReady ? {} : 'skip');
-  const remoteAccounts = useQuery(api.financialAccounts.list, isReady ? {} : 'skip');
+  const remoteTransactions = useQuery(api.transactions.list, isReady ? { installationId } : 'skip');
+  const remoteAccounts = useQuery(api.financialAccounts.list, isReady ? { installationId } : 'skip');
+  const [registrationAttempt, setRegistrationAttempt] = useState(0);
   const isRunning = useRef(false);
   const isRerunNeeded = useRef(false);
 
@@ -84,7 +85,7 @@ export function useCloudSync({ records, accounts, onPulled }: CloudSyncOptions):
     return () => {
       isActive = false;
     };
-  }, [convex, isAuthenticated, isSupported, userId]);
+  }, [convex, isAuthenticated, isSupported, registrationAttempt, userId]);
 
   const synchronize = useCallback(async () => {
     if (!isReady || userId == null) {
@@ -108,18 +109,18 @@ export function useCloudSync({ records, accounts, onPulled }: CloudSyncOptions):
           remove: deleteIngestionRecord,
         },
         cloud: {
-          list: () => convex.query(api.transactions.list, {}),
+          list: () => convex.query(api.transactions.list, { installationId }),
           push: (changes) => convex.mutation(api.transactions.push, { installationId, changes }),
         },
       },
       accounts: {
         local: {
-          list: () => loadAccounts(secureAccountStorage),
-          save: (account) => upsertAccount(secureAccountStorage, account),
-          remove: (id) => removeAccount(secureAccountStorage, id),
+          list: () => loadAccounts(fileAccountStorage),
+          save: (account) => upsertAccount(fileAccountStorage, account),
+          remove: (id) => removeAccount(fileAccountStorage, id),
         },
         cloud: {
-          list: () => convex.query(api.financialAccounts.list, {}),
+          list: () => convex.query(api.financialAccounts.list, { installationId }),
           push: (changes) =>
             convex.mutation(api.financialAccounts.push, { installationId, changes }),
         },
@@ -158,10 +159,16 @@ export function useCloudSync({ records, accounts, onPulled }: CloudSyncOptions):
       return;
     }
 
-    const timeout = setTimeout(() => void synchronize(), retryDelayMs);
+    const timeout = setTimeout(() => {
+      if (isReady) {
+        void synchronize();
+      } else {
+        setRegistrationAttempt((attempt) => attempt + 1);
+      }
+    }, retryDelayMs);
 
     return () => clearTimeout(timeout);
-  }, [status.state, synchronize]);
+  }, [isReady, status.state, synchronize]);
 
   useEffect(() => {
     let wasConnected = convex.connectionState().isWebSocketConnected;
@@ -188,7 +195,7 @@ export function useCloudSync({ records, accounts, onPulled }: CloudSyncOptions):
     };
   }, [convex, synchronize]);
 
-  if (!isConnected && status.state !== 'syncing') {
+  if (!isConnected) {
     return { state: 'offline', lastSyncedAt: status.lastSyncedAt };
   }
 

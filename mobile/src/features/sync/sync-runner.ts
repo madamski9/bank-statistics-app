@@ -68,11 +68,9 @@ function parseSection(value: unknown): SyncLedger {
   ) as SyncLedger;
 }
 
-function parseLedger(stored: string | null): StoredLedger | null {
-  if (stored === null) {
-    return null;
-  }
+type LedgerReading = { kind: 'missing' } | { kind: 'unreadable' } | { kind: 'owned'; ledger: StoredLedger };
 
+function parseLedger(stored: string): StoredLedger | null {
   try {
     const parsed: unknown = JSON.parse(stored);
 
@@ -92,8 +90,22 @@ function parseLedger(stored: string | null): StoredLedger | null {
   }
 }
 
-async function readLedger(storage: LedgerStorage): Promise<StoredLedger | null> {
-  return parseLedger(await storage.read().catch(() => null));
+async function readLedger(storage: LedgerStorage): Promise<LedgerReading> {
+  let stored: string | null;
+
+  try {
+    stored = await storage.read();
+  } catch {
+    return { kind: 'unreadable' };
+  }
+
+  if (stored === null) {
+    return { kind: 'missing' };
+  }
+
+  const ledger = parseLedger(stored);
+
+  return ledger === null ? { kind: 'unreadable' } : { kind: 'owned', ledger };
 }
 
 function writeLedger(storage: LedgerStorage, ledger: StoredLedger): Promise<void> {
@@ -101,15 +113,15 @@ function writeLedger(storage: LedgerStorage, ledger: StoredLedger): Promise<void
 }
 
 export async function claimDevice(storage: LedgerStorage, ownerId: string): Promise<boolean> {
-  const stored = await readLedger(storage);
+  const reading = await readLedger(storage);
 
-  if (stored === null) {
+  if (reading.kind === 'missing') {
     await writeLedger(storage, { ownerId, transactions: {}, accounts: {} });
 
     return true;
   }
 
-  return stored.ownerId === ownerId;
+  return reading.kind === 'owned' && reading.ledger.ownerId === ownerId;
 }
 
 async function syncEntity<Item, Change extends { clientId: string }>(
@@ -148,13 +160,19 @@ async function syncEntity<Item, Change extends { clientId: string }>(
 }
 
 export async function runSync(ports: SyncPorts): Promise<SyncResult> {
-  const stored = await readLedger(ports.ledger);
+  const reading = await readLedger(ports.ledger);
 
-  if (stored !== null && stored.ownerId !== ports.ownerId) {
+  if (
+    reading.kind === 'unreadable' ||
+    (reading.kind === 'owned' && reading.ledger.ownerId !== ports.ownerId)
+  ) {
     return { pushed: 0, pulled: 0, isForeignDevice: true };
   }
 
-  const ledger = stored ?? { ownerId: ports.ownerId, transactions: {}, accounts: {} };
+  const ledger =
+    reading.kind === 'owned'
+      ? reading.ledger
+      : { ownerId: ports.ownerId, transactions: {}, accounts: {} };
   const now = ports.now();
   const accounts = await syncEntity(
     ports.accounts,

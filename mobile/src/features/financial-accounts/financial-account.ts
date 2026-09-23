@@ -1,4 +1,14 @@
-export type FinancialAccountBank = 'manual' | 'millennium';
+const financialAccountBanks = ['manual', 'millennium'] as const;
+
+export type FinancialAccountBank = (typeof financialAccountBanks)[number];
+
+export function isFinancialAccountBank(value: unknown): value is FinancialAccountBank {
+  return financialAccountBanks.some((bank) => bank === value);
+}
+
+export function financialAccountBank(value: string): FinancialAccountBank {
+  return isFinancialAccountBank(value) ? value : 'manual';
+}
 
 export interface FinancialAccount {
   id: string;
@@ -9,7 +19,7 @@ export interface FinancialAccount {
 
 export const generalManualAccountId = 'general-manual';
 
-const maximumNameLength = 60;
+export const maximumAccountNameLength = 60;
 
 const generalAccounts: FinancialAccount[] = [
   { id: generalManualAccountId, bank: 'manual', name: 'Gotówka i inne', isGeneral: true },
@@ -46,8 +56,8 @@ export function accountNameError(name: string, existing: FinancialAccount[]): st
     return 'Podaj nazwę konta.';
   }
 
-  if (trimmed.length > maximumNameLength) {
-    return `Nazwa konta może mieć najwyżej ${maximumNameLength} znaków.`;
+  if (trimmed.length > maximumAccountNameLength) {
+    return `Nazwa konta może mieć najwyżej ${maximumAccountNameLength} znaków.`;
   }
 
   const lowered = trimmed.toLocaleLowerCase('pl');

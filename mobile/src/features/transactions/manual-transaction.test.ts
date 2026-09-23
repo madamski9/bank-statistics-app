@@ -127,6 +127,21 @@ describe('recordFromDraft', () => {
     expect(draftFromRecord({ ...manualRecord, accountId: undefined }).accountId).toBe('general-manual');
   });
 
+  test('keeps an edited transaction on an account this device does not know yet', () => {
+    const original = recordFromDraft(
+      { ...emptyDraft(now), amount: '5', accountId: 'account-remote' },
+      { now, accounts: [{ id: 'account-remote', bank: 'manual', name: 'Z iPada', isGeneral: false }] },
+    );
+
+    const edited = recordFromDraft(
+      { ...draftFromRecord(original), amount: '6' },
+      { record: original, now },
+    );
+
+    expect(edited.accountId).toBe('account-remote');
+    expect(edited.accountName).toBe('Z iPada');
+  });
+
   test('leaves the account of a captured transaction as the bank reported it', () => {
     const withAccount = { ...captured, accountName: 'Konto 360' };
     const record = recordFromDraft(draftFromRecord(withAccount), { record: withAccount, now });

@@ -51,7 +51,65 @@ describe('transactions', () => {
     await expect(
       backend.mutation(api.transactions.push, { installationId: 'phone', changes: [lunch()] }),
     ).rejects.toThrow();
-    await expect(backend.query(api.transactions.list, {})).rejects.toThrow();
+    await expect(backend.query(api.transactions.list, { installationId: 'phone' })).rejects.toThrow();
+  });
+
+  test('asks an unauthenticated caller to sign in before judging the data', async () => {
+    const backend = convexTest(schema, modules);
+
+    await expect(
+      backend.mutation(api.transactions.push, {
+        installationId: 'phone',
+        changes: [lunch({ amountMinor: -1 })],
+      }),
+    ).rejects.toThrow('Sign in');
+  });
+
+  test('reads transactions only through a registered installation', async () => {
+    const { user } = await signedIn(alice, 'phone');
+
+    await expect(user.query(api.transactions.list, { installationId: 'stolen' })).rejects.toThrow();
+  });
+
+  test('files a transaction only under a general account or an account the user owns', async () => {
+    const { backend, user } = await signedIn(alice, 'phone');
+    await user.mutation(api.financialAccounts.push, {
+      installationId: 'phone',
+      changes: [
+        {
+          clientId: 'account-shared',
+          bank: 'manual',
+          name: 'Wspólne',
+          isGeneral: false,
+          revision: 1,
+          deleted: false,
+        },
+      ],
+    });
+
+    await user.mutation(api.transactions.push, {
+      installationId: 'phone',
+      changes: [
+        lunch({ clientId: 'manual-a', accountId: 'account-shared' }),
+        lunch({ clientId: 'manual-b', accountId: 'general-millennium' }),
+      ],
+    });
+    await expect(
+      user.mutation(api.transactions.push, {
+        installationId: 'phone',
+        changes: [lunch({ accountId: 'account-unknown' })],
+      }),
+    ).rejects.toThrow();
+
+    const other = backend.withIdentity(bob);
+    await other.mutation(api.devices.register, { installationId: 'phone', platform: 'ios' });
+
+    await expect(
+      other.mutation(api.transactions.push, {
+        installationId: 'phone',
+        changes: [lunch({ accountId: 'account-shared' })],
+      }),
+    ).rejects.toThrow();
   });
 
   test('refuses a push from an installation the user never registered', async () => {
@@ -68,7 +126,7 @@ describe('transactions', () => {
 
     const tablet = backend.withIdentity(alice);
     await tablet.mutation(api.devices.register, { installationId: 'tablet', platform: 'ios' });
-    const listed = await tablet.query(api.transactions.list, {});
+    const listed = await tablet.query(api.transactions.list, { installationId: 'tablet' });
 
     expect(listed).toHaveLength(1);
     expect(listed[0]).toMatchObject({ clientId: 'manual-lunch', amountMinor: 3450, revision: 1 });
@@ -79,7 +137,7 @@ describe('transactions', () => {
     await user.mutation(api.transactions.push, { installationId: 'phone', changes: [lunch()] });
     await user.mutation(api.transactions.push, { installationId: 'phone', changes: [lunch()] });
 
-    expect(await user.query(api.transactions.list, {})).toHaveLength(1);
+    expect(await user.query(api.transactions.list, { installationId: 'phone' })).toHaveLength(1);
   });
 
   test('keeps the newest revision and ignores an older one arriving late', async () => {
@@ -93,7 +151,7 @@ describe('transactions', () => {
       changes: [lunch({ revision: 3, amountMinor: 3000 })],
     });
 
-    const [stored] = await user.query(api.transactions.list, {});
+    const [stored] = await user.query(api.transactions.list, { installationId: 'phone' });
 
     expect(stored).toMatchObject({ amountMinor: 5000, revision: 5 });
   });
@@ -106,7 +164,7 @@ describe('transactions', () => {
       changes: [lunch({ revision: 2, deleted: true })],
     });
 
-    const [stored] = await user.query(api.transactions.list, {});
+    const [stored] = await user.query(api.transactions.list, { installationId: 'phone' });
 
     expect(stored).toMatchObject({ clientId: 'manual-lunch', deleted: true, revision: 2 });
   });
@@ -118,7 +176,7 @@ describe('transactions', () => {
     const other = backend.withIdentity(bob);
     await other.mutation(api.devices.register, { installationId: 'phone', platform: 'ios' });
 
-    expect(await other.query(api.transactions.list, {})).toEqual([]);
+    expect(await other.query(api.transactions.list, { installationId: 'phone' })).toEqual([]);
   });
 
   test('never lets one user overwrite or remove the transaction of another', async () => {
@@ -132,8 +190,8 @@ describe('transactions', () => {
       changes: [lunch({ revision: 9, amountMinor: 1, deleted: true })],
     });
 
-    const [aliceCopy] = await user.query(api.transactions.list, {});
-    const [bobCopy] = await other.query(api.transactions.list, {});
+    const [aliceCopy] = await user.query(api.transactions.list, { installationId: 'phone' });
+    const [bobCopy] = await other.query(api.transactions.list, { installationId: 'phone' });
 
     expect(aliceCopy).toMatchObject({ amountMinor: 3450, revision: 1, deleted: false });
     expect(bobCopy).toMatchObject({ amountMinor: 1, revision: 9, deleted: true });
@@ -223,7 +281,7 @@ describe('transactions', () => {
     });
 
     await backend.mutation(internal.syncedRows.purgeExpiredTombstones, {});
-    const remaining = await user.query(api.transactions.list, {});
+    const remaining = await user.query(api.transactions.list, { installationId: 'phone' });
 
     expect(remaining.map((row) => row.clientId).sort()).toEqual(['manual-kept', 'manual-recent']);
   });

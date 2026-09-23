@@ -2,7 +2,7 @@ import { ConvexError } from 'convex/values';
 
 import { internal } from './_generated/api';
 import type { Doc } from './_generated/dataModel';
-import { internalMutation, type MutationCtx } from './_generated/server';
+import { internalMutation, type QueryCtx } from './_generated/server';
 import { findDevice } from './devices';
 import { requireOwnerId } from './owner';
 
@@ -24,7 +24,7 @@ export function assertValidRevision(change: SyncedChange) {
   }
 }
 
-export async function requireDevice(ctx: MutationCtx, installationId: string) {
+export async function requireDevice(ctx: QueryCtx, installationId: string) {
   const ownerId = await requireOwnerId(ctx.auth);
   const device = await findDevice(ctx, ownerId, installationId);
 

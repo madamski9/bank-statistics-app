@@ -1,4 +1,4 @@
-import type { FinancialAccount } from './financial-account';
+import { isFinancialAccountBank, type FinancialAccount } from './financial-account';
 
 export interface AccountStorage {
   read: () => Promise<string | null>;
@@ -14,7 +14,7 @@ function isFinancialAccount(value: unknown): value is FinancialAccount {
 
   return (
     typeof account.id === 'string' &&
-    (account.bank === 'manual' || account.bank === 'millennium') &&
+    isFinancialAccountBank(account.bank) &&
     typeof account.name === 'string' &&
     typeof account.isGeneral === 'boolean'
   );
@@ -40,22 +40,30 @@ export function saveAccounts(storage: AccountStorage, accounts: FinancialAccount
   return storage.write(JSON.stringify(accounts));
 }
 
-export async function upsertAccount(storage: AccountStorage, account: FinancialAccount): Promise<void> {
-  const accounts = await loadAccounts(storage);
-  const index = accounts.findIndex((candidate) => candidate.id === account.id);
-  const next =
-    index === -1
-      ? [...accounts, account]
-      : accounts.map((candidate, position) => (position === index ? account : candidate));
+const pendingUpdates = new WeakMap<AccountStorage, Promise<unknown>>();
 
-  await saveAccounts(storage, next);
+function updateAccounts(
+  storage: AccountStorage,
+  change: (accounts: FinancialAccount[]) => FinancialAccount[],
+): Promise<void> {
+  const previous = pendingUpdates.get(storage) ?? Promise.resolve();
+  const next = previous
+    .catch(() => undefined)
+    .then(async () => saveAccounts(storage, change(await loadAccounts(storage))));
+
+  pendingUpdates.set(storage, next);
+
+  return next;
 }
 
-export async function removeAccount(storage: AccountStorage, id: string): Promise<void> {
-  const accounts = await loadAccounts(storage);
-
-  await saveAccounts(
-    storage,
-    accounts.filter((account) => account.id !== id),
+export function upsertAccount(storage: AccountStorage, account: FinancialAccount): Promise<void> {
+  return updateAccounts(storage, (accounts) =>
+    accounts.some((candidate) => candidate.id === account.id)
+      ? accounts.map((candidate) => (candidate.id === account.id ? account : candidate))
+      : [...accounts, account],
   );
+}
+
+export function removeAccount(storage: AccountStorage, id: string): Promise<void> {
+  return updateAccounts(storage, (accounts) => accounts.filter((account) => account.id !== id));
 }

@@ -11,9 +11,9 @@ describe('syncStatusLabel', () => {
     );
   });
 
-  test('says that changes wait on the phone while offline', () => {
+  test('says that synchronization resumes once the network returns', () => {
     expect(syncStatusLabel({ state: 'offline', lastSyncedAt: null }, noon)).toBe(
-      'Offline. Zmiany czekają na tym telefonie.',
+      'Offline. Zsynchronizujemy po powrocie sieci.',
     );
   });
 

@@ -1,8 +1,7 @@
 import { ConvexError, v, type Infer } from 'convex/values';
 
-import { mutation, query } from './_generated/server';
+import { mutation, query, type QueryCtx } from './_generated/server';
 import { transactionFields } from './schema';
-import { requireOwnerId } from './owner';
 import { assertValidRevision, requireDevice, rowFromChange, withoutServerFields } from './syncedRows';
 
 const transactionChange = v.object({
@@ -39,11 +38,33 @@ function assertValidChange(change: TransactionChange) {
   assertValidRevision(change);
 }
 
+const generalAccountPrefix = 'general-';
+
+async function assertOwnedAccount(ctx: QueryCtx, ownerId: string, change: TransactionChange) {
+  const accountId = change.accountId ?? '';
+
+  if (change.deleted || accountId.startsWith(generalAccountPrefix)) {
+    return;
+  }
+
+  const account = await ctx.db
+    .query('financialAccounts')
+    .withIndex('by_owner_client', (index) => index.eq('ownerId', ownerId).eq('clientId', accountId))
+    .unique();
+
+  if (account === null || account.deleted) {
+    throw new ConvexError('A transaction belongs to one of your Financial Accounts.');
+  }
+}
+
 export const push = mutation({
   args: { installationId: v.string(), changes: v.array(transactionChange) },
   handler: async (ctx, { installationId, changes }) => {
-    changes.forEach(assertValidChange);
     const owner = await requireDevice(ctx, installationId);
+    changes.forEach(assertValidChange);
+    await Promise.all(
+      changes.map((change) => assertOwnedAccount(ctx, owner.ownerId, change)),
+    );
     const now = Date.now();
 
     for (const change of changes) {
@@ -71,9 +92,9 @@ export const push = mutation({
 });
 
 export const list = query({
-  args: {},
-  handler: async (ctx) => {
-    const ownerId = await requireOwnerId(ctx.auth);
+  args: { installationId: v.string() },
+  handler: async (ctx, { installationId }) => {
+    const { ownerId } = await requireDevice(ctx, installationId);
     const rows = await ctx.db
       .query('transactions')
       .withIndex('by_owner', (index) => index.eq('ownerId', ownerId))

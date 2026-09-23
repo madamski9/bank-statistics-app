@@ -179,11 +179,21 @@ function accountFields(
     return { accountId: base.accountId, accountName: base.accountName };
   }
 
-  const account =
-    accounts.find((candidate) => candidate.id === draft.accountId) ??
-    withGeneralAccounts(accounts).find((candidate) => candidate.id === generalManualAccountId);
+  const account = accounts.find((candidate) => candidate.id === draft.accountId);
 
-  return { accountId: account?.id, accountName: account?.name };
+  if (account !== undefined) {
+    return { accountId: account.id, accountName: account.name };
+  }
+
+  if (base.accountId !== undefined && base.accountId === draft.accountId) {
+    return { accountId: base.accountId, accountName: base.accountName };
+  }
+
+  const general = withGeneralAccounts([]).find(
+    (candidate) => candidate.id === generalManualAccountId,
+  );
+
+  return { accountId: general?.id, accountName: general?.name };
 }
 
 export function recordFromDraft(

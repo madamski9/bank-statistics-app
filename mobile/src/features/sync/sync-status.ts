@@ -31,7 +31,7 @@ export function syncStatusLabel(status: SyncStatus, now: number): string {
         ? 'Zsynchronizowano'
         : `Zsynchronizowano ${dayLabel(status.lastSyncedAt, now)}`;
     case 'offline':
-      return 'Offline. Zmiany czekają na tym telefonie.';
+      return 'Offline. Zsynchronizujemy po powrocie sieci.';
     case 'failed':
       return 'Nie udało się zsynchronizować. Spróbujemy ponownie.';
     case 'syncing':

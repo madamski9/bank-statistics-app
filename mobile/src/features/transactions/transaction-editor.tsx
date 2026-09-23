@@ -20,10 +20,8 @@ import {
   uncategorizedLabel,
 } from '@/features/classification/categories';
 import { supportsCategoryRule } from '@/features/classification/categorization-rule';
-import {
-  accountNameError,
-  type FinancialAccount,
-} from '@/features/financial-accounts/financial-account';
+import { AccountPicker } from '@/features/financial-accounts/account-picker';
+import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 
 import {
@@ -388,139 +386,6 @@ export function TransactionEditor({
         ) : null}
       </ScrollView>
     </KeyboardAvoidingView>
-  );
-}
-
-interface AccountPickerProps {
-  accounts: FinancialAccount[];
-  selectedId: string;
-  onSelect: (accountId: string) => void;
-  onCreate: (name: string) => Promise<void>;
-}
-
-function AccountPicker({ accounts, selectedId, onSelect, onCreate }: AccountPickerProps) {
-  const [newName, setNewName] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
-
-  const handleCreate = async () => {
-    if (newName === null) {
-      return;
-    }
-
-    const invalid = accountNameError(newName, accounts);
-
-    if (invalid !== null) {
-      setError(invalid);
-
-      return;
-    }
-
-    setIsCreating(true);
-
-    try {
-      await onCreate(newName);
-      impactLight();
-      setNewName(null);
-      setError(null);
-    } catch {
-      setError('Nie udało się dodać konta. Spróbuj ponownie.');
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  return (
-    <View style={styles.categories}>
-      <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
-        Konto
-      </Text>
-      <View style={styles.chips}>
-        {accounts.map((account) => {
-          const isActive = account.id === selectedId;
-
-          return (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ selected: isActive }}
-              key={account.id}
-              onPress={() => {
-                selectionChanged();
-                onSelect(account.id);
-              }}
-              style={({ pressed }) => [
-                styles.chip,
-                isActive ? styles.chipActive : null,
-                pressed ? styles.pressed : null,
-              ]}
-            >
-              <Text
-                maxFontSizeMultiplier={1.3}
-                style={[styles.chipLabel, isActive ? styles.chipLabelActive : null]}
-              >
-                {account.name}
-              </Text>
-            </Pressable>
-          );
-        })}
-        {newName === null ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => {
-              selectionChanged();
-              setNewName('');
-            }}
-            style={({ pressed }) => [styles.chip, pressed ? styles.pressed : null]}
-          >
-            <Text maxFontSizeMultiplier={1.3} style={styles.chipLabel}>
-              + Nowe konto
-            </Text>
-          </Pressable>
-        ) : null}
-      </View>
-      {newName !== null ? (
-        <View style={styles.card}>
-          <View style={styles.field}>
-            <TextInput
-              accessibilityLabel="Nazwa nowego konta"
-              autoFocus
-              maxLength={60}
-              onChangeText={(value) => {
-                setError(null);
-                setNewName(value);
-              }}
-              onSubmitEditing={() => void handleCreate()}
-              placeholder="Na przykład Oszczędnościowe"
-              placeholderTextColor={overviewColors.textDisabled}
-              returnKeyType="done"
-              selectionColor={overviewColors.textPrimary}
-              style={styles.fieldInput}
-              value={newName}
-            />
-            <Pressable
-              accessibilityRole="button"
-              disabled={isCreating}
-              hitSlop={8}
-              onPress={() => void handleCreate()}
-              style={({ pressed }) => [pressed ? styles.pressed : null]}
-            >
-              {isCreating ? (
-                <ActivityIndicator color={overviewColors.textPrimary} />
-              ) : (
-                <Text maxFontSizeMultiplier={1.3} style={styles.submitLabel}>
-                  Dodaj
-                </Text>
-              )}
-            </Pressable>
-          </View>
-        </View>
-      ) : null}
-      {error !== null ? (
-        <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={1.5} style={styles.error}>
-          {error}
-        </Text>
-      ) : null}
-    </View>
   );
 }
 

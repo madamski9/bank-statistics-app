@@ -57,4 +57,27 @@ describe('account storage', () => {
 
     expect((await loadAccounts(storage)).map((account) => account.id)).toEqual(['account-b']);
   });
+
+  test('keeps both accounts when two writes overlap', async () => {
+    const storage = memoryStorage();
+    const slowStorage: AccountStorage = {
+      read: async () => {
+        const snapshot = storage.value;
+        await new Promise((resolve) => setTimeout(resolve, 5));
+
+        return snapshot;
+      },
+      write: storage.write,
+    };
+
+    await Promise.all([
+      upsertAccount(slowStorage, { id: 'account-a', bank: 'manual', name: 'A', isGeneral: false }),
+      upsertAccount(slowStorage, { id: 'account-b', bank: 'manual', name: 'B', isGeneral: false }),
+    ]);
+
+    expect((await loadAccounts(storage)).map((account) => account.id).sort()).toEqual([
+      'account-a',
+      'account-b',
+    ]);
+  });
 });
