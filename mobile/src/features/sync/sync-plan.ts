@@ -1,29 +1,12 @@
+import type { api } from '@bankstats/convex/convex/_generated/api';
 import type { IngestionRecord } from '@bankstats/ingestion-native';
+import type { FunctionArgs, FunctionReturnType } from 'convex/server';
 
-export interface TransactionChange {
-  clientId: string;
-  bank: IngestionRecord['bank'];
-  origin: 'manual';
-  direction: IngestionRecord['direction'];
-  transactionType?: IngestionRecord['transactionType'];
-  amountMinor: number;
-  currency: string;
-  merchant?: string;
-  category?: string;
-  accountName?: string;
-  occurredAt: string;
-  capturedAt: string;
-  status: IngestionRecord['status'];
-}
+export type PushedChange = FunctionArgs<typeof api.transactions.push>['changes'][number];
 
-export interface RemoteTransaction extends Omit<TransactionChange, 'bank' | 'origin'> {
-  bank: string;
-  origin: 'capture' | 'manual';
-  revision: number;
-  deleted: boolean;
-}
+export type TransactionChange = Omit<PushedChange, 'revision' | 'deleted'>;
 
-export type PushedChange = TransactionChange & { revision: number; deleted: boolean };
+export type RemoteTransaction = FunctionReturnType<typeof api.transactions.list>[number];
 
 export interface LedgerEntry {
   revision: number;
@@ -127,9 +110,14 @@ export function planSync({ local, remote, ledger, now }: SyncInput): SyncPlan {
     const remoteFingerprint = remoteRecord === undefined ? null : fingerprint(remoteRecord);
 
     const localChanged =
-      entry === undefined ? localRecord !== undefined : localFingerprint !== entry.fingerprint;
+      entry === undefined
+        ? localRecord !== undefined && remoteChange === undefined
+        : localFingerprint !== entry.fingerprint;
     const remoteChanged =
-      remoteChange !== undefined && (entry === undefined || remoteChange.revision > entry.revision);
+      remoteChange !== undefined &&
+      (entry === undefined ||
+        remoteChange.revision > entry.revision ||
+        (remoteChange.revision === entry.revision && remoteFingerprint !== entry.fingerprint));
 
     if (remoteChange !== undefined && localFingerprint === remoteFingerprint) {
       if (localChanged || remoteChanged) {
@@ -155,6 +143,11 @@ export function planSync({ local, remote, ledger, now }: SyncInput): SyncPlan {
     }
 
     if (!localChanged) {
+      if (remoteChange === undefined && localRecord === undefined && entry?.fingerprint === null) {
+        delete plan.pulledLedger[clientId];
+        delete plan.ledger[clientId];
+      }
+
       continue;
     }
 

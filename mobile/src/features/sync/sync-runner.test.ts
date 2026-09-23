@@ -2,7 +2,7 @@ import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { describe, expect, test } from 'bun:test';
 
 import type { PushedChange, RemoteTransaction } from './sync-plan';
-import { runSync, type SyncPorts } from './sync-runner';
+import { claimDevice, runSync, type SyncPorts } from './sync-runner';
 
 function manual(id: string, overrides: Partial<IngestionRecord> = {}): IngestionRecord {
   return {
@@ -57,12 +57,17 @@ function createCloud() {
   };
 }
 
-function createDevice(cloud: ReturnType<typeof createCloud>, records: IngestionRecord[] = []) {
+function createDevice(
+  cloud: ReturnType<typeof createCloud>,
+  records: IngestionRecord[] = [],
+  ownerId = 'user_alice',
+) {
   const outbox = new Map(records.map((record) => [record.id, record]));
   const ledger: { value: string | null } = { value: null };
   let clock = 1_800_000_000_000;
 
   const ports: SyncPorts = {
+    ownerId,
     outbox: {
       list: async () => [...outbox.values()],
       save: async (record) => {
@@ -108,7 +113,7 @@ describe('runSync', () => {
     await runSync(phone.ports);
     const second = await runSync(phone.ports);
 
-    expect(second).toEqual({ pushed: 0, pulled: 0 });
+    expect(second).toEqual({ pushed: 0, pulled: 0, isForeignDevice: false });
   });
 
   test('keeps an offline entry durable and pushes it once connectivity returns', async () => {
@@ -178,7 +183,34 @@ describe('runSync', () => {
     phone.ledger.value = '{not json';
     const result = await runSync(phone.ports);
 
-    expect(result).toEqual({ pushed: 0, pulled: 0 });
+    expect(result).toEqual({ pushed: 0, pulled: 0, isForeignDevice: false });
     expect(cloud.stored.size).toBe(1);
+  });
+
+  test('refuses to carry the transactions of one user into the cloud of another', async () => {
+    const aliceCloud = createCloud();
+    const bobCloud = createCloud();
+    const phone = createDevice(aliceCloud, [manual('manual-lunch')]);
+    await runSync(phone.ports);
+
+    phone.outbox.set('manual-offline', manual('manual-offline'));
+    const bobSession = { ...phone.ports, ownerId: 'user_bob', cloud: bobCloud.port };
+    const result = await runSync(bobSession);
+
+    expect(result).toEqual({ pushed: 0, pulled: 0, isForeignDevice: true });
+    expect(bobCloud.stored.size).toBe(0);
+  });
+
+  test('claims a fresh device for the first user who signs in, before any connection', async () => {
+    const cloud = createCloud();
+    const phone = createDevice(cloud);
+
+    expect(await claimDevice(phone.ports.ledger, 'user_alice')).toBe(true);
+    phone.outbox.set('manual-offline', manual('manual-offline'));
+    expect(await claimDevice(phone.ports.ledger, 'user_bob')).toBe(false);
+
+    const bobSession = { ...phone.ports, ownerId: 'user_bob' };
+    expect((await runSync(bobSession)).isForeignDevice).toBe(true);
+    expect(cloud.stored.size).toBe(0);
   });
 });

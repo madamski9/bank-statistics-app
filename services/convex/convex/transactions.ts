@@ -1,7 +1,9 @@
 import { ConvexError, v, type Infer } from 'convex/values';
 
-import { mutation, query } from './_generated/server';
-import { findDevice, requireOwnerId } from './owner';
+import { internal } from './_generated/api';
+import { internalMutation, mutation, query } from './_generated/server';
+import { findDevice } from './devices';
+import { requireOwnerId } from './owner';
 import { transactionFields } from './schema';
 
 const transactionChange = v.object({
@@ -13,8 +15,14 @@ const transactionChange = v.object({
 type TransactionChange = Infer<typeof transactionChange>;
 
 const currencyPattern = /^[A-Z]{3}$/;
+const tombstoneRetentionMs = 90 * 24 * 60 * 60 * 1000;
+const purgeBatchSize = 500;
 
 function assertValidChange(change: TransactionChange) {
+  if (change.origin !== 'manual') {
+    throw new ConvexError('Only manual transactions synchronize for now.');
+  }
+
   if (!Number.isSafeInteger(change.amountMinor) || change.amountMinor <= 0) {
     throw new ConvexError('An amount is a positive whole number of minor units.');
   }
@@ -23,8 +31,8 @@ function assertValidChange(change: TransactionChange) {
     throw new ConvexError('A currency is a three-letter ISO code.');
   }
 
-  if (Number.isNaN(Date.parse(change.occurredAt))) {
-    throw new ConvexError('An occurrence time is an ISO 8601 timestamp.');
+  if (Number.isNaN(Date.parse(change.occurredAt)) || Number.isNaN(Date.parse(change.capturedAt))) {
+    throw new ConvexError('Occurrence and capture times are ISO 8601 timestamps.');
   }
 
   if (!Number.isSafeInteger(change.revision) || change.revision < 0) {
@@ -43,6 +51,7 @@ export const push = mutation({
     }
 
     changes.forEach(assertValidChange);
+    const now = Date.now();
 
     for (const change of changes) {
       const stored = await ctx.db
@@ -52,14 +61,21 @@ export const push = mutation({
         )
         .unique();
 
+      const row = {
+        ...change,
+        ownerId,
+        lastDeviceId: device._id,
+        deletedAt: change.deleted ? (stored?.deletedAt ?? now) : undefined,
+      };
+
       if (stored === null) {
-        await ctx.db.insert('transactions', { ...change, ownerId, lastDeviceId: device._id });
+        await ctx.db.insert('transactions', row);
       } else if (change.revision > stored.revision) {
-        await ctx.db.replace(stored._id, { ...change, ownerId, lastDeviceId: device._id });
+        await ctx.db.replace(stored._id, row);
       }
     }
 
-    await ctx.db.patch(device._id, { lastSeenAt: Date.now() });
+    await ctx.db.patch(device._id, { lastSeenAt: now });
   },
 });
 
@@ -72,6 +88,27 @@ export const list = query({
       .withIndex('by_owner', (index) => index.eq('ownerId', ownerId))
       .collect();
 
-    return stored.map(({ _id, _creationTime, ownerId: _owner, lastDeviceId: _device, ...change }) => change);
+    return stored.map(
+      ({ _id, _creationTime, ownerId: _owner, lastDeviceId: _device, deletedAt: _deletedAt, ...change }) =>
+        change,
+    );
+  },
+});
+
+export const purgeExpiredTombstones = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const expired = await ctx.db
+      .query('transactions')
+      .withIndex('by_deleted_at', (index) =>
+        index.gt('deletedAt', 0).lt('deletedAt', Date.now() - tombstoneRetentionMs),
+      )
+      .take(purgeBatchSize);
+
+    await Promise.all(expired.map((row) => ctx.db.delete(row._id)));
+
+    if (expired.length === purgeBatchSize) {
+      await ctx.scheduler.runAfter(0, internal.transactions.purgeExpiredTombstones, {});
+    }
   },
 });

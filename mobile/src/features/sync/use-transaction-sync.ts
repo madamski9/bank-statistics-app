@@ -7,14 +7,12 @@ import {
 } from '@bankstats/ingestion-native';
 import { useAuth } from '@clerk/expo';
 import { useConvex, useConvexAuth, useQuery } from 'convex/react';
-import * as SecureStore from 'expo-secure-store';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 
+import { fileLedgerStorage } from './file-ledger-storage';
 import { loadInstallationId } from './installation-id';
-import { runSync, type SyncPorts } from './sync-runner';
-
-const ledgerKey = 'bankstats.sync-ledger';
+import { claimDevice, runSync, type SyncPorts } from './sync-runner';
 
 interface Registration {
   userId: string;
@@ -40,14 +38,27 @@ export function useTransactionSync({ records, refresh }: TransactionSyncOptions)
   const isRerunNeeded = useRef(false);
 
   useEffect(() => {
+    if (!isSupported || userId == null) {
+      return;
+    }
+
+    void claimDevice(fileLedgerStorage, userId).catch(() => undefined);
+  }, [isSupported, userId]);
+
+  useEffect(() => {
     if (!isSupported || !isAuthenticated || userId == null) {
       return;
     }
 
     let isActive = true;
 
-    loadInstallationId()
-      .then(async (id) => {
+    claimDevice(fileLedgerStorage, userId)
+      .then(async (isOwnDevice) => {
+        if (!isOwnDevice) {
+          return;
+        }
+
+        const id = await loadInstallationId();
         await convex.mutation(api.devices.register, { installationId: id, platform: 'ios' });
 
         if (isActive) {
@@ -62,7 +73,7 @@ export function useTransactionSync({ records, refresh }: TransactionSyncOptions)
   }, [convex, isAuthenticated, isSupported, userId]);
 
   const synchronize = useCallback(async () => {
-    if (!isReady) {
+    if (!isReady || userId == null) {
       return;
     }
 
@@ -74,6 +85,7 @@ export function useTransactionSync({ records, refresh }: TransactionSyncOptions)
     isRunning.current = true;
 
     const ports: SyncPorts = {
+      ownerId: userId,
       outbox: {
         list: listIngestionRecords,
         save: saveIngestionRecord,
@@ -83,10 +95,7 @@ export function useTransactionSync({ records, refresh }: TransactionSyncOptions)
         list: () => convex.query(api.transactions.list, {}),
         push: (changes) => convex.mutation(api.transactions.push, { installationId, changes }),
       },
-      ledger: {
-        read: () => SecureStore.getItemAsync(ledgerKey),
-        write: (value) => SecureStore.setItemAsync(ledgerKey, value),
-      },
+      ledger: fileLedgerStorage,
       now: Date.now,
     };
 
@@ -104,7 +113,7 @@ export function useTransactionSync({ records, refresh }: TransactionSyncOptions)
     } finally {
       isRunning.current = false;
     }
-  }, [convex, installationId, isReady, refresh]);
+  }, [convex, installationId, isReady, refresh, userId]);
 
   useEffect(() => {
     void synchronize();

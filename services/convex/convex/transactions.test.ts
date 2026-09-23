@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { convexTest } from 'convex-test';
 
-import { api } from './_generated/api';
+import { api, internal } from './_generated/api';
 import schema from './schema';
 
 const moduleFiles = new Bun.Glob('**/*.{ts,js}').scanSync({ cwd: import.meta.dir });
@@ -166,5 +166,47 @@ describe('transactions', () => {
         changes: [lunch({ occurredAt: 'yesterday' })],
       }),
     ).rejects.toThrow();
+  });
+
+  test('rejects a captured transaction and an unreadable capture time', async () => {
+    const { user } = await signedIn(alice, 'phone');
+
+    await expect(
+      user.mutation(api.transactions.push, {
+        installationId: 'phone',
+        changes: [lunch({ origin: 'capture' })],
+      }),
+    ).rejects.toThrow();
+    await expect(
+      user.mutation(api.transactions.push, {
+        installationId: 'phone',
+        changes: [lunch({ capturedAt: 'soon' })],
+      }),
+    ).rejects.toThrow();
+  });
+
+  test('forgets a tombstone 90 days after the removal and keeps younger ones', async () => {
+    const { backend, user } = await signedIn(alice, 'phone');
+    await user.mutation(api.transactions.push, {
+      installationId: 'phone',
+      changes: [
+        lunch({ clientId: 'manual-old', deleted: true }),
+        lunch({ clientId: 'manual-recent', deleted: true }),
+        lunch({ clientId: 'manual-kept' }),
+      ],
+    });
+    const dayMs = 24 * 60 * 60 * 1000;
+    await backend.run(async (ctx) => {
+      const old = await ctx.db
+        .query('transactions')
+        .filter((row) => row.eq(row.field('clientId'), 'manual-old'))
+        .unique();
+      await ctx.db.patch(old!._id, { deletedAt: Date.now() - 91 * dayMs });
+    });
+
+    await backend.mutation(internal.transactions.purgeExpiredTombstones, {});
+    const remaining = await user.query(api.transactions.list, {});
+
+    expect(remaining.map((row) => row.clientId).sort()).toEqual(['manual-kept', 'manual-recent']);
   });
 });

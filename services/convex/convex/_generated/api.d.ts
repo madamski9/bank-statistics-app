@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as crons from "../crons.js";
 import type * as devices from "../devices.js";
 import type * as owner from "../owner.js";
 import type * as transactions from "../transactions.js";
@@ -19,6 +20,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  crons: typeof crons;
   devices: typeof devices;
   owner: typeof owner;
   transactions: typeof transactions;

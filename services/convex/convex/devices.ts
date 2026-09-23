@@ -1,8 +1,22 @@
 import { v } from 'convex/values';
 
-import { mutation } from './_generated/server';
-import { findDevice, requireOwnerId } from './owner';
+import type { Doc } from './_generated/dataModel';
+import { mutation, type QueryCtx } from './_generated/server';
+import { requireOwnerId } from './owner';
 import { devicePlatform } from './schema';
+
+export async function findDevice(
+  ctx: QueryCtx,
+  ownerId: string,
+  installationId: string,
+): Promise<Doc<'devices'> | null> {
+  return ctx.db
+    .query('devices')
+    .withIndex('by_owner_installation', (index) =>
+      index.eq('ownerId', ownerId).eq('installationId', installationId),
+    )
+    .unique();
+}
 
 export const register = mutation({
   args: { installationId: v.string(), platform: devicePlatform },

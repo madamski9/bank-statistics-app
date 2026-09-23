@@ -38,8 +38,10 @@ export default defineSchema({
     ...transactionFields,
     revision: v.number(),
     deleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
     lastDeviceId: v.id('devices'),
   })
     .index('by_owner', ['ownerId'])
-    .index('by_owner_client', ['ownerId', 'clientId']),
+    .index('by_owner_client', ['ownerId', 'clientId'])
+    .index('by_deleted_at', ['deletedAt']),
 });

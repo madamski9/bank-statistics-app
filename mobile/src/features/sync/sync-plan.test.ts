@@ -156,6 +156,52 @@ describe('planSync', () => {
     expect(plan.ledger[lunch.id]).toEqual({ revision: 9, fingerprint: fingerprint(lunch) });
   });
 
+  test('takes the cloud copy when this device has no history of the transaction', () => {
+    const stale = manual({ amountMinor: 1000 });
+    const current = manual({ amountMinor: 2000 });
+
+    const plan = planSync({ local: [stale], remote: [remote(current, 9)], ledger: {}, now });
+
+    expect(plan.push).toEqual([]);
+    expect(plan.saveLocally).toEqual([current]);
+  });
+
+  test('does not bring back a transaction removed elsewhere when this device has no history', () => {
+    const lunch = manual();
+
+    const plan = planSync({ local: [lunch], remote: [remote(lunch, 9, true)], ledger: {}, now });
+
+    expect(plan.push).toEqual([]);
+    expect(plan.removeLocally).toEqual([lunch.id]);
+  });
+
+  test('settles on the cloud copy when another device won a push with the same revision', () => {
+    const mine = manual({ amountMinor: 4000 });
+    const theirs = manual({ amountMinor: 5000 });
+
+    const plan = planSync({
+      local: [mine],
+      remote: [remote(theirs, 9)],
+      ledger: synced(mine, 9),
+      now,
+    });
+
+    expect(plan.push).toEqual([]);
+    expect(plan.saveLocally).toEqual([theirs]);
+  });
+
+  test('forgets a removal once the cloud has let its tombstone go', () => {
+    const plan = planSync({
+      local: [],
+      remote: [],
+      ledger: { 'manual-lunch': { revision: 4, fingerprint: null } },
+      now,
+    });
+
+    expect(plan.ledger).toEqual({});
+    expect(plan.pulledLedger).toEqual({});
+  });
+
   test('forgets a removal the cloud never received', () => {
     const lunch = manual();
 
