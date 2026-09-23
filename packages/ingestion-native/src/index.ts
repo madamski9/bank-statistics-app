@@ -34,7 +34,7 @@ export interface StorageDiagnostics {
   /** ISO 8601 timestamp of the last time a background App Intent ran, in any outcome. */
   lastAttemptAt?: string;
   /**
-   * 'ignored' means a notification was recognized but deliberately not saved — e.g. Millennium's
+   * 'ignored' means a notification was recognized but deliberately not saved - e.g. Millennium's
    * own card-payment push, deferred to the matching Apple Pay Wallet transaction.
    */
   lastAttemptOutcome?: 'success' | 'ignored' | 'failure';

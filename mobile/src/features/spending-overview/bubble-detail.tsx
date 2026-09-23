@@ -49,6 +49,7 @@ interface BubbleDetailProps {
   change: number | null;
   period: SpendingPeriod;
   onChangePeriod: (period: SpendingPeriod) => void;
+  onSelectSource: (source: SpendingSource) => void;
   onClosed: () => void;
 }
 
@@ -78,6 +79,7 @@ export function BubbleDetail({
   change,
   period,
   onChangePeriod,
+  onSelectSource,
   onClosed,
 }: BubbleDetailProps) {
   const { width, height } = useWindowDimensions();
@@ -382,14 +384,21 @@ export function BubbleDetail({
             </Text>
           ) : (
             sources.map((source) => (
-              <View
-                accessible
+              <Pressable
+                accessibilityHint={
+                  key === 'expense' && source.group !== null
+                    ? 'Otwiera historię i wykres wydatków'
+                    : undefined
+                }
                 accessibilityLabel={`${source.label}, ${formatAmount(
                   source.amountMinor,
                   summary.currency,
                 )}, ${formatShare(source.share)}, ${formatTransactionCount(source.count)}`}
+                accessibilityRole={key === 'expense' && source.group !== null ? 'button' : 'text'}
+                disabled={key !== 'expense' || source.group === null}
                 key={source.key}
-                style={styles.sourceRow}
+                onPress={() => onSelectSource(source)}
+                style={({ pressed }) => [styles.sourceRow, pressed ? styles.pressed : null]}
               >
                 <View style={styles.sourceIcon}>
                   <SymbolView
@@ -422,7 +431,17 @@ export function BubbleDetail({
                     {formatShare(source.share)} · {formatTransactionCount(source.count)}
                   </Text>
                 </View>
-              </View>
+                {key === 'expense' && source.group !== null ? (
+                  <View style={styles.sourceChevron}>
+                    <SymbolView
+                      name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+                      size={12}
+                      tintColor={overviewColors.textSecondary}
+                      weight="semibold"
+                    />
+                  </View>
+                ) : null}
+              </Pressable>
             ))
           )}
 
@@ -586,6 +605,10 @@ const styles = StyleSheet.create({
   sourceBody: {
     flex: 1,
     gap: 6,
+  },
+  sourceChevron: {
+    height: 20,
+    justifyContent: 'center',
   },
   sourceHeading: {
     flexDirection: 'row',

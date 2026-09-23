@@ -44,30 +44,37 @@ describe('alertsToRaise', () => {
 
     expect(raised).toHaveLength(1);
     expect(raised[0].share).toBe(0.8);
-    expect(raised[0].key).toBe(sentKey('rule-1', window.key, 0.8));
+    expect(raised[0].key).toBe(sentKey(rule(), window.key, 0.8));
   });
 
   test('never repeats an alert it has already sent this period', () => {
-    const sent = [sentKey('rule-1', window.key, 0.8)];
+    const sent = [sentKey(rule(), window.key, 0.8)];
 
     expect(alertsToRaise(rule(), progress(45_000), sent, duringPeriod)).toEqual([]);
   });
 
+  test('a changed shop starts a fresh threshold for the edited rule', () => {
+    const sent = [sentKey(rule(), window.key, 0.8)];
+    const edited = rule({ scope: { kind: 'merchant', key: 'lidl', name: 'Lidl' } });
+
+    expect(alertsToRaise(edited, progress(45_000), sent, duringPeriod)).toHaveLength(1);
+  });
+
   test('raises the limit itself as its own alert', () => {
-    const sent = [sentKey('rule-1', window.key, 0.8)];
+    const sent = [sentKey(rule(), window.key, 0.8)];
     const raised = alertsToRaise(rule(), progress(51_000), sent, duringPeriod);
 
     expect(raised).toHaveLength(1);
     expect(raised[0].share).toBe(1);
   });
 
-  test('raises both at once when one purchase jumps past the limit', () => {
-    expect(alertsToRaise(rule(), progress(60_000), [], duringPeriod)).toHaveLength(2);
+  test('raises the highest reached threshold when one purchase jumps past the limit', () => {
+    expect(alertsToRaise(rule(), progress(60_000), [], duringPeriod).map((alert) => alert.share)).toEqual([1]);
   });
 
   test('starts over in the next period', () => {
     const october = { ...window, key: 'month:2026-10' };
-    const sent = [sentKey('rule-1', window.key, 0.8), sentKey('rule-1', window.key, 1)];
+    const sent = [sentKey(rule(), window.key, 0.8), sentKey(rule(), window.key, 1)];
     const raised = alertsToRaise(
       rule(),
       { ...progress(60_000), window: october },
@@ -75,7 +82,7 @@ describe('alertsToRaise', () => {
       duringPeriod,
     );
 
-    expect(raised).toHaveLength(2);
+    expect(raised).toHaveLength(1);
   });
 
   test('says nothing for a rule the user switched off', () => {

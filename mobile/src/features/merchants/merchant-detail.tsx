@@ -7,6 +7,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import { SymbolView } from 'expo-symbols';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
@@ -21,6 +22,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import type { SpendingGroup } from '@/features/classification/spending-groups';
 import type { GroupLimit } from '@/features/alerts/group-limit';
+import { LimitProgressBar } from '@/features/alerts/limit-progress-bar';
 import { formatAmount, formatShare } from '@/features/spending-overview/formatting';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { periodOption, type PeriodWindow, type SpendingPeriod } from '@/features/spending-overview/periods';
@@ -184,46 +186,60 @@ export function MerchantDetail({
           contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 32 }]}
           indicatorStyle="white"
         >
-          <Pressable
-            accessibilityHint={
-              limit === null ? 'Otwiera ustawienie limitu' : 'Otwiera ustawienia limitu'
-            }
-            accessibilityRole="button"
-            onPress={onEditLimit}
-            style={({ pressed }) => [styles.limit, pressed ? styles.pressed : null]}
-          >
-            {limit === null ? (
-              <Text maxFontSizeMultiplier={1.5} style={styles.limitLabel}>
-                Ustaw limit miesięczny
-              </Text>
-            ) : (
-              <>
-                <View style={styles.limitHeading}>
-                  <Text maxFontSizeMultiplier={1.5} style={styles.limitLabel}>
-                    Limit {limit.periodLabel}
-                  </Text>
+          {limit !== null ? (
+            <Pressable
+              accessibilityHint="Otwiera ustawienia limitu"
+              accessibilityLabel={`Limit ${limit.periodLabel}, ${formatAmount(limit.amountMinor, limit.currency)} z ${formatAmount(limit.targetMinor, limit.currency)}`}
+              accessibilityRole="button"
+              onPress={onEditLimit}
+              style={({ pressed }) => [styles.limit, pressed ? styles.pressed : null]}
+            >
+              <View style={styles.limitHeading}>
+                <Text maxFontSizeMultiplier={1.5} style={styles.limitLabel}>
+                  Limit {limit.periodLabel}
+                </Text>
+                <View style={styles.limitValue}>
                   <Text maxFontSizeMultiplier={1.5} style={styles.limitAmount}>
-                    {formatAmount(limit.amountMinor, limit.currency)} z{' '}
-                    {formatAmount(limit.targetMinor, limit.currency)}
+                    <Text
+                      style={[
+                        styles.limitSpent,
+                        limit.share >= 1 ? styles.limitSpentExceeded : null,
+                      ]}
+                    >
+                      {formatAmount(limit.amountMinor, limit.currency)}
+                    </Text>{' '}
+                    z {formatAmount(limit.targetMinor, limit.currency)}
                   </Text>
-                </View>
-                <View style={styles.track}>
-                  <View
-                    style={[
-                      styles.fill,
-                      {
-                        width: `${Math.min(Math.max(limit.share * 100, 2), 100)}%`,
-                        backgroundColor:
-                          limit.share >= 1
-                            ? overviewColors.negative
-                            : overviewColors.textSecondary,
-                      },
-                    ]}
+                  <SymbolView
+                    name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+                    size={12}
+                    tintColor={overviewColors.textSecondary}
+                    weight="semibold"
                   />
                 </View>
-              </>
-            )}
-          </Pressable>
+              </View>
+              <LimitProgressBar share={limit.share} />
+            </Pressable>
+          ) : group.records.some((record) => record.currency === 'PLN') ? (
+            <Pressable
+              accessibilityHint="Otwiera ustawienie limitu"
+              accessibilityLabel="Ustaw limit"
+              accessibilityRole="button"
+              hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
+              onPress={onEditLimit}
+              style={({ pressed }) => [styles.limitAction, pressed ? styles.pressed : null]}
+            >
+              <SymbolView
+                name={{ ios: 'plus', android: 'add', web: 'add' }}
+                size={12}
+                tintColor={overviewColors.textPrimary}
+                weight="semibold"
+              />
+              <Text maxFontSizeMultiplier={1.3} style={styles.limitActionLabel}>
+                Ustaw limit
+              </Text>
+            </Pressable>
+          ) : null}
 
           {buckets.length > 0 ? (
             <DailySpendChart
@@ -267,11 +283,8 @@ export function MerchantDetail({
 
 const styles = StyleSheet.create({
   limit: {
-    gap: 8,
-    marginHorizontal: overviewSpacing.gutter,
-    padding: 14,
-    borderRadius: 16,
-    backgroundColor: overviewColors.surface,
+    gap: 10,
+    paddingVertical: 4,
   },
   limitHeading: {
     flexDirection: 'row',
@@ -284,19 +297,38 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: overviewColors.textPrimary,
   },
+  limitValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   limitAmount: {
     fontSize: 14,
     color: overviewColors.textSecondary,
   },
-  track: {
-    height: 5,
-    overflow: 'hidden',
-    borderRadius: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.10)',
+  limitSpent: {
+    fontWeight: '600',
+    color: overviewColors.textPrimary,
   },
-  fill: {
-    height: '100%',
-    borderRadius: 3,
+  limitSpentExceeded: {
+    color: overviewColors.negative,
+  },
+  limitAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    minHeight: 32,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: overviewColors.hairline,
+    backgroundColor: overviewColors.surfacePressed,
+  },
+  limitActionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: overviewColors.textPrimary,
   },
   scrim: {
     position: 'absolute',

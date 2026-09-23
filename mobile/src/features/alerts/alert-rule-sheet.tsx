@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -22,8 +22,10 @@ import { scopeLabel } from './alert-message';
 
 interface AlertRuleSheetProps {
   scope: AlertScope;
+  merchants: Extract<AlertScope, { kind: 'merchant' }>[];
   rule: AlertRule | null;
   isFirstRule: boolean;
+  isScopeLocked: boolean;
   onCancel: () => void;
   onSave: (rule: AlertRule) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
@@ -48,6 +50,12 @@ const approachShares = [0.5, 0.8, 0.9] as const;
 
 const defaultApproachShare = 0.8;
 
+const merchantRowHeight = 48;
+
+const merchantRowGap = 8;
+
+const visibleMerchantRows = 3;
+
 function amountFromMinor(minor: number): string {
   return `${Math.trunc(minor / 100)},${String(minor % 100).padStart(2, '0')}`;
 }
@@ -58,8 +66,10 @@ function ruleIdentifier(now: Date, random: () => number): string {
 
 export function AlertRuleSheet({
   scope,
+  merchants,
   rule,
   isFirstRule,
+  isScopeLocked,
   onCancel,
   onSave,
   onDelete,
@@ -67,6 +77,9 @@ export function AlertRuleSheet({
 }: AlertRuleSheetProps) {
   const insets = useSafeAreaInsets();
   const [metric, setMetric] = useState<AlertMetric>(rule?.metric ?? 'expense');
+  const [selectedScope, setSelectedScope] = useState<AlertScope>(scope);
+  const [merchantSearch, setMerchantSearch] = useState('');
+  const merchantListRef = useRef<ScrollView>(null);
   const [period, setPeriod] = useState<RepeatingPeriod>(
     rule === null || rule.period.kind === 'custom' ? 'month' : rule.period.kind,
   );
@@ -79,11 +92,23 @@ export function AlertRuleSheet({
   const [missingIncome, setMissingIncome] = useState(rule?.condition === 'missingIncome');
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const availableMerchants =
+    scope.kind === 'merchant'
+      ? [scope, ...merchants.filter((merchant) => merchant.key !== scope.key)]
+      : merchants;
+  const visibleMerchants = availableMerchants
+    .filter((merchant) =>
+      merchant.name.toLocaleLowerCase('pl').includes(merchantSearch.trim().toLocaleLowerCase('pl')),
+    );
+
+  useEffect(() => {
+    merchantListRef.current?.flashScrollIndicators();
+  }, []);
 
   const handleSave = useCallback(async () => {
     const targetMinor = parseAmountMinor(amount);
 
-    if (targetMinor === null) {
+    if (targetMinor === null || !Number.isSafeInteger(targetMinor)) {
       setError('Podaj kwotę większą od zera.');
 
       return;
@@ -107,7 +132,7 @@ export function AlertRuleSheet({
       await onSave({
         id: rule?.id ?? ruleIdentifier(new Date(), Math.random),
         metric,
-        scope,
+        scope: selectedScope,
         period: { kind: period },
         condition,
         targetMinor,
@@ -130,7 +155,7 @@ export function AlertRuleSheet({
     onSave,
     period,
     rule,
-    scope,
+    selectedScope,
   ]);
 
   return (
@@ -177,84 +202,159 @@ export function AlertRuleSheet({
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
         keyboardShouldPersistTaps="handled"
       >
-        <Text maxFontSizeMultiplier={1.5} style={styles.scope}>
-          {scopeLabel(scope)}
-        </Text>
-
-        <View style={styles.chips}>
-          {metrics.map((option) => (
+        {!isScopeLocked && (scope.kind === 'all' || scope.kind === 'merchant') ? (
+          <View style={styles.merchantSection}>
+            <Text maxFontSizeMultiplier={1.4} style={styles.approachLabel}>
+              Zakres limitu
+            </Text>
+            <TextInput
+              accessibilityLabel="Szukaj sklepu"
+              autoCapitalize="none"
+              onChangeText={setMerchantSearch}
+              placeholder="Szukaj w historii transakcji"
+              placeholderTextColor={overviewColors.textDisabled}
+              selectionColor={overviewColors.textPrimary}
+              style={styles.merchantSearch}
+              value={merchantSearch}
+            />
             <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ selected: option.value === metric }}
-              key={option.value}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: selectedScope.kind === 'all' }}
               onPress={() => {
                 selectionChanged();
-                setMetric(option.value);
-
-                if (option.value !== 'income') {
-                  setMissingIncome(false);
-                }
+                setSelectedScope({ kind: 'all' });
               }}
-              style={({ pressed }) => [
-                styles.chip,
-                option.value === metric ? styles.chipActive : null,
-                pressed ? styles.pressed : null,
-              ]}
+              style={({ pressed }) => [styles.merchantOption, pressed ? styles.pressed : null]}
             >
-              <Text
-                maxFontSizeMultiplier={1.3}
-                style={[styles.chipLabel, option.value === metric ? styles.chipLabelActive : null]}
-              >
-                {option.label}
-              </Text>
+              <Text style={styles.merchantOptionLabel}>Wszystkie wydatki</Text>
+              {selectedScope.kind === 'all' ? <Text style={styles.selectedMark}>✓</Text> : null}
             </Pressable>
-          ))}
-        </View>
-
-        <View style={styles.chips}>
-          {periods.map((option) => (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ selected: option.value === period }}
-              key={option.value}
-              onPress={() => {
-                selectionChanged();
-                setPeriod(option.value);
-              }}
-              style={({ pressed }) => [
-                styles.chip,
-                option.value === period ? styles.chipActive : null,
-                pressed ? styles.pressed : null,
-              ]}
-            >
-              <Text
-                maxFontSizeMultiplier={1.3}
-                style={[styles.chipLabel, option.value === period ? styles.chipLabelActive : null]}
+            {visibleMerchants.length > 0 ? (
+              <ScrollView
+                contentContainerStyle={styles.merchantListContent}
+                indicatorStyle="white"
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled
+                persistentScrollbar
+                ref={merchantListRef}
+                style={styles.merchantList}
               >
-                {option.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <View style={styles.amountRow}>
-          <TextInput
-            accessibilityLabel="Kwota limitu"
-            autoFocus={rule === null}
-            keyboardType="decimal-pad"
-            onChangeText={(next) => {
-              setError(null);
-              setAmount(next);
-            }}
-            placeholder="0,00"
-            placeholderTextColor={overviewColors.textDisabled}
-            selectionColor={overviewColors.textPrimary}
-            style={styles.amountInput}
-            value={amount}
-          />
-          <Text maxFontSizeMultiplier={1.3} style={styles.currency}>
-            zł
+                {visibleMerchants.map((merchant) => (
+                  <Pressable
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: selectedScope.kind === 'merchant' && selectedScope.key === merchant.key }}
+                    key={merchant.key}
+                    onPress={() => {
+                      selectionChanged();
+                      setSelectedScope(merchant);
+                    }}
+                    style={({ pressed }) => [styles.merchantOption, pressed ? styles.pressed : null]}
+                  >
+                    <Text maxFontSizeMultiplier={1.5} numberOfLines={1} style={styles.merchantOptionLabel}>{merchant.name}</Text>
+                    {selectedScope.kind === 'merchant' && selectedScope.key === merchant.key ? (
+                      <Text style={styles.selectedMark}>✓</Text>
+                    ) : null}
+                  </Pressable>
+                ))}
+              </ScrollView>
+            ) : null}
+            {merchants.length === 0 ? (
+              <Text style={styles.note}>Sklepy pojawią się po dodaniu lub przechwyceniu transakcji w PLN.</Text>
+            ) : visibleMerchants.length === 0 ? (
+              <Text style={styles.note}>Nie znaleziono sklepu. Spróbuj innej nazwy.</Text>
+            ) : null}
+          </View>
+        ) : (
+          <Text maxFontSizeMultiplier={1.4} numberOfLines={2} style={styles.scope}>
+            {scopeLabel(scope)}
           </Text>
+        )}
+
+        {isScopeLocked ? null : (
+          <View style={styles.chips}>
+            {metrics.map((option) => (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: option.value === metric }}
+                key={option.value}
+                onPress={() => {
+                  selectionChanged();
+                  setMetric(option.value);
+
+                  if (option.value !== 'income') {
+                    setMissingIncome(false);
+                  }
+                }}
+                style={({ pressed }) => [
+                  styles.chip,
+                  option.value === metric ? styles.chipActive : null,
+                  pressed ? styles.pressed : null,
+                ]}
+              >
+                <Text
+                  maxFontSizeMultiplier={1.3}
+                  style={[styles.chipLabel, option.value === metric ? styles.chipLabelActive : null]}
+                >
+                  {option.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        <View style={styles.approach}>
+          <Text maxFontSizeMultiplier={1.4} style={styles.approachLabel}>
+            Kwota limitu
+          </Text>
+          <View style={styles.amountRow}>
+            <TextInput
+              accessibilityLabel="Kwota limitu"
+              keyboardType="decimal-pad"
+              onChangeText={(next) => {
+                setError(null);
+                setAmount(next);
+              }}
+              placeholder="0,00"
+              placeholderTextColor={overviewColors.textDisabled}
+              selectionColor={overviewColors.textPrimary}
+              style={styles.amountInput}
+              value={amount}
+            />
+            <Text maxFontSizeMultiplier={1.3} style={styles.currency}>
+              zł
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.approach}>
+          <Text maxFontSizeMultiplier={1.4} style={styles.approachLabel}>
+            Okres limitu
+          </Text>
+          <View style={styles.chips}>
+            {periods.map((option) => (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: option.value === period }}
+                key={option.value}
+                onPress={() => {
+                  selectionChanged();
+                  setPeriod(option.value);
+                }}
+                style={({ pressed }) => [
+                  styles.chip,
+                  option.value === period ? styles.chipActive : null,
+                  pressed ? styles.pressed : null,
+                ]}
+              >
+                <Text
+                  maxFontSizeMultiplier={1.3}
+                  style={[styles.chipLabel, option.value === period ? styles.chipLabelActive : null]}
+                >
+                  {option.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
 
         {metric === 'income' ? (
@@ -307,7 +407,7 @@ export function AlertRuleSheet({
 
         {isFirstRule && rule === null ? (
           <Text maxFontSizeMultiplier={1.5} style={styles.note}>
-            Zapytamy o zgodę na powiadomienia, bo bez niej nie damy znać o progu.
+            Zapytamy o zgodę na powiadomienia. Limit sprawdzamy po aktualizacji transakcji w aplikacji.
           </Text>
         ) : null}
 
@@ -409,9 +509,47 @@ const styles = StyleSheet.create({
     paddingTop: overviewSpacing.tight,
   },
   scope: {
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: -0.4,
+    color: overviewColors.textPrimary,
+  },
+  merchantSection: {
+    gap: 8,
+  },
+  merchantSearch: {
+    minHeight: 48,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: overviewColors.surface,
+    color: overviewColors.textPrimary,
+    fontSize: 16,
+  },
+  merchantList: {
+    maxHeight: merchantRowHeight * visibleMerchantRows + merchantRowGap * (visibleMerchantRows - 1),
+  },
+  merchantListContent: {
+    gap: merchantRowGap,
+  },
+  merchantOption: {
+    minHeight: merchantRowHeight,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: overviewColors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  merchantOptionLabel: {
+    flex: 1,
+    color: overviewColors.textPrimary,
     fontSize: 15,
-    fontWeight: '600',
-    color: overviewColors.textSecondary,
+  },
+  selectedMark: {
+    color: overviewColors.positive,
+    fontSize: 17,
+    fontWeight: '700',
   },
   approach: {
     gap: 10,

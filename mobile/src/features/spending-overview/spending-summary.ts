@@ -2,6 +2,10 @@ import type { IngestionRecord } from '@bankstats/ingestion-native';
 
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
 import { classifyTransaction } from '@/features/classification/classify-transaction';
+import {
+  partyGroupReference,
+  type PartyGroupReference,
+} from '@/features/classification/spending-groups';
 
 import { isWithinWindow, windowDays, type PeriodWindow } from './periods';
 
@@ -14,6 +18,7 @@ export interface SpendingSource {
   amountMinor: number;
   share: number;
   count: number;
+  group: PartyGroupReference | null;
 }
 
 export interface SpendingSummary {
@@ -70,10 +75,16 @@ function sourceKind(record: IngestionRecord): SpendingSourceKind {
   return record.transactionType ?? 'other';
 }
 
-function sourceName(record: IngestionRecord, rules: CategorizationRule[]): string | null {
+function sourceParty(
+  record: IngestionRecord,
+  rules: CategorizationRule[],
+): { name: string | null; group: PartyGroupReference | null } {
   const classified = classifyTransaction(record, rules);
 
-  return classified.merchantName ?? classified.counterpartyName ?? null;
+  return {
+    name: classified.merchantName ?? classified.counterpartyName ?? null,
+    group: partyGroupReference(classified),
+  };
 }
 
 function accountLabel(record: IngestionRecord): string {
@@ -88,7 +99,7 @@ function groupSources(
   const sourcesByKey = new Map<string, SpendingSource>();
 
   for (const record of records) {
-    const name = sourceName(record, rules);
+    const { name, group } = sourceParty(record, rules);
     const key = name ?? sourceKind(record);
     const existing = sourcesByKey.get(key);
 
@@ -100,6 +111,7 @@ function groupSources(
         amountMinor: record.amountMinor,
         share: 0,
         count: 1,
+        group: name === null ? null : group,
       });
       continue;
     }
@@ -122,6 +134,7 @@ function groupSources(
       amountMinor: remainder.reduce((sum, source) => sum + source.amountMinor, 0),
       share: 0,
       count: remainder.reduce((sum, source) => sum + source.count, 0),
+      group: null,
     });
   }
 

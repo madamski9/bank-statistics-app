@@ -1,5 +1,4 @@
 import { useClerk, useUser } from '@clerk/expo';
-import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -78,15 +77,11 @@ export function ProfileScreen({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.identity}>
-          {user?.imageUrl ? (
-            <Image accessible={false} contentFit="cover" source={user.imageUrl} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarFallback}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.avatarInitial}>
-                {initial}
-              </Text>
-            </View>
-          )}
+          <View style={styles.avatar}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.avatarInitial}>
+              {initial}
+            </Text>
+          </View>
           <View style={styles.identityCopy}>
             <Text maxFontSizeMultiplier={1.35} numberOfLines={1} style={styles.name}>
               {name}
@@ -291,12 +286,6 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: overviewColors.surfacePressed,
-  },
-  avatarFallback: {
     width: 72,
     height: 72,
     alignItems: 'center',
