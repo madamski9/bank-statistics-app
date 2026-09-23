@@ -70,6 +70,10 @@ export function transactionTitle(record: IngestionRecord, rules: CategorizationR
     : classified.categoryName;
 }
 
+export function transactionKindLabel(record: IngestionRecord): string {
+  return typeLabels[transactionKind(record)];
+}
+
 export function transactionContext(record: IngestionRecord): string {
   const bank = bankLabels[record.bank];
 

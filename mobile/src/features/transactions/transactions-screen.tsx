@@ -25,10 +25,10 @@ import type { SpendingSourceKind } from '@/features/spending-overview/spending-s
 
 import { dayKey, formatDayHeading, formatTime } from './format-date';
 import { confirmedRecord } from './manual-transaction';
+import { TransactionDetail } from './transaction-detail';
 import { TransactionEditor } from './transaction-editor';
 import {
   affectsStatistics,
-  isManualTransaction,
   transactionBadge,
   transactionContext,
   transactionKind,
@@ -55,9 +55,9 @@ interface DaySection {
   data: IngestionRecord[];
 }
 
-interface EditorTarget {
-  record: IngestionRecord | null;
-}
+type EditorTarget =
+  | { mode: 'detail'; record: IngestionRecord }
+  | { mode: 'edit'; record: IngestionRecord | null };
 
 const sourceSymbols = {
   cardPayment: { ios: 'creditcard.fill', android: 'credit_card', web: 'credit_card' },
@@ -232,7 +232,7 @@ function TransactionsScreenComponent({
                 .filter((part) => part !== undefined)
                 .join(', ')}
               accessibilityRole="button"
-              onPress={() => setEditor({ record: item })}
+              onPress={() => setEditor({ mode: 'detail', record: item })}
               style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
             >
               <View style={styles.icon}>
@@ -308,7 +308,7 @@ function TransactionsScreenComponent({
         hitSlop={8}
         onPress={() => {
           impactLight();
-          setEditor({ record: null });
+          setEditor({ mode: 'edit', record: null });
         }}
         style={({ pressed }) => [
           styles.addButton,
@@ -330,24 +330,33 @@ function TransactionsScreenComponent({
         presentationStyle="pageSheet"
         visible={editor !== null}
       >
-        {editor !== null ? (
+        {editor === null ? null : editor.mode === 'detail' ? (
+          <TransactionDetail
+            isWriting={isWriting}
+            onClose={closeEditor}
+            onDelete={handleDelete}
+            onEdit={() => setEditor({ mode: 'edit', record: editor.record })}
+            record={editor.record}
+            rules={rules}
+            writeError={writeError}
+          />
+        ) : (
           <TransactionEditor
             accounts={accounts}
             isWriting={isWriting}
             key={editor.record?.id ?? 'new'}
-            onCancel={closeEditor}
+            onCancel={() => {
+              clearError();
+              setEditor(editor.record === null ? null : { mode: 'detail', record: editor.record });
+            }}
             onCreateAccount={onCreateAccount}
             onConfirm={editor.record?.review === undefined ? undefined : handleConfirm}
-            onDelete={
-              editor.record !== null && isManualTransaction(editor.record)
-                ? handleDelete
-                : undefined
-            }
+            onDelete={editor.record !== null ? handleDelete : undefined}
             onSubmit={handleSubmit}
             record={editor.record}
             writeError={writeError}
           />
-        ) : null}
+        )}
       </Modal>
     </View>
   );
