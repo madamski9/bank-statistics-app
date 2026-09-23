@@ -21,6 +21,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { alertProgress } from '@/features/alerts/alert-evaluation';
+import { AlertRuleSheet } from '@/features/alerts/alert-rule-sheet';
+import type { AlertRule, AlertScope } from '@/features/alerts/alert-rule';
+import { AlertsScreen } from '@/features/alerts/alerts-screen';
+import { requestAlertPermission } from '@/features/alerts/expo-alert-notifier';
+import { groupLimit, ruleForScope, scopeForGroup } from '@/features/alerts/group-limit';
+import { useAlerts } from '@/features/alerts/use-alerts';
 import {
   groupSpending,
   type SpendingDimension,
@@ -61,7 +68,12 @@ const pages = [
 ] as const;
 
 type PageKey = (typeof pages)[number]['key'];
-type SheetKey = 'profile' | 'diagnostics';
+type SheetKey = 'profile' | 'diagnostics' | 'alerts';
+
+interface AlertEditor {
+  scope: AlertScope;
+  rule: AlertRule | null;
+}
 
 /**
  * The persistent shell: Overview and Transactions side by side in a pager, the settings avatar,
@@ -86,6 +98,7 @@ export function HomeScreen() {
   const navOffset = useSharedValue(0);
   const { error, isLoading, records, refresh } = useCapturedSpending();
   const { remember, rules } = useCategorizationRules();
+  const [alertEditor, setAlertEditor] = useState<AlertEditor | null>(null);
   const countedRecords = useMemo(() => records.filter(affectsStatistics), [records]);
 
   /**
@@ -112,6 +125,48 @@ export function HomeScreen() {
   const groups = useMemo(
     () => groupSpending(countedRecords, { window: spendWindow, rules, dimension }),
     [countedRecords, dimension, rules, spendWindow],
+  );
+  const alerts = useAlerts({ records: countedRecords, categorizationRules: rules });
+  const selectedLimit = useMemo(
+    () =>
+      group === null
+        ? null
+        : groupLimit(group, alerts.rules, countedRecords, rules, new Date()),
+    [alerts.rules, countedRecords, group, rules],
+  );
+  const alertEntries = useMemo(
+    () =>
+      alerts.rules.map((rule) => ({
+        rule,
+        progress: alertProgress(rule, countedRecords, { reference: new Date(), rules }),
+      })),
+    [alerts.rules, countedRecords, rules],
+  );
+
+  const handleEditLimit = useCallback(() => {
+    if (group === null) {
+      return;
+    }
+
+    const scope = scopeForGroup(group);
+
+    setAlertEditor({ scope, rule: ruleForScope(alerts.rules, scope) });
+  }, [alerts.rules, group]);
+
+  const handleSaveAlert = useCallback(
+    async (rule: AlertRule) => {
+      await alerts.save(rule);
+      setAlertEditor(null);
+    },
+    [alerts],
+  );
+
+  const handleDeleteAlert = useCallback(
+    async (id: string) => {
+      await alerts.remove(id);
+      setAlertEditor(null);
+    },
+    [alerts],
   );
 
   const pageIndex = Math.max(
@@ -326,7 +381,9 @@ export function HomeScreen() {
       {group !== null ? (
         <MerchantDetail
           group={group}
+          limit={selectedLimit}
           onClosed={handleGroupClosed}
+          onEditLimit={handleEditLimit}
           period={period}
           spendWindow={spendWindow}
         />
@@ -334,14 +391,32 @@ export function HomeScreen() {
 
       <Modal
         animationType="slide"
-        onRequestClose={() => setActiveSheet(null)}
+        onRequestClose={() => (alertEditor === null ? setActiveSheet(null) : setAlertEditor(null))}
         presentationStyle="pageSheet"
-        visible={activeSheet !== null}
+        visible={activeSheet !== null || alertEditor !== null}
       >
-        {activeSheet === 'profile' ? (
+        {alertEditor !== null ? (
+          <AlertRuleSheet
+            isFirstRule={alerts.rules.length === 0}
+            onCancel={() => setAlertEditor(null)}
+            onDelete={alertEditor.rule === null ? undefined : handleDeleteAlert}
+            onRequestPermission={requestAlertPermission}
+            onSave={handleSaveAlert}
+            rule={alertEditor.rule}
+            scope={alertEditor.scope}
+          />
+        ) : activeSheet === 'profile' ? (
           <ProfileScreen
             onClose={() => setActiveSheet(null)}
+            onOpenAlerts={() => setActiveSheet('alerts')}
             onOpenDiagnostics={() => setActiveSheet('diagnostics')}
+          />
+        ) : activeSheet === 'alerts' ? (
+          <AlertsScreen
+            entries={alertEntries}
+            onClose={() => setActiveSheet(null)}
+            onCreate={() => setAlertEditor({ scope: { kind: 'all' }, rule: null })}
+            onEdit={(rule) => setAlertEditor({ scope: rule.scope, rule })}
           />
         ) : (
           <View style={styles.sheet}>
