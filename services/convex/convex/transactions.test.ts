@@ -227,7 +227,50 @@ describe('transactions', () => {
     ).rejects.toThrow();
   });
 
-  test('rejects a captured transaction and an unreadable capture time', async () => {
+  test('accepts a captured Millennium transaction with no Financial Account', async () => {
+    const { user } = await signedIn(alice, 'phone');
+
+    await user.mutation(api.transactions.push, {
+      installationId: 'phone',
+      changes: [lunch({
+        clientId: 'capture-wallet',
+        bank: 'millennium',
+        origin: 'capture',
+        accountId: undefined,
+        sourceApp: 'com.apple.Passbook',
+        review: 'currency',
+      })],
+    });
+
+    expect(await user.query(api.transactions.list, { installationId: 'phone' })).toEqual([
+      expect.objectContaining({
+        clientId: 'capture-wallet',
+        origin: 'capture',
+        sourceApp: 'com.apple.Passbook',
+        review: 'currency',
+      }),
+    ]);
+  });
+
+  test('keeps captured Millennium transactions under the signed-in owner', async () => {
+    const { backend, user } = await signedIn(alice, 'phone');
+    await user.mutation(api.transactions.push, {
+      installationId: 'phone',
+      changes: [lunch({
+        clientId: 'capture-wallet',
+        bank: 'millennium',
+        origin: 'capture',
+        accountId: undefined,
+      })],
+    });
+
+    const other = backend.withIdentity(bob);
+    await other.mutation(api.devices.register, { installationId: 'phone', platform: 'ios' });
+
+    expect(await other.query(api.transactions.list, { installationId: 'phone' })).toEqual([]);
+  });
+
+  test('rejects a captured transaction from an unavailable bank and an unreadable capture time', async () => {
     const { user } = await signedIn(alice, 'phone');
 
     await expect(

@@ -15,11 +15,11 @@ type TransactionChange = Infer<typeof transactionChange>;
 const currencyPattern = /^[A-Z]{3}$/;
 
 function assertValidChange(change: TransactionChange) {
-  if (change.origin !== 'manual') {
-    throw new ConvexError('Only manual transactions synchronize for now.');
+  if (change.origin === 'capture' && change.bank !== 'millennium') {
+    throw new ConvexError('Only enabled banks can synchronize captured transactions.');
   }
 
-  if (change.accountId === undefined || change.accountId.trim() === '') {
+  if (change.origin === 'manual' && (change.accountId === undefined || change.accountId.trim() === '')) {
     throw new ConvexError('A manual transaction belongs to a Financial Account.');
   }
 
@@ -43,7 +43,7 @@ const generalAccountPrefix = 'general-';
 async function assertOwnedAccount(ctx: QueryCtx, ownerId: string, change: TransactionChange) {
   const accountId = change.accountId ?? '';
 
-  if (change.deleted || accountId.startsWith(generalAccountPrefix)) {
+  if (change.deleted || change.accountId === undefined || accountId.startsWith(generalAccountPrefix)) {
     return;
   }
 

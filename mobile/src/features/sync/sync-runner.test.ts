@@ -136,6 +136,53 @@ describe('runSync', () => {
     expect(tablet.outbox.get('manual-lunch')).toEqual(manual('manual-lunch'));
   });
 
+  test('brings a captured Millennium transaction from a phone to another device', async () => {
+    const cloud = createCloud();
+    const captured = manual('capture-wallet', {
+      bank: 'millennium',
+      origin: 'capture',
+      accountId: undefined,
+      sourceApp: 'com.apple.Passbook',
+      review: 'currency',
+    });
+    const phone = createDevice(cloud, [captured]);
+    const tablet = createDevice(cloud);
+
+    await runSync(phone.ports);
+    await runSync(tablet.ports);
+
+    expect(tablet.outbox.get(captured.id)).toEqual(captured);
+    expect(cloud.stored.get(captured.id)).toMatchObject({
+      origin: 'capture',
+      sourceApp: 'com.apple.Passbook',
+      review: 'currency',
+    });
+  });
+
+  test('carries edits and removals of captured transactions across devices', async () => {
+    const cloud = createCloud();
+    const captured = manual('capture-wallet', {
+      bank: 'millennium',
+      origin: 'capture',
+      accountId: undefined,
+      sourceApp: 'com.apple.Passbook',
+    });
+    const phone = createDevice(cloud, [captured]);
+    const tablet = createDevice(cloud);
+    await runSync(phone.ports);
+    await runSync(tablet.ports);
+
+    tablet.outbox.set(captured.id, { ...captured, merchant: 'Poprawiony sklep' });
+    await runSync(tablet.ports);
+    await runSync(phone.ports);
+    expect(phone.outbox.get(captured.id)?.merchant).toBe('Poprawiony sklep');
+
+    phone.outbox.delete(captured.id);
+    await runSync(phone.ports);
+    await runSync(tablet.ports);
+    expect(tablet.outbox.has(captured.id)).toBe(false);
+  });
+
   test('pushes nothing on a second run when nothing changed', async () => {
     const cloud = createCloud();
     const phone = createDevice(cloud, [manual('manual-lunch')]);
