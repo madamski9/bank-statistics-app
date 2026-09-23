@@ -19,6 +19,15 @@ export const transactionFields = {
   currency: v.string(),
   merchant: v.optional(v.string()),
   category: v.optional(v.string()),
+  sourceApp: v.optional(v.string()),
+  review: v.optional(
+    v.union(
+      v.literal('amount'),
+      v.literal('currency'),
+      v.literal('direction'),
+      v.literal('merchant'),
+    ),
+  ),
   accountId: v.optional(v.string()),
   accountName: v.optional(v.string()),
   occurredAt: v.string(),
