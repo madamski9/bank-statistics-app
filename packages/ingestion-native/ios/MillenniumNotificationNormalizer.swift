@@ -101,16 +101,16 @@ struct MillenniumNotificationNormalizer {
 
     let prefix = Range(match.range(at: 1), in: text).map { String(text[$0]) }
     let suffix = Range(match.range(at: 3), in: text).map { String(text[$0]) }
-    let symbol = suffix ?? prefix
+    let code = (suffix ?? prefix).flatMap(currencyCode)
 
     return Amount(
       minor: minor,
-      currency: symbol.map(currencyCode) ?? "PLN",
-      isCurrencyRecognized: symbol != nil
+      currency: code ?? "PLN",
+      isCurrencyRecognized: code != nil
     )
   }
 
-  private func currencyCode(_ symbol: String) -> String {
+  private func currencyCode(_ symbol: String) -> String? {
     switch symbol.lowercased() {
     case "zł", "zl": return "PLN"
     case "€": return "EUR"
@@ -118,7 +118,9 @@ struct MillenniumNotificationNormalizer {
     case "£": return "GBP"
     case "¥": return "JPY"
     case "₣": return "CHF"
-    default: return symbol.uppercased()
+    default:
+      let code = symbol.uppercased()
+      return code.range(of: "^[A-Z]{3}$", options: .regularExpression) != nil ? code : nil
     }
   }
 
