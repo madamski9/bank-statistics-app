@@ -3,6 +3,7 @@ import { v } from 'convex/values';
 import type { Doc } from './_generated/dataModel';
 import { mutation, type QueryCtx } from './_generated/server';
 import { requireOwnerId } from './owner';
+import { assertBoundedText } from './syncedRows';
 import { devicePlatform } from './schema';
 
 export async function findDevice(
@@ -22,6 +23,7 @@ export const register = mutation({
   args: { installationId: v.string(), platform: devicePlatform },
   handler: async (ctx, { installationId, platform }) => {
     const ownerId = await requireOwnerId(ctx.auth);
+    assertBoundedText(installationId);
     const now = Date.now();
     const existing = await findDevice(ctx, ownerId, installationId);
 
