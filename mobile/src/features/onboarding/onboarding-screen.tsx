@@ -33,6 +33,9 @@ import {
   overviewSpacing,
 } from '@/features/spending-overview/overview-theme';
 import { LimitProgressBar } from '@/features/alerts/limit-progress-bar';
+import { biometricLabels } from '@/features/privacy/biometrics';
+import { PinSetup } from '@/features/privacy/pin-setup';
+import { usePrivacy } from '@/features/privacy/privacy-provider';
 
 interface OnboardingScreenProps {
   onComplete: (selectedBanks: string[]) => Promise<void>;
@@ -65,7 +68,8 @@ const banks = [
   },
 ] as const;
 
-const stepCount = 5;
+const pinStep = 5;
+const stepCount = 6;
 const millenniumShortcutUrl =
   'https://www.icloud.com/shortcuts/3e16ea95fa2f488baffd3cb3b8bf9763';
 
@@ -75,6 +79,7 @@ function pendingReturnKey(userId: string): string {
 
 export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
   const { userId } = useAuth();
+  const { biometric, changePin, updateSettings } = usePrivacy();
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState(0);
   const [transitionDirection, setTransitionDirection] = useState<
@@ -111,7 +116,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
     void SecureStore.getItemAsync(pendingReturnKey(userId))
       .then((value) => {
         if (isActive && value === 'true') {
-          setStep(stepCount);
+          setStep(pinStep);
           void SecureStore.deleteItemAsync(pendingReturnKey(userId));
         }
       })
@@ -133,7 +138,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
       } else if (state === 'active' && leftApp.current) {
         launchedShortcuts.current = false;
         leftApp.current = false;
-        setStep(stepCount);
+        setStep(pinStep);
         if (userId != null) {
           void SecureStore.deleteItemAsync(pendingReturnKey(userId));
         }
@@ -202,6 +207,15 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
       setIsFinishing(false);
     }
   }, [onComplete, selectedBanks]);
+
+  const protectWithPin = useCallback(
+    async (pin: string) => {
+      await changePin(pin);
+      await updateSettings({ isLockEnabled: true });
+      changeStep(stepCount);
+    },
+    [changePin, changeStep, updateSettings],
+  );
 
   const primaryLabel =
     step === 2
@@ -315,6 +329,12 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
               selectedBanks={selectedBanks}
             />
           ) : null}
+          {step === pinStep ? (
+            <PinIntro
+              biometricName={biometric === 'none' ? null : biometricLabels[biometric]}
+              onComplete={protectWithPin}
+            />
+          ) : null}
           {step === stepCount ? <CompletionIntro /> : null}
         </Animated.View>
       </ScrollView>
@@ -337,35 +357,48 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
             {error}
           </Text>
         ) : null}
-        <Pressable
-          accessibilityRole="button"
-          disabled={isFinishing || (step === 4 && selectedBanks.length === 0)}
-          onPress={() => void primaryAction()}
-          style={({ pressed }) => [
-            styles.primaryButton,
-            isFinishing || (step === 4 && selectedBanks.length === 0)
-              ? styles.disabled
-              : null,
-            pressed ? styles.pressed : null,
-          ]}
-        >
-          <Text maxFontSizeMultiplier={1.3} style={styles.primaryLabel}>
-            {isFinishing ? 'Zapisywanie…' : primaryLabel}
-          </Text>
-          <SymbolView
-            name={{
-              ios: 'arrow.right',
-              android: 'arrow_forward',
-              web: 'arrow_forward',
-            }}
-            size={18}
-            tintColor={overviewColors.background}
-          />
-        </Pressable>
-        {step === 4 ? (
+        {step !== pinStep ? (
+          <Pressable
+            accessibilityRole="button"
+            disabled={isFinishing || (step === 4 && selectedBanks.length === 0)}
+            onPress={() => void primaryAction()}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              isFinishing || (step === 4 && selectedBanks.length === 0)
+                ? styles.disabled
+                : null,
+              pressed ? styles.pressed : null,
+            ]}
+          >
+            <Text maxFontSizeMultiplier={1.3} style={styles.primaryLabel}>
+              {isFinishing ? 'Zapisywanie…' : primaryLabel}
+            </Text>
+            <SymbolView
+              name={{
+                ios: 'arrow.right',
+                android: 'arrow_forward',
+                web: 'arrow_forward',
+              }}
+              size={18}
+              tintColor={overviewColors.background}
+            />
+          </Pressable>
+        ) : (
           <Pressable
             accessibilityRole="button"
             onPress={() => changeStep(stepCount)}
+            style={({ pressed }) => [
+              styles.secondaryButton,
+              pressed ? styles.pressed : null,
+            ]}
+          >
+            <Text style={styles.secondaryLabel}>Nie teraz</Text>
+          </Pressable>
+        )}
+        {step === 4 ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => changeStep(pinStep)}
             style={({ pressed }) => [
               styles.secondaryButton,
               pressed ? styles.pressed : null,
@@ -811,6 +844,29 @@ function BanksSetup({
         Przycisk otworzy gotowy skrót Millennium. Dodanie skrótu i włączenie
         automatyzacji wymagają Twojego potwierdzenia.
       </Text>
+    </View>
+  );
+}
+
+function PinIntro({
+  biometricName,
+  onComplete,
+}: {
+  biometricName: string | null;
+  onComplete: (pin: string) => Promise<void>;
+}) {
+  return (
+    <View style={styles.stepContent}>
+      <SectionHeading
+        description={
+          biometricName === null
+            ? 'Ustaw 4-cyfrowy kod PIN. Będziemy o niego pytać przy otwieraniu aplikacji.'
+            : `Aplikację odblokujesz przez ${biometricName}. Gdy nie rozpozna Cię, wpiszesz 4-cyfrowy kod PIN.`
+        }
+        eyebrow="ZABEZPIECZENIE"
+        title="Chroń swoje finanse"
+      />
+      <PinSetup onComplete={onComplete} />
     </View>
   );
 }

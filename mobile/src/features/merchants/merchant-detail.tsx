@@ -23,7 +23,8 @@ import { scheduleOnRN } from 'react-native-worklets';
 import type { SpendingGroup } from '@/features/classification/spending-groups';
 import type { GroupLimit } from '@/features/alerts/group-limit';
 import { LimitProgressBar } from '@/features/alerts/limit-progress-bar';
-import { formatAmount, formatShare } from '@/features/spending-overview/formatting';
+import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
+import { formatShare } from '@/features/spending-overview/formatting';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { periodOption, type PeriodWindow, type SpendingPeriod } from '@/features/spending-overview/periods';
 import { formatDayHeading, formatTime } from '@/features/transactions/format-date';
@@ -52,6 +53,7 @@ export function MerchantDetail({
   period,
   onClosed,
 }: MerchantDetailProps) {
+  const { formatAmount } = useAmountFormatting();
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(height);

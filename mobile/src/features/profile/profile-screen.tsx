@@ -12,6 +12,7 @@ interface ProfileScreenProps {
   onClose: () => void;
   onOpenAlerts: () => void;
   onOpenDiagnostics: () => void;
+  onOpenPrivacy: () => void;
   syncStatus: SyncStatus;
 }
 
@@ -19,6 +20,7 @@ export function ProfileScreen({
   onClose,
   onOpenAlerts,
   onOpenDiagnostics,
+  onOpenPrivacy,
   syncStatus,
 }: ProfileScreenProps) {
   const insets = useSafeAreaInsets();
@@ -167,6 +169,34 @@ export function ProfileScreen({
               </View>
               <Text maxFontSizeMultiplier={1.4} style={styles.actionLabel}>
                 Limity i alerty
+              </Text>
+              <SymbolView
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+                name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+                size={17}
+                tintColor={overviewColors.textDisabled}
+              />
+            </Pressable>
+            <Pressable
+              accessibilityHint="Otwiera blokadę aplikacji, tryb prywatny i ustawienia widżetu"
+              accessibilityRole="button"
+              onPress={onOpenPrivacy}
+              style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
+            >
+              <View accessibilityElementsHidden importantForAccessibility="no" style={styles.rowIcon}>
+                <SymbolView
+                  name={{
+                    ios: 'lock.shield',
+                    android: 'shield',
+                    web: 'shield',
+                  }}
+                  size={18}
+                  tintColor={overviewColors.textSecondary}
+                />
+              </View>
+              <Text maxFontSizeMultiplier={1.4} style={styles.actionLabel}>
+                Prywatność i blokada
               </Text>
               <SymbolView
                 accessibilityElementsHidden

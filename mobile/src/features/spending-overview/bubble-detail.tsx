@@ -28,14 +28,13 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { impactLight } from '@/haptics';
 import { project, rubberband } from '@/motion';
+import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 
 import { BubbleSkin } from './bubble-skin';
 import type { BubbleSelection } from './bubble-selection';
 import {
-  formatAmount,
   formatChange,
   formatShare,
-  formatSignedAmount,
   formatTransactionCount,
 } from './formatting';
 import { bubbleTints, overviewColors, overviewMotion, type BubbleKey } from './overview-theme';
@@ -82,6 +81,7 @@ export function BubbleDetail({
   onSelectSource,
   onClosed,
 }: BubbleDetailProps) {
+  const { formatAmount, formatSignedAmount } = useAmountFormatting();
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();

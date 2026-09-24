@@ -1,7 +1,8 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { formatAmount, formatShare } from '@/features/spending-overview/formatting';
+import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
+import { formatShare } from '@/features/spending-overview/formatting';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { impactLight } from '@/haptics';
 
@@ -36,6 +37,7 @@ const metricLabels: Record<AlertRule['metric'], string> = {
 };
 
 export function AlertsScreen({ entries, onClose, onCreate, onEdit }: AlertsScreenProps) {
+  const { formatAmount } = useAmountFormatting();
   const insets = useSafeAreaInsets();
 
   return (

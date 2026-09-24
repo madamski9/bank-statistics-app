@@ -3,13 +3,8 @@ import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BubbleField, type BubbleDescriptor } from '@/features/spending-overview/bubble-field';
-import {
-  formatAmount,
-  formatChange,
-  formatCompactAmount,
-  formatSignedCompactAmount,
-  formatTransactionCount,
-} from '@/features/spending-overview/formatting';
+import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
+import { formatChange, formatTransactionCount } from '@/features/spending-overview/formatting';
 import type { BubbleOrigin } from '@/features/spending-overview/glass-bubble';
 import {
   overviewColors,
@@ -43,6 +38,7 @@ function OverviewScreenComponent({
   isLoading,
   hasData,
 }: OverviewScreenProps) {
+  const { formatAmount, formatCompactAmount, formatSignedCompactAmount } = useAmountFormatting();
   const insets = useSafeAreaInsets();
   const option = periodOption(period);
 

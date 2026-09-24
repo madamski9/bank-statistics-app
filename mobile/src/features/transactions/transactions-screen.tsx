@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
 import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
 import { impactLight } from '@/haptics';
-import { formatAmount } from '@/features/spending-overview/formatting';
+import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import {
   overviewColors,
   overviewSpacing,
@@ -120,6 +120,7 @@ function TransactionsScreenComponent({
   onChanged,
   onRememberRule,
 }: TransactionsScreenProps) {
+  const { formatAmount } = useAmountFormatting();
   const insets = useSafeAreaInsets();
   const sections = useMemo(() => buildSections(records, new Date()), [records]);
   const [editor, setEditor] = useState<EditorTarget | null>(null);
