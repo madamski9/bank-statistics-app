@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
 import { classifyTransaction } from '@/features/classification/classify-transaction';
-import { formatAmount } from '@/features/spending-overview/formatting';
+import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 
 import { formatDayHeading, formatTime } from './format-date';
@@ -37,6 +37,7 @@ export function TransactionDetail({
   onEdit,
   onDelete,
 }: TransactionDetailProps) {
+  const { formatAmount } = useAmountFormatting();
   const insets = useSafeAreaInsets();
   const occurredAt = new Date(record.occurredAt);
   const isIncome = record.direction === 'income';

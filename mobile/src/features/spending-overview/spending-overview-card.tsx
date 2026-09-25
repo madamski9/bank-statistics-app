@@ -2,14 +2,10 @@ import { SymbolView } from 'expo-symbols';
 import { useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { useTheme, type Theme } from '@/theme';
 
-import {
-  formatAmount,
-  formatShare,
-  formatSignedAmount,
-  formatTransactionCount,
-} from './formatting';
+import { formatShare, formatTransactionCount } from './formatting';
 import { periodLabel, periodWindow, type SpendingPeriod } from './periods';
 import { summarizeSpending, type SpendingSourceKind } from './spending-summary';
 import { useCapturedSpending } from './use-captured-spending';
@@ -31,6 +27,7 @@ const sourceSymbols = {
 } as const satisfies Record<SpendingSourceKind, { ios: string; android: string; web: string }>;
 
 export function SpendingOverviewCard() {
+  const { formatAmount, formatSignedAmount } = useAmountFormatting();
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [period, setPeriod] = useState<SpendingPeriod>('month');

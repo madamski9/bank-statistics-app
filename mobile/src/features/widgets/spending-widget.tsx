@@ -7,8 +7,10 @@ import {
   Spacer,
   Text,
   VStack,
+  ZStack,
 } from '@expo/ui/swift-ui';
 import {
+  blur,
   buttonStyle,
   containerBackground,
   font,
@@ -17,7 +19,6 @@ import {
   lineLimit,
   minimumScaleFactor,
   monospacedDigit,
-  privacySensitive,
   progressViewStyle,
   tint,
   widgetURL,
@@ -79,7 +80,9 @@ function spendingWidgetLayout(
   const toneColor = (tone: WidgetLimit['tone']) =>
     tone === 'over' ? palette.over : tone === 'caution' ? palette.caution : palette.calm;
   const background = containerBackground(isAccessory ? '#00000000' : palette.background, 'widget');
-  const opensApp = props.openUrl ? [widgetURL(props.openUrl)] : [];
+  const isBlurred = props.isBlurred === true && props.status === 'ready';
+  const tapUrl = isBlurred ? props.revealUrl : props.openUrl;
+  const opensApp = tapUrl ? [widgetURL(tapUrl)] : [];
 
   const caption = ({ text, color }: { text: string; color?: string }) => (
     <Text
@@ -100,7 +103,6 @@ function spendingWidgetLayout(
         monospacedDigit(),
         lineLimit(1),
         minimumScaleFactor(0.5),
-        privacySensitive(),
       ]}>
       {text}
     </Text>
@@ -109,7 +111,7 @@ function spendingWidgetLayout(
   const bar = ({ share, color }: { share: number; color: string }) => (
     <ProgressView
       value={Math.min(Math.max(share, 0), 1)}
-      modifiers={[progressViewStyle('linear'), tint(color), privacySensitive()]}
+      modifiers={[progressViewStyle('linear'), tint(color)]}
     />
   );
 
@@ -137,7 +139,7 @@ function spendingWidgetLayout(
     <HStack>
       {caption({ text: title.toUpperCase(), color })}
       <Spacer />
-      {screens.length > 1 ? pager() : null}
+      {screens.length > 1 && !isBlurred ? pager() : null}
     </HStack>
   );
 
@@ -156,7 +158,7 @@ function spendingWidgetLayout(
             font({ size: 13, weight: 'semibold' }),
             foregroundStyle(palette.primary),
             lineLimit(1),
-          ]}>
+              ]}>
           {limit.name}
         </Text>
         <Spacer />
@@ -166,8 +168,7 @@ function spendingWidgetLayout(
             foregroundStyle(toneColor(limit.tone)),
             monospacedDigit(),
             lineLimit(1),
-            privacySensitive(),
-          ]}>
+              ]}>
           {`${limit.spentLabel} / ${limit.targetLabel}`}
         </Text>
       </HStack>
@@ -190,7 +191,7 @@ function spendingWidgetLayout(
           font({ size: 13, weight: 'semibold' }),
           foregroundStyle(palette.primary),
           lineLimit(1),
-        ]}>
+          ]}>
         {name}
       </Text>
       <Spacer />
@@ -200,8 +201,7 @@ function spendingWidgetLayout(
           foregroundStyle(palette.expense),
           monospacedDigit(),
           lineLimit(1),
-          privacySensitive(),
-        ]}>
+          ]}>
         {amountLabel}
       </Text>
     </HStack>
@@ -227,6 +227,15 @@ function spendingWidgetLayout(
   );
 
   if (isAccessory) {
+    if (isBlurred) {
+      return (
+        <HStack spacing={4} modifiers={[background, ...opensApp]}>
+          <Image systemName="lock.fill" size={12} />
+          <Text>BankStats</Text>
+        </HStack>
+      );
+    }
+
     if (props.status !== 'ready' || isNewMonth) {
       return (
         <HStack modifiers={[background, ...opensApp]}>
@@ -237,7 +246,7 @@ function spendingWidgetLayout(
 
     if (family === 'accessoryInline') {
       return (
-        <Text modifiers={[privacySensitive(), background]}>
+        <Text modifiers={[background]}>
           {`${props.monthLabel}: ${props.expenseLabel}`}
         </Text>
       );
@@ -254,12 +263,11 @@ function spendingWidgetLayout(
             monospacedDigit(),
             lineLimit(1),
             minimumScaleFactor(0.6),
-            privacySensitive(),
-          ]}>
+              ]}>
           {props.expenseLabel}
         </Text>
         {urgent !== undefined ? (
-          <Text modifiers={[font({ size: 12 }), lineLimit(1), privacySensitive()]}>
+          <Text modifiers={[font({ size: 12 }), lineLimit(1)]}>
             {`${urgent.name}: ${urgent.remainingLabel}`}
           </Text>
         ) : null}
@@ -326,7 +334,7 @@ function spendingWidgetLayout(
           font({ size: 15, weight: 'semibold' }),
           foregroundStyle(palette.primary),
           lineLimit(1),
-        ]}>
+          ]}>
         {limit.name}
       </Text>
       {amount({ text: limit.remainingLabel, size: isWide ? 26 : 20, color: toneColor(limit.tone) })}
@@ -369,6 +377,27 @@ function spendingWidgetLayout(
     ) : (
       monthScreen()
     );
+
+  if (isBlurred) {
+    return (
+      <ZStack
+        modifiers={[
+          frame({ maxWidth: 10_000, maxHeight: 10_000 }),
+          background,
+          ...opensApp,
+        ]}>
+        <VStack
+          alignment="leading"
+          modifiers={[frame({ maxWidth: 10_000, maxHeight: 10_000, alignment: 'topLeading' }), blur(14)]}>
+          {content}
+        </VStack>
+        <VStack spacing={6}>
+          <Image systemName="lock.fill" size={20} color={palette.primary} />
+          {caption({ text: 'Dotknij, aby odsłonić', color: palette.primary })}
+        </VStack>
+      </ZStack>
+    );
+  }
 
   return (
     <VStack

@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { formatAmount } from '@/features/spending-overview/formatting';
+import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { bubbleTints, overviewColors } from '@/features/spending-overview/overview-theme';
 
 import type { SpendBucket } from './merchant-summary';
@@ -42,6 +42,7 @@ function DailySpendChartComponent({
   selectedKey,
   onSelect,
 }: DailySpendChartProps) {
+  const { formatAmount } = useAmountFormatting();
   if (buckets.length === 0) {
     return null;
   }

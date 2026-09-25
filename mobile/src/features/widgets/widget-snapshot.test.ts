@@ -3,7 +3,12 @@ import { describe, expect, test } from 'bun:test';
 
 import type { AlertRule } from '@/features/alerts/alert-rule';
 
-import { buildSpendingWidgetProps, signedOutWidgetProps, widgetLimits } from './widget-snapshot';
+import {
+  buildSpendingWidgetProps,
+  signedOutWidgetProps,
+  widgetEntries,
+  widgetLimits,
+} from './widget-snapshot';
 
 const reference = new Date(2026, 8, 24, 18, 5);
 
@@ -143,5 +148,50 @@ describe('signedOutWidgetProps', () => {
     expect(props.expenseLabel).toBe('');
     expect(props.limits).toEqual([]);
     expect(props.shops).toEqual([]);
+  });
+});
+
+describe('widgetEntries', () => {
+  const ready = () =>
+    buildSpendingWidgetProps({
+      records: [record()],
+      alertRules: [],
+      categorizationRules: [],
+      reference,
+      openUrl: 'bankstats://',
+      revealUrl: 'bankstats://?widget=reveal',
+    });
+
+  test('shows the widget plainly unless the user asked to blur it', () => {
+    const entries = widgetEntries(ready(), { isBlurred: false, revealedUntilMs: 0 }, reference);
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].props.isBlurred).toBe(false);
+    expect(entries[0].props.expenseLabel).toBe('100\u00A0zł');
+  });
+
+  test('blurs the widget and points a tap at the reveal link', () => {
+    const [entry] = widgetEntries(ready(), { isBlurred: true, revealedUntilMs: 0 }, reference);
+
+    expect(entry.props.isBlurred).toBe(true);
+    expect(entry.props.revealUrl).toBe('bankstats://?widget=reveal');
+  });
+
+  test('reveals a blurred widget until the reveal window ends, then blurs it again', () => {
+    const until = reference.getTime() + 5 * 60_000;
+    const entries = widgetEntries(ready(), { isBlurred: true, revealedUntilMs: until }, reference);
+
+    expect(entries.map((entry) => entry.props.isBlurred)).toEqual([false, true]);
+    expect(entries[1].date.getTime()).toBe(until);
+  });
+
+  test('never blurs the signed-out message', () => {
+    const [entry] = widgetEntries(
+      signedOutWidgetProps(reference, 'bankstats://'),
+      { isBlurred: true, revealedUntilMs: 0 },
+      reference,
+    );
+
+    expect(entry.props.isBlurred).toBe(false);
   });
 });

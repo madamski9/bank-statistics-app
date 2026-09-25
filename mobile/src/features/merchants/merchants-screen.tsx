@@ -4,7 +4,8 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { SpendingDimension, SpendingGroup } from '@/features/classification/spending-groups';
-import { formatAmount, formatShare } from '@/features/spending-overview/formatting';
+import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
+import { formatShare } from '@/features/spending-overview/formatting';
 import { bubbleTints, overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { periodOption, type SpendingPeriod } from '@/features/spending-overview/periods';
 import { RangeSwitcher } from '@/features/spending-overview/range-switcher';
@@ -45,6 +46,7 @@ function MerchantsScreenComponent({
   error,
   isLoading,
 }: MerchantsScreenProps) {
+  const { formatAmount } = useAmountFormatting();
   const insets = useSafeAreaInsets();
   const option = periodOption(period);
   const tint = bubbleTints.expense;
