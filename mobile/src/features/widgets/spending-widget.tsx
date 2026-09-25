@@ -72,6 +72,15 @@ function spendingWidgetLayout(
   const tapUrl = isBlurred ? props.revealUrl : props.openUrl;
   const opensApp = tapUrl ? [widgetURL(tapUrl)] : [];
 
+  if (props.labels === undefined) {
+    return (
+      <VStack spacing={6} modifiers={[frame({ maxWidth: 10_000, maxHeight: 10_000 }), container, ...opensApp]}>
+        <Image systemName="chart.bar.fill" size={20} color={palette.spending} modifiers={[accessibilityHidden(true)]} />
+        <Text modifiers={[font({ size: 15, weight: 'semibold' }), foregroundStyle(palette.primary)]}>BankStats</Text>
+      </VStack>
+    );
+  }
+
   const caption = (text: string, color = palette.secondary) => (
     <Text modifiers={[font({ size: 12, weight: 'medium' }), foregroundStyle(color), lineLimit(1), minimumScaleFactor(0.85)]}>
       {text}
