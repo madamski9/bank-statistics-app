@@ -98,7 +98,7 @@ BankStats earns revenue through an optional Premium subscription. The free produ
 58. As a user, I want neutral alert wording, so that financial monitoring does not shame or pressure me.
 59. As a user, I want push permission requested when I create my first alert, so that the permission request has clear context.
 60. As a free user, I want a basic widget showing monthly expenses, so that I can check progress without opening the application.
-61. As a user, I want widget amounts hidden on the locked screen by default, so that bystanders cannot see private information.
+61. As a user, I want to blur the widget and reveal it with Face ID or my PIN, so that bystanders cannot see private information when I choose.
 62. As a Premium user, I want configurable widgets, so that I can monitor the metric or limit most useful to me.
 63. As a user, I want Sign in with Apple, Google, or an email code, so that authentication is quick and does not require a password.
 64. As a user with several devices, I want one identity and synchronized normalized transactions, so that the same history is available everywhere.
@@ -281,10 +281,10 @@ BankStats earns revenue through an optional Premium subscription. The free produ
 
 ### Privacy, security, and compliance
 
-- Biometric application lock is available to all users with immediate, one-minute, or five-minute timeout.
+- Biometric application lock is available to all users with immediate, one-minute, or five-minute timeout. A 4-digit PIN, set during onboarding or in settings, unlocks the application when biometrics fail or are unavailable.
 - Financial values are obscured in operating-system task switchers.
 - Screenshots remain allowed, while Privacy Mode hides amounts inside the application.
-- Widgets hide amounts on locked screens by default.
+- Widgets always show their content by default. Users can blur the widget in settings; tapping a blurred widget asks for Face ID or the PIN and reveals it for five minutes.
 - Sentry may collect crashes without session replay.
 - Telemetry never contains amounts, Merchants, Counterparties, Bank Notification text, screenshots, or raw notification payloads.
 - Product analytics uses only first-party aggregate events that cannot reconstruct financial activity.

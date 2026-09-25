@@ -4,6 +4,7 @@ import type { Doc } from './_generated/dataModel';
 import { mutation, query, type QueryCtx } from './_generated/server';
 import { isAccountDeleted } from './account';
 import { requireOwnerId } from './owner';
+import { assertBoundedText } from './syncedRows';
 import { devicePlatform } from './schema';
 
 export async function findDevice(
@@ -43,6 +44,7 @@ export const register = mutation({
   args: { installationId: v.string(), platform: devicePlatform },
   handler: async (ctx, { installationId, platform }) => {
     const ownerId = await requireOwnerId(ctx.auth);
+    assertBoundedText(installationId);
 
     if (await isAccountDeleted(ctx, ownerId)) {
       throw new ConvexError('This account is being deleted.');

@@ -63,11 +63,15 @@ import { useCapturedSpending } from '@/features/spending-overview/use-captured-s
 import { useFinancialAccounts } from '@/features/financial-accounts/use-financial-accounts';
 import { MerchantDetail } from '@/features/merchants/merchant-detail';
 import { MerchantsScreen } from '@/features/merchants/merchants-screen';
+import { PrivacySettingsScreen } from '@/features/privacy/privacy-settings-screen';
+import { usePrivacy } from '@/features/privacy/privacy-provider';
 import { ProfileScreen } from '@/features/profile/profile-screen';
 import { useCloudSync } from '@/features/sync/use-cloud-sync';
 import { affectsStatistics } from '@/features/transactions/transaction-record';
 import { TransactionsScreen } from '@/features/transactions/transactions-screen';
 import { useSpendingWidget } from '@/features/widgets/use-spending-widget';
+import { WidgetPreview } from '@/features/widgets/widget-preview';
+import { buildSpendingWidgetProps } from '@/features/widgets/widget-snapshot';
 
 const pages = [
   { key: 'overview', label: 'Przegląd' },
@@ -76,7 +80,7 @@ const pages = [
 ] as const;
 
 type PageKey = (typeof pages)[number]['key'];
-type SheetKey = 'profile' | 'diagnostics' | 'alerts' | 'data';
+type SheetKey = 'profile' | 'diagnostics' | 'alerts' | 'data' | 'privacy';
 
 interface AlertEditor {
   scope: AlertScope;
@@ -147,12 +151,32 @@ export function HomeScreen() {
     [countedRecords, dimension, rules, spendWindow],
   );
   const alerts = useAlerts({ records: countedRecords, categorizationRules: rules });
+  const { settings: privacySettings, widgetRevealedUntilMs, isWidgetPreviewOpen, closeWidgetPreview } =
+    usePrivacy();
+  const widgetPrivacy = useMemo(
+    () => ({ isBlurred: privacySettings.isWidgetBlurred, revealedUntilMs: widgetRevealedUntilMs }),
+    [privacySettings.isWidgetBlurred, widgetRevealedUntilMs],
+  );
   useSpendingWidget({
     isReady: !isLoading && error === null,
     records,
     alertRules: alerts.rules,
     categorizationRules: rules,
+    privacy: widgetPrivacy,
   });
+  const widgetPreviewProps = useMemo(
+    () =>
+      isWidgetPreviewOpen
+        ? buildSpendingWidgetProps({
+            records,
+            alertRules: alerts.rules,
+            categorizationRules: rules,
+            reference: new Date(),
+            openUrl: '',
+          })
+        : null,
+    [alerts.rules, isWidgetPreviewOpen, records, rules],
+  );
   const alertMerchants = useMemo(() => merchantOptions(countedRecords, rules), [countedRecords, rules]);
   const selectedLimit = useMemo(
     () =>
@@ -460,6 +484,7 @@ export function HomeScreen() {
             onOpenAlerts={() => setActiveSheet('alerts')}
             onOpenData={() => setActiveSheet('data')}
             onOpenDiagnostics={() => setActiveSheet('diagnostics')}
+            onOpenPrivacy={() => setActiveSheet('privacy')}
             syncStatus={syncStatus}
           />
         ) : activeSheet === 'data' ? (
@@ -468,6 +493,8 @@ export function HomeScreen() {
             onClose={() => setActiveSheet('profile')}
             records={records}
           />
+        ) : activeSheet === 'privacy' ? (
+          <PrivacySettingsScreen onClose={() => setActiveSheet('profile')} />
         ) : activeSheet === 'alerts' ? (
           <AlertsScreen
             entries={alertEntries}
@@ -495,6 +522,17 @@ export function HomeScreen() {
             <IngestionDiagnosticsCard />
           </View>
         )}
+      </Modal>
+
+      <Modal
+        animationType="slide"
+        onRequestClose={closeWidgetPreview}
+        presentationStyle="pageSheet"
+        visible={widgetPreviewProps !== null}
+      >
+        {widgetPreviewProps !== null ? (
+          <WidgetPreview onClose={closeWidgetPreview} props={widgetPreviewProps} />
+        ) : null}
       </Modal>
     </View>
   );

@@ -227,6 +227,54 @@ describe('transactions', () => {
     ).rejects.toThrow();
   });
 
+  test('rejects a loosely parsed date that is not an ISO 8601 timestamp', async () => {
+    const { user } = await signedIn(alice, 'phone');
+
+    for (const occurredAt of ['1', 'Sep 20 2026', '2026-09-20']) {
+      await expect(
+        user.mutation(api.transactions.push, {
+          installationId: 'phone',
+          changes: [lunch({ occurredAt })],
+        }),
+      ).rejects.toThrow('ISO 8601');
+    }
+  });
+
+  test('refuses an account id that only looks like a general account', async () => {
+    const { user } = await signedIn(alice, 'phone');
+
+    await expect(
+      user.mutation(api.transactions.push, {
+        installationId: 'phone',
+        changes: [lunch({ accountId: 'general-someone-else' })],
+      }),
+    ).rejects.toThrow('Financial Accounts');
+    await user.mutation(api.transactions.push, {
+      installationId: 'phone',
+      changes: [lunch({ accountId: 'general-millennium' })],
+    });
+  });
+
+  test('refuses oversized text fields and oversized pushes', async () => {
+    const { user } = await signedIn(alice, 'phone');
+
+    await expect(
+      user.mutation(api.transactions.push, {
+        installationId: 'phone',
+        changes: [lunch({ merchant: 'x'.repeat(201) })],
+      }),
+    ).rejects.toThrow('at most');
+    await expect(
+      user.mutation(api.transactions.push, {
+        installationId: 'phone',
+        changes: Array.from({ length: 501 }, (_, index) => lunch({ clientId: `manual-${index}` })),
+      }),
+    ).rejects.toThrow('at most');
+    await expect(
+      user.mutation(api.devices.register, { installationId: 'x'.repeat(201), platform: 'ios' }),
+    ).rejects.toThrow('at most');
+  });
+
   test('accepts a captured Millennium transaction with no Financial Account', async () => {
     const { user } = await signedIn(alice, 'phone');
 

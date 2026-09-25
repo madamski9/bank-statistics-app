@@ -8,10 +8,13 @@ import type { AlertRule } from '@/features/alerts/alert-rule';
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
 
 import type { SpendingWidget } from './spending-widget';
+import { widgetRevealParams } from './widget-links';
 import {
   buildSpendingWidgetProps,
   signedOutWidgetProps,
+  widgetEntries,
   type SpendingWidgetProps,
+  type WidgetPrivacy,
 } from './widget-snapshot';
 
 const publishDebounceMs = 400;
@@ -21,6 +24,7 @@ interface SpendingWidgetSources {
   records: IngestionRecord[];
   alertRules: AlertRule[];
   categorizationRules: CategorizationRule[];
+  privacy: WidgetPrivacy;
 }
 
 function loadSpendingWidget(): SpendingWidget | null {
@@ -35,8 +39,19 @@ function loadSpendingWidget(): SpendingWidget | null {
 
 const spendingWidget = loadSpendingWidget();
 
-function publish(props: SpendingWidgetProps): void {
-  spendingWidget?.updateSnapshot(props);
+function publish(props: SpendingWidgetProps, privacy: WidgetPrivacy): void {
+  if (spendingWidget === null) {
+    return;
+  }
+
+  const entries = widgetEntries(props, privacy, new Date());
+  const [first] = entries;
+
+  if (entries.length === 1 && first !== undefined) {
+    spendingWidget.updateSnapshot(first.props);
+  } else {
+    spendingWidget.updateTimeline(entries);
+  }
 }
 
 async function currentStep(): Promise<number> {
@@ -74,6 +89,7 @@ export function useSpendingWidget({
   records,
   alertRules,
   categorizationRules,
+  privacy,
 }: SpendingWidgetSources): void {
   const foregroundTick = useForegroundTick();
 
@@ -96,8 +112,10 @@ export function useSpendingWidget({
             categorizationRules,
             reference: new Date(),
             openUrl: Linking.createURL('/'),
+            revealUrl: Linking.createURL('/', { queryParams: widgetRevealParams }),
             step,
           }),
+          privacy,
         );
       });
     }, publishDebounceMs);
@@ -106,12 +124,15 @@ export function useSpendingWidget({
       isCurrent = false;
       clearTimeout(timer);
     };
-  }, [alertRules, categorizationRules, foregroundTick, isReady, records]);
+  }, [alertRules, categorizationRules, foregroundTick, isReady, privacy, records]);
 }
 
 export function SignedOutSpendingWidget(): null {
   useEffect(() => {
-    publish(signedOutWidgetProps(new Date(), Linking.createURL('/')));
+    publish(signedOutWidgetProps(new Date(), Linking.createURL('/')), {
+      isBlurred: false,
+      revealedUntilMs: 0,
+    });
   }, []);
 
   return null;

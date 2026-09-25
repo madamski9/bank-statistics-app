@@ -4,6 +4,8 @@ import { AccountStandingGate } from '@/features/account-data/account-standing-ga
 import { SignInScreen } from '@/features/auth/sign-in-screen';
 import { HomeScreen } from '@/features/home/home-screen';
 import { OnboardingGate } from '@/features/onboarding/onboarding-gate';
+import { AppLockGate } from '@/features/privacy/app-lock-gate';
+import { PrivacyProvider } from '@/features/privacy/privacy-provider';
 import { OwnedDeviceGate } from '@/features/sync/owned-device-gate';
 import { SignedOutSpendingWidget } from '@/features/widgets/use-spending-widget';
 
@@ -13,9 +15,13 @@ export default function Index() {
       <Show when="signed-in">
         <OwnedDeviceGate>
           <AccountStandingGate>
-            <OnboardingGate>
-              <HomeScreen />
-            </OnboardingGate>
+            <PrivacyProvider>
+              <OnboardingGate>
+                <AppLockGate>
+                  <HomeScreen />
+                </AppLockGate>
+              </OnboardingGate>
+            </PrivacyProvider>
           </AccountStandingGate>
         </OwnedDeviceGate>
       </Show>

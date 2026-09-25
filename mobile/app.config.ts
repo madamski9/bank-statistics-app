@@ -87,6 +87,10 @@ const config: ExpoConfig = {
       },
     ],
     'expo-secure-store',
+    [
+      'expo-local-authentication',
+      { faceIDPermission: 'BankStats używa Face ID, żeby odblokować aplikację i odsłonić widżet.' },
+    ],
     'expo-notifications',
     ['@clerk/expo', { appleSignIn: false }],
     '@bankstats/ingestion-native',

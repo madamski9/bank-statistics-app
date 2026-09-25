@@ -42,6 +42,18 @@ export interface SpendingWidgetProps {
   shops: WidgetShop[];
   step: number;
   openUrl: string;
+  isBlurred: boolean;
+  revealUrl: string;
+}
+
+export interface WidgetPrivacy {
+  isBlurred: boolean;
+  revealedUntilMs: number;
+}
+
+export interface SpendingWidgetEntry {
+  date: Date;
+  props: SpendingWidgetProps;
 }
 
 export interface SnapshotSources {
@@ -50,6 +62,7 @@ export interface SnapshotSources {
   categorizationRules: CategorizationRule[];
   reference: Date;
   openUrl: string;
+  revealUrl?: string;
   step?: number;
 }
 
@@ -163,6 +176,7 @@ export function buildSpendingWidgetProps({
   categorizationRules,
   reference,
   openUrl,
+  revealUrl = openUrl,
   step = 0,
 }: SnapshotSources): SpendingWidgetProps {
   const counted = records.filter(affectsStatistics);
@@ -191,6 +205,8 @@ export function buildSpendingWidgetProps({
     shops,
     step,
     openUrl,
+    isBlurred: false,
+    revealUrl,
   };
 }
 
@@ -208,5 +224,26 @@ export function signedOutWidgetProps(reference: Date, openUrl: string): Spending
     shops: [],
     step: 0,
     openUrl,
+    isBlurred: false,
+    revealUrl: openUrl,
   };
+}
+
+export function widgetEntries(
+  props: SpendingWidgetProps,
+  privacy: WidgetPrivacy,
+  now: Date,
+): SpendingWidgetEntry[] {
+  if (!privacy.isBlurred || props.status !== 'ready') {
+    return [{ date: now, props: { ...props, isBlurred: false } }];
+  }
+
+  if (privacy.revealedUntilMs > now.getTime()) {
+    return [
+      { date: now, props: { ...props, isBlurred: false } },
+      { date: new Date(privacy.revealedUntilMs), props: { ...props, isBlurred: true } },
+    ];
+  }
+
+  return [{ date: now, props: { ...props, isBlurred: true } }];
 }
