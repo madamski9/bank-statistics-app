@@ -6,6 +6,8 @@ triggers on a notification from **either** Millennium **or** Portfel (Wallet) an
 whichever text arrives:
 
 - A Millennium transfer push (incoming/outgoing) is saved as before.
+- Any other bank push, such as an advertisement or a request to rate the app, is read and ignored
+  with the reason `notTransaction`: nothing is saved and Shortcuts does not report an error.
 - Millennium's own card-payment push (e.g. "Płatność kartą debetową: Kwota: ...") never names the
   merchant, so it is recognized and deliberately dropped — not saved, not treated as an error —
   rather than stored twice once Wallet's own push for the same purchase arrives.

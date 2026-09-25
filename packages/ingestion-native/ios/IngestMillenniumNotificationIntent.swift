@@ -37,6 +37,9 @@ public struct IngestMillenniumNotificationIntent: AppIntent {
         return .result(dialog: "Saved \(label), \(record.amountMinor) minor units")
       case .ignored(let reasonCode):
         IngestionAttemptLog.record { $0.recordIgnored(reasonCode) }
+        if reasonCode == IgnoredReason.notTransaction {
+          return .result(dialog: "Not a transaction - nothing saved")
+        }
         return .result(dialog: "Ignored - waiting for the matching Apple Pay transaction")
       }
     } catch {

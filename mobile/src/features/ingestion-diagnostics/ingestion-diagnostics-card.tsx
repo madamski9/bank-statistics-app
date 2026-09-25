@@ -1,5 +1,6 @@
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { failureLabel, lastAttemptLabel } from './attempt-labels';
 import { useIngestionDiagnostics } from './use-ingestion-diagnostics';
 
 export function IngestionDiagnosticsCard() {
@@ -11,12 +12,6 @@ export function IngestionDiagnosticsCard() {
     (latestRecord?.transactionType === 'incomingTransfer'
       ? 'Przelew przychodzący'
       : 'Przelew wychodzący');
-  const lastAttemptLabel =
-    storage?.lastAttemptOutcome === 'success'
-      ? 'zapisano'
-      : storage?.lastAttemptOutcome === 'ignored'
-        ? `zignorowano, czeka na Apple Pay (${storage.lastAttemptFailureReason ?? 'nieznany powód'})`
-        : `błąd (${storage?.lastAttemptFailureReason ?? 'nieznany'})`;
 
   if (Platform.OS !== 'ios') {
     return null;
@@ -47,8 +42,14 @@ export function IngestionDiagnosticsCard() {
         Ostatnia automatyzacja:{' '}
         {storage?.lastAttemptAt === undefined
           ? 'jeszcze nie uruchomiona na tym urządzeniu'
-          : `${new Date(storage.lastAttemptAt).toLocaleString()} · ${lastAttemptLabel}`}
+          : `${new Date(storage.lastAttemptAt).toLocaleString()} · ${lastAttemptLabel(storage)}`}
       </Text>
+      {storage?.lastFailureAt !== undefined ? (
+        <Text style={styles.detail}>
+          Ostatni błąd: {new Date(storage.lastFailureAt).toLocaleString()} ·{' '}
+          {failureLabel(storage.lastFailureReason)}
+        </Text>
+      ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <View style={styles.actions}>
         <Pressable disabled={isLoading} onPress={() => void ingestSynthetic()} style={styles.button}>

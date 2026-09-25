@@ -63,3 +63,8 @@ enum NormalizationOutcome {
   case record(NormalizedRecord)
   case ignored(reasonCode: String)
 }
+
+enum IgnoredReason {
+  static let cardPaymentAwaitingApplePay = "cardPaymentAwaitingApplePay"
+  static let notTransaction = "notTransaction"
+}
