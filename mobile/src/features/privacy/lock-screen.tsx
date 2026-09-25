@@ -1,6 +1,7 @@
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
@@ -27,6 +28,7 @@ export function LockScreen({ title, subtitle, promptMessage, onUnlocked, onCance
   const [isChecking, setIsChecking] = useState(false);
   const [lockedForMs, setLockedForMs] = useState(() => pinLockoutMs());
   const hasPrompted = useRef(false);
+  const [hasDeclinedBiometrics, setHasDeclinedBiometrics] = useState(false);
 
   const tryBiometrics = useCallback(async () => {
     if (biometric === 'none') {
@@ -37,7 +39,12 @@ export function LockScreen({ title, subtitle, promptMessage, onUnlocked, onCance
 
     if (outcome === 'success') {
       onUnlocked();
-    } else if (outcome === 'usePin' || outcome === 'unavailable') {
+      return;
+    }
+
+    setHasDeclinedBiometrics(true);
+
+    if (outcome === 'usePin' || outcome === 'unavailable') {
       setMessage('Wpisz kod PIN.');
     }
   }, [authenticate, biometric, onUnlocked, promptMessage]);
@@ -92,6 +99,7 @@ export function LockScreen({ title, subtitle, promptMessage, onUnlocked, onCance
   );
 
   const isLockedOut = lockedForMs > 0;
+  const isPinVisible = biometric === 'none' || hasDeclinedBiometrics;
 
   return (
     <View
@@ -100,55 +108,59 @@ export function LockScreen({ title, subtitle, promptMessage, onUnlocked, onCance
         { paddingTop: insets.top + 32, paddingBottom: insets.bottom + overviewSpacing.block },
       ]}
     >
-      <View style={styles.header}>
-        {onCancel !== undefined ? (
-          <Pressable
-            accessibilityRole="button"
-            hitSlop={8}
-            onPress={onCancel}
-            style={({ pressed }) => [styles.cancel, pressed ? styles.pressed : null]}
-          >
-            <Text maxFontSizeMultiplier={1.3} style={styles.cancelLabel}>
-              Anuluj
+      {isPinVisible ? (
+        <Animated.View entering={FadeIn.duration(220)} style={styles.pinArea}>
+          <View style={styles.header}>
+            {onCancel !== undefined ? (
+              <Pressable
+                accessibilityRole="button"
+                hitSlop={8}
+                onPress={onCancel}
+                style={({ pressed }) => [styles.cancel, pressed ? styles.pressed : null]}
+              >
+                <Text maxFontSizeMultiplier={1.3} style={styles.cancelLabel}>
+                  Anuluj
+                </Text>
+              </Pressable>
+            ) : null}
+            <SymbolView
+              name={{ ios: 'lock.fill', android: 'lock', web: 'lock' }}
+              size={30}
+              tintColor={overviewColors.textPrimary}
+            />
+            <Text accessibilityRole="header" maxFontSizeMultiplier={1.35} style={styles.title}>
+              {title}
             </Text>
-          </Pressable>
-        ) : null}
-        <SymbolView
-          name={{ ios: 'lock.fill', android: 'lock', web: 'lock' }}
-          size={30}
-          tintColor={overviewColors.textPrimary}
-        />
-        <Text accessibilityRole="header" maxFontSizeMultiplier={1.35} style={styles.title}>
-          {title}
-        </Text>
-        <Text maxFontSizeMultiplier={1.5} style={styles.subtitle}>
-          {subtitle}
-        </Text>
-      </View>
+            <Text maxFontSizeMultiplier={1.5} style={styles.subtitle}>
+              {subtitle}
+            </Text>
+          </View>
 
-      <View style={styles.entry}>
-        <PinDots filled={pin.length} hasError={hasError} />
-        <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={1.5} style={styles.message}>
-          {isLockedOut
-            ? `Za dużo błędnych prób. Spróbuj za ${lockoutLabel(lockedForMs)}.`
-            : (message ?? ' ')}
-        </Text>
-      </View>
+          <View style={styles.entry}>
+            <PinDots filled={pin.length} hasError={hasError} />
+            <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={1.5} style={styles.message}>
+              {isLockedOut
+                ? `Za dużo błędnych prób. Spróbuj za ${lockoutLabel(lockedForMs)}.`
+                : (message ?? ' ')}
+            </Text>
+          </View>
 
-      <PinPad
-        biometric={
-          biometric === 'none'
-            ? undefined
-            : {
-                label: biometricLabels[biometric],
-                symbol: biometric === 'faceId' ? 'faceid' : 'touchid',
-                onPress: () => void tryBiometrics(),
-              }
-        }
-        isDisabled={isChecking || isLockedOut}
-        onChange={(next) => void handleChange(next)}
-        value={pin}
-      />
+          <PinPad
+            biometric={
+              biometric === 'none'
+                ? undefined
+                : {
+                    label: biometricLabels[biometric],
+                    symbol: biometric === 'faceId' ? 'faceid' : 'touchid',
+                    onPress: () => void tryBiometrics(),
+                  }
+            }
+            isDisabled={isChecking || isLockedOut}
+            onChange={(next) => void handleChange(next)}
+            value={pin}
+          />
+        </Animated.View>
+      ) : null}
     </View>
   );
 }
@@ -187,7 +199,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: overviewColors.textSecondary,
   },
+  pinArea: {
+    flex: 1,
+  },
   entry: {
+    flex: 1,
+    justifyContent: 'center',
     gap: 16,
   },
   message: {
