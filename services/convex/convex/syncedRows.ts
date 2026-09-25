@@ -3,8 +3,7 @@ import { ConvexError } from 'convex/values';
 import { internal } from './_generated/api';
 import type { Doc } from './_generated/dataModel';
 import { internalMutation, type QueryCtx } from './_generated/server';
-import { findDevice } from './devices';
-import { requireOwnerId } from './owner';
+import { requireActiveDevice } from './devices';
 
 type SyncedTable = 'transactions' | 'financialAccounts';
 
@@ -40,16 +39,9 @@ export function assertValidRevision(change: SyncedChange) {
   assertBoundedText(change.clientId);
 }
 
-export async function requireDevice(ctx: QueryCtx, installationId: string) {
+export function requireDevice(ctx: QueryCtx, installationId: string) {
   assertBoundedText(installationId);
-  const ownerId = await requireOwnerId(ctx.auth);
-  const device = await findDevice(ctx, ownerId, installationId);
-
-  if (device === null) {
-    throw new ConvexError('Register this device before synchronizing.');
-  }
-
-  return { ownerId, device };
+  return requireActiveDevice(ctx, installationId);
 }
 
 interface StoredRow {
