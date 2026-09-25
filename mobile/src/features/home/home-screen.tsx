@@ -65,6 +65,14 @@ import { useCapturedSpending } from '@/features/spending-overview/use-captured-s
 import { useFinancialAccounts } from '@/features/financial-accounts/use-financial-accounts';
 import { MerchantDetail } from '@/features/merchants/merchant-detail';
 import { MerchantsScreen } from '@/features/merchants/merchants-screen';
+import {
+  canCreateLimit,
+  fallbackPeriod,
+  lockedPeriods,
+  type PremiumReason,
+} from '@/features/premium/premium-access';
+import { PremiumScreen } from '@/features/premium/premium-screen';
+import { usePremium } from '@/features/premium/use-premium';
 import { PrivacySettingsScreen } from '@/features/privacy/privacy-settings-screen';
 import { usePrivacy } from '@/features/privacy/privacy-provider';
 import { ProfileScreen } from '@/features/profile/profile-screen';
@@ -87,7 +95,7 @@ type PageKey = TabKey | 'profile';
 const navLabelFontSize = 24;
 
 const pageOrder: readonly PageKey[] = [...pages.map((entry) => entry.key), 'profile'];
-type SheetKey = 'alerts' | 'data' | 'privacy';
+type SheetKey = 'alerts' | 'data' | 'privacy' | 'premium';
 
 interface AlertEditor {
   scope: AlertScope;
@@ -106,7 +114,7 @@ export function HomeScreen() {
   const { width } = useWindowDimensions();
   const pagerRef = useRef<ScrollView>(null);
   const [page, setPage] = useState<PageKey>('overview');
-  const [period, setPeriod] = useState<SpendingPeriod>('month');
+  const [requestedPeriod, setRequestedPeriod] = useState<SpendingPeriod>('month');
   const [{ selection, revision }, dispatchSelection] = useReducer(
     bubbleSelectionReducer,
     initialBubbleSelection,
@@ -130,6 +138,33 @@ export function HomeScreen() {
     onPulled: refreshAfterPull,
   });
   const { remember, rules } = useCategorizationRules();
+  const premium = usePremium();
+  const hasPremiumAccess = premium === undefined || premium.isPremium;
+  const periodLocks = useMemo(() => lockedPeriods(hasPremiumAccess), [hasPremiumAccess]);
+  const period = periodLocks.has(requestedPeriod) ? fallbackPeriod : requestedPeriod;
+  const [premiumReason, setPremiumReason] = useState<PremiumReason | null>(null);
+  const [premiumReturnSheet, setPremiumReturnSheet] = useState<SheetKey | null>(null);
+
+  const openPremium = useCallback(
+    (reason: PremiumReason | null) => {
+      setPremiumReason(reason);
+      setPremiumReturnSheet(activeSheet === 'premium' ? null : activeSheet);
+      setActiveSheet('premium');
+    },
+    [activeSheet],
+  );
+
+  const changePeriod = useCallback(
+    (next: SpendingPeriod) => {
+      if (periodLocks.has(next)) {
+        openPremium('period');
+        return;
+      }
+
+      setRequestedPeriod(next);
+    },
+    [openPremium, periodLocks],
+  );
   const [alertEditor, setAlertEditor] = useState<AlertEditor | null>(null);
   const countedRecords = useMemo(() => records.filter(affectsStatistics), [records]);
 
@@ -171,6 +206,7 @@ export function HomeScreen() {
   );
   useSpendingWidget({
     isReady: !isLoading && error === null,
+    isPremium: premium?.isPremium,
     records,
     alertRules: alerts.rules,
     categorizationRules: rules,
@@ -206,15 +242,33 @@ export function HomeScreen() {
     [alerts.rules, countedRecords, rules],
   );
 
+  const requestNewLimit = useCallback(
+    (scope: AlertScope, isScopeLocked = false) => {
+      if (!canCreateLimit(alerts.rules.length, hasPremiumAccess)) {
+        openPremium('limit');
+        return;
+      }
+
+      setAlertEditor({ scope, rule: null, isScopeLocked });
+    },
+    [alerts.rules.length, hasPremiumAccess, openPremium],
+  );
+
   const handleEditLimit = useCallback(() => {
     if (group === null) {
       return;
     }
 
     const scope = scopeForGroup(group);
+    const rule = ruleForScope(alerts.rules, scope);
 
-    setAlertEditor({ scope, rule: ruleForScope(alerts.rules, scope), isScopeLocked: true });
-  }, [alerts.rules, group]);
+    if (rule === null) {
+      requestNewLimit(scope, true);
+      return;
+    }
+
+    setAlertEditor({ scope, rule, isScopeLocked: true });
+  }, [alerts.rules, group, requestNewLimit]);
 
   const handleSaveAlert = useCallback(
     async (rule: AlertRule) => {
@@ -431,7 +485,8 @@ export function HomeScreen() {
             expenseChange={expenseChange}
             hasData={records.length > 0}
             isLoading={isLoading}
-            onChangePeriod={setPeriod}
+            lockedPeriods={periodLocks}
+            onChangePeriod={changePeriod}
             onSelectBubble={handleSelectBubble}
             period={period}
             rhythm={rhythm}
@@ -457,8 +512,9 @@ export function HomeScreen() {
             groups={groups}
             isLoading={isLoading}
             onChangeDimension={setDimension}
-            onChangePeriod={setPeriod}
-            onCreateLimit={() => setAlertEditor({ scope: { kind: 'all' }, rule: null })}
+            lockedPeriods={periodLocks}
+            onChangePeriod={changePeriod}
+            onCreateLimit={() => requestNewLimit({ kind: 'all' })}
             onSelectGroup={setGroup}
             period={period}
           />
@@ -467,7 +523,9 @@ export function HomeScreen() {
           <ProfileScreen
             onOpenAlerts={() => setActiveSheet('alerts')}
             onOpenData={() => setActiveSheet('data')}
+            onOpenPremium={() => openPremium(null)}
             onOpenPrivacy={() => setActiveSheet('privacy')}
+            premium={premium}
             syncStatus={syncStatus}
           />
         </View>
@@ -477,7 +535,8 @@ export function HomeScreen() {
         <BubbleDetail
           change={selectedChange}
           key={revision}
-          onChangePeriod={setPeriod}
+          lockedPeriods={periodLocks}
+          onChangePeriod={changePeriod}
           onClosed={handleDetailClosed}
           onSelectSource={handleSelectSource}
           period={period}
@@ -521,13 +580,19 @@ export function HomeScreen() {
             onClose={() => setActiveSheet(null)}
             records={records}
           />
+        ) : activeSheet === 'premium' ? (
+          <PremiumScreen
+            onClose={() => setActiveSheet(premiumReturnSheet)}
+            reason={premiumReason}
+            status={premium}
+          />
         ) : activeSheet === 'privacy' ? (
           <PrivacySettingsScreen onClose={() => setActiveSheet(null)} />
         ) : (
           <AlertsScreen
             entries={alertEntries}
             onClose={() => setActiveSheet(null)}
-            onCreate={() => setAlertEditor({ scope: { kind: 'all' }, rule: null })}
+            onCreate={() => requestNewLimit({ kind: 'all' })}
             onEdit={(rule) => setAlertEditor({ scope: rule.scope, rule })}
           />
         )}

@@ -19,6 +19,7 @@ interface MerchantsScreenProps {
   onChangeDimension: (dimension: SpendingDimension) => void;
   period: SpendingPeriod;
   onChangePeriod: (period: SpendingPeriod) => void;
+  lockedPeriods: ReadonlySet<SpendingPeriod>;
   onCreateLimit: () => void;
   onSelectGroup: (group: SpendingGroup) => void;
   error: string | null;
@@ -41,6 +42,7 @@ function MerchantsScreenComponent({
   onChangeDimension,
   period,
   onChangePeriod,
+  lockedPeriods,
   onCreateLimit,
   onSelectGroup,
   error,
@@ -86,7 +88,7 @@ function MerchantsScreenComponent({
             </Text>
           </Pressable>
         </View>
-        <RangeSwitcher onChange={onChangePeriod} period={period} />
+        <RangeSwitcher lockedPeriods={lockedPeriods} onChange={onChangePeriod} period={period} />
         <DimensionSwitcher dimension={dimension} onChange={onChangeDimension} />
       </View>
 

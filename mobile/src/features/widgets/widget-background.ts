@@ -2,6 +2,7 @@ import type { IngestionRecord } from '@bankstats/ingestion-native';
 
 import {
   buildSpendingWidgetProps,
+  lockedWidgetProps,
   signedOutWidgetProps,
   widgetEntries,
   type WidgetPrivacy,
@@ -10,6 +11,7 @@ import {
 
 export interface WidgetBackgroundConfiguration {
   enabled: boolean;
+  isPremium?: boolean;
   alertRules: SnapshotSources['alertRules'];
   categorizationRules: SnapshotSources['categorizationRules'];
   openUrl: string;
@@ -26,6 +28,10 @@ export function snapshot(
 
   if (!configuration.enabled) {
     return signedOutWidgetProps(reference, configuration.openUrl);
+  }
+
+  if (configuration.isPremium === false) {
+    return lockedWidgetProps(reference, configuration.openUrl);
   }
 
   return buildSpendingWidgetProps({

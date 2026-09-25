@@ -268,6 +268,8 @@ function spendingWidgetLayout(
 
   const content = props.status === 'signedOut'
     ? empty('Twoje wydatki pod ręką', 'Zaloguj się w BankStats.')
+    : props.status === 'locked'
+      ? empty('Widżety w Premium', 'Odblokuj BankStats Premium w aplikacji.')
     : props.status !== 'ready'
       ? empty('Witaj w BankStats', 'Otwórz aplikację, żeby włączyć widżet.')
       : newMonth
