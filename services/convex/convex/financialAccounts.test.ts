@@ -100,4 +100,15 @@ describe('financialAccounts', () => {
       ).rejects.toThrow();
     }
   });
+
+  test('rejects an account from a bank that is not enabled', async () => {
+    const { user } = await signedIn(alice, 'phone');
+
+    await expect(
+      user.mutation(api.financialAccounts.push, {
+        installationId: 'phone',
+        changes: [savings({ bank: 'x'.repeat(10_000) })],
+      }),
+    ).rejects.toThrow('enabled bank');
+  });
 });

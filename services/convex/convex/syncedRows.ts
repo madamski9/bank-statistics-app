@@ -17,14 +17,31 @@ interface SyncedChange {
 const syncedTables: SyncedTable[] = ['transactions', 'financialAccounts'];
 const tombstoneRetentionMs = 90 * 24 * 60 * 60 * 1000;
 const purgeBatchSize = 500;
+const maximumChangesPerPush = 500;
+const maximumTextLength = 200;
+
+export function assertPushSize(changes: unknown[]) {
+  if (changes.length > maximumChangesPerPush) {
+    throw new ConvexError(`A push carries at most ${maximumChangesPerPush} changes.`);
+  }
+}
+
+export function assertBoundedText(value: string | undefined) {
+  if (value !== undefined && value.length > maximumTextLength) {
+    throw new ConvexError(`A text field has at most ${maximumTextLength} characters.`);
+  }
+}
 
 export function assertValidRevision(change: SyncedChange) {
   if (!Number.isSafeInteger(change.revision) || change.revision < 0) {
     throw new ConvexError('A revision is a non-negative whole number.');
   }
+
+  assertBoundedText(change.clientId);
 }
 
 export async function requireDevice(ctx: QueryCtx, installationId: string) {
+  assertBoundedText(installationId);
   const ownerId = await requireOwnerId(ctx.auth);
   const device = await findDevice(ctx, ownerId, installationId);
 

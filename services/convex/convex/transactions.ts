@@ -2,7 +2,14 @@ import { ConvexError, v, type Infer } from 'convex/values';
 
 import { mutation, query, type QueryCtx } from './_generated/server';
 import { transactionFields } from './schema';
-import { assertValidRevision, requireDevice, rowFromChange, withoutServerFields } from './syncedRows';
+import {
+  assertBoundedText,
+  assertPushSize,
+  assertValidRevision,
+  requireDevice,
+  rowFromChange,
+  withoutServerFields,
+} from './syncedRows';
 
 const transactionChange = v.object({
   ...transactionFields,
@@ -13,6 +20,11 @@ const transactionChange = v.object({
 type TransactionChange = Infer<typeof transactionChange>;
 
 const currencyPattern = /^[A-Z]{3}$/;
+const isoTimestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
+
+function isIsoTimestamp(value: string): boolean {
+  return isoTimestampPattern.test(value) && !Number.isNaN(Date.parse(value));
+}
 
 function assertValidChange(change: TransactionChange) {
   if (change.origin === 'capture' && change.bank !== 'millennium') {
@@ -31,19 +43,22 @@ function assertValidChange(change: TransactionChange) {
     throw new ConvexError('A currency is a three-letter ISO code.');
   }
 
-  if (Number.isNaN(Date.parse(change.occurredAt)) || Number.isNaN(Date.parse(change.capturedAt))) {
+  if (!isIsoTimestamp(change.occurredAt) || !isIsoTimestamp(change.capturedAt)) {
     throw new ConvexError('Occurrence and capture times are ISO 8601 timestamps.');
   }
 
+  [change.bank, change.merchant, change.category, change.sourceApp, change.accountId, change.accountName].forEach(
+    assertBoundedText,
+  );
   assertValidRevision(change);
 }
 
-const generalAccountPrefix = 'general-';
+const generalAccountIds = new Set(['general-manual', 'general-millennium']);
 
 async function assertOwnedAccount(ctx: QueryCtx, ownerId: string, change: TransactionChange) {
-  const accountId = change.accountId ?? '';
+  const accountId = change.accountId;
 
-  if (change.deleted || change.accountId === undefined || accountId.startsWith(generalAccountPrefix)) {
+  if (change.deleted || accountId === undefined || generalAccountIds.has(accountId)) {
     return;
   }
 
@@ -61,6 +76,7 @@ export const push = mutation({
   args: { installationId: v.string(), changes: v.array(transactionChange) },
   handler: async (ctx, { installationId, changes }) => {
     const owner = await requireDevice(ctx, installationId);
+    assertPushSize(changes);
     changes.forEach(assertValidChange);
     await Promise.all(
       changes.map((change) => assertOwnedAccount(ctx, owner.ownerId, change)),
