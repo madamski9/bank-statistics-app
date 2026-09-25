@@ -55,7 +55,7 @@ struct MillenniumNotificationNormalizer {
     }
 
     if isGenericCardPayment(text) {
-      return .ignored(reasonCode: "cardPaymentAwaitingApplePay")
+      return .ignored(reasonCode: IgnoredReason.cardPaymentAwaitingApplePay)
     }
 
     if let record = transfer(
@@ -80,7 +80,7 @@ struct MillenniumNotificationNormalizer {
       return .record(record)
     }
 
-    throw IngestionError.unsupportedNotification
+    return .ignored(reasonCode: IgnoredReason.notTransaction)
   }
 
   private func collapseWhitespace(_ value: String) -> String {

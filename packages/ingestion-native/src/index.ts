@@ -40,6 +40,8 @@ export interface StorageDiagnostics {
   lastAttemptOutcome?: 'success' | 'ignored' | 'failure';
   /** A coarse, non-sensitive failure/ignore code (e.g. "cardPaymentAwaitingApplePay"). Never raw text. */
   lastAttemptFailureReason?: string;
+  lastFailureAt?: string;
+  lastFailureReason?: string;
 }
 
 interface BankStatsIngestionNativeModule {

@@ -182,6 +182,7 @@ final class EncryptedOutbox: @unchecked Sendable {
         sqlite3_key(database, bytes.baseAddress, Int32(bytes.count))
       }
       try check(keyStatus, database)
+      try check(sqlite3_busy_timeout(database, 5_000), database)
       try execute("PRAGMA cipher_memory_security = ON", database: database)
       try execute("PRAGMA journal_mode = WAL", database: database)
       try execute(

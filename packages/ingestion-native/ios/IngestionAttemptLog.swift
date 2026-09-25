@@ -11,6 +11,8 @@ struct IngestionAttemptLog {
     static let attemptedAt = "com.bankstats.ingestion.lastAttemptAt"
     static let outcome = "com.bankstats.ingestion.lastAttemptOutcome"
     static let failureReason = "com.bankstats.ingestion.lastAttemptFailureReason"
+    static let lastFailureAt = "com.bankstats.ingestion.lastFailureAt"
+    static let lastFailureReason = "com.bankstats.ingestion.lastFailureReason"
   }
 
   private let defaults: UserDefaults?
@@ -26,9 +28,12 @@ struct IngestionAttemptLog {
   }
 
   func recordFailure(_ reasonCode: String, at date: Date = Date()) {
-    defaults?.set(ISO8601DateFormatter().string(from: date), forKey: Key.attemptedAt)
+    let timestamp = ISO8601DateFormatter().string(from: date)
+    defaults?.set(timestamp, forKey: Key.attemptedAt)
     defaults?.set("failure", forKey: Key.outcome)
     defaults?.set(reasonCode, forKey: Key.failureReason)
+    defaults?.set(timestamp, forKey: Key.lastFailureAt)
+    defaults?.set(reasonCode, forKey: Key.lastFailureReason)
   }
 
   /// The automation recognized the notification but deliberately did not persist it (e.g. a
@@ -44,6 +49,8 @@ struct IngestionAttemptLog {
     defaults?.removeObject(forKey: Key.attemptedAt)
     defaults?.removeObject(forKey: Key.outcome)
     defaults?.removeObject(forKey: Key.failureReason)
+    defaults?.removeObject(forKey: Key.lastFailureAt)
+    defaults?.removeObject(forKey: Key.lastFailureReason)
   }
 
   func snapshot() -> [String: String] {
@@ -51,6 +58,8 @@ struct IngestionAttemptLog {
     values["lastAttemptAt"] = defaults?.string(forKey: Key.attemptedAt)
     values["lastAttemptOutcome"] = defaults?.string(forKey: Key.outcome)
     values["lastAttemptFailureReason"] = defaults?.string(forKey: Key.failureReason)
+    values["lastFailureAt"] = defaults?.string(forKey: Key.lastFailureAt)
+    values["lastFailureReason"] = defaults?.string(forKey: Key.lastFailureReason)
     return values
   }
 }
