@@ -61,6 +61,11 @@ export default defineSchema({
   })
     .index('by_owner', ['ownerId'])
     .index('by_owner_installation', ['ownerId', 'installationId']),
+  profiles: defineTable({
+    ownerId: v.string(),
+    isPremium: v.boolean(),
+    premiumSince: v.optional(v.number()),
+  }).index('by_owner', ['ownerId']),
   accountDeletions: defineTable({
     ownerId: v.string(),
     requestedAt: v.number(),
