@@ -156,7 +156,6 @@ function spendingWidgetLayout(
             font({ size: 13, weight: 'semibold' }),
             foregroundStyle(palette.primary),
             lineLimit(1),
-            privacySensitive(),
           ]}>
           {limit.name}
         </Text>
@@ -191,7 +190,6 @@ function spendingWidgetLayout(
           font({ size: 13, weight: 'semibold' }),
           foregroundStyle(palette.primary),
           lineLimit(1),
-          privacySensitive(),
         ]}>
         {name}
       </Text>
@@ -328,7 +326,6 @@ function spendingWidgetLayout(
           font({ size: 15, weight: 'semibold' }),
           foregroundStyle(palette.primary),
           lineLimit(1),
-          privacySensitive(),
         ]}>
         {limit.name}
       </Text>
