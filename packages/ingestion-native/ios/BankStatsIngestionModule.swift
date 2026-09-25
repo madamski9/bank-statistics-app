@@ -4,6 +4,10 @@ public final class BankStatsIngestionModule: Module {
   public func definition() -> ModuleDefinition {
     Name("BankStatsIngestion")
 
+    Function("configureSpendingWidget") { (configuration: String) in
+      try SpendingWidgetUpdater.shared.configure(configuration)
+    }
+
     AsyncFunction("ingestSynthetic") { () -> [String: Any] in
       let outcome = try EncryptedOutbox.shared.ingest(
         subtitle: SyntheticSample.millennium.subtitle,

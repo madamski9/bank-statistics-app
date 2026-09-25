@@ -17,15 +17,17 @@ final class EncryptedOutbox: @unchecked Sendable {
       return outcome
     }
     try persist(record)
+    SpendingWidgetUpdater.shared.refresh()
     return outcome
   }
 
   func save(_ record: NormalizedRecord) throws {
     try persist(record)
+    SpendingWidgetUpdater.shared.refresh()
   }
 
   func delete(id: String) throws -> Int {
-    try queue.sync {
+    let deletedCount = try queue.sync {
       let database = try openDatabase()
       defer { sqlite3_close(database) }
       let sql = "DELETE FROM outbox WHERE id = ?"
@@ -36,6 +38,10 @@ final class EncryptedOutbox: @unchecked Sendable {
       try check(sqlite3_step(statement), database, accepted: [SQLITE_DONE])
       return Int(sqlite3_changes(database))
     }
+    if deletedCount > 0 {
+      SpendingWidgetUpdater.shared.refresh()
+    }
+    return deletedCount
   }
 
   private func persist(_ record: NormalizedRecord) throws {
@@ -58,6 +64,7 @@ final class EncryptedOutbox: @unchecked Sendable {
   }
 
   func clear() throws {
+    defer { SpendingWidgetUpdater.shared.refresh() }
     try queue.sync {
       let configuration = try IngestionConfiguration.current()
       let database = try openDatabase(configuration: configuration)
@@ -68,7 +75,7 @@ final class EncryptedOutbox: @unchecked Sendable {
   }
 
   func deleteSyntheticRecords() throws -> Int {
-    try queue.sync {
+    let deletedCount = try queue.sync {
       let database = try openDatabase()
       defer { sqlite3_close(database) }
       let identifiers = try syntheticIdentifiers(database)
@@ -90,6 +97,10 @@ final class EncryptedOutbox: @unchecked Sendable {
 
       return identifiers.count
     }
+    if deletedCount > 0 {
+      SpendingWidgetUpdater.shared.refresh()
+    }
+    return deletedCount
   }
 
   func records() throws -> [NormalizedRecord] {

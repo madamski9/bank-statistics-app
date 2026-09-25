@@ -94,6 +94,7 @@ const config: ExpoConfig = {
     'expo-notifications',
     ['@clerk/expo', { appleSignIn: false }],
     '@bankstats/ingestion-native',
+    './plugins/withSpendingWidget.js',
     [
       'expo-widgets',
       {
@@ -113,10 +114,10 @@ const config: ExpoConfig = {
               ],
               configuration: {
                 title: 'Wydatki',
-                description: 'Wybierz ekran, od którego zaczyna widżet.',
+                description: 'Wybierz widok. Dodaj kolejne widżety do stosu, żeby przewijać je pionowo.',
                 parameters: {
                   startScreen: {
-                    title: 'Ekran startowy',
+                    title: 'Widok',
                     type: 'enum',
                     default: 'month',
                     values: [
@@ -130,6 +131,14 @@ const config: ExpoConfig = {
               },
             },
           },
+          ...[
+            { name: 'SpendingWatchWidget', displayName: 'Najbliżej limitu', description: 'Sprawdź, ile możesz jeszcze wydać. Dodaj do stosu z pozostałymi widżetami BankStats.' },
+            { name: 'SpendingLimitsWidget', displayName: 'Limity', description: 'Twoje limity wydatków w jednym miejscu. Dodaj do stosu BankStats i przewijaj pionowo.' },
+            { name: 'SpendingShopsWidget', displayName: 'Sklepy', description: 'Sklepy, w których wydajesz najwięcej. Dodaj do stosu BankStats i przewijaj pionowo.' },
+          ].map((widget) => ({
+            ...widget,
+            ios: { supportedFamilies: ['systemSmall', 'systemMedium'] },
+          })),
         ],
       },
     ],

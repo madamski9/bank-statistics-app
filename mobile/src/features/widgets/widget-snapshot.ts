@@ -18,6 +18,7 @@ export interface WidgetLimit {
   spentLabel: string;
   targetLabel: string;
   remainingLabel: string;
+  remainingAmountLabel: string;
   share: number;
   tone: WidgetLimitTone;
   daysLeftLabel: string;
@@ -37,10 +38,11 @@ export interface SpendingWidgetProps {
   updatedLabel: string;
   expenseLabel: string;
   dailyLabel: string;
+  dailyAmountLabel: string;
   countLabel: string;
   limits: WidgetLimit[];
   shops: WidgetShop[];
-  step: number;
+  screen?: 'month' | 'watch' | 'limits' | 'shops';
   openUrl: string;
   isBlurred: boolean;
   revealUrl: string;
@@ -63,7 +65,6 @@ export interface SnapshotSources {
   reference: Date;
   openUrl: string;
   revealUrl?: string;
-  step?: number;
 }
 
 const dayMs = 86_400_000;
@@ -161,6 +162,7 @@ export function widgetLimits(
           remainingMinor >= 0
             ? `zostało ${formatCompactAmount(remainingMinor, progress.currency)}`
             : `${formatCompactAmount(remainingMinor, progress.currency)} ponad limit`,
+        remainingAmountLabel: formatCompactAmount(remainingMinor, progress.currency),
         share: progress.share,
         tone: limitTone(progress.share),
         daysLeftLabel: daysLeftLabel(progress.window.endMs, reference),
@@ -177,14 +179,13 @@ export function buildSpendingWidgetProps({
   reference,
   openUrl,
   revealUrl = openUrl,
-  step = 0,
 }: SnapshotSources): SpendingWidgetProps {
   const counted = records.filter(affectsStatistics);
   const month = alertWindow({ kind: 'month' }, reference);
   const window: PeriodWindow = { startMs: month.startMs, endMs: reference.getTime() };
   const summary = summarizeSpending(counted, window, categorizationRules);
   const elapsedDays = Math.max(Math.ceil((reference.getTime() - month.startMs) / dayMs), 1);
-  const shops = groupSpending(counted, { window, rules: categorizationRules, dimension: 'merchant' })
+  const shops = groupSpending(counted.filter((record) => record.currency === summary.currency), { window, rules: categorizationRules, dimension: 'merchant' })
     .slice(0, maximumShops)
     .map((group) => ({
       name: group.name,
@@ -199,11 +200,11 @@ export function buildSpendingWidgetProps({
     updatedAtMs: reference.getTime(),
     updatedLabel: updatedLabel(reference),
     expenseLabel: formatCompactAmount(summary.expenseMinor, summary.currency),
+    dailyAmountLabel: formatCompactAmount(Math.round(summary.expenseMinor / elapsedDays), summary.currency),
     dailyLabel: `${formatCompactAmount(Math.round(summary.expenseMinor / elapsedDays), summary.currency)} dziennie`,
     countLabel: transactionCountLabel(summary.expenseCount),
     limits: widgetLimits(alertRules, counted, categorizationRules, reference),
     shops,
-    step,
     openUrl,
     isBlurred: false,
     revealUrl,
@@ -219,10 +220,10 @@ export function signedOutWidgetProps(reference: Date, openUrl: string): Spending
     updatedLabel: updatedLabel(reference),
     expenseLabel: '',
     dailyLabel: '',
+    dailyAmountLabel: '',
     countLabel: '',
     limits: [],
     shops: [],
-    step: 0,
     openUrl,
     isBlurred: false,
     revealUrl: openUrl,

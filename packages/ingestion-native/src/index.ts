@@ -45,6 +45,7 @@ export interface StorageDiagnostics {
 }
 
 interface BankStatsIngestionNativeModule {
+  configureSpendingWidget?(configuration: string): void;
   ingestSynthetic(): Promise<IngestionRecord>;
   ingestSyntheticApplePayTransaction(): Promise<IngestionRecord>;
   deleteSyntheticRecords?(): Promise<number>;
@@ -133,4 +134,13 @@ export function listIngestionRecords(): Promise<IngestionRecord[]> {
 
 export function getIngestionStorageDiagnostics(): Promise<StorageDiagnostics> {
   return requireIosModule().storageDiagnostics();
+}
+
+export function configureSpendingWidget(configuration: string): boolean {
+  if (Platform.OS !== 'ios' || nativeModule?.configureSpendingWidget === undefined) {
+    return false;
+  }
+
+  nativeModule.configureSpendingWidget(configuration);
+  return true;
 }
