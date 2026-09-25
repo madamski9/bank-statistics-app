@@ -1,0 +1,48 @@
+import type { IngestionRecord } from '@bankstats/ingestion-native';
+
+import {
+  buildSpendingWidgetProps,
+  signedOutWidgetProps,
+  widgetEntries,
+  type WidgetPrivacy,
+  type SnapshotSources,
+} from './widget-snapshot';
+
+export interface WidgetBackgroundConfiguration {
+  enabled: boolean;
+  alertRules: SnapshotSources['alertRules'];
+  categorizationRules: SnapshotSources['categorizationRules'];
+  openUrl: string;
+  revealUrl?: string;
+  privacy?: WidgetPrivacy;
+}
+
+export function snapshot(
+  configuration: WidgetBackgroundConfiguration,
+  records: IngestionRecord[],
+  referenceMs: number,
+) {
+  const reference = new Date(referenceMs);
+
+  if (!configuration.enabled) {
+    return signedOutWidgetProps(reference, configuration.openUrl);
+  }
+
+  return buildSpendingWidgetProps({
+    ...configuration,
+    records: records.filter((record) => record.merchant !== 'SKLEP TEST' || record.origin === 'manual'),
+    reference,
+  });
+}
+
+export function timeline(
+  configuration: WidgetBackgroundConfiguration,
+  records: IngestionRecord[],
+  referenceMs: number,
+) {
+  return widgetEntries(
+    snapshot(configuration, records, referenceMs),
+    configuration.privacy ?? { isBlurred: false, revealedUntilMs: 0 },
+    new Date(referenceMs),
+  ).map((entry) => ({ timestamp: entry.date.getTime(), props: entry.props }));
+}

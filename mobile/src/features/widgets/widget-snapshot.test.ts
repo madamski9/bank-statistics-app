@@ -87,17 +87,16 @@ describe('buildSpendingWidgetProps', () => {
     expect(props.shops[0].amountLabel).toBe('300 zł');
   });
 
-  test('keeps the page the user flipped to', () => {
-    const props = buildSpendingWidgetProps({
-      records: [],
-      alertRules: [],
-      categorizationRules: [],
-      reference,
-      openUrl: 'bankstats://',
-      step: 3,
-    });
+  test('keeps shop totals in the same currency as the monthly amount', () => {
+    const props = build([
+      record({ amountMinor: 10_000 }),
+      record({ amountMinor: 5_000 }),
+      record({ amountMinor: 90_000, currency: 'EUR' }),
+    ]);
 
-    expect(props.step).toBe(3);
+    expect(props.expenseLabel).toBe('150 zł');
+    expect(props.shops[0].amountLabel).toBe('150 zł');
+    expect(props.dailyAmountLabel).toBe('6 zł');
   });
 });
 
