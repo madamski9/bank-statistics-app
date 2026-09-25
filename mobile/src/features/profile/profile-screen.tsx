@@ -11,6 +11,7 @@ import { syncStatusLabel, type SyncStatus } from '@/features/sync/sync-status';
 interface ProfileScreenProps {
   onClose: () => void;
   onOpenAlerts: () => void;
+  onOpenData: () => void;
   onOpenDiagnostics: () => void;
   syncStatus: SyncStatus;
 }
@@ -18,6 +19,7 @@ interface ProfileScreenProps {
 export function ProfileScreen({
   onClose,
   onOpenAlerts,
+  onOpenData,
   onOpenDiagnostics,
   syncStatus,
 }: ProfileScreenProps) {
@@ -167,6 +169,34 @@ export function ProfileScreen({
               </View>
               <Text maxFontSizeMultiplier={1.4} style={styles.actionLabel}>
                 Limity i alerty
+              </Text>
+              <SymbolView
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+                name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+                size={17}
+                tintColor={overviewColors.textDisabled}
+              />
+            </Pressable>
+            <Pressable
+              accessibilityHint="Otwiera eksport danych, listę urządzeń i usuwanie konta"
+              accessibilityRole="button"
+              onPress={onOpenData}
+              style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
+            >
+              <View accessibilityElementsHidden importantForAccessibility="no" style={styles.rowIcon}>
+                <SymbolView
+                  name={{
+                    ios: 'externaldrive',
+                    android: 'storage',
+                    web: 'storage',
+                  }}
+                  size={18}
+                  tintColor={overviewColors.textSecondary}
+                />
+              </View>
+              <Text maxFontSizeMultiplier={1.4} style={styles.actionLabel}>
+                Twoje dane i urządzenia
               </Text>
               <SymbolView
                 accessibilityElementsHidden

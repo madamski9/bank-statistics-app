@@ -1,0 +1,150 @@
+import { describe, expect, test } from 'bun:test';
+import { convexTest } from 'convex-test';
+
+import { api } from './_generated/api';
+import schema from './schema';
+
+const moduleFiles = new Bun.Glob('**/*.{ts,js}').scanSync({ cwd: import.meta.dir });
+const modules = Object.fromEntries(
+  [...moduleFiles]
+    .filter((path) => !path.endsWith('.test.ts'))
+    .map((path) => [`./${path}`, () => import(`./${path}`)]),
+);
+
+const alice = { subject: 'user_alice', issuer: 'https://clerk.test' };
+const bob = { subject: 'user_bob', issuer: 'https://clerk.test' };
+
+function lunch(clientId = 'manual-lunch') {
+  return {
+    clientId,
+    bank: 'manual',
+    origin: 'manual' as const,
+    direction: 'expense' as const,
+    amountMinor: 3450,
+    currency: 'PLN',
+    accountId: 'general-manual',
+    occurredAt: '2026-09-20T12:30:00.000Z',
+    capturedAt: '2026-09-20T12:31:00.000Z',
+    status: 'posted' as const,
+    revision: 1,
+    deleted: false,
+  };
+}
+
+const savings = {
+  clientId: 'account-savings',
+  bank: 'millennium',
+  name: 'Oszczędnościowe',
+  isGeneral: false,
+  revision: 1,
+  deleted: false,
+};
+
+async function withData() {
+  const backend = convexTest(schema, modules);
+  const user = backend.withIdentity(alice);
+  const other = backend.withIdentity(bob);
+
+  for (const [identity, installationId] of [
+    [user, 'phone'],
+    [other, 'bob-phone'],
+  ] as const) {
+    await identity.mutation(api.devices.register, { installationId, platform: 'ios' });
+    await identity.mutation(api.financialAccounts.push, { installationId, changes: [savings] });
+    await identity.mutation(api.transactions.push, { installationId, changes: [lunch()] });
+  }
+
+  return { backend, user, other };
+}
+
+async function countOwned(backend: Awaited<ReturnType<typeof withData>>['backend'], ownerId: string) {
+  return backend.run(async (ctx) => {
+    const transactions = await ctx.db
+      .query('transactions')
+      .withIndex('by_owner', (index) => index.eq('ownerId', ownerId))
+      .collect();
+    const accounts = await ctx.db
+      .query('financialAccounts')
+      .withIndex('by_owner', (index) => index.eq('ownerId', ownerId))
+      .collect();
+    const devices = await ctx.db
+      .query('devices')
+      .withIndex('by_owner', (index) => index.eq('ownerId', ownerId))
+      .collect();
+
+    return transactions.length + accounts.length + devices.length;
+  });
+}
+
+describe('account deletion', () => {
+  test('deletes every synchronized row of the user and nobody else', async () => {
+    const { backend, user } = await withData();
+
+    expect(await user.mutation(api.account.deleteData, {})).toEqual({ isComplete: true });
+    expect(await countOwned(backend, 'user_alice')).toBe(0);
+    expect(await countOwned(backend, 'user_bob')).toBe(3);
+  });
+
+  test('can be retried safely after it completed', async () => {
+    const { backend, user } = await withData();
+
+    await user.mutation(api.account.deleteData, {});
+    expect(await user.mutation(api.account.deleteData, {})).toEqual({ isComplete: true });
+
+    const markers = await backend.run((ctx) => ctx.db.query('accountDeletions').collect());
+    expect(markers).toHaveLength(1);
+  });
+
+  test('stops other devices from uploading their copies back', async () => {
+    const { user } = await withData();
+
+    await user.mutation(api.account.deleteData, {});
+
+    expect(await user.query(api.devices.standing, { installationId: 'phone' })).toBe('accountDeleted');
+    await expect(
+      user.mutation(api.devices.register, { installationId: 'phone', platform: 'ios' }),
+    ).rejects.toThrow('being deleted');
+    await expect(
+      user.mutation(api.transactions.push, { installationId: 'phone', changes: [lunch('late')] }),
+    ).rejects.toThrow('being deleted');
+  });
+
+  test('deletes a large history over several retries', async () => {
+    const { backend, user } = await withData();
+    await backend.run(async (ctx) => {
+      const device = await ctx.db
+        .query('devices')
+        .withIndex('by_owner', (index) => index.eq('ownerId', 'user_alice'))
+        .first();
+
+      if (device === null) {
+        throw new Error('Alice has a registered device.');
+      }
+
+      for (let index = 0; index < 1_200; index += 1) {
+        await ctx.db.insert('transactions', {
+          ...lunch(`bulk-${index}`),
+          ownerId: 'user_alice',
+          lastDeviceId: device._id,
+        });
+      }
+    });
+
+    let rounds = 0;
+    let result = { isComplete: false };
+
+    while (!result.isComplete) {
+      result = await user.mutation(api.account.deleteData, {});
+      rounds += 1;
+    }
+
+    expect(rounds).toBeGreaterThan(1);
+    expect(await countOwned(backend, 'user_alice')).toBe(0);
+  });
+
+  test('refuses an anonymous caller', async () => {
+    const backend = convexTest(schema, modules);
+
+    await expect(backend.mutation(api.account.deleteData, {})).rejects.toThrow('Sign in');
+  });
+});

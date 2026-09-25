@@ -1,5 +1,6 @@
 import { Show } from '@clerk/expo';
 
+import { AccountStandingGate } from '@/features/account-data/account-standing-gate';
 import { SignInScreen } from '@/features/auth/sign-in-screen';
 import { HomeScreen } from '@/features/home/home-screen';
 import { OnboardingGate } from '@/features/onboarding/onboarding-gate';
@@ -11,9 +12,11 @@ export default function Index() {
     <>
       <Show when="signed-in">
         <OwnedDeviceGate>
-          <OnboardingGate>
-            <HomeScreen />
-          </OnboardingGate>
+          <AccountStandingGate>
+            <OnboardingGate>
+              <HomeScreen />
+            </OnboardingGate>
+          </AccountStandingGate>
         </OwnedDeviceGate>
       </Show>
       <Show when="signed-out">

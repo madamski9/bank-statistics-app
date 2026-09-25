@@ -57,7 +57,14 @@ export default defineSchema({
     platform: devicePlatform,
     registeredAt: v.number(),
     lastSeenAt: v.number(),
-  }).index('by_owner_installation', ['ownerId', 'installationId']),
+    revokedAt: v.optional(v.number()),
+  })
+    .index('by_owner', ['ownerId'])
+    .index('by_owner_installation', ['ownerId', 'installationId']),
+  accountDeletions: defineTable({
+    ownerId: v.string(),
+    requestedAt: v.number(),
+  }).index('by_owner', ['ownerId']),
   transactions: defineTable({ ...transactionFields, ...syncedRowFields })
     .index('by_owner', ['ownerId'])
     .index('by_owner_client', ['ownerId', 'clientId'])

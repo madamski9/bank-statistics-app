@@ -34,6 +34,7 @@ import {
   type SpendingGroup,
 } from '@/features/classification/spending-groups';
 import { useCategorizationRules } from '@/features/classification/use-categorization-rules';
+import { DataScreen } from '@/features/account-data/data-screen';
 import { accountInitial } from '@/features/profile/account-identity';
 import { IngestionDiagnosticsCard } from '@/features/ingestion-diagnostics/ingestion-diagnostics-card';
 import { OverviewScreen } from '@/features/overview/overview-screen';
@@ -75,7 +76,7 @@ const pages = [
 ] as const;
 
 type PageKey = (typeof pages)[number]['key'];
-type SheetKey = 'profile' | 'diagnostics' | 'alerts';
+type SheetKey = 'profile' | 'diagnostics' | 'alerts' | 'data';
 
 interface AlertEditor {
   scope: AlertScope;
@@ -457,8 +458,15 @@ export function HomeScreen() {
           <ProfileScreen
             onClose={() => setActiveSheet(null)}
             onOpenAlerts={() => setActiveSheet('alerts')}
+            onOpenData={() => setActiveSheet('data')}
             onOpenDiagnostics={() => setActiveSheet('diagnostics')}
             syncStatus={syncStatus}
+          />
+        ) : activeSheet === 'data' ? (
+          <DataScreen
+            accounts={financialAccounts.accounts}
+            onClose={() => setActiveSheet('profile')}
+            records={records}
           />
         ) : activeSheet === 'alerts' ? (
           <AlertsScreen

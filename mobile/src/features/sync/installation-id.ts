@@ -24,3 +24,7 @@ export async function loadInstallationId(): Promise<string> {
 
   return created;
 }
+
+export async function forgetInstallationId(): Promise<void> {
+  await SecureStore.deleteItemAsync(installationKey);
+}
