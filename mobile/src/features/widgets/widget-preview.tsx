@@ -3,9 +3,11 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LimitProgressBar } from '@/features/alerts/limit-progress-bar';
+import { useCopy } from '@/features/localization/language';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 
 import type { SpendingWidgetProps, WidgetLimitTone } from './widget-snapshot';
+import { widgetsCopy } from './widgets-copy';
 
 interface WidgetPreviewProps {
   props: SpendingWidgetProps;
@@ -19,16 +21,17 @@ const toneColors: Record<WidgetLimitTone, string> = {
 };
 
 export function WidgetPreview({ props, onClose }: WidgetPreviewProps) {
+  const copy = useCopy(widgetsCopy).preview;
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top + 14 }]}>
+    <View style={[styles.screen, styles.sheetTop]}>
       <View style={styles.header}>
         <Text accessibilityRole="header" maxFontSizeMultiplier={1.35} style={styles.title}>
-          Widżet
+          {copy.title}
         </Text>
         <Pressable
-          accessibilityLabel="Zamknij widżet"
+          accessibilityLabel={copy.close}
           accessibilityRole="button"
           hitSlop={8}
           onPress={onClose}
@@ -51,7 +54,7 @@ export function WidgetPreview({ props, onClose }: WidgetPreviewProps) {
             {props.monthLabel.toUpperCase()}
           </Text>
           <Text maxFontSizeMultiplier={1.4} style={styles.caption}>
-            Wydatki
+            {props.labels.spending}
           </Text>
           <Text maxFontSizeMultiplier={1.2} style={styles.total}>
             {props.expenseLabel}
@@ -64,7 +67,7 @@ export function WidgetPreview({ props, onClose }: WidgetPreviewProps) {
         {props.limits.length > 0 ? (
           <View style={styles.card}>
             <Text maxFontSizeMultiplier={1.4} style={styles.caption}>
-              LIMITY
+              {copy.limits}
             </Text>
             {props.limits.map((limit) => (
               <View key={limit.name} style={styles.limit}>
@@ -88,7 +91,7 @@ export function WidgetPreview({ props, onClose }: WidgetPreviewProps) {
         {props.shops.length > 0 ? (
           <View style={styles.card}>
             <Text maxFontSizeMultiplier={1.4} style={styles.caption}>
-              NAJWIĘCEJ WYDAJESZ
+              {copy.shops}
             </Text>
             {props.shops.map((shop, index) => (
               <View key={shop.name} style={styles.row}>
@@ -107,7 +110,7 @@ export function WidgetPreview({ props, onClose }: WidgetPreviewProps) {
         ) : null}
 
         <Text maxFontSizeMultiplier={1.5} style={styles.note}>
-          Widżet na ekranie głównym jest odsłonięty przez 5 minut, potem znów się rozmyje.
+          {copy.revealNote}
         </Text>
       </ScrollView>
     </View>
@@ -115,6 +118,9 @@ export function WidgetPreview({ props, onClose }: WidgetPreviewProps) {
 }
 
 const styles = StyleSheet.create({
+  sheetTop: {
+    paddingTop: 14,
+  },
   screen: {
     flex: 1,
     backgroundColor: overviewColors.background,

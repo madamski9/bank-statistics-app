@@ -7,7 +7,9 @@ import type { CategorizationRule } from '@/features/classification/categorizatio
 import { classifyTransaction } from '@/features/classification/classify-transaction';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
+import { useCopy } from '@/features/localization/language';
 
+import { transactionsCopy } from './transactions-copy';
 import { formatDayHeading, formatTime } from './format-date';
 import {
   affectsStatistics,
@@ -39,6 +41,7 @@ export function TransactionDetail({
 }: TransactionDetailProps) {
   const { formatAmount } = useAmountFormatting();
   const insets = useSafeAreaInsets();
+  const copy = useCopy(transactionsCopy);
   const occurredAt = new Date(record.occurredAt);
   const isIncome = record.direction === 'income';
   const title = transactionTitle(record, rules);
@@ -48,14 +51,14 @@ export function TransactionDetail({
   const amount = `${isIncome ? '+' : '−'}${formatAmount(record.amountMinor, record.currency)}`;
 
   const details: { label: string; value: string }[] = [
-    { label: 'Data', value: `${formatDayHeading(occurredAt, new Date())}, ${formatTime(occurredAt)}` },
-    { label: 'Rodzaj', value: transactionKindLabel(record) },
-    { label: 'Kategoria', value: classified.categoryName },
-    { label: 'Konto', value: transactionContext(record) },
+    { label: copy.detail.date, value: `${formatDayHeading(occurredAt, new Date())}, ${formatTime(occurredAt)}` },
+    { label: copy.detail.kind, value: transactionKindLabel(record) },
+    { label: copy.detail.category, value: classified.categoryName },
+    { label: copy.detail.account, value: transactionContext(record) },
   ];
 
   if (classified.merchantLocation !== undefined) {
-    details.push({ label: 'Miejsce', value: classified.merchantLocation });
+    details.push({ label: copy.detail.place, value: classified.merchantLocation });
   }
 
   return (
@@ -68,13 +71,13 @@ export function TransactionDetail({
           style={({ pressed }) => [styles.headerAction, pressed ? styles.pressed : null]}
         >
           <Text maxFontSizeMultiplier={1.3} style={styles.headerActionLabel}>
-            Zamknij
+            {copy.close}
           </Text>
         </Pressable>
         <View style={styles.headerSpacer} />
         <Pressable
-          accessibilityHint="Otwiera edycję transakcji"
-          accessibilityLabel="Edytuj"
+          accessibilityHint={copy.editHint}
+          accessibilityLabel={copy.edit}
           accessibilityRole="button"
           hitSlop={8}
           onPress={onEdit}
@@ -87,7 +90,7 @@ export function TransactionDetail({
             weight="semibold"
           />
           <Text maxFontSizeMultiplier={1.3} style={styles.editLabel}>
-            Edytuj
+            {copy.edit}
           </Text>
         </Pressable>
       </View>
@@ -168,7 +171,7 @@ export function TransactionDetail({
           style={({ pressed }) => [styles.deleteButton, pressed ? styles.pressed : null]}
         >
           <Text maxFontSizeMultiplier={1.4} style={styles.deleteLabel}>
-            Usuń transakcję
+            {copy.delete}
           </Text>
         </Pressable>
       </ScrollView>

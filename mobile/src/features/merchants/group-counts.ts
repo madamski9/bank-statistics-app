@@ -1,33 +1,38 @@
 import type { SpendingDimension } from '@/features/classification/spending-groups';
+import { currentCopy, defineCopy } from '@/features/localization/language';
+import { englishPlural, polishPlural } from '@/features/localization/plural';
 
-function polishPlural(count: number, one: string, few: string, many: string): string {
-  if (count === 1) {
-    return one;
-  }
-
-  const lastDigit = count % 10;
-  const lastTwoDigits = count % 100;
-  const takesFew = lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14);
-
-  return takesFew ? few : many;
-}
+const countCopy = defineCopy({
+  pl: {
+    people: (count: number) => `${count} ${polishPlural(count, 'osoba', 'osoby', 'osób')}`,
+    categories: (count: number) =>
+      `${count} ${polishPlural(count, 'kategoria', 'kategorie', 'kategorii')}`,
+    shops: (count: number) => `${count} ${polishPlural(count, 'sklep', 'sklepy', 'sklepów')}`,
+    purchases: (count: number) => `${count} ${polishPlural(count, 'zakup', 'zakupy', 'zakupów')}`,
+    transactions: (count: number) =>
+      `${count} ${polishPlural(count, 'transakcja', 'transakcje', 'transakcji')}`,
+  },
+  en: {
+    people: (count: number) => `${count} ${englishPlural(count, 'person', 'people')}`,
+    categories: (count: number) => `${count} ${englishPlural(count, 'category', 'categories')}`,
+    shops: (count: number) => `${count} ${englishPlural(count, 'shop', 'shops')}`,
+    purchases: (count: number) => `${count} ${englishPlural(count, 'purchase', 'purchases')}`,
+    transactions: (count: number) => `${count} ${englishPlural(count, 'transaction', 'transactions')}`,
+  },
+});
 
 export function groupCount(count: number, dimension: SpendingDimension): string {
+  const copy = currentCopy(countCopy);
+
   if (dimension === 'counterparty') {
-    return `${count} ${polishPlural(count, 'osoba', 'osoby', 'osób')}`;
+    return copy.people(count);
   }
 
-  if (dimension === 'category') {
-    return `${count} ${polishPlural(count, 'kategoria', 'kategorie', 'kategorii')}`;
-  }
-
-  return `${count} ${polishPlural(count, 'sklep', 'sklepy', 'sklepów')}`;
+  return dimension === 'category' ? copy.categories(count) : copy.shops(count);
 }
 
 export function transactionCount(count: number, dimension: SpendingDimension): string {
-  if (dimension === 'merchant') {
-    return `${count} ${polishPlural(count, 'zakup', 'zakupy', 'zakupów')}`;
-  }
+  const copy = currentCopy(countCopy);
 
-  return `${count} ${polishPlural(count, 'transakcja', 'transakcje', 'transakcji')}`;
+  return dimension === 'merchant' ? copy.purchases(count) : copy.transactions(count);
 }

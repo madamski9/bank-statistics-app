@@ -25,7 +25,7 @@ describe('categories', () => {
   });
 
   test('offers every catalog category for a correction', () => {
-    expect(categoryOptions.map((option) => option.id)).toContain('groceries');
-    expect(categoryOptions.every((option) => option.label !== '')).toBe(true);
+    expect(categoryOptions().map((option) => option.id)).toContain('groceries');
+    expect(categoryOptions().every((option) => option.label !== '')).toBe(true);
   });
 });

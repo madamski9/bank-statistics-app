@@ -22,12 +22,6 @@ const lockTimeoutMs: Record<LockTimeout, number> = {
   fiveMinutes: 300_000,
 };
 
-export const lockTimeoutLabels: Record<LockTimeout, string> = {
-  immediate: 'Od razu',
-  oneMinute: 'Po 1 minucie',
-  fiveMinutes: 'Po 5 minutach',
-};
-
 function isLockTimeout(value: unknown): value is LockTimeout {
   return lockTimeouts.some((timeout) => timeout === value);
 }

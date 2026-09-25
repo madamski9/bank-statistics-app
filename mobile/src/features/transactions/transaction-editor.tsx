@@ -23,7 +23,9 @@ import { supportsCategoryRule } from '@/features/classification/categorization-r
 import { AccountPicker } from '@/features/financial-accounts/account-picker';
 import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
+import { useCopy } from '@/features/localization/language';
 
+import { transactionsCopy } from './transactions-copy';
 import {
   draftError,
   draftFromRecord,
@@ -48,10 +50,7 @@ interface TransactionEditorProps {
   onDelete?: () => void;
 }
 
-const directions: { value: TransactionDirection; label: string }[] = [
-  { value: 'expense', label: 'Wydatek' },
-  { value: 'income', label: 'Przychód' },
-];
+const directionOrder: TransactionDirection[] = ['expense', 'income'];
 
 export function TransactionEditor({
   record,
@@ -65,6 +64,7 @@ export function TransactionEditor({
   onDelete,
 }: TransactionEditorProps) {
   const insets = useSafeAreaInsets();
+  const copy = useCopy(transactionsCopy);
   const [draft, setDraft] = useState<TransactionDraft>(() =>
     record === null ? emptyDraft(new Date()) : draftFromRecord(record),
   );
@@ -72,7 +72,7 @@ export function TransactionEditor({
   const [rememberCategory, setRememberCategory] = useState(false);
   const prompt = record?.review === undefined ? null : reviewPrompt(record.review);
   const isManual = record === null || record.origin === 'manual';
-  const title = record === null ? 'Nowa transakcja' : prompt === null ? 'Edycja' : 'Do sprawdzenia';
+  const title = record === null ? copy.newTransaction : prompt === null ? copy.editing : copy.toReview;
   const error = validationError ?? writeError;
   const canRemember =
     draft.category !== '' &&
@@ -115,7 +115,7 @@ export function TransactionEditor({
           style={({ pressed }) => [styles.headerAction, pressed ? styles.pressed : null]}
         >
           <Text maxFontSizeMultiplier={1.3} style={styles.headerActionLabel}>
-            Anuluj
+            {copy.cancel}
           </Text>
         </Pressable>
         <Text maxFontSizeMultiplier={1.3} style={styles.title}>
@@ -136,7 +136,7 @@ export function TransactionEditor({
             <ActivityIndicator color={overviewColors.textPrimary} />
           ) : (
             <Text maxFontSizeMultiplier={1.3} style={styles.submitLabel}>
-              Zapisz
+              {copy.save}
             </Text>
           )}
         </Pressable>
@@ -163,7 +163,7 @@ export function TransactionEditor({
                 style={({ pressed }) => [styles.confirmButton, pressed ? styles.pressed : null]}
               >
                 <Text maxFontSizeMultiplier={1.4} style={styles.confirmLabel}>
-                  Potwierdź bez zmian
+                  {copy.confirmUnchanged}
                 </Text>
               </Pressable>
             ) : null}
@@ -171,7 +171,7 @@ export function TransactionEditor({
         ) : null}
 
         <View accessibilityRole="tablist" style={styles.directions}>
-          {directions.map((option) => {
+          {directionOrder.map((value) => ({ value, label: copy.directions[value] })).map((option) => {
             const isActive = option.value === draft.direction;
 
             return (
@@ -200,7 +200,7 @@ export function TransactionEditor({
         </View>
 
         <View style={styles.kinds}>
-          {transactionKindOptions[draft.direction].map((option) => {
+          {transactionKindOptions(draft.direction).map((option) => {
             const isActive = option.value === draft.kind;
 
             return (
@@ -231,7 +231,7 @@ export function TransactionEditor({
 
         <View style={styles.amountRow}>
           <TextInput
-            accessibilityLabel="Kwota"
+            accessibilityLabel={copy.amount}
             autoFocus={record === null}
             keyboardType="decimal-pad"
             onChangeText={(amount) => update({ amount })}
@@ -242,7 +242,7 @@ export function TransactionEditor({
             value={draft.amount}
           />
           <TextInput
-            accessibilityLabel="Waluta"
+            accessibilityLabel={copy.currency}
             autoCapitalize="characters"
             autoCorrect={false}
             maxLength={3}
@@ -255,9 +255,9 @@ export function TransactionEditor({
 
         <View style={styles.card}>
           <EditorField
-            label="Nazwa"
+            label={copy.name}
             onChangeText={(name) => update({ name })}
-            placeholder="Sklep, osoba lub opis"
+            placeholder={copy.namePlaceholder}
             value={draft.name}
           />
           {isManual ? null : (
@@ -265,10 +265,10 @@ export function TransactionEditor({
               <View style={styles.separator} />
               <View accessible style={styles.field}>
                 <Text maxFontSizeMultiplier={1.4} style={styles.fieldLabel}>
-                  Konto
+                  {copy.account}
                 </Text>
                 <Text maxFontSizeMultiplier={1.4} numberOfLines={1} style={styles.fieldValue}>
-                  {record?.accountName ?? 'Konto ogólne banku'}
+                  {record?.accountName ?? copy.bankGeneralAccount}
                 </Text>
               </View>
             </>
@@ -289,10 +289,10 @@ export function TransactionEditor({
 
         <View style={styles.categories}>
           <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
-            Kategoria
+            {copy.category}
           </Text>
           <View style={styles.chips}>
-            {[{ id: uncategorizedCategory, label: uncategorizedLabel }, ...categoryOptions].map((option) => {
+            {[{ id: uncategorizedCategory, label: uncategorizedLabel() }, ...categoryOptions()].map((option) => {
               const isActive = option.id === draft.category;
 
               return (
@@ -342,7 +342,7 @@ export function TransactionEditor({
                 ) : null}
               </View>
               <Text maxFontSizeMultiplier={1.4} style={styles.rememberLabel}>
-                Zapamiętaj tę kategorię dla „{draft.name.trim()}”. Reguła zostaje na tym urządzeniu.
+                {copy.rememberCategory(draft.name.trim())}
               </Text>
             </Pressable>
           ) : null}
@@ -351,7 +351,7 @@ export function TransactionEditor({
         <View style={styles.card}>
           <EditorField
             keyboardType="numbers-and-punctuation"
-            label="Data"
+            label={copy.date}
             onChangeText={(date) => update({ date })}
             placeholder="DD.MM.RRRR"
             value={draft.date}
@@ -359,7 +359,7 @@ export function TransactionEditor({
           <View style={styles.separator} />
           <EditorField
             keyboardType="numbers-and-punctuation"
-            label="Godzina"
+            label={copy.time}
             onChangeText={(time) => update({ time })}
             placeholder="GG:MM"
             value={draft.time}
@@ -380,7 +380,7 @@ export function TransactionEditor({
             style={({ pressed }) => [styles.deleteButton, pressed ? styles.pressed : null]}
           >
             <Text maxFontSizeMultiplier={1.4} style={styles.deleteLabel}>
-              Usuń transakcję
+              {copy.delete}
             </Text>
           </Pressable>
         ) : null}

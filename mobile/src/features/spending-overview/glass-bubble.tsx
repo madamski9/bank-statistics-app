@@ -14,11 +14,13 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { useCopy } from '@/features/localization/language';
 import { impactLight } from '@/haptics';
 
 import { BubbleSkin } from './bubble-skin';
 import { createBubbleTap } from './bubble-tap';
 import { bubbleTints, overviewColors, overviewMotion, type BubbleKey } from './overview-theme';
+import { spendingOverviewCopy } from './spending-overview-copy';
 
 const EASE_IN_OUT = Easing.inOut(Easing.sin);
 
@@ -55,6 +57,7 @@ function GlassBubbleComponent({
   driftSeed,
   onSelect,
 }: GlassBubbleProps) {
+  const copy = useCopy(spendingOverviewCopy);
   const reducedMotion = useReducedMotion();
   const [isPressed, setIsPressed] = useState(false);
   const containerRef = useRef<View>(null);
@@ -193,7 +196,7 @@ function GlassBubbleComponent({
     <GestureDetector gesture={tap}>
       <View
         accessible
-        accessibilityHint="Otwiera szczegóły"
+        accessibilityHint={copy.openDetailsHint}
         accessibilityLabel={accessibilityLabel}
         accessibilityRole="button"
         onAccessibilityTap={handlePress}

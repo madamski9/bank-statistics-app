@@ -3,6 +3,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { overviewColors } from '@/features/spending-overview/overview-theme';
+import { useCopy } from '@/features/localization/language';
+
+import { accountDataCopy } from './account-data-copy';
 
 interface EmailReverificationProps {
   onVerified: () => void;
@@ -11,6 +14,7 @@ interface EmailReverificationProps {
 type Stage = 'sending' | 'code' | 'checking' | 'unavailable';
 
 export function EmailReverification({ onVerified }: EmailReverificationProps) {
+  const copy = useCopy(accountDataCopy);
   const { session } = useSession();
   const [stage, setStage] = useState<Stage>('sending');
   const [code, setCode] = useState('');
@@ -49,10 +53,10 @@ export function EmailReverification({ onVerified }: EmailReverificationProps) {
       });
       setStage('code');
     } catch {
-      setError('Nie udało się wysłać kodu. Spróbuj ponownie.');
+      setError(copy.codeSendFailed);
       setStage('code');
     }
-  }, [onVerified, session]);
+  }, [copy, onVerified, session]);
 
   useEffect(() => {
     if (hasStarted.current) {
@@ -82,18 +86,18 @@ export function EmailReverification({ onVerified }: EmailReverificationProps) {
         return;
       }
 
-      setError('Kod jest nieprawidłowy lub stracił ważność.');
+      setError(copy.codeInvalid);
     } catch {
-      setError('Kod jest nieprawidłowy lub stracił ważność.');
+      setError(copy.codeInvalid);
     }
 
     setStage('code');
-  }, [code, onVerified, session]);
+  }, [code, copy, onVerified, session]);
 
   if (stage === 'unavailable') {
     return (
       <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={1.5} style={styles.error}>
-        Nie możemy potwierdzić tożsamości kodem e-mail. Wyloguj się, zaloguj ponownie i spróbuj jeszcze raz.
+        {copy.codeUnavailable}
       </Text>
     );
   }
@@ -102,18 +106,18 @@ export function EmailReverification({ onVerified }: EmailReverificationProps) {
     <View style={styles.form}>
       <Text maxFontSizeMultiplier={1.5} style={styles.hint}>
         {stage === 'sending'
-          ? 'Wysyłamy kod na Twój adres e-mail…'
-          : 'Wpisz kod, który wysłaliśmy na Twój adres e-mail.'}
+          ? copy.sendingCode
+          : copy.enterCode}
       </Text>
       <TextInput
-        accessibilityLabel="Kod z wiadomości e-mail"
+        accessibilityLabel={copy.codeLabel}
         autoComplete="one-time-code"
         editable={stage === 'code'}
         inputMode="numeric"
         maxLength={8}
         onChangeText={setCode}
         onSubmitEditing={() => void checkCode()}
-        placeholder="Kod"
+        placeholder={copy.codePlaceholder}
         placeholderTextColor={overviewColors.textDisabled}
         style={styles.input}
         textContentType="oneTimeCode"
@@ -138,7 +142,7 @@ export function EmailReverification({ onVerified }: EmailReverificationProps) {
           <ActivityIndicator color={overviewColors.background} />
         ) : (
           <Text maxFontSizeMultiplier={1.4} style={styles.primaryLabel}>
-            Potwierdź
+            {copy.confirm}
           </Text>
         )}
       </Pressable>
@@ -149,7 +153,7 @@ export function EmailReverification({ onVerified }: EmailReverificationProps) {
         style={({ pressed }) => [styles.secondary, pressed ? styles.pressed : null]}
       >
         <Text maxFontSizeMultiplier={1.4} style={styles.secondaryLabel}>
-          Wyślij kod ponownie
+          {copy.resendCode}
         </Text>
       </Pressable>
     </View>

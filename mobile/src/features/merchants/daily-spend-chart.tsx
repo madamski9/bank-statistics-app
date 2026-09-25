@@ -5,7 +5,9 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { bubbleTints, overviewColors } from '@/features/spending-overview/overview-theme';
+import { useCopy } from '@/features/localization/language';
 
+import { merchantsCopy } from './merchants-copy';
 import type { SpendBucket } from './merchant-summary';
 
 interface DailySpendChartProps {
@@ -40,6 +42,7 @@ function DailySpendChartComponent({
   onSelect,
 }: DailySpendChartProps) {
   const { formatAmount } = useAmountFormatting();
+  const copy = useCopy(merchantsCopy);
   const [plotWidth, setPlotWidth] = useState(0);
 
   if (buckets.length === 0) {
@@ -96,7 +99,7 @@ function DailySpendChartComponent({
     <View style={styles.chart}>
       <View style={styles.caption}>
         <Text maxFontSizeMultiplier={1.5} style={styles.captionLabel}>
-          {highlighted.key === peak.key && selectedKey === null ? 'Najwięcej' : 'Wybrany okres'} ·{' '}
+          {highlighted.key === peak.key && selectedKey === null ? copy.highest : copy.selected} ·{' '}
           {highlighted.spokenLabel}
         </Text>
         <Text maxFontSizeMultiplier={1.5} style={styles.captionValue}>

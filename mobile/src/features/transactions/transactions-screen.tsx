@@ -22,7 +22,9 @@ import {
   overviewSpacing,
 } from '@/features/spending-overview/overview-theme';
 import type { SpendingSourceKind } from '@/features/spending-overview/spending-summary';
+import { useCopy } from '@/features/localization/language';
 
+import { transactionsCopy } from './transactions-copy';
 import { dayKey, formatDayHeading, formatTime } from './format-date';
 import { confirmedRecord } from './manual-transaction';
 import { TransactionDetail } from './transaction-detail';
@@ -122,6 +124,7 @@ function TransactionsScreenComponent({
 }: TransactionsScreenProps) {
   const { formatAmount } = useAmountFormatting();
   const insets = useSafeAreaInsets();
+  const copy = useCopy(transactionsCopy);
   const sections = useMemo(() => buildSections(records, new Date()), [records]);
   const [editor, setEditor] = useState<EditorTarget | null>(null);
   const { clearError, error: writeError, isWriting, remove, save } = useTransactionWrites(onChanged);
@@ -143,8 +146,8 @@ function TransactionsScreenComponent({
             await onRememberRule(record.merchant, record.category);
           } catch {
             Alert.alert(
-              'Nie zapisano reguły',
-              'Kategoria tej transakcji została zapisana, ale reguły na przyszłość nie udało się zachować na tym urządzeniu.',
+              copy.ruleNotSavedTitle,
+              copy.ruleNotSavedBody,
             );
           }
         }
@@ -152,7 +155,7 @@ function TransactionsScreenComponent({
         closeEditor();
       });
     },
-    [closeEditor, onRememberRule, save],
+    [closeEditor, copy, onRememberRule, save],
   );
 
   const handleConfirm = useCallback(() => {
@@ -172,11 +175,11 @@ function TransactionsScreenComponent({
       return;
     }
 
-    Alert.alert('Usunąć transakcję?', 'Tej operacji nie można cofnąć.', [
-      { style: 'cancel', text: 'Anuluj' },
+    Alert.alert(copy.deleteTitle, copy.deleteBody, [
+      { style: 'cancel', text: copy.cancel },
       {
         style: 'destructive',
-        text: 'Usuń',
+        text: copy.deleteConfirm,
         onPress: () => {
           void remove(target.id).then((removed) => {
             if (removed) {
@@ -186,16 +189,16 @@ function TransactionsScreenComponent({
         },
       },
     ]);
-  }, [closeEditor, editor, remove]);
+  }, [closeEditor, copy, editor, remove]);
 
   const emptyMessage =
     error !== null
       ? error
       : Platform.OS !== 'ios'
-        ? 'Przechwytywanie powiadomień działa na razie tylko na iOS.'
+        ? copy.captureIosOnly
         : isLoading
-          ? 'Wczytywanie…'
-          : 'Nie przechwycono jeszcze żadnej transakcji. Skonfiguruj automatyzację powiadomień w aplikacji Skróty albo dodaj transakcję ręcznie.';
+          ? copy.loading
+          : copy.empty;
 
   return (
     <View style={styles.screen}>
@@ -222,7 +225,7 @@ function TransactionsScreenComponent({
 
           return (
             <Pressable
-              accessibilityHint="Otwiera szczegóły transakcji"
+              accessibilityHint={copy.rowHint}
               accessibilityLabel={[
                 label,
                 amount,
@@ -303,8 +306,8 @@ function TransactionsScreenComponent({
       />
 
       <Pressable
-        accessibilityHint="Otwiera formularz ręcznej transakcji"
-        accessibilityLabel="Dodaj transakcję"
+        accessibilityHint={copy.addHint}
+        accessibilityLabel={copy.add}
         accessibilityRole="button"
         hitSlop={8}
         onPress={() => {

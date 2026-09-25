@@ -1,0 +1,68 @@
+import { defineCopy } from '@/features/localization/language';
+
+export const premiumCopy = defineCopy({
+  pl: {
+    reasons: {
+      period: 'Ostatni rok i cała historia są dostępne w Premium.',
+      limit: 'Bez Premium możesz mieć jeden limit wydatków.',
+      widget: 'Widżety na ekranie głównym i blokady są dostępne w Premium.',
+    },
+    thanks: 'Dziękujemy za wsparcie',
+    activeSince: (date: string) => `Aktywne od ${date}`,
+    pitch: 'Więcej analiz, widżetów i limitów',
+    detailsHint: 'Pokazuje szczegóły Premium',
+    pitchHint: 'Pokazuje, co daje Premium',
+    cardLabel: (isPremium: boolean, subtitle: string) =>
+      `BankStats Premium. ${isPremium ? 'Aktywne' : 'Nieaktywne'}. ${subtitle}`,
+    youHavePremium: 'Masz Premium',
+    see: 'Zobacz',
+    close: 'Zamknij',
+    thanksLong: 'Dziękujemy, że wspierasz BankStats.',
+    activeSinceLong: (date: string) => `Aktywne od ${date}. Dziękujemy, że wspierasz BankStats.`,
+    tagline: 'Pełny obraz Twoich wydatków, bez reklam i bez sprzedawania danych.',
+    benefits: [
+      { title: 'Głębsze analizy', detail: 'Porównania okresów i trendy w sklepach oraz kategoriach.' },
+      { title: 'Więcej widżetów', detail: 'Wszystkie widoki widżetów na ekranie głównym i blokady.' },
+      { title: 'Limity bez ograniczeń', detail: 'Dowolna liczba limitów dla sklepów i kategorii.' },
+      { title: 'Wsparcie rozwoju', detail: 'Pomagasz rozwijać BankStats bez reklam i sprzedaży danych.' },
+    ],
+    purchaseSoon: 'Zakup Premium w aplikacji będzie dostępny wkrótce.',
+    buy: 'Kup Premium',
+    footnote: 'Płatność i odnawianie obsługuje App Store. Możesz zrezygnować w każdej chwili.',
+    previewOn: 'Podgląd bez Premium',
+    previewOff: 'Wróć do Premium',
+    previewDetail: 'Tylko w wersji deweloperskiej. Premium na koncie się nie zmienia.',
+  },
+  en: {
+    reasons: {
+      period: 'The last year and your full history are available with Premium.',
+      limit: 'Without Premium you can have one spending limit.',
+      widget: 'Home Screen and Lock Screen widgets are available with Premium.',
+    },
+    thanks: 'Thank you for your support',
+    activeSince: (date: string) => `Active since ${date}`,
+    pitch: 'More insights, widgets and limits',
+    detailsHint: 'Shows your Premium details',
+    pitchHint: 'Shows what Premium includes',
+    cardLabel: (isPremium: boolean, subtitle: string) =>
+      `BankStats Premium. ${isPremium ? 'Active' : 'Inactive'}. ${subtitle}`,
+    youHavePremium: 'You have Premium',
+    see: 'See',
+    close: 'Close',
+    thanksLong: 'Thank you for supporting BankStats.',
+    activeSinceLong: (date: string) => `Active since ${date}. Thank you for supporting BankStats.`,
+    tagline: 'The full picture of your spending, with no ads and no selling of your data.',
+    benefits: [
+      { title: 'Deeper insights', detail: 'Period comparisons and trends across shops and categories.' },
+      { title: 'More widgets', detail: 'Every widget view on your Home Screen and Lock Screen.' },
+      { title: 'Unlimited limits', detail: 'As many limits for shops and categories as you need.' },
+      { title: 'Support development', detail: 'Help build BankStats with no ads and no selling of data.' },
+    ],
+    purchaseSoon: 'Buying Premium in the app will be available soon.',
+    buy: 'Get Premium',
+    footnote: 'Payment and renewal are handled by the App Store. Cancel anytime.',
+    previewOn: 'Preview without Premium',
+    previewOff: 'Back to Premium',
+    previewDetail: 'Development builds only. Your account keeps Premium.',
+  },
+});

@@ -76,6 +76,8 @@ import {
 import { PremiumScreen } from '@/features/premium/premium-screen';
 import { usePremium } from '@/features/premium/use-premium';
 import { PrivacySettingsScreen } from '@/features/privacy/privacy-settings-screen';
+import { useCopy } from '@/features/localization/language';
+import { LanguageScreen } from '@/features/localization/language-screen';
 import { usePrivacy } from '@/features/privacy/privacy-provider';
 import { ProfileScreen } from '@/features/profile/profile-screen';
 import { useCloudSync } from '@/features/sync/use-cloud-sync';
@@ -85,20 +87,18 @@ import { useSpendingWidget } from '@/features/widgets/use-spending-widget';
 import { WidgetPreview } from '@/features/widgets/widget-preview';
 import { buildSpendingWidgetProps } from '@/features/widgets/widget-snapshot';
 
-const pages = [
-  { key: 'overview', label: 'Przegląd' },
-  { key: 'transactions', label: 'Transakcje' },
-  { key: 'merchants', label: 'Sklepy' },
-] as const;
+import { homeCopy } from './home-copy';
+
+const pages = [{ key: 'overview' }, { key: 'transactions' }, { key: 'merchants' }] as const;
 
 type TabKey = (typeof pages)[number]['key'];
-type PageKey = TabKey | 'profile';
+export type PageKey = TabKey | 'profile';
 
 const navLabelFontSize = 24;
 const navFadeWidth = 40;
 
 const pageOrder: readonly PageKey[] = [...pages.map((entry) => entry.key), 'profile'];
-type SheetKey = 'alerts' | 'data' | 'privacy' | 'premium';
+type SheetKey = 'alerts' | 'data' | 'privacy' | 'premium' | 'language';
 
 interface AlertEditor {
   scope: AlertScope;
@@ -111,12 +111,17 @@ interface AlertEditor {
  * and the bubble detail on top of both so its expansion is measured against the window.
  */
 
-export function HomeScreen() {
+interface HomeScreenProps {
+  initialPage?: PageKey;
+}
+
+export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   const { user } = useUser();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const pagerRef = useRef<ScrollView>(null);
-  const [page, setPage] = useState<PageKey>('overview');
+  const copy = useCopy(homeCopy);
+  const [page, setPage] = useState<PageKey>(initialPage);
   const [requestedPeriod, setRequestedPeriod] = useState<SpendingPeriod>('month');
   const [{ selection, revision }, dispatchSelection] = useReducer(
     bubbleSelectionReducer,
@@ -479,7 +484,7 @@ export function HomeScreen() {
                     maxFontSizeMultiplier={1.4}
                     style={[styles.navLabel, isActive ? styles.navLabelActive : null]}
                   >
-                    {entry.label}
+                    {copy.tabs[entry.key]}
                   </Text>
                 </Pressable>
               );
@@ -489,8 +494,8 @@ export function HomeScreen() {
           <Animated.View pointerEvents="none" style={[styles.navTrailingFade, navTrailingFadeStyle]} />
         </View>
         <Pressable
-          accessibilityHint="Pokazuje profil i ustawienia konta"
-          accessibilityLabel={user?.firstName ? `Konto: ${user.firstName}` : 'Konto'}
+          accessibilityHint={copy.accountHint}
+          accessibilityLabel={user?.firstName ? copy.accountOf(user.firstName) : copy.account}
           accessibilityRole="tab"
           accessibilityState={{ selected: page === 'profile' }}
           hitSlop={8}
@@ -507,6 +512,7 @@ export function HomeScreen() {
 
       <ScrollView
         canCancelContentTouches
+        contentOffset={{ x: pageOrder.indexOf(initialPage) * width, y: 0 }}
         horizontal
         onScroll={handleScroll}
         pagingEnabled
@@ -560,6 +566,7 @@ export function HomeScreen() {
           <ProfileScreen
             onOpenAlerts={() => setActiveSheet('alerts')}
             onOpenData={() => setActiveSheet('data')}
+            onOpenLanguage={() => setActiveSheet('language')}
             onOpenPremium={() => openPremium(null)}
             onOpenPrivacy={() => setActiveSheet('privacy')}
             premium={premium}
@@ -624,6 +631,8 @@ export function HomeScreen() {
             reason={premiumReason}
             status={premium}
           />
+        ) : activeSheet === 'language' ? (
+          <LanguageScreen onClose={() => setActiveSheet(null)} />
         ) : activeSheet === 'privacy' ? (
           <PrivacySettingsScreen onClose={() => setActiveSheet(null)} />
         ) : (

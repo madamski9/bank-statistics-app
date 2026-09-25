@@ -4,9 +4,11 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 
+import { useCopy } from '@/features/localization/language';
 
 import { chartPoints, nearestIndex, smoothAreaPath, smoothLinePath } from './area-chart-geometry';
 import { overviewColors } from './overview-theme';
+import { spendingOverviewCopy } from './spending-overview-copy';
 import type { TrendPoint } from './spending-trend';
 
 export interface AreaSeries {
@@ -36,6 +38,7 @@ function tickIndexes(count: number): number[] {
 }
 
 export function AreaChart({ points, series, formatValue, height = 168 }: AreaChartProps) {
+  const copy = useCopy(spendingOverviewCopy);
   const [width, setWidth] = useState(0);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
@@ -102,7 +105,7 @@ export function AreaChart({ points, series, formatValue, height = 168 }: AreaCha
         ) : (
           <>
             <Text maxFontSizeMultiplier={1.4} style={styles.readoutDate}>
-              {activeIndex === null ? 'Najwięcej · ' : ''}
+              {activeIndex === null ? copy.chartPeak : ''}
               {points[readoutIndex].spokenLabel}
             </Text>
             <View style={styles.readoutValues}>
@@ -123,7 +126,11 @@ export function AreaChart({ points, series, formatValue, height = 168 }: AreaCha
 
       <GestureDetector gesture={Gesture.Race(scrub, tap)}>
         <View
-          accessibilityLabel={`Wykres: ${series.map((entry) => entry.label).join(' i ')}. ${points[0].spokenLabel} – ${points[points.length - 1].spokenLabel}.`}
+          accessibilityLabel={copy.chartLabel(
+            series.map((entry) => entry.label),
+            points[0].spokenLabel,
+            points[points.length - 1].spokenLabel,
+          )}
           accessible
           onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
           style={{ height }}

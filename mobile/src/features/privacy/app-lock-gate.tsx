@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react';
+import { useCopy } from '@/features/localization/language';
 
+import { privacyCopy } from './privacy-copy';
+import { biometricLabels } from './biometrics';
 import { LockScreen } from './lock-screen';
 import { usePrivacy } from './privacy-provider';
 
@@ -9,6 +12,7 @@ interface AppLockGateProps {
 
 export function AppLockGate({ children }: AppLockGateProps) {
   const { biometric, cancelWidgetReveal, isLoaded, lockReason, unlock } = usePrivacy();
+  const copy = useCopy(privacyCopy);
 
   if (!isLoaded) {
     return null;
@@ -20,9 +24,9 @@ export function AppLockGate({ children }: AppLockGateProps) {
         key="widget"
         onCancel={cancelWidgetReveal}
         onUnlocked={unlock}
-        promptMessage="Pokaż widżet BankStats"
-        subtitle="Potwierdź, że to Ty, żeby zobaczyć widżet."
-        title="Odsłoń widżet"
+        promptMessage={copy.revealWidgetPrompt}
+        subtitle={copy.revealWidgetSubtitle}
+        title={copy.revealWidgetTitle}
       />
     );
   }
@@ -32,9 +36,9 @@ export function AppLockGate({ children }: AppLockGateProps) {
       <LockScreen
         key="app"
         onUnlocked={unlock}
-        promptMessage="Odblokuj BankStats"
-        subtitle={biometric === 'none' ? 'Wpisz kod PIN.' : 'Użyj Face ID albo wpisz kod PIN.'}
-        title="BankStats jest zablokowany"
+        promptMessage={copy.unlockPrompt}
+        subtitle={biometric === 'none' ? copy.enterPin : copy.useBiometricOrPin(biometricLabels[biometric])}
+        title={copy.lockedTitle}
       />
     );
   }

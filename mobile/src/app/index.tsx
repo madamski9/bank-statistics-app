@@ -2,7 +2,7 @@ import { Show } from '@clerk/expo';
 
 import { AccountStandingGate } from '@/features/account-data/account-standing-gate';
 import { SignInScreen } from '@/features/auth/sign-in-screen';
-import { HomeScreen } from '@/features/home/home-screen';
+import { LocalizedHomeScreen } from '@/features/home/localized-home-screen';
 import { OnboardingGate } from '@/features/onboarding/onboarding-gate';
 import { AppLockGate } from '@/features/privacy/app-lock-gate';
 import { PrivacyProvider } from '@/features/privacy/privacy-provider';
@@ -18,7 +18,7 @@ export default function Index() {
             <PrivacyProvider>
               <OnboardingGate>
                 <AppLockGate>
-                  <HomeScreen />
+                  <LocalizedHomeScreen />
                 </AppLockGate>
               </OnboardingGate>
             </PrivacyProvider>

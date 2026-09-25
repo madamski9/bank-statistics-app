@@ -3,6 +3,9 @@ import type { IngestionRecord, IngestionReviewReason } from '@bankstats/ingestio
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
 import { classifyTransaction } from '@/features/classification/classify-transaction';
 import type { SpendingSourceKind } from '@/features/spending-overview/spending-summary';
+import { currentCopy } from '@/features/localization/language';
+
+import { transactionsCopy } from './transactions-copy';
 
 export type TransactionBadgeTone = 'caution' | 'neutral';
 
@@ -12,27 +15,6 @@ export interface TransactionBadge {
 }
 
 const blockingReviewReasons: IngestionReviewReason[] = ['amount', 'currency', 'direction'];
-
-const bankLabels: Record<IngestionRecord['bank'], string> = {
-  millennium: 'Millennium',
-  manual: 'Wpis ręczny',
-};
-
-const typeLabels: Record<SpendingSourceKind, string> = {
-  cardPayment: 'Płatność kartą',
-  outgoingTransfer: 'Przelew wychodzący',
-  incomingTransfer: 'Przelew przychodzący',
-  other: 'Inna transakcja',
-};
-
-const reviewPrompts: Record<IngestionReviewReason, string> = {
-  amount: 'Nie mamy pewności co do kwoty. Potwierdź ją, żeby transakcja trafiła do statystyk.',
-  currency: 'Nie rozpoznaliśmy waluty. Potwierdź ją, żeby transakcja trafiła do statystyk.',
-  direction:
-    'Nie wiemy, czy to wydatek, czy przychód. Potwierdź kierunek, żeby transakcja trafiła do statystyk.',
-  merchant:
-    'Nie rozpoznaliśmy nazwy. Transakcja liczy się do przepływów, a nazwę możesz uzupełnić tutaj.',
-};
 
 export function isReviewItem(record: IngestionRecord): boolean {
   return record.review !== undefined;
@@ -66,32 +48,32 @@ export function transactionTitle(record: IngestionRecord, rules: CategorizationR
   }
 
   return classified.isUncategorized
-    ? typeLabels[transactionKind(record)]
+    ? currentCopy(transactionsCopy).types[transactionKind(record)]
     : classified.categoryName;
 }
 
 export function transactionKindLabel(record: IngestionRecord): string {
-  return typeLabels[transactionKind(record)];
+  return currentCopy(transactionsCopy).types[transactionKind(record)];
 }
 
 export function transactionContext(record: IngestionRecord): string {
-  const bank = bankLabels[record.bank];
+  const bank = currentCopy(transactionsCopy).banks[record.bank];
 
   return record.accountName === undefined ? bank : `${bank} · ${record.accountName}`;
 }
 
 export function transactionBadge(record: IngestionRecord): TransactionBadge | null {
   if (isReviewItem(record)) {
-    return { label: 'Do sprawdzenia', tone: 'caution' };
+    return { label: currentCopy(transactionsCopy).toReview, tone: 'caution' };
   }
 
   if (record.status === 'reversed') {
-    return { label: 'Cofnięta', tone: 'neutral' };
+    return { label: currentCopy(transactionsCopy).reversed, tone: 'neutral' };
   }
 
   return null;
 }
 
 export function reviewPrompt(reason: IngestionReviewReason): string {
-  return reviewPrompts[reason];
+  return currentCopy(transactionsCopy).reviewPrompts[reason];
 }

@@ -1,3 +1,4 @@
+import { currentCopy, defineCopy } from '@/features/localization/language';
 import { merchantKey } from '@/features/merchants/merchant-name';
 
 export interface CategoryOption {
@@ -5,22 +6,69 @@ export interface CategoryOption {
   label: string;
 }
 
-export const uncategorizedLabel = 'Bez kategorii';
-
 export const uncategorizedCategory = 'uncategorized';
 
-export const categoryOptions: CategoryOption[] = [
-  { id: 'groceries', label: 'Zakupy spożywcze' },
-  { id: 'eatingOut', label: 'Jedzenie na mieście' },
-  { id: 'transport', label: 'Transport i paliwo' },
-  { id: 'health', label: 'Zdrowie i apteka' },
-  { id: 'home', label: 'Dom i wyposażenie' },
-  { id: 'clothing', label: 'Odzież' },
-  { id: 'entertainment', label: 'Rozrywka' },
-  { id: 'services', label: 'Usługi i subskrypcje' },
-  { id: 'transfers', label: 'Przelewy osobiste' },
-  { id: 'other', label: 'Inne wydatki' },
+const categoryCopy = defineCopy({
+  pl: {
+    uncategorized: 'Bez kategorii',
+    labels: {
+      groceries: 'Zakupy spożywcze',
+      eatingOut: 'Jedzenie na mieście',
+      transport: 'Transport i paliwo',
+      health: 'Zdrowie i apteka',
+      home: 'Dom i wyposażenie',
+      clothing: 'Odzież',
+      entertainment: 'Rozrywka',
+      services: 'Usługi i subskrypcje',
+      transfers: 'Przelewy osobiste',
+      other: 'Inne wydatki',
+    },
+  },
+  en: {
+    uncategorized: 'Uncategorized',
+    labels: {
+      groceries: 'Groceries',
+      eatingOut: 'Eating out',
+      transport: 'Transport and fuel',
+      health: 'Health and pharmacy',
+      home: 'Home and furnishings',
+      clothing: 'Clothing',
+      entertainment: 'Entertainment',
+      services: 'Services and subscriptions',
+      transfers: 'Personal transfers',
+      other: 'Other spending',
+    },
+  },
+});
+
+type CategoryId = keyof (typeof categoryCopy)['pl']['labels'];
+
+const categoryIds: CategoryId[] = [
+  'groceries',
+  'eatingOut',
+  'transport',
+  'health',
+  'home',
+  'clothing',
+  'entertainment',
+  'services',
+  'transfers',
+  'other',
 ];
+
+export function uncategorizedLabel(): string {
+  return currentCopy(categoryCopy).uncategorized;
+}
+
+export function categoryOptions(): CategoryOption[] {
+  const { labels } = currentCopy(categoryCopy);
+
+  return categoryIds.map((id) => ({ id, label: labels[id] }));
+}
+
+function isCategoryId(category: string): category is CategoryId {
+  return categoryIds.some((id) => id === category);
+}
 
 const categoriesByMerchant: Record<string, string> = {
   Żabka: 'groceries',
@@ -276,16 +324,14 @@ const suggestionsByKey = new Map(
   Object.entries(categoriesByMerchant).map(([name, category]) => [merchantKey(name), category]),
 );
 
-const labelsById = new Map(categoryOptions.map((option) => [option.id, option.label]));
-
 export function suggestedCategory(merchantName: string): string | null {
   return suggestionsByKey.get(merchantKey(merchantName)) ?? null;
 }
 
 export function categoryLabel(category: string | undefined): string {
   if (category === undefined || category.trim() === '' || category === uncategorizedCategory) {
-    return uncategorizedLabel;
+    return uncategorizedLabel();
   }
 
-  return labelsById.get(category) ?? category;
+  return isCategoryId(category) ? currentCopy(categoryCopy).labels[category] : category;
 }

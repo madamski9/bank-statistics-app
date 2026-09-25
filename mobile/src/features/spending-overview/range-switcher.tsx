@@ -2,10 +2,12 @@ import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
+import { useCopy } from '@/features/localization/language';
 import { selectionChanged } from '@/haptics';
 
 import { overviewColors } from './overview-theme';
 import { periodOptions, type SpendingPeriod } from './periods';
+import { spendingOverviewCopy } from './spending-overview-copy';
 
 interface RangeSwitcherProps {
   period: SpendingPeriod;
@@ -15,15 +17,17 @@ interface RangeSwitcherProps {
 
 /** The five ranges from the issue: week, month, three months, year, all-time. */
 export function RangeSwitcher({ period, onChange, lockedPeriods }: RangeSwitcherProps) {
+  const copy = useCopy(spendingOverviewCopy);
+
   return (
     <View accessibilityRole="tablist" style={styles.row}>
-      {periodOptions.map((option) => {
+      {periodOptions().map((option) => {
         const isSelected = option.value === period;
         const isLocked = lockedPeriods?.has(option.value) === true;
 
         return (
           <Pressable
-            accessibilityHint={isLocked ? 'Dostępne w Premium' : undefined}
+            accessibilityHint={isLocked ? copy.availableInPremium : undefined}
             accessibilityLabel={option.label}
             accessibilityRole="tab"
             accessibilityState={{ selected: isSelected }}

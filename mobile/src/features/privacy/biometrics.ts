@@ -1,6 +1,10 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Platform } from 'react-native';
 
+import { currentCopy } from '@/features/localization/language';
+
+import { privacyCopy } from './privacy-copy';
+
 export type BiometricKind = 'faceId' | 'touchId' | 'none';
 
 export type BiometricOutcome = 'success' | 'usePin' | 'cancelled' | 'unavailable';
@@ -37,11 +41,13 @@ export async function availableBiometric(): Promise<BiometricKind> {
 }
 
 export async function authenticateWithBiometrics(promptMessage: string): Promise<BiometricOutcome> {
+  const copy = currentCopy(privacyCopy);
+
   try {
     const result = await LocalAuthentication.authenticateAsync({
       promptMessage,
-      cancelLabel: 'Anuluj',
-      fallbackLabel: 'Użyj kodu PIN',
+      cancelLabel: copy.cancel,
+      fallbackLabel: copy.usePin,
       disableDeviceFallback: true,
     });
 

@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { appEnvironment } from '@/app-environment';
 import { tokenCache } from '@/features/auth/token-cache';
+import { LanguageBootstrap } from '@/features/localization/language-bootstrap';
 import { convexClient } from '@/convex-client';
 
 export default function RootLayout() {
@@ -16,7 +17,9 @@ export default function RootLayout() {
         publishableKey={appEnvironment.clerkPublishableKey}
       >
         <ConvexProviderWithClerk client={convexClient} useAuth={useAuth}>
-          <Slot />
+          <LanguageBootstrap>
+            <Slot />
+          </LanguageBootstrap>
         </ConvexProviderWithClerk>
       </ClerkProvider>
     </GestureHandlerRootView>

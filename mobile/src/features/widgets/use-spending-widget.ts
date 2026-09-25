@@ -6,10 +6,18 @@ import { AppState, Platform } from 'react-native';
 
 import type { AlertRule } from '@/features/alerts/alert-rule';
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
+import { useLanguage } from '@/features/localization/language';
 
 import type { WidgetBackgroundConfiguration } from './widget-background';
 import { widgetRevealParams } from './widget-links';
-import { buildSpendingWidgetProps, lockedWidgetProps, signedOutWidgetProps, widgetEntries, type WidgetPrivacy, type SpendingWidgetProps } from './widget-snapshot';
+import {
+  buildSpendingWidgetProps,
+  lockedWidgetProps,
+  signedOutWidgetProps,
+  widgetEntries,
+  type SpendingWidgetProps,
+  type WidgetPrivacy,
+} from './widget-snapshot';
 
 const publishDebounceMs = 400;
 
@@ -67,6 +75,7 @@ function useForegroundTick(): number {
 
 export function useSpendingWidget({ isReady, isPremium, records, alertRules, categorizationRules, privacy }: SpendingWidgetSources): void {
   const foregroundTick = useForegroundTick();
+  const language = useLanguage();
 
   useEffect(() => {
     if (spendingWidgets.length === 0 || !isReady || isPremium === undefined) {
@@ -76,7 +85,16 @@ export function useSpendingWidget({ isReady, isPremium, records, alertRules, cat
     const timer = setTimeout(() => {
       const openUrl = Linking.createURL('/');
       const revealUrl = Linking.createURL('/', { queryParams: widgetRevealParams });
-      const configured = configure({ enabled: true, isPremium, alertRules, categorizationRules, openUrl, revealUrl, privacy });
+      const configured = configure({
+        enabled: true,
+        isPremium,
+        alertRules,
+        categorizationRules,
+        openUrl,
+        revealUrl,
+        privacy,
+        language,
+      });
 
       if (!configured) {
         publish(
@@ -89,15 +107,26 @@ export function useSpendingWidget({ isReady, isPremium, records, alertRules, cat
     }, publishDebounceMs);
 
     return () => clearTimeout(timer);
-  }, [alertRules, categorizationRules, foregroundTick, isPremium, isReady, records, privacy]);
+  }, [
+    alertRules,
+    categorizationRules,
+    foregroundTick,
+    isPremium,
+    isReady,
+    language,
+    records,
+    privacy,
+  ]);
 }
 
 export function SignedOutSpendingWidget(): null {
+  const language = useLanguage();
+
   useEffect(() => {
     const openUrl = Linking.createURL('/');
-    configure({ enabled: false, alertRules: [], categorizationRules: [], openUrl });
+    configure({ enabled: false, alertRules: [], categorizationRules: [], openUrl, language });
     publish(signedOutWidgetProps(new Date(), openUrl), { isBlurred: false, revealedUntilMs: 0 });
-  }, []);
+  }, [language]);
 
   return null;
 }

@@ -6,10 +6,14 @@ import type { AlertRule, AlertScope } from '@/features/alerts/alert-rule';
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
 import { categoryLabel } from '@/features/classification/categories';
 import { groupSpending } from '@/features/classification/spending-groups';
+import { calendarCopy } from '@/features/localization/calendar-copy';
+import { currentCopy } from '@/features/localization/language';
 import { formatCompactAmount } from '@/features/spending-overview/formatting';
 import type { PeriodWindow } from '@/features/spending-overview/periods';
 import { summarizeSpending } from '@/features/spending-overview/spending-summary';
 import { affectsStatistics } from '@/features/transactions/transaction-record';
+
+import { widgetsCopy } from './widgets-copy';
 
 export type WidgetLimitTone = 'calm' | 'caution' | 'over';
 
@@ -19,6 +23,7 @@ export interface WidgetLimit {
   targetLabel: string;
   remainingLabel: string;
   remainingAmountLabel: string;
+  spentOfTargetLabel: string;
   share: number;
   tone: WidgetLimitTone;
   daysLeftLabel: string;
@@ -30,6 +35,10 @@ export interface WidgetShop {
   share: number;
 }
 
+export type WidgetLabels = {
+  [Key in keyof (typeof widgetsCopy)['pl']['labels']]: string;
+};
+
 export interface SpendingWidgetProps {
   status: 'ready' | 'signedOut' | 'locked';
   monthKey: string;
@@ -39,6 +48,7 @@ export interface SpendingWidgetProps {
   expenseLabel: string;
   dailyLabel: string;
   dailyAmountLabel: string;
+  incomeLabel: string;
   countLabel: string;
   limits: WidgetLimit[];
   shops: WidgetShop[];
@@ -46,6 +56,7 @@ export interface SpendingWidgetProps {
   openUrl: string;
   isBlurred: boolean;
   revealUrl: string;
+  labels: WidgetLabels;
 }
 
 export interface WidgetPrivacy {
@@ -72,21 +83,6 @@ const cautionShare = 0.8;
 const maximumLimits = 4;
 const maximumShops = 4;
 
-const monthNames = [
-  'Styczeń',
-  'Luty',
-  'Marzec',
-  'Kwiecień',
-  'Maj',
-  'Czerwiec',
-  'Lipiec',
-  'Sierpień',
-  'Wrzesień',
-  'Październik',
-  'Listopad',
-  'Grudzień',
-];
-
 function pad(value: number): string {
   return String(value).padStart(2, '0');
 }
@@ -95,13 +91,25 @@ export function widgetMonthKey(reference: Date): string {
   return `${reference.getFullYear()}-${pad(reference.getMonth() + 1)}`;
 }
 
+function monthLabel(reference: Date): string {
+  return currentCopy(calendarCopy).monthNames[reference.getMonth()];
+}
+
+export function widgetLabels(reference: Date): WidgetLabels {
+  const { asOf, ...labels } = currentCopy(widgetsCopy).labels;
+
+  return { ...labels, asOf: asOf(updatedLabel(reference)) };
+}
+
 function updatedLabel(reference: Date): string {
-  return `${reference.getDate()}.${pad(reference.getMonth() + 1)}, ${pad(reference.getHours())}:${pad(reference.getMinutes())}`;
+  const time = `${pad(reference.getHours())}:${pad(reference.getMinutes())}`;
+
+  return currentCopy(widgetsCopy).updated(reference.getDate(), reference.getMonth(), time);
 }
 
 function scopeName(scope: AlertScope): string {
   if (scope.kind === 'all') {
-    return 'Wszystkie wydatki';
+    return currentCopy(widgetsCopy).allSpending;
   }
 
   if (scope.kind === 'category') {
@@ -123,14 +131,10 @@ function daysLeftLabel(endMs: number, reference: Date): string {
   const days = Math.max(Math.ceil((endMs - reference.getTime()) / dayMs), 0);
 
   if (days === 0) {
-    return 'ostatni dzień';
+    return currentCopy(widgetsCopy).lastDay;
   }
 
-  return days === 1 ? 'jeszcze 1 dzień' : `jeszcze ${days} dni`;
-}
-
-function transactionCountLabel(count: number): string {
-  return count === 1 ? '1 płatność' : `${count} płatności`;
+  return currentCopy(widgetsCopy).daysLeft(days);
 }
 
 function isSpendingLimit(rule: AlertRule): boolean {
@@ -153,16 +157,20 @@ export function widgetLimits(
     .map((rule) => {
       const progress = alertProgress(rule, records, { reference, rules: categorizationRules });
       const remainingMinor = progress.targetMinor - progress.amountMinor;
+      const copy = currentCopy(widgetsCopy);
+      const spentLabel = formatCompactAmount(progress.amountMinor, progress.currency);
+      const targetLabel = formatCompactAmount(progress.targetMinor, progress.currency);
 
       return {
         name: scopeName(rule.scope),
-        spentLabel: formatCompactAmount(progress.amountMinor, progress.currency),
-        targetLabel: formatCompactAmount(progress.targetMinor, progress.currency),
+        spentLabel,
+        targetLabel,
         remainingLabel:
           remainingMinor >= 0
-            ? `zostało ${formatCompactAmount(remainingMinor, progress.currency)}`
-            : `${formatCompactAmount(remainingMinor, progress.currency)} ponad limit`,
+            ? copy.remaining(formatCompactAmount(remainingMinor, progress.currency))
+            : copy.overLimit(formatCompactAmount(remainingMinor, progress.currency)),
         remainingAmountLabel: formatCompactAmount(remainingMinor, progress.currency),
+        spentOfTargetLabel: copy.spentOfTarget(spentLabel, targetLabel),
         share: progress.share,
         tone: limitTone(progress.share),
         daysLeftLabel: daysLeftLabel(progress.window.endMs, reference),
@@ -185,7 +193,15 @@ export function buildSpendingWidgetProps({
   const window: PeriodWindow = { startMs: month.startMs, endMs: reference.getTime() };
   const summary = summarizeSpending(counted, window, categorizationRules);
   const elapsedDays = Math.max(Math.ceil((reference.getTime() - month.startMs) / dayMs), 1);
-  const shops = groupSpending(counted.filter((record) => record.currency === summary.currency), { window, rules: categorizationRules, dimension: 'merchant' })
+  const dailyAmountLabel = formatCompactAmount(
+    Math.round(summary.expenseMinor / elapsedDays),
+    summary.currency,
+  );
+  const copy = currentCopy(widgetsCopy);
+  const shops = groupSpending(
+    counted.filter((record) => record.currency === summary.currency),
+    { window, rules: categorizationRules, dimension: 'merchant' },
+  )
     .slice(0, maximumShops)
     .map((group) => ({
       name: group.name,
@@ -196,18 +212,20 @@ export function buildSpendingWidgetProps({
   return {
     status: 'ready',
     monthKey: widgetMonthKey(reference),
-    monthLabel: monthNames[reference.getMonth()],
+    monthLabel: monthLabel(reference),
     updatedAtMs: reference.getTime(),
     updatedLabel: updatedLabel(reference),
     expenseLabel: formatCompactAmount(summary.expenseMinor, summary.currency),
-    dailyAmountLabel: formatCompactAmount(Math.round(summary.expenseMinor / elapsedDays), summary.currency),
-    dailyLabel: `${formatCompactAmount(Math.round(summary.expenseMinor / elapsedDays), summary.currency)} dziennie`,
-    countLabel: transactionCountLabel(summary.expenseCount),
+    dailyAmountLabel,
+    dailyLabel: copy.perDay(dailyAmountLabel),
+    incomeLabel: formatCompactAmount(summary.incomeMinor, summary.currency),
+    countLabel: copy.payments(summary.expenseCount),
     limits: widgetLimits(alertRules, counted, categorizationRules, reference),
     shops,
     openUrl,
     isBlurred: false,
     revealUrl,
+    labels: widgetLabels(reference),
   };
 }
 
@@ -227,18 +245,20 @@ function emptyWidgetProps(
   return {
     status,
     monthKey: widgetMonthKey(reference),
-    monthLabel: monthNames[reference.getMonth()],
+    monthLabel: monthLabel(reference),
     updatedAtMs: reference.getTime(),
     updatedLabel: updatedLabel(reference),
     expenseLabel: '',
     dailyLabel: '',
     dailyAmountLabel: '',
+    incomeLabel: '',
     countLabel: '',
     limits: [],
     shops: [],
     openUrl,
     isBlurred: false,
     revealUrl: openUrl,
+    labels: widgetLabels(reference),
   };
 }
 

@@ -5,7 +5,9 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
+import { useCopy } from '@/features/localization/language';
 
+import { privacyCopy } from './privacy-copy';
 import { biometricLabels } from './biometrics';
 import { lockoutLabel, pinLength } from './pin';
 import { PinDots, PinPad } from './pin-pad';
@@ -22,6 +24,7 @@ interface LockScreenProps {
 export function LockScreen({ title, subtitle, promptMessage, onUnlocked, onCancel }: LockScreenProps) {
   const insets = useSafeAreaInsets();
   const { biometric, authenticate, checkPin, pinLockoutMs } = usePrivacy();
+  const copy = useCopy(privacyCopy);
   const [pin, setPin] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
@@ -45,9 +48,9 @@ export function LockScreen({ title, subtitle, promptMessage, onUnlocked, onCance
     setHasDeclinedBiometrics(true);
 
     if (outcome === 'usePin' || outcome === 'unavailable') {
-      setMessage('Wpisz kod PIN.');
+      setMessage(copy.enterPin);
     }
-  }, [authenticate, biometric, onUnlocked, promptMessage]);
+  }, [authenticate, biometric, copy, onUnlocked, promptMessage]);
 
   useEffect(() => {
     if (hasPrompted.current || biometric === 'none') {
@@ -91,11 +94,11 @@ export function LockScreen({ title, subtitle, promptMessage, onUnlocked, onCance
       setLockedForMs(result.lockedForMs);
       setMessage(
         result.lockedForMs > 0
-          ? 'Za dużo błędnych prób.'
-          : 'Nieprawidłowy kod PIN. Spróbuj ponownie.',
+          ? copy.tooManyAttempts
+          : copy.wrongPin,
       );
     },
-    [checkPin, onUnlocked],
+    [checkPin, copy, onUnlocked],
   );
 
   const isLockedOut = lockedForMs > 0;
@@ -119,7 +122,7 @@ export function LockScreen({ title, subtitle, promptMessage, onUnlocked, onCance
                 style={({ pressed }) => [styles.cancel, pressed ? styles.pressed : null]}
               >
                 <Text maxFontSizeMultiplier={1.3} style={styles.cancelLabel}>
-                  Anuluj
+                  {copy.cancel}
                 </Text>
               </Pressable>
             ) : null}
@@ -140,7 +143,7 @@ export function LockScreen({ title, subtitle, promptMessage, onUnlocked, onCance
             <PinDots filled={pin.length} hasError={hasError} />
             <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={1.5} style={styles.message}>
               {isLockedOut
-                ? `Za dużo błędnych prób. Spróbuj za ${lockoutLabel(lockedForMs)}.`
+                ? copy.tryAgainIn(lockoutLabel(lockedForMs))
                 : (message ?? ' ')}
             </Text>
           </View>

@@ -3,9 +3,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { formatShare } from '@/features/spending-overview/formatting';
+import { useCopy } from '@/features/localization/language';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { impactLight } from '@/haptics';
 
+import { alertsCopy } from './alerts-copy';
 import type { AlertProgress } from './alert-evaluation';
 import { scopeLabel } from './alert-message';
 import type { AlertRule } from './alert-rule';
@@ -23,28 +25,16 @@ interface AlertsScreenProps {
   onEdit: (rule: AlertRule) => void;
 }
 
-const periodLabels: Record<string, string> = {
-  week: 'tygodniowo',
-  month: 'miesięcznie',
-  year: 'rocznie',
-  custom: 'w wybranym okresie',
-};
-
-const metricLabels: Record<AlertRule['metric'], string> = {
-  expense: 'Wydatki',
-  income: 'Przychody',
-  netFlow: 'Bilans',
-};
-
 export function AlertsScreen({ entries, onClose, onCreate, onEdit }: AlertsScreenProps) {
   const { formatAmount } = useAmountFormatting();
+  const copy = useCopy(alertsCopy);
   const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
         <Text maxFontSizeMultiplier={1.4} style={styles.title}>
-          Limity i alerty
+          {copy.title}
         </Text>
         <Pressable
           accessibilityRole="button"
@@ -53,7 +43,7 @@ export function AlertsScreen({ entries, onClose, onCreate, onEdit }: AlertsScree
           style={({ pressed }) => [styles.headerAction, pressed ? styles.pressed : null]}
         >
           <Text maxFontSizeMultiplier={1.3} style={styles.headerActionLabel}>
-            Gotowe
+            {copy.done}
           </Text>
         </Pressable>
       </View>
@@ -64,13 +54,12 @@ export function AlertsScreen({ entries, onClose, onCreate, onEdit }: AlertsScree
       >
         {entries.length === 0 ? (
           <Text maxFontSizeMultiplier={1.5} style={styles.empty}>
-            Nie masz jeszcze żadnego limitu. Ustaw kwotę na miesiąc, a damy znać, zanim ją
-            osiągniesz.
+            {copy.empty}
           </Text>
         ) : (
           entries.map(({ rule, progress }) => (
             <Pressable
-              accessibilityHint="Otwiera ustawienia limitu"
+              accessibilityHint={copy.editHint}
               accessibilityRole="button"
               key={rule.id}
               onPress={() => onEdit(rule)}
@@ -101,9 +90,9 @@ export function AlertsScreen({ entries, onClose, onCreate, onEdit }: AlertsScree
                 </View>
               )}
               <Text maxFontSizeMultiplier={1.5} style={styles.cardMeta}>
-                {metricLabels[rule.metric]} · {formatAmount(rule.targetMinor, progress.currency)}{' '}
-                {periodLabels[rule.period.kind]} · {formatShare(Math.min(progress.share, 1))}
-                {rule.isActive ? '' : ' · wyłączony'}
+                {copy.metrics[rule.metric]} · {formatAmount(rule.targetMinor, progress.currency)}{' '}
+                {copy.frequency[rule.period.kind]} · {formatShare(Math.min(progress.share, 1))}
+                {rule.isActive ? '' : copy.disabled}
               </Text>
             </Pressable>
           ))
@@ -118,7 +107,7 @@ export function AlertsScreen({ entries, onClose, onCreate, onEdit }: AlertsScree
           style={({ pressed }) => [styles.create, pressed ? styles.pressed : null]}
         >
           <Text maxFontSizeMultiplier={1.4} style={styles.createLabel}>
-            Dodaj limit
+            {copy.add}
           </Text>
         </Pressable>
       </ScrollView>

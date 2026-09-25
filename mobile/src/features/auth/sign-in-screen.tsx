@@ -14,6 +14,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useCopy } from '@/features/localization/language';
+
+import { authCopy } from './auth-copy';
 import { EmailCodeSignIn } from './email-code-sign-in';
 import { appleSignInIcon, googleSignInIcon } from './social-provider-assets';
 import { useWarmUpBrowser } from './use-warm-up-browser';
@@ -32,6 +35,7 @@ type SocialStrategy = 'oauth_google' | 'oauth_apple';
 type FormStep = 'email' | 'code';
 
 export function SignInScreen() {
+  const copy = useCopy(authCopy);
   const insets = useSafeAreaInsets();
   const { startSSOFlow } = useSSO();
   const [formStep, setFormStep] = useState<FormStep>('email');
@@ -54,15 +58,15 @@ export function SignInScreen() {
         }
 
         if (signUp?.status === 'missing_requirements') {
-          setSocialError('Nie udało się dokończyć logowania. Wybierz inną metodę.');
+          setSocialError(copy.socialIncomplete);
         }
       } catch {
-        setSocialError('Logowanie nie powiodło się. Spróbuj ponownie.');
+        setSocialError(copy.socialFailed);
       } finally {
         setActiveStrategy(null);
       }
     },
-    [startSSOFlow],
+    [copy, startSSOFlow],
   );
 
   return (
@@ -99,15 +103,17 @@ export function SignInScreen() {
             <Text maxFontSizeMultiplier={1.35} style={styles.title}>
               {formStep === 'email' ? (
                 <>
-                  Twoje finanse,{`\n`}w jednym miejscu
+                  {copy.titleFirstLine}
+                  {`\n`}
+                  {copy.titleSecondLine}
                 </>
               ) : (
-                'Sprawdź pocztę'
+                copy.checkMail
               )}
             </Text>
             {formStep === 'email' ? (
               <Text maxFontSizeMultiplier={1.5} style={styles.subtitle}>
-                Zaloguj się, aby zobaczyć wydatki, wpływy i najważniejsze zmiany.
+                {copy.subtitle}
               </Text>
             ) : null}
           </View>
@@ -118,7 +124,7 @@ export function SignInScreen() {
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
               <Text maxFontSizeMultiplier={1.3} style={styles.dividerLabel}>
-                lub
+                {copy.or}
               </Text>
               <View style={styles.dividerLine} />
             </View>
@@ -127,14 +133,14 @@ export function SignInScreen() {
               <SocialIconButton
                 isDisabled={activeStrategy !== null}
                 isLoading={activeStrategy === 'oauth_google'}
-                label="Kontynuuj z Google"
+                label={copy.continueWithGoogle}
                 onPress={() => signInWith('oauth_google')}
                 provider="google"
               />
               <SocialIconButton
                 isDisabled={activeStrategy !== null}
                 isLoading={activeStrategy === 'oauth_apple'}
-                label="Kontynuuj z Apple"
+                label={copy.continueWithApple}
                 onPress={() => signInWith('oauth_apple')}
                 provider="apple"
               />
@@ -152,7 +158,7 @@ export function SignInScreen() {
           </View>
 
           <Text maxFontSizeMultiplier={1.4} style={styles.privacy}>
-            Logowanie służy wyłącznie do zabezpieczenia Twojego konta i synchronizacji danych.
+            {copy.privacy}
           </Text>
         </View>
       </KeyboardAvoidingView>

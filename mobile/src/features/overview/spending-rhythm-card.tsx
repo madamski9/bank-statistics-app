@@ -1,19 +1,15 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useCopy } from '@/features/localization/language';
 import type { BucketSize, SpendBucket } from '@/features/merchants/merchant-summary';
 import { bubbleTints, overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 
+import { overviewCopy } from './overview-copy';
 import { rhythmAverageMinor } from './spending-rhythm';
 
 const plotHeight = 64;
 const emptyBarHeight = 2;
 const maximumBarWidth = 14;
-
-const averageLabels: Record<BucketSize, string> = {
-  day: 'Średnio dziennie',
-  week: 'Średnio na tydzień',
-  month: 'Średnio na miesiąc',
-};
 
 interface RhythmStat {
   key: string;
@@ -30,6 +26,7 @@ interface SpendingRhythmCardProps {
 
 export function SpendingRhythmCard({ buckets, bucketSize, stats, formatAverage }: SpendingRhythmCardProps) {
   const peakMinor = buckets.reduce((highest, bucket) => Math.max(highest, bucket.totalMinor), 0);
+  const averageLabels = useCopy(overviewCopy).average;
   const averageMinor = rhythmAverageMinor(buckets);
   const hasBars = peakMinor > 0;
   const tint = bubbleTints.expense.film;

@@ -4,22 +4,24 @@ import Animated from 'react-native-reanimated';
 import type { SpendingDimension } from '@/features/classification/spending-groups';
 import { overviewColors } from '@/features/spending-overview/overview-theme';
 import { selectionChanged } from '@/haptics';
+import { useCopy } from '@/features/localization/language';
+
+import { merchantsCopy } from './merchants-copy';
 
 interface DimensionSwitcherProps {
   dimension: SpendingDimension;
   onChange: (dimension: SpendingDimension) => void;
 }
 
-const dimensions: { value: SpendingDimension; label: string; hint: string }[] = [
-  { value: 'merchant', label: 'Sklepy', hint: 'Wydatki w sklepach' },
-  { value: 'counterparty', label: 'Osoby', hint: 'Przelewy do osób i firm' },
-  { value: 'category', label: 'Kategorie', hint: 'Wydatki według kategorii' },
-];
+const dimensionOrder: SpendingDimension[] = ['merchant', 'counterparty', 'category'];
 
 export function DimensionSwitcher({ dimension, onChange }: DimensionSwitcherProps) {
+  const copy = useCopy(merchantsCopy);
+
   return (
     <View accessibilityRole="tablist" style={styles.row}>
-      {dimensions.map((option) => {
+      {dimensionOrder.map((value) => {
+        const option = { value, ...copy.dimensions[value] };
         const isSelected = option.value === dimension;
 
         return (

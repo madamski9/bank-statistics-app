@@ -9,7 +9,9 @@ import { overviewColors, overviewSpacing } from '@/features/spending-overview/ov
 import { clearLocalData } from '@/features/sync/clear-local-data';
 import { forgetInstallationId } from '@/features/sync/installation-id';
 import { useInstallationId } from '@/features/sync/use-installation-id';
+import { useCopy } from '@/features/localization/language';
 
+import { accountDataCopy } from './account-data-copy';
 import { EmailReverification } from './email-reverification';
 
 interface AccountStandingGateProps {
@@ -68,17 +70,18 @@ function useLocalCleanup(extra: () => Promise<void>) {
 function RevokedDeviceScreen() {
   const { signOut } = useClerk();
   const { cleanup, retry } = useLocalCleanup(forgetInstallationId);
+  const copy = useCopy(accountDataCopy);
 
   return (
     <StandingLayout
-      body="To urządzenie zostało odłączone od Twojego konta na innym telefonie. Usuwamy z niego Twoje dane, a potem możesz się wylogować."
-      title="Urządzenie odłączone"
+      body={copy.revokedBody}
+      title={copy.revokedTitle}
     >
       {cleanup === 'working' ? <ActivityIndicator color={overviewColors.textPrimary} /> : null}
       {cleanup === 'failed' ? (
-        <ActionButton label="Spróbuj ponownie usunąć dane" onPress={() => void retry()} />
+        <ActionButton label={copy.retryCleanup} onPress={() => void retry()} />
       ) : null}
-      {cleanup === 'done' ? <ActionButton label="Wyloguj się" onPress={() => void signOut()} /> : null}
+      {cleanup === 'done' ? <ActionButton label={copy.signOut} onPress={() => void signOut()} /> : null}
     </StandingLayout>
   );
 }
@@ -88,6 +91,7 @@ const noExtraCleanup = async () => undefined;
 function FinishDeletionScreen() {
   const { user } = useUser();
   const { cleanup, retry } = useLocalCleanup(noExtraCleanup);
+  const copy = useCopy(accountDataCopy);
   const [identity, setIdentity] = useState<'deleting' | 'needsVerification' | 'failed'>('deleting');
   const hasTriedDeletion = useRef(false);
 
@@ -117,11 +121,11 @@ function FinishDeletionScreen() {
 
   return (
     <StandingLayout
-      body="Zsynchronizowane dane zostały usunięte. Kończymy: czyścimy ten telefon i usuwamy konto logowania."
-      title="Usuwanie konta"
+      body={copy.deletionBody}
+      title={copy.deletionTitle}
     >
       {cleanup === 'failed' ? (
-        <ActionButton label="Spróbuj ponownie" onPress={() => void retry()} />
+        <ActionButton label={copy.retry} onPress={() => void retry()} />
       ) : identity === 'needsVerification' ? (
         <EmailReverification onVerified={() => void deleteIdentity()} />
       ) : (

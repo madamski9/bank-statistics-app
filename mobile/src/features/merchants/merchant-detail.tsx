@@ -30,7 +30,9 @@ import { periodOption, type PeriodWindow, type SpendingPeriod } from '@/features
 import { formatDayHeading, formatTime } from '@/features/transactions/format-date';
 import { impactLight } from '@/haptics';
 import { project, rubberband } from '@/motion';
+import { useCopy } from '@/features/localization/language';
 
+import { merchantsCopy } from './merchants-copy';
 import { DailySpendChart } from './daily-spend-chart';
 import { transactionCount } from './group-counts';
 import { bucketSizeFor, bucketSpending, earliestOccurredMs } from './merchant-summary';
@@ -54,6 +56,7 @@ export function MerchantDetail({
   onClosed,
 }: MerchantDetailProps) {
   const { formatAmount } = useAmountFormatting();
+  const copy = useCopy(merchantsCopy);
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(height);
@@ -159,15 +162,15 @@ export function MerchantDetail({
                 ) : null}
               </View>
               <Pressable
-                accessibilityHint="Wraca do listy"
-                accessibilityLabel={`Zamknij ${group.name}`}
+                accessibilityHint={copy.backHint}
+                accessibilityLabel={copy.closeLabel(group.name)}
                 accessibilityRole="button"
                 hitSlop={10}
                 onPress={requestClose}
                 style={({ pressed }) => [styles.close, pressed ? styles.pressed : null]}
               >
                 <Text maxFontSizeMultiplier={1.4} style={styles.closeLabel}>
-                  Zamknij
+                  {copy.close}
                 </Text>
               </Pressable>
             </View>
@@ -182,9 +185,9 @@ export function MerchantDetail({
               {formatAmount(group.totalMinor, group.currency)}
             </Text>
             <Text maxFontSizeMultiplier={1.5} style={styles.meta}>
-              {option.label} · {transactionCount(group.count, group.dimension)} · średnio{' '}
+              {option.label} · {transactionCount(group.count, group.dimension)} · {copy.average}{' '}
               {formatAmount(group.averageMinor, group.currency)} ·{' '}
-              {formatShare(group.share)} wydatków
+              {copy.shareOfSpending(formatShare(group.share))}
             </Text>
           </Animated.View>
         </GestureDetector>
@@ -195,15 +198,15 @@ export function MerchantDetail({
         >
           {limit !== null ? (
             <Pressable
-              accessibilityHint="Otwiera ustawienia limitu"
-              accessibilityLabel={`Limit ${limit.periodLabel}, ${formatAmount(limit.amountMinor, limit.currency)} z ${formatAmount(limit.targetMinor, limit.currency)}`}
+              accessibilityHint={copy.limitHint}
+              accessibilityLabel={`${copy.limitTitle(limit.periodLabel)}, ${copy.limitProgress(formatAmount(limit.amountMinor, limit.currency), formatAmount(limit.targetMinor, limit.currency))}`}
               accessibilityRole="button"
               onPress={onEditLimit}
               style={({ pressed }) => [styles.limit, pressed ? styles.pressed : null]}
             >
               <View style={styles.limitHeading}>
                 <Text maxFontSizeMultiplier={1.5} style={styles.limitLabel}>
-                  Limit {limit.periodLabel}
+                  {copy.limitTitle(limit.periodLabel)}
                 </Text>
                 <View style={styles.limitValue}>
                   <Text maxFontSizeMultiplier={1.5} style={styles.limitAmount}>
@@ -215,7 +218,7 @@ export function MerchantDetail({
                     >
                       {formatAmount(limit.amountMinor, limit.currency)}
                     </Text>{' '}
-                    z {formatAmount(limit.targetMinor, limit.currency)}
+                    {copy.of} {formatAmount(limit.targetMinor, limit.currency)}
                   </Text>
                   <SymbolView
                     name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
@@ -229,8 +232,8 @@ export function MerchantDetail({
             </Pressable>
           ) : group.records.some((record) => record.currency === 'PLN') ? (
             <Pressable
-              accessibilityHint="Otwiera ustawienie limitu"
-              accessibilityLabel="Ustaw limit"
+              accessibilityHint={copy.setLimitHint}
+              accessibilityLabel={copy.setLimit}
               accessibilityRole="button"
               hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
               onPress={onEditLimit}
@@ -243,7 +246,7 @@ export function MerchantDetail({
                 weight="semibold"
               />
               <Text maxFontSizeMultiplier={1.3} style={styles.limitActionLabel}>
-                Ustaw limit
+                {copy.setLimit}
               </Text>
             </Pressable>
           ) : null}
@@ -259,7 +262,7 @@ export function MerchantDetail({
 
           <View style={styles.history}>
             <Text maxFontSizeMultiplier={1.5} style={styles.historyTitle}>
-              Historia
+              {copy.history}
             </Text>
             {group.records.map((record) => {
               const occurredAt = new Date(record.occurredAt);

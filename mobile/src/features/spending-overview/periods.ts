@@ -1,3 +1,5 @@
+import { currentCopy, defineCopy } from '@/features/localization/language';
+
 export type SpendingPeriod = 'week' | 'month' | 'quarter' | 'year' | 'all';
 
 export interface PeriodWindow {
@@ -26,21 +28,31 @@ const spanInDays: Record<Exclude<SpendingPeriod, 'all'>, number> = {
   year: 365,
 };
 
-export const periodOptions: PeriodOption[] = [
-  { value: 'week', short: '1T', label: 'ostatnie 7 dni', previousLabel: 'poprzednie 7 dni' },
-  { value: 'month', short: '1M', label: 'ostatnie 30 dni', previousLabel: 'poprzednie 30 dni' },
-  {
-    value: 'quarter',
-    short: '3M',
-    label: 'ostatnie 90 dni',
-    previousLabel: 'poprzednie 90 dni',
-  },
-  { value: 'year', short: '1R', label: 'ostatni rok', previousLabel: 'poprzedni rok' },
-  { value: 'all', short: 'Max', label: 'od początku', previousLabel: 'brak porównania' },
-];
+const periodCopy = defineCopy<PeriodOption[]>({
+  pl: [
+    { value: 'week', short: '1T', label: 'ostatnie 7 dni', previousLabel: 'poprzednie 7 dni' },
+    { value: 'month', short: '1M', label: 'ostatnie 30 dni', previousLabel: 'poprzednie 30 dni' },
+    { value: 'quarter', short: '3M', label: 'ostatnie 90 dni', previousLabel: 'poprzednie 90 dni' },
+    { value: 'year', short: '1R', label: 'ostatni rok', previousLabel: 'poprzedni rok' },
+    { value: 'all', short: 'Max', label: 'od początku', previousLabel: 'brak porównania' },
+  ],
+  en: [
+    { value: 'week', short: '1W', label: 'last 7 days', previousLabel: 'previous 7 days' },
+    { value: 'month', short: '1M', label: 'last 30 days', previousLabel: 'previous 30 days' },
+    { value: 'quarter', short: '3M', label: 'last 90 days', previousLabel: 'previous 90 days' },
+    { value: 'year', short: '1Y', label: 'last year', previousLabel: 'previous year' },
+    { value: 'all', short: 'Max', label: 'all time', previousLabel: 'no comparison' },
+  ],
+});
+
+export function periodOptions(): PeriodOption[] {
+  return currentCopy(periodCopy);
+}
 
 export function periodOption(period: SpendingPeriod): PeriodOption {
-  return periodOptions.find((option) => option.value === period) ?? periodOptions[1];
+  const options = periodOptions();
+
+  return options.find((option) => option.value === period) ?? options[1];
 }
 
 export function periodLabel(period: SpendingPeriod): string {

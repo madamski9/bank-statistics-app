@@ -3,6 +3,7 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BubbleField, type BubbleDescriptor } from '@/features/spending-overview/bubble-field';
+import { useCopy } from '@/features/localization/language';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { formatChange, formatTransactionCount } from '@/features/spending-overview/formatting';
 import type { BubbleOrigin } from '@/features/spending-overview/glass-bubble';
@@ -15,6 +16,7 @@ import { periodOption, type SpendingPeriod } from '@/features/spending-overview/
 import { RangeSwitcher } from '@/features/spending-overview/range-switcher';
 import type { SpendingSummary } from '@/features/spending-overview/spending-summary';
 
+import { overviewCopy } from './overview-copy';
 import { SpendingRhythmCard } from './spending-rhythm-card';
 import { rhythmPeak, type ExpenseRhythm } from './spending-rhythm';
 
@@ -47,6 +49,7 @@ function OverviewScreenComponent({
 }: OverviewScreenProps) {
   const { formatAmount, formatCompactAmount, formatSignedCompactAmount } = useAmountFormatting();
   const insets = useSafeAreaInsets();
+  const copy = useCopy(overviewCopy);
   const option = periodOption(period);
 
   const amount = (minor: number, compact: boolean, signed = false) => {
@@ -66,38 +69,41 @@ function OverviewScreenComponent({
   const bubbles: BubbleDescriptor[] = [
     {
       key: 'expense',
-      label: 'Wydatki',
+      label: copy.expense,
       value: amount(summary.expenseMinor, false),
       caption: formatTransactionCount(summary.expenseCount),
-      accessibilityLabel: `Wydatki, ${amount(summary.expenseMinor, false)}, ${option.label}, ${formatTransactionCount(summary.expenseCount)}`,
+      accessibilityLabel: copy.expenseLabel(
+        amount(summary.expenseMinor, false),
+        option.label,
+        formatTransactionCount(summary.expenseCount),
+      ),
     },
     {
       key: 'income',
-      label: 'Przychody',
+      label: copy.income,
       value: amount(summary.incomeMinor, true),
-      accessibilityLabel: `Przychody, ${amount(summary.incomeMinor, true)}, ${option.label}`,
+      accessibilityLabel: copy.incomeLabel(amount(summary.incomeMinor, true), option.label),
     },
     {
       key: 'net',
-      label: 'Przepływ',
+      label: copy.net,
       value: amount(summary.netMinor, true, true),
-      accessibilityLabel: `Przepływ, przychody minus wydatki, ${amount(summary.netMinor, true, true)}, ${option.label}`,
+      accessibilityLabel: copy.netLabel(amount(summary.netMinor, true, true), option.label),
     },
   ];
 
   const bucketSize = rhythm.size;
   const peak = rhythmPeak(rhythm.buckets);
-  const peakLabels = { day: 'Maks. / dzień', week: 'Maks. / tydz.', month: 'Maks. / mies.' };
   const stats = [
-    { key: 'count', label: 'Transakcje', value: String(summary.expenseCount + summary.incomeCount) },
+    { key: 'count', label: copy.transactions, value: String(summary.expenseCount + summary.incomeCount) },
     {
       key: 'peak',
-      label: peakLabels[bucketSize],
+      label: copy.peak[bucketSize],
       value: peak === null ? unavailableValue : amount(peak.totalMinor, true),
     },
     {
       key: 'largest',
-      label: 'Top źródło',
+      label: copy.topSource,
       value: summary.largestExpense?.label ?? unavailableValue,
     },
   ];
@@ -107,7 +113,7 @@ function OverviewScreenComponent({
       <View style={styles.header}>
         <View style={styles.contextRow}>
           <Text maxFontSizeMultiplier={1.6} style={styles.contextLabel}>
-            Wydatki · {option.label}
+            {copy.context(option.label)}
           </Text>
           {expenseChange !== null ? (
             <Text
@@ -117,7 +123,7 @@ function OverviewScreenComponent({
                 { color: expenseChange < 0 ? overviewColors.positive : overviewColors.negative },
               ]}
             >
-              {expenseChange >= 0 ? '▲' : '▼'} {formatChange(expenseChange)} vs{' '}
+              {expenseChange >= 0 ? '▲' : '▼'} {formatChange(expenseChange)} {copy.versus}{' '}
               {option.previousLabel}
             </Text>
           ) : null}
@@ -134,12 +140,11 @@ function OverviewScreenComponent({
         </Text>
       ) : Platform.OS !== 'ios' ? (
         <Text maxFontSizeMultiplier={1.6} style={styles.hint}>
-          Przechwytywanie powiadomień działa na razie tylko na iOS.
+          {copy.captureIosOnly}
         </Text>
       ) : !hasData && !isLoading ? (
         <Text maxFontSizeMultiplier={1.6} style={styles.hint}>
-          Nie przechwycono jeszcze żadnej transakcji. Skonfiguruj automatyzację powiadomień w
-          aplikacji Skróty.
+          {copy.noTransactions}
         </Text>
       ) : null}
 

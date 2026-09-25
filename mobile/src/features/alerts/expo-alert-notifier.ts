@@ -3,6 +3,10 @@ import { Platform } from 'react-native';
 
 import type { AlertNotifier } from './alert-runner';
 
+import { currentCopy } from '@/features/localization/language';
+
+import { alertsCopy } from './alerts-copy';
+
 const alertChannel = 'spending-limits';
 
 Notifications.setNotificationHandler({
@@ -17,7 +21,7 @@ Notifications.setNotificationHandler({
 export async function requestAlertPermission(): Promise<boolean> {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(alertChannel, {
-      name: 'Limity wydatków',
+      name: currentCopy(alertsCopy).channel,
       importance: Notifications.AndroidImportance.DEFAULT,
       sound: null,
     });
