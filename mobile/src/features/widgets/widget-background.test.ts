@@ -98,6 +98,15 @@ describe('background widget snapshots', () => {
     expect(props.shops).toEqual([]);
   });
 
+  test('shows no financial data without premium', () => {
+    const [entry] = timeline({ ...configuration, isPremium: false }, [record('new')], reference);
+
+    expect(entry.props.status).toBe('locked');
+    expect(entry.props.expenseLabel).toBe('');
+    expect(entry.props.limits).toEqual([]);
+    expect(entry.props.shops).toEqual([]);
+  });
+
   test('keeps background captures blurred and preserves the reveal deadline', () => {
     const until = reference + 5 * 60_000;
     const hiddenConfiguration = {

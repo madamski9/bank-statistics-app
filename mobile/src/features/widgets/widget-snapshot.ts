@@ -31,7 +31,7 @@ export interface WidgetShop {
 }
 
 export interface SpendingWidgetProps {
-  status: 'ready' | 'signedOut';
+  status: 'ready' | 'signedOut' | 'locked';
   monthKey: string;
   monthLabel: string;
   updatedAtMs: number;
@@ -212,8 +212,20 @@ export function buildSpendingWidgetProps({
 }
 
 export function signedOutWidgetProps(reference: Date, openUrl: string): SpendingWidgetProps {
+  return emptyWidgetProps('signedOut', reference, openUrl);
+}
+
+export function lockedWidgetProps(reference: Date, openUrl: string): SpendingWidgetProps {
+  return emptyWidgetProps('locked', reference, openUrl);
+}
+
+function emptyWidgetProps(
+  status: Exclude<SpendingWidgetProps['status'], 'ready'>,
+  reference: Date,
+  openUrl: string,
+): SpendingWidgetProps {
   return {
-    status: 'signedOut',
+    status,
     monthKey: widgetMonthKey(reference),
     monthLabel: monthNames[reference.getMonth()],
     updatedAtMs: reference.getTime(),

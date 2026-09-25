@@ -27,6 +27,7 @@ interface OverviewScreenProps {
   expenseChange: number | null;
   period: SpendingPeriod;
   onChangePeriod: (period: SpendingPeriod) => void;
+  lockedPeriods: ReadonlySet<SpendingPeriod>;
   onSelectBubble: (key: BubbleKey, origin: BubbleOrigin) => void;
   error: string | null;
   isLoading: boolean;
@@ -39,6 +40,7 @@ function OverviewScreenComponent({
   expenseChange,
   period,
   onChangePeriod,
+  lockedPeriods,
   onSelectBubble,
   error,
   isLoading,
@@ -122,7 +124,7 @@ function OverviewScreenComponent({
           ) : null}
         </View>
 
-        <RangeSwitcher onChange={onChangePeriod} period={period} />
+        <RangeSwitcher lockedPeriods={lockedPeriods} onChange={onChangePeriod} period={period} />
       </View>
 
       <BubbleField bubbles={bubbles} onSelect={onSelectBubble} />

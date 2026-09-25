@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PremiumCard } from '@/features/premium/premium-card';
+import type { PremiumStatus } from '@/features/premium/use-premium';
 import { accountInitial } from '@/features/profile/account-identity';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { syncStatusLabel, type SyncStatus } from '@/features/sync/sync-status';
@@ -12,6 +14,8 @@ interface ProfileScreenProps {
   onOpenAlerts: () => void;
   onOpenData: () => void;
   onOpenPrivacy: () => void;
+  onOpenPremium: () => void;
+  premium: PremiumStatus | undefined;
   syncStatus: SyncStatus;
 }
 
@@ -19,6 +23,8 @@ export function ProfileScreen({
   onOpenAlerts,
   onOpenData,
   onOpenPrivacy,
+  onOpenPremium,
+  premium,
   syncStatus,
 }: ProfileScreenProps) {
   const insets = useSafeAreaInsets();
@@ -72,6 +78,8 @@ export function ProfileScreen({
             </Text>
           </View>
         </View>
+
+        <PremiumCard onPress={onOpenPremium} status={premium} />
 
         <View style={styles.section}>
           <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>

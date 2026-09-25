@@ -2,7 +2,7 @@ import { mutation, type QueryCtx } from './_generated/server';
 import { requireOwnerId } from './owner';
 
 const deletionBatchSize = 500;
-const ownedTables = ['transactions', 'financialAccounts', 'devices'] as const;
+const ownedTables = ['transactions', 'financialAccounts', 'devices', 'profiles'] as const;
 
 export async function isAccountDeleted(ctx: QueryCtx, ownerId: string): Promise<boolean> {
   const deletion = await ctx.db

@@ -9,12 +9,13 @@ import type { CategorizationRule } from '@/features/classification/categorizatio
 
 import type { WidgetBackgroundConfiguration } from './widget-background';
 import { widgetRevealParams } from './widget-links';
-import { buildSpendingWidgetProps, signedOutWidgetProps, widgetEntries, type WidgetPrivacy, type SpendingWidgetProps } from './widget-snapshot';
+import { buildSpendingWidgetProps, lockedWidgetProps, signedOutWidgetProps, widgetEntries, type WidgetPrivacy, type SpendingWidgetProps } from './widget-snapshot';
 
 const publishDebounceMs = 400;
 
 interface SpendingWidgetSources {
   isReady: boolean;
+  isPremium: boolean | undefined;
   privacy: WidgetPrivacy;
   records: IngestionRecord[];
   alertRules: AlertRule[];
@@ -64,26 +65,31 @@ function useForegroundTick(): number {
   return tick;
 }
 
-export function useSpendingWidget({ isReady, records, alertRules, categorizationRules, privacy }: SpendingWidgetSources): void {
+export function useSpendingWidget({ isReady, isPremium, records, alertRules, categorizationRules, privacy }: SpendingWidgetSources): void {
   const foregroundTick = useForegroundTick();
 
   useEffect(() => {
-    if (spendingWidgets.length === 0 || !isReady) {
+    if (spendingWidgets.length === 0 || !isReady || isPremium === undefined) {
       return;
     }
 
     const timer = setTimeout(() => {
       const openUrl = Linking.createURL('/');
       const revealUrl = Linking.createURL('/', { queryParams: widgetRevealParams });
-      const configured = configure({ enabled: true, alertRules, categorizationRules, openUrl, revealUrl, privacy });
+      const configured = configure({ enabled: true, isPremium, alertRules, categorizationRules, openUrl, revealUrl, privacy });
 
       if (!configured) {
-        publish(buildSpendingWidgetProps({ records, alertRules, categorizationRules, reference: new Date(), openUrl, revealUrl }), privacy);
+        publish(
+          isPremium
+            ? buildSpendingWidgetProps({ records, alertRules, categorizationRules, reference: new Date(), openUrl, revealUrl })
+            : lockedWidgetProps(new Date(), openUrl),
+          privacy,
+        );
       }
     }, publishDebounceMs);
 
     return () => clearTimeout(timer);
-  }, [alertRules, categorizationRules, foregroundTick, isReady, records, privacy]);
+  }, [alertRules, categorizationRules, foregroundTick, isPremium, isReady, records, privacy]);
 }
 
 export function SignedOutSpendingWidget(): null {

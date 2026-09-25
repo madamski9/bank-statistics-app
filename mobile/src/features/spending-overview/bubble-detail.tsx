@@ -48,6 +48,7 @@ interface BubbleDetailProps {
   change: number | null;
   period: SpendingPeriod;
   onChangePeriod: (period: SpendingPeriod) => void;
+  lockedPeriods: ReadonlySet<SpendingPeriod>;
   onSelectSource: (source: SpendingSource) => void;
   onClosed: () => void;
 }
@@ -78,6 +79,7 @@ export function BubbleDetail({
   change,
   period,
   onChangePeriod,
+  lockedPeriods,
   onSelectSource,
   onClosed,
 }: BubbleDetailProps) {
@@ -341,7 +343,7 @@ export function BubbleDetail({
               ) : null}
             </View>
 
-            <RangeSwitcher onChange={onChangePeriod} period={period} />
+            <RangeSwitcher lockedPeriods={lockedPeriods} onChange={onChangePeriod} period={period} />
           </Animated.View>
         </GestureDetector>
 
