@@ -46,8 +46,8 @@ export const bubbleTints: Record<BubbleKey, BubbleTint> = {
  */
 export const bubbleLayout = {
   expense: { diameter: 0.58, centerX: 0.33, centerY: 0.48 },
-  income: { diameter: 0.36, centerX: 0.75, centerY: 0.27 },
-  net: { diameter: 0.25, centerX: 0.71, centerY: 0.67 },
+  income: { diameter: 0.36, centerX: 0.75, centerY: 0.24 },
+  net: { diameter: 0.25, centerX: 0.72, centerY: 0.71 },
 } as const satisfies Record<BubbleKey, { diameter: number; centerX: number; centerY: number }>;
 
 export const overviewSpacing = {

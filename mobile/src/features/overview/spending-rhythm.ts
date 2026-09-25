@@ -1,0 +1,39 @@
+import type { IngestionRecord } from '@bankstats/ingestion-native';
+
+import {
+  bucketSizeFor,
+  bucketSpending,
+  type SpendBucket,
+} from '@/features/merchants/merchant-summary';
+import type { PeriodWindow, SpendingPeriod } from '@/features/spending-overview/periods';
+
+export function expenseRhythm(
+  records: IngestionRecord[],
+  currency: string,
+  window: PeriodWindow,
+  period: SpendingPeriod,
+): SpendBucket[] {
+  const expenses = records.filter(
+    (record) => record.direction === 'expense' && record.currency === currency,
+  );
+
+  return bucketSpending(expenses, window, bucketSizeFor(period));
+}
+
+export function rhythmAverageMinor(buckets: SpendBucket[]): number {
+  if (buckets.length === 0) {
+    return 0;
+  }
+
+  return Math.round(buckets.reduce((sum, bucket) => sum + bucket.totalMinor, 0) / buckets.length);
+}
+
+export function rhythmPeak(buckets: SpendBucket[]): SpendBucket | null {
+  return buckets.reduce<SpendBucket | null>(
+    (highest, bucket) =>
+      bucket.totalMinor > 0 && (highest === null || bucket.totalMinor > highest.totalMinor)
+        ? bucket
+        : highest,
+    null,
+  );
+}
