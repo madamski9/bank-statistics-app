@@ -1,5 +1,7 @@
-import { memo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { memo, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { bubbleTints, overviewColors } from '@/features/spending-overview/overview-theme';
@@ -15,19 +17,14 @@ interface DailySpendChartProps {
 
 const plotHeight = 132;
 const axisBand = 16;
-const maximumTicks = 5;
+const centeredTickWidth = 64;
 
-/** Which x labels to draw: the ends plus evenly spaced ones, so they never collide. */
-function tickIndexes(count: number): Set<number> {
-  if (count <= maximumTicks) {
-    return new Set(Array.from({ length: count }, (_, index) => index));
+function tickIndexes(count: number): number[] {
+  if (count <= 1) {
+    return count === 1 ? [0] : [];
   }
 
-  const step = (count - 1) / (maximumTicks - 1);
-
-  return new Set(
-    Array.from({ length: maximumTicks }, (_, index) => Math.round(index * step)),
-  );
+  return [...new Set([0, Math.floor((count - 1) / 2), count - 1])];
 }
 
 /**
@@ -43,9 +40,49 @@ function DailySpendChartComponent({
   onSelect,
 }: DailySpendChartProps) {
   const { formatAmount } = useAmountFormatting();
+  const [plotWidth, setPlotWidth] = useState(0);
+
   if (buckets.length === 0) {
     return null;
   }
+
+  const bucketAt = (x: number) => {
+    const index = Math.floor((x / Math.max(plotWidth, 1)) * buckets.length);
+
+    return buckets[Math.min(Math.max(index, 0), buckets.length - 1)];
+  };
+
+  const scrubTo = (x: number) => {
+    const bucket = bucketAt(x);
+
+    if (bucket.key === selectedKey) {
+      return;
+    }
+
+    void Haptics.selectionAsync();
+    onSelect(bucket.key);
+  };
+
+  const tap = Gesture.Tap()
+    .runOnJS(true)
+    .onEnd((event, success) => {
+      if (!success) {
+        return;
+      }
+
+      const bucket = bucketAt(event.x);
+
+      onSelect(bucket.key === selectedKey ? null : bucket.key);
+    });
+
+  const scrub = Gesture.Pan()
+    .runOnJS(true)
+    .activeOffsetX([-6, 6])
+    .failOffsetY([-10, 10])
+    .onStart((event) => scrubTo(event.x))
+    .onUpdate((event) => scrubTo(event.x));
+
+  const plotGesture = Gesture.Race(scrub, tap);
 
   const peak = buckets.reduce(
     (highest, bucket) => (bucket.totalMinor > highest.totalMinor ? bucket : highest),
@@ -67,47 +104,73 @@ function DailySpendChartComponent({
         </Text>
       </View>
 
-      <View accessibilityRole="summary" style={[styles.plot, { height: plotHeight }]}>
-        {buckets.map((bucket) => {
-          const isHighlighted = bucket.key === highlighted.key;
-          const ratio = peak.totalMinor === 0 ? 0 : bucket.totalMinor / peak.totalMinor;
+      <GestureDetector gesture={plotGesture}>
+        <View
+          accessibilityRole="summary"
+          onLayout={(event) => setPlotWidth(event.nativeEvent.layout.width)}
+          style={[styles.plot, { height: plotHeight }]}
+        >
+          {buckets.map((bucket) => {
+            const isHighlighted = bucket.key === highlighted.key;
+            const ratio = peak.totalMinor === 0 ? 0 : bucket.totalMinor / peak.totalMinor;
 
-          return (
-            <Pressable
-              accessibilityLabel={`${bucket.spokenLabel}: ${formatAmount(bucket.totalMinor, currency)}`}
-              accessibilityRole="button"
-              accessibilityState={{ selected: bucket.key === selectedKey }}
-              key={bucket.key}
-              onPress={() => onSelect(bucket.key === selectedKey ? null : bucket.key)}
-              style={styles.column}
-            >
+            return (
               <View
-                style={[
-                  styles.bar,
-                  {
-                    height: Math.max(ratio * plotHeight, bucket.totalMinor > 0 ? 3 : 0),
-                    backgroundColor: tint.film,
-                    opacity: isHighlighted ? 1 : 0.55,
-                  },
-                ]}
-              />
-            </Pressable>
-          );
-        })}
-      </View>
-
-      <View style={styles.baseline} />
+                accessibilityLabel={`${bucket.spokenLabel}: ${formatAmount(bucket.totalMinor, currency)}`}
+                accessibilityRole="button"
+                accessibilityState={{ selected: bucket.key === selectedKey }}
+                accessible
+                key={bucket.key}
+                onAccessibilityTap={() => onSelect(bucket.key === selectedKey ? null : bucket.key)}
+                style={styles.column}
+              >
+                <View
+                  style={[
+                    styles.bar,
+                    bucket.totalMinor > 0
+                      ? {
+                          height: Math.max(ratio * plotHeight, 3),
+                          backgroundColor: tint.film,
+                          opacity: isHighlighted ? 1 : 0.55,
+                        }
+                      : styles.emptyBar,
+                  ]}
+                />
+              </View>
+            );
+          })}
+        </View>
+      </GestureDetector>
 
       <View style={[styles.axis, { height: axisBand }]}>
-        {buckets.map((bucket, index) => (
-          <View key={bucket.key} style={styles.axisSlot}>
-            {ticks.has(index) ? (
+        {ticks.map((index) => {
+          const bucket = buckets[index];
+          const isFirst = index === 0;
+          const isLast = index === buckets.length - 1;
+
+          return (
+            <View
+              key={bucket.key}
+              style={[
+                styles.tick,
+                isFirst
+                  ? styles.tickStart
+                  : isLast
+                    ? styles.tickEnd
+                    : {
+                        left: `${((index + 0.5) / buckets.length) * 100}%`,
+                        width: centeredTickWidth,
+                        marginLeft: -centeredTickWidth / 2,
+                        alignItems: 'center',
+                      },
+              ]}
+            >
               <Text maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.axisLabel}>
                 {bucket.label}
               </Text>
-            ) : null}
-          </View>
-        ))}
+            </View>
+          );
+        })}
       </View>
     </View>
   );
@@ -149,21 +212,27 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 4,
     borderTopRightRadius: 4,
   },
-  baseline: {
-    height: StyleSheet.hairlineWidth,
-    marginTop: -10,
-    backgroundColor: overviewColors.hairline,
+  emptyBar: {
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: overviewColors.textDisabled,
   },
   axis: {
-    flexDirection: 'row',
-    gap: 2,
+    marginTop: -4,
   },
-  axisSlot: {
-    flex: 1,
-    alignItems: 'center',
+  tick: {
+    position: 'absolute',
+    top: 0,
+  },
+  tickStart: {
+    left: 0,
+  },
+  tickEnd: {
+    right: 0,
   },
   axisLabel: {
-    fontSize: 10,
+    fontSize: 11,
     color: overviewColors.textSecondary,
+    fontVariant: ['tabular-nums'],
   },
 });
