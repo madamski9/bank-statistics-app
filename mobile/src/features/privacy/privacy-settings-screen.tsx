@@ -81,7 +81,7 @@ export function PrivacySettingsScreen({ onClose }: PrivacySettingsScreenProps) {
   };
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top + 14 }]}>
+    <View style={[styles.screen, styles.sheetTop]}>
       <View style={styles.header}>
         <Text accessibilityRole="header" maxFontSizeMultiplier={1.35} style={styles.title}>
           Prywatność
@@ -265,6 +265,9 @@ function ToggleRow({
 }
 
 const styles = StyleSheet.create({
+  sheetTop: {
+    paddingTop: 14,
+  },
   screen: {
     flex: 1,
     backgroundColor: overviewColors.background,

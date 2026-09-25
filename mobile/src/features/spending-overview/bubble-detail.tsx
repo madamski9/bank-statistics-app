@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -39,12 +38,16 @@ import {
 } from './formatting';
 import { bubbleTints, overviewColors, overviewMotion, type BubbleKey } from './overview-theme';
 import { periodOption, type SpendingPeriod } from './periods';
+import { AreaChart, type AreaSeries } from './area-chart';
 import { RangeSwitcher } from './range-switcher';
 import type { SpendingSource, SpendingSourceKind, SpendingSummary } from './spending-summary';
+import type { SpendingTrend } from './spending-trend';
+import { TintedScrollView } from './tinted-scroll-view';
 
 interface BubbleDetailProps {
   selection: BubbleSelection;
   summary: SpendingSummary;
+  trend: SpendingTrend;
   change: number | null;
   period: SpendingPeriod;
   onChangePeriod: (period: SpendingPeriod) => void;
@@ -73,9 +76,21 @@ const titles: Record<BubbleKey, string> = {
   net: 'Przepływ',
 };
 
+function trendSeries(key: BubbleKey, trend: SpendingTrend): AreaSeries[] {
+  const expense = { key: 'expense', label: titles.expense, color: bubbleTints.expense.film, values: trend.expense };
+  const income = { key: 'income', label: titles.income, color: bubbleTints.income.film, values: trend.income };
+
+  if (key === 'expense') {
+    return [expense];
+  }
+
+  return key === 'income' ? [income] : [income, expense];
+}
+
 export function BubbleDetail({
   selection,
   summary,
+  trend,
   change,
   period,
   onChangePeriod,
@@ -347,13 +362,20 @@ export function BubbleDetail({
           </Animated.View>
         </GestureDetector>
 
-        <ScrollView
+        <TintedScrollView
+          color={tint.film}
           contentContainerStyle={styles.listContent}
-          indicatorStyle="white"
           style={styles.list}
         >
           {contentReady ? (
             <>
+          <View style={styles.trend}>
+            <AreaChart
+              formatValue={(minor) => formatAmount(minor, summary.currency)}
+              points={trend.points}
+              series={trendSeries(key, trend)}
+            />
+          </View>
           {key === 'net' ? (
             <View style={styles.netBlock}>
               <Text maxFontSizeMultiplier={1.6} style={styles.explainer}>
@@ -454,7 +476,7 @@ export function BubbleDetail({
           ) : null}
             </>
           ) : null}
-        </ScrollView>
+        </TintedScrollView>
       </Animated.View>
     </Animated.View>
   );
@@ -490,6 +512,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  trend: {
+    paddingBottom: 8,
   },
   content: {
     position: 'absolute',
@@ -557,9 +582,11 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
+    marginHorizontal: -horizontalPadding,
   },
   listContent: {
     gap: 18,
+    paddingHorizontal: horizontalPadding,
     paddingTop: 16,
     paddingBottom: 32,
   },

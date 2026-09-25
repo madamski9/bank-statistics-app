@@ -51,13 +51,36 @@ function occurredMs(record: IngestionRecord): number {
   return new Date(record.occurredAt).getTime();
 }
 
-/** Keep the bar count readable: a year of days would be 365 slivers. */
-export function bucketSizeFor(period: SpendingPeriod): BucketSize {
+export function earliestOccurredMs(records: IngestionRecord[]): number | null {
+  const times = records.map(occurredMs).filter((time) => !Number.isNaN(time));
+
+  return times.length === 0 ? null : Math.min(...times);
+}
+
+export function bucketSizeFor(
+  period: SpendingPeriod,
+  earliestMs: number | null = null,
+  endMs: number = Date.now(),
+): BucketSize {
   if (period === 'week' || period === 'month') {
     return 'day';
   }
 
-  return period === 'quarter' ? 'week' : 'month';
+  if (period === 'quarter') {
+    return 'week';
+  }
+
+  if (period === 'year' || earliestMs === null) {
+    return 'month';
+  }
+
+  const spanDays = (endMs - earliestMs) / dayMs;
+
+  if (spanDays <= 62) {
+    return 'day';
+  }
+
+  return spanDays <= 210 ? 'week' : 'month';
 }
 
 function startOfBucket(date: Date, size: BucketSize): Date {

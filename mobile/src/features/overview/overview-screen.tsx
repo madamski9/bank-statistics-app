@@ -2,7 +2,6 @@ import { memo } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { bucketSizeFor, type SpendBucket } from '@/features/merchants/merchant-summary';
 import { BubbleField, type BubbleDescriptor } from '@/features/spending-overview/bubble-field';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { formatChange, formatTransactionCount } from '@/features/spending-overview/formatting';
@@ -17,13 +16,13 @@ import { RangeSwitcher } from '@/features/spending-overview/range-switcher';
 import type { SpendingSummary } from '@/features/spending-overview/spending-summary';
 
 import { SpendingRhythmCard } from './spending-rhythm-card';
-import { rhythmPeak } from './spending-rhythm';
+import { rhythmPeak, type ExpenseRhythm } from './spending-rhythm';
 
 const unavailableValue = '-';
 
 interface OverviewScreenProps {
   summary: SpendingSummary;
-  rhythm: SpendBucket[];
+  rhythm: ExpenseRhythm;
   expenseChange: number | null;
   period: SpendingPeriod;
   onChangePeriod: (period: SpendingPeriod) => void;
@@ -86,8 +85,8 @@ function OverviewScreenComponent({
     },
   ];
 
-  const bucketSize = bucketSizeFor(period);
-  const peak = rhythmPeak(rhythm);
+  const bucketSize = rhythm.size;
+  const peak = rhythmPeak(rhythm.buckets);
   const peakLabels = { day: 'Maks. / dzień', week: 'Maks. / tydz.', month: 'Maks. / mies.' };
   const stats = [
     { key: 'count', label: 'Transakcje', value: String(summary.expenseCount + summary.incomeCount) },
@@ -147,7 +146,7 @@ function OverviewScreenComponent({
       <View style={{ paddingBottom: insets.bottom + 16 }}>
         <SpendingRhythmCard
           bucketSize={bucketSize}
-          buckets={rhythm}
+          buckets={rhythm.buckets}
           formatAverage={(minor) => amount(minor, true)}
           stats={stats}
         />

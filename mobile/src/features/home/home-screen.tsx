@@ -18,6 +18,7 @@ import Animated, {
   ReduceMotion,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -61,6 +62,7 @@ import {
   summarizeSpending,
   type SpendingSource,
 } from '@/features/spending-overview/spending-summary';
+import { spendingTrend } from '@/features/spending-overview/spending-trend';
 import { useCapturedSpending } from '@/features/spending-overview/use-captured-spending';
 import { useFinancialAccounts } from '@/features/financial-accounts/use-financial-accounts';
 import { MerchantDetail } from '@/features/merchants/merchant-detail';
@@ -93,6 +95,7 @@ type TabKey = (typeof pages)[number]['key'];
 type PageKey = TabKey | 'profile';
 
 const navLabelFontSize = 24;
+const navFadeWidth = 40;
 
 const pageOrder: readonly PageKey[] = [...pages.map((entry) => entry.key), 'profile'];
 type SheetKey = 'alerts' | 'data' | 'privacy' | 'premium';
@@ -123,7 +126,11 @@ export function HomeScreen() {
   const [dimension, setDimension] = useState<SpendingDimension>('merchant');
   const [activeSheet, setActiveSheet] = useState<SheetKey | null>(null);
   const [navViewportWidth, setNavViewportWidth] = useState(0);
-  const [navFontSize, setNavFontSize] = useState(navLabelFontSize);
+  const [navRowWidth, setNavRowWidth] = useState(0);
+  const [titleOffsets, setTitleOffsets] = useState<Partial<Record<TabKey, number>>>({});
+  const navOffset = useSharedValue(0);
+  const navLeadingFade = useSharedValue(0);
+  const navTrailingFade = useSharedValue(0);
   const profileTabProgress = useSharedValue(0);
   const { error, isLoading, records, refresh } = useCapturedSpending();
   const financialAccounts = useFinancialAccounts();
@@ -181,6 +188,10 @@ export function HomeScreen() {
   const summary = useMemo(
     () => summarizeSpending(countedRecords, spendWindow, rules),
     [countedRecords, rules, spendWindow],
+  );
+  const trend = useMemo(
+    () => spendingTrend(countedRecords, summary.currency, spendWindow, period),
+    [countedRecords, period, spendWindow, summary.currency],
   );
   const rhythm = useMemo(
     () => expenseRhythm(countedRecords, summary.currency, spendWindow, period),
@@ -369,6 +380,36 @@ export function HomeScreen() {
     );
   }, [page, profileTabProgress]);
 
+  useEffect(() => {
+    const target = titleOffsets[page === 'profile' ? 'merchants' : page];
+
+    if (target === undefined || navViewportWidth === 0 || navRowWidth === 0) {
+      return;
+    }
+
+    const maximumOffset = Math.max(navRowWidth - navViewportWidth, 0);
+    const offset = Math.min(target, maximumOffset);
+    const fade = { duration: 220, reduceMotion: ReduceMotion.System };
+
+    navOffset.set(
+      withSpring(-offset, { duration: 420, dampingRatio: 0.9, reduceMotion: ReduceMotion.System }),
+    );
+    navLeadingFade.set(withTiming(offset > 0 ? 1 : 0, fade));
+    navTrailingFade.set(withTiming(offset < maximumOffset ? 1 : 0, fade));
+  }, [navLeadingFade, navOffset, navRowWidth, navTrailingFade, navViewportWidth, page, titleOffsets]);
+
+  const navRowStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: navOffset.get() }],
+  }));
+
+  const navLeadingFadeStyle = useAnimatedStyle(() => ({
+    opacity: navLeadingFade.get(),
+  }));
+
+  const navTrailingFadeStyle = useAnimatedStyle(() => ({
+    opacity: navTrailingFade.get(),
+  }));
+
   const profileTabStyle = useAnimatedStyle(() => ({
     transform: [{ scale: interpolate(profileTabProgress.get(), [0, 1], [1, 1.12]) }],
     backgroundColor: interpolateColor(
@@ -408,21 +449,12 @@ export function HomeScreen() {
       <View style={[styles.nav, { paddingTop: insets.top + 12 }]}>
         <View
           accessibilityRole="tablist"
-          onLayout={(event) => {
-            setNavViewportWidth(event.nativeEvent.layout.width);
-            setNavFontSize(navLabelFontSize);
-          }}
+          onLayout={(event) => setNavViewportWidth(event.nativeEvent.layout.width)}
           style={styles.navViewport}
         >
-          <View
-            onLayout={(event) => {
-              const rowWidth = event.nativeEvent.layout.width;
-
-              if (navViewportWidth > 0 && rowWidth > navViewportWidth) {
-                setNavFontSize((current) => Math.floor(current * (navViewportWidth / rowWidth) * 10) / 10);
-              }
-            }}
-            style={styles.navRow}
+          <Animated.View
+            onLayout={(event) => setNavRowWidth(event.nativeEvent.layout.width)}
+            style={[styles.navRow, navRowStyle]}
           >
             {pages.map((entry) => {
               const isActive = entry.key === page;
@@ -433,23 +465,28 @@ export function HomeScreen() {
                   accessibilityState={{ selected: isActive }}
                   hitSlop={8}
                   key={entry.key}
+                  onLayout={(event) => {
+                    const { x } = event.nativeEvent.layout;
+
+                    setTitleOffsets((current) =>
+                      current[entry.key] === x ? current : { ...current, [entry.key]: x },
+                    );
+                  }}
                   onPress={() => goToPage(entry.key)}
                   style={({ pressed }) => [styles.navTab, pressed ? styles.pressed : null]}
                 >
                   <Text
                     maxFontSizeMultiplier={1.4}
-                    style={[
-                      styles.navLabel,
-                      { fontSize: navFontSize },
-                      isActive ? styles.navLabelActive : null,
-                    ]}
+                    style={[styles.navLabel, isActive ? styles.navLabelActive : null]}
                   >
                     {entry.label}
                   </Text>
                 </Pressable>
               );
             })}
-          </View>
+          </Animated.View>
+          <Animated.View pointerEvents="none" style={[styles.navLeadingFade, navLeadingFadeStyle]} />
+          <Animated.View pointerEvents="none" style={[styles.navTrailingFade, navTrailingFadeStyle]} />
         </View>
         <Pressable
           accessibilityHint="Pokazuje profil i ustawienia konta"
@@ -542,6 +579,7 @@ export function HomeScreen() {
           period={period}
           selection={selection}
           summary={summary}
+          trend={trend}
         />
       ) : null}
 
@@ -628,6 +666,22 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: 'hidden',
   },
+  navLeadingFade: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: navFadeWidth,
+    experimental_backgroundImage: 'linear-gradient(to left, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 100%)',
+  },
+  navTrailingFade: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: navFadeWidth,
+    experimental_backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 100%)',
+  },
   navRow: {
     alignSelf: 'flex-start',
     flexDirection: 'row',
@@ -642,6 +696,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   navLabel: {
+    fontSize: navLabelFontSize,
     fontWeight: '700',
     letterSpacing: -0.6,
     color: overviewColors.textSecondary,

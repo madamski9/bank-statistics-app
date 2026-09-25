@@ -33,7 +33,7 @@ import { project, rubberband } from '@/motion';
 
 import { DailySpendChart } from './daily-spend-chart';
 import { transactionCount } from './group-counts';
-import { bucketSizeFor, bucketSpending } from './merchant-summary';
+import { bucketSizeFor, bucketSpending, earliestOccurredMs } from './merchant-summary';
 
 interface MerchantDetailProps {
   group: SpendingGroup;
@@ -61,7 +61,12 @@ export function MerchantDetail({
   const [selectedBucket, setSelectedBucket] = useState<string | null>(null);
 
   const buckets = useMemo(
-    () => bucketSpending(group.records, spendWindow, bucketSizeFor(period)),
+    () =>
+      bucketSpending(
+        group.records,
+        spendWindow,
+        bucketSizeFor(period, earliestOccurredMs(group.records), spendWindow.endMs),
+      ),
     [group.records, period, spendWindow],
   );
 

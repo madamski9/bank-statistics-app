@@ -54,7 +54,7 @@ export function PremiumScreen({ status, reason, onClose }: PremiumScreenProps) {
   };
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top + 14 }]}>
+    <View style={[styles.screen, styles.sheetTop]}>
       <View style={styles.header}>
         <Pressable
           accessibilityLabel="Zamknij"
@@ -178,6 +178,9 @@ export function PremiumScreen({ status, reason, onClose }: PremiumScreenProps) {
 }
 
 const styles = StyleSheet.create({
+  sheetTop: {
+    paddingTop: 14,
+  },
   screen: {
     flex: 1,
     backgroundColor: overviewColors.background,

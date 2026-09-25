@@ -37,7 +37,7 @@ export function DataScreen({ records, accounts, onClose }: DataScreenProps) {
   };
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top + 14 }]}>
+    <View style={[styles.screen, styles.sheetTop]}>
       <View style={styles.header}>
         <Text accessibilityRole="header" maxFontSizeMultiplier={1.35} style={styles.title}>
           Twoje dane
@@ -136,6 +136,9 @@ export function DataScreen({ records, accounts, onClose }: DataScreenProps) {
 }
 
 const styles = StyleSheet.create({
+  sheetTop: {
+    paddingTop: 14,
+  },
   screen: {
     flex: 1,
     backgroundColor: overviewColors.background,

@@ -7,6 +7,7 @@ import { rhythmAverageMinor } from './spending-rhythm';
 
 const plotHeight = 64;
 const emptyBarHeight = 2;
+const maximumBarWidth = 14;
 
 const averageLabels: Record<BucketSize, string> = {
   day: 'Średnio dziennie',
@@ -135,10 +136,12 @@ const styles = StyleSheet.create({
   plot: {
     flexDirection: 'row',
     alignItems: 'flex-end',
+    justifyContent: 'space-between',
     gap: 2,
   },
   column: {
     flex: 1,
+    maxWidth: maximumBarWidth,
     height: '100%',
     justifyContent: 'flex-end',
   },
