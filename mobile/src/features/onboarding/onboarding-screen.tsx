@@ -33,9 +33,12 @@ import {
   overviewSpacing,
 } from '@/features/spending-overview/overview-theme';
 import { LimitProgressBar } from '@/features/alerts/limit-progress-bar';
+import { useCopy } from '@/features/localization/language';
 import { biometricLabels } from '@/features/privacy/biometrics';
 import { PinSetup } from '@/features/privacy/pin-setup';
 import { usePrivacy } from '@/features/privacy/privacy-provider';
+
+import { onboardingCopy } from './onboarding-copy';
 
 interface OnboardingScreenProps {
   onComplete: (selectedBanks: string[]) => Promise<void>;
@@ -78,6 +81,7 @@ function pendingReturnKey(userId: string): string {
 }
 
 export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
+  const copy = useCopy(onboardingCopy);
   const { userId } = useAuth();
   const { biometric, changePin, updateSettings } = usePrivacy();
   const insets = useSafeAreaInsets();
@@ -160,12 +164,12 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
 
   const openShortcuts = useCallback(async () => {
     if (selectedBanks.length === 0) {
-      setError('Wybierz Millennium albo skonfiguruj przechwytywanie później.');
+      setError(copy.chooseBank);
       return;
     }
 
     if (Platform.OS !== 'ios') {
-      setError('Konfiguracja Skrótów jest dostępna na iPhonie.');
+      setError(copy.shortcutsIphoneOnly);
       return;
     }
 
@@ -174,9 +178,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
       try {
         await SecureStore.setItemAsync(pendingReturnKey(userId), 'true');
       } catch {
-        setError(
-          'Nie udało się zapisać postępu konfiguracji. Spróbuj ponownie.',
-        );
+        setError(copy.progressSaveFailed);
         return;
       }
     }
@@ -190,11 +192,9 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
       if (userId != null) {
         void SecureStore.deleteItemAsync(pendingReturnKey(userId));
       }
-      setError(
-        'Nie udało się otworzyć skrótu Millennium. Spróbuj ponownie.',
-      );
+      setError(copy.shortcutOpenFailed);
     }
-  }, [selectedBanks, userId]);
+  }, [copy, selectedBanks, userId]);
 
   const finish = useCallback(async () => {
     setIsFinishing(true);
@@ -203,10 +203,10 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
     try {
       await onComplete(selectedBanks);
     } catch {
-      setError('Nie udało się zapisać konfiguracji. Spróbuj ponownie.');
+      setError(copy.finishFailed);
       setIsFinishing(false);
     }
-  }, [onComplete, selectedBanks]);
+  }, [copy, onComplete, selectedBanks]);
 
   const protectWithPin = useCallback(
     async (pin: string) => {
@@ -220,15 +220,15 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
   const primaryLabel =
     step === 2
       ? selectedPlan === 'free'
-        ? 'Kontynuuj za darmo'
-        : 'Przejdź do płatności'
+        ? copy.continueFree
+        : copy.goToPayment
       : step === 3
-        ? 'Przejdź do konfiguracji'
+        ? copy.goToSetup
         : step === 4
-          ? 'Dodaj skrót Millennium'
+          ? copy.addShortcut
           : step === stepCount
-            ? 'Przejdź do aplikacji'
-            : 'Dalej';
+            ? copy.goToApp
+            : copy.next;
   const primaryAction =
     step === 4
       ? openShortcuts
@@ -236,9 +236,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
         ? finish
         : step === 2 && selectedPlan === 'premium'
           ? () =>
-              setError(
-                'Płatności Premium będą dostępne wkrótce. Wybierz plan bezpłatny, aby kontynuować.',
-              )
+              setError(copy.premiumSoon)
           : () => changeStep(step + 1);
 
   return (
@@ -247,7 +245,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
       <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
         {step > 0 && step < stepCount ? (
           <Pressable
-            accessibilityLabel="Wróć do poprzedniego ekranu"
+            accessibilityLabel={copy.back}
             accessibilityRole="button"
             onPress={() => changeStep(step - 1)}
             style={({ pressed }) => [
@@ -269,7 +267,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
           <View style={styles.topAction} />
         )}
         <Text maxFontSizeMultiplier={1.3} style={styles.stepCount}>
-          {step < stepCount ? `${step + 1} / ${stepCount}` : 'Gotowe'}
+          {step < stepCount ? `${step + 1} / ${stepCount}` : copy.done}
         </Text>
         {step < 3 ? (
           <Pressable
@@ -280,7 +278,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
               pressed ? styles.pressed : null,
             ]}
           >
-            <Text style={styles.skipLabel}>Pomiń opis</Text>
+            <Text style={styles.skipLabel}>{copy.skipIntro}</Text>
           </Pressable>
         ) : (
           <View style={styles.skipAction} />
@@ -341,7 +339,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <View
-          accessibilityLabel={`Postęp konfiguracji: ${Math.min(step + 1, stepCount)} z ${stepCount}`}
+          accessibilityLabel={copy.progress(Math.min(step + 1, stepCount), stepCount)}
           accessibilityRole="progressbar"
           accessibilityValue={{
             min: 0,
@@ -371,7 +369,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
             ]}
           >
             <Text maxFontSizeMultiplier={1.3} style={styles.primaryLabel}>
-              {isFinishing ? 'Zapisywanie…' : primaryLabel}
+              {isFinishing ? copy.saving : primaryLabel}
             </Text>
             <SymbolView
               name={{
@@ -392,7 +390,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
               pressed ? styles.pressed : null,
             ]}
           >
-            <Text style={styles.secondaryLabel}>Nie teraz</Text>
+            <Text style={styles.secondaryLabel}>{copy.notNow}</Text>
           </Pressable>
         )}
         {step === 4 ? (
@@ -404,7 +402,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
               pressed ? styles.pressed : null,
             ]}
           >
-            <Text style={styles.secondaryLabel}>Skonfiguruję później</Text>
+            <Text style={styles.secondaryLabel}>{copy.setUpLater}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -468,6 +466,7 @@ function FeatureRow({
 }
 
 function WelcomeIntro() {
+  const copy = useCopy(onboardingCopy).welcome;
   const pinkOffset = useSharedValue(-1);
   const greenOffset = useSharedValue(1);
   const blueOffset = useSharedValue(-1);
@@ -537,20 +536,20 @@ function WelcomeIntro() {
         />
       </View>
       <SectionHeading
-        eyebrow="WITAJ W BANKSTATS"
-        title="Zobacz, dokąd trafiają Twoje pieniądze"
-        description="BankStats układa wydatki i wpływy z powiadomień w czytelne statystyki. Bez podawania loginu ani hasła do banku."
+        eyebrow={copy.eyebrow}
+        title={copy.title}
+        description={copy.description}
       />
       <View style={styles.featureList}>
         <FeatureRow
           symbol="chart.bar.fill"
-          title="Wydatki w jednym miejscu"
-          description="Przeglądaj sklepy, transakcje i zmiany w czasie."
+          title={copy.spendingTitle}
+          description={copy.spendingDescription}
         />
         <FeatureRow
           symbol="lock.shield.fill"
-          title="Masz kontrolę"
-          description="Wybierasz, które powiadomienia mogą trafić do aplikacji."
+          title={copy.controlTitle}
+          description={copy.controlDescription}
         />
       </View>
     </View>
@@ -558,38 +557,36 @@ function WelcomeIntro() {
 }
 
 function LimitsIntro() {
+  const copy = useCopy(onboardingCopy).limits;
   return (
     <View style={styles.stepContent}>
       <View style={styles.limitVisual}>
-        <Text style={styles.visualCaption}>TWÓJ LIMIT</Text>
+        <Text style={styles.visualCaption}>{copy.caption}</Text>
         <View style={styles.visualHeading}>
-          <Text style={styles.visualMerchant}>Wybrany sklep</Text>
-          <Text style={styles.visualAmount}>400 zł</Text>
+          <Text style={styles.visualMerchant}>{copy.merchant}</Text>
+          <Text style={styles.visualAmount}>{copy.amount}</Text>
         </View>
         <LimitProgressBar share={320 / 400} />
-        <Text style={styles.visualMeta}>Przykład: wydano 320 zł z 400 zł</Text>
+        <Text style={styles.visualMeta}>{copy.example}</Text>
       </View>
       <SectionHeading
-        eyebrow="LIMITY I POWIADOMIENIA"
-        title="Ustal kwotę dla sklepu"
-        description="Wybierz sklep i kwotę, którą chcesz kontrolować. Powiadomimy Cię, gdy zbliżysz się do limitu lub go osiągniesz."
+        eyebrow={copy.eyebrow}
+        title={copy.title}
+        description={copy.description}
       />
       <View style={styles.featureList}>
         <FeatureRow
           symbol="bell.badge.fill"
-          title="Wiesz wcześniej"
-          description="Możesz dostać ostrzeżenie już przy 80% limitu."
+          title={copy.earlyTitle}
+          description={copy.earlyDescription}
         />
         <FeatureRow
           symbol="calendar"
-          title="Wybierasz okres"
-          description="Limit możesz ustawić na tydzień, miesiąc lub rok."
+          title={copy.periodTitle}
+          description={copy.periodDescription}
         />
       </View>
-      <Text style={styles.smallNote}>
-        Alerty pojawiają się po aktualizacji transakcji w aplikacji. Nie blokują
-        płatności.
-      </Text>
+      <Text style={styles.smallNote}>{copy.note}</Text>
     </View>
   );
 }
@@ -601,15 +598,16 @@ function PremiumIntro({
   onSelect: (plan: 'free' | 'premium') => void;
   selectedPlan: 'free' | 'premium';
 }) {
+  const copy = useCopy(onboardingCopy).plans;
   return (
     <View style={styles.stepContent}>
       <SectionHeading
-        eyebrow="WYBIERASZ, JAK KORZYSTASZ"
-        title="Wybierz swój plan"
-        description="Korzystaj bezpłatnie albo sprawdź, co zaoferuje Premium. Płatności Premium pojawią się wkrótce."
+        eyebrow={copy.eyebrow}
+        title={copy.title}
+        description={copy.description}
       />
       <Pressable
-        accessibilityLabel="Plan bezpłatny, 0 zł, docelowo jeden aktywny limit i miesiąc wydatków"
+        accessibilityLabel={copy.freeLabel}
         accessibilityRole="radio"
         accessibilityState={{ checked: selectedPlan === 'free' }}
         onPress={() => onSelect('free')}
@@ -620,9 +618,9 @@ function PremiumIntro({
         ]}
       >
         <View style={styles.planHeading}>
-          <Text style={styles.planName}>Bezpłatnie</Text>
+          <Text style={styles.planName}>{copy.freeName}</Text>
           <View style={styles.planHeadingRight}>
-            <Text style={styles.planPrice}>0 zł</Text>
+            <Text style={styles.planPrice}>{copy.freePrice}</Text>
             <View
               style={[
                 styles.planCheck,
@@ -639,12 +637,10 @@ function PremiumIntro({
             </View>
           </View>
         </View>
-        <Text style={styles.planDetail}>
-          Docelowo: 1 aktywny limit · wykresy i wydatki do 1 miesiąca
-        </Text>
+        <Text style={styles.planDetail}>{copy.freeDetail}</Text>
       </Pressable>
       <Pressable
-        accessibilityLabel="Plan Premium, 9,99 zł miesięcznie lub 99,99 zł rocznie zamiast 119,88 zł, dostępny wkrótce"
+        accessibilityLabel={copy.premiumLabel}
         accessibilityRole="radio"
         accessibilityState={{ checked: selectedPlan === 'premium' }}
         onPress={() => onSelect('premium')}
@@ -658,7 +654,7 @@ function PremiumIntro({
         <View style={styles.planHeading}>
           <Text style={styles.premiumName}>Premium</Text>
           <View style={styles.planHeadingRight}>
-            <Text style={styles.comingSoon}>WKRÓTCE</Text>
+            <Text style={styles.comingSoon}>{copy.comingSoon}</Text>
             <View
               style={[
                 styles.planCheck,
@@ -675,30 +671,24 @@ function PremiumIntro({
             </View>
           </View>
         </View>
-        <Text style={styles.premiumPrice}>9,99 zł / mies.</Text>
+        <Text style={styles.premiumPrice}>{copy.monthlyPrice}</Text>
         <View style={styles.yearlyPriceRow}>
-          <Text style={styles.planDetail}>lub</Text>
-          <Text style={styles.oldYearlyPrice}>119,88 zł</Text>
-          <Text style={styles.newYearlyPrice}>99,99 zł / rok</Text>
+          <Text style={styles.planDetail}>{copy.or}</Text>
+          <Text style={styles.oldYearlyPrice}>{copy.oldYearlyPrice}</Text>
+          <Text style={styles.newYearlyPrice}>{copy.yearlyPrice}</Text>
         </View>
         <View style={styles.premiumDivider} />
-        <Text style={styles.premiumBenefit}>Nielimitowane aktywne limity</Text>
-        <Text style={styles.premiumBenefit}>
-          Więcej statystyk i dłuższe zakresy czasu
-        </Text>
-        <Text style={styles.premiumBenefit}>
-          Wspólne konto i kolejne funkcje w planie
-        </Text>
+        <Text style={styles.premiumBenefit}>{copy.unlimitedLimits}</Text>
+        <Text style={styles.premiumBenefit}>{copy.moreStatistics}</Text>
+        <Text style={styles.premiumBenefit}>{copy.sharedAccount}</Text>
       </Pressable>
-      <Text style={styles.smallNote}>
-        Premium nie można jeszcze kupić. Możesz od razu korzystać z wersji
-        bezpłatnej.
-      </Text>
+      <Text style={styles.smallNote}>{copy.note}</Text>
     </View>
   );
 }
 
 function ShortcutsIntro() {
+  const copy = useCopy(onboardingCopy).shortcuts;
   const floatOffset = useSharedValue(0);
   const reduceMotion = useReducedMotion();
 
@@ -738,9 +728,9 @@ function ShortcutsIntro() {
         </Animated.View>
       </View>
       <SectionHeading
-        eyebrow="JAK DZIAŁA PRZECHWYTYWANIE"
-        title="Połącz BankStats ze Skrótami"
-        description="Na iPhonie Skróty przekazują powiadomienia o transakcjach do BankStats. To Ty tworzysz i zatwierdzasz automatyzację."
+        eyebrow={copy.eyebrow}
+        title={copy.title}
+        description={copy.description}
       />
       <View style={styles.warningCard}>
         <SymbolView
@@ -753,13 +743,10 @@ function ShortcutsIntro() {
           tintColor={overviewColors.caution}
         />
         <Text maxFontSizeMultiplier={1.5} style={styles.warningText}>
-          Włącz powiadomienia banku i Portfela Apple. Gdy są wyłączone,
-          aplikacja nie otrzyma tych transakcji automatycznie.
+          {copy.warning}
         </Text>
       </View>
-      <Text style={styles.smallNote}>
-        Transakcje nadal możesz dodać ręcznie.
-      </Text>
+      <Text style={styles.smallNote}>{copy.manualNote}</Text>
     </View>
   );
 }
@@ -771,12 +758,13 @@ function BanksSetup({
   onToggle: (bankId: string) => void;
   selectedBanks: string[];
 }) {
+  const copy = useCopy(onboardingCopy).banks;
   return (
     <View style={styles.stepContent}>
       <SectionHeading
-        eyebrow="KONFIGURACJA SKRÓTÓW"
-        title="Wybierz banki do konfiguracji"
-        description="Zaznacz bank, a potem dodaj gotowy skrót Millennium. Na razie automatyczne przechwytywanie działa tylko dla tego banku."
+        eyebrow={copy.eyebrow}
+        title={copy.title}
+        description={copy.description}
       />
       <View style={styles.bankList}>
         {banks.map((bank) => {
@@ -784,7 +772,7 @@ function BanksSetup({
 
           return (
             <Pressable
-              accessibilityLabel={`${bank.name}${bank.available ? '' : ', wkrótce'}`}
+              accessibilityLabel={`${bank.name}${bank.available ? '' : copy.soonSuffix}`}
               accessibilityRole="checkbox"
               accessibilityState={{
                 checked: selected,
@@ -822,28 +810,19 @@ function BanksSetup({
                 {bank.name}
               </Text>
               {!bank.available ? (
-                <Text style={styles.bankSoon}>Wkrótce</Text>
+                <Text style={styles.bankSoon}>{copy.soon}</Text>
               ) : null}
             </Pressable>
           );
         })}
       </View>
       <View style={styles.stepsCard}>
-        <Text style={styles.stepsTitle}>Jak uruchomić przechwytywanie</Text>
-        <Text style={styles.stepsLine}>
-          1. Otwórz udostępniony skrót i dodaj go do aplikacji Skróty.
-        </Text>
-        <Text style={styles.stepsLine}>
-          2. Utwórz automatyzację dla powiadomień Millennium i Portfela Apple.
-        </Text>
-        <Text style={styles.stepsLine}>
-          3. W automatyzacji uruchom dodany skrót i zatwierdź ją.
-        </Text>
+        <Text style={styles.stepsTitle}>{copy.stepsTitle}</Text>
+        <Text style={styles.stepsLine}>{copy.stepOne}</Text>
+        <Text style={styles.stepsLine}>{copy.stepTwo}</Text>
+        <Text style={styles.stepsLine}>{copy.stepThree}</Text>
       </View>
-      <Text style={styles.smallNote}>
-        Przycisk otworzy gotowy skrót Millennium. Dodanie skrótu i włączenie
-        automatyzacji wymagają Twojego potwierdzenia.
-      </Text>
+      <Text style={styles.smallNote}>{copy.note}</Text>
     </View>
   );
 }
@@ -855,16 +834,15 @@ function PinIntro({
   biometricName: string | null;
   onComplete: (pin: string) => Promise<void>;
 }) {
+  const copy = useCopy(onboardingCopy).pin;
   return (
     <View style={styles.stepContent}>
       <SectionHeading
         description={
-          biometricName === null
-            ? 'Ustaw 4-cyfrowy kod PIN. Będziemy o niego pytać przy otwieraniu aplikacji.'
-            : `Aplikację odblokujesz przez ${biometricName}. Gdy nie rozpozna Cię, wpiszesz 4-cyfrowy kod PIN.`
+          biometricName === null ? copy.pinOnly : copy.withBiometric(biometricName)
         }
-        eyebrow="ZABEZPIECZENIE"
-        title="Chroń swoje finanse"
+        eyebrow={copy.eyebrow}
+        title={copy.title}
       />
       <PinSetup onComplete={onComplete} />
     </View>
@@ -872,6 +850,7 @@ function PinIntro({
 }
 
 function CompletionIntro() {
+  const copy = useCopy(onboardingCopy).completion;
   return (
     <View style={[styles.stepContent, styles.completionContent]}>
       <View
@@ -889,23 +868,21 @@ function CompletionIntro() {
           maxFontSizeMultiplier={1.35}
           style={[styles.title, styles.completionTitle]}
         >
-          Witaj w BankStats
+          {copy.title}
         </Text>
         <Text
           maxFontSizeMultiplier={1.5}
           style={[styles.description, styles.completionDescription]}
         >
-          Twoje finanse w jednym miejscu. Dodaj pierwszą transakcję i zacznij
-          poznawać swoje wydatki.
+          {copy.description}
         </Text>
       </View>
       <View style={styles.completionNote}>
         <Text maxFontSizeMultiplier={1.4} style={styles.completionNoteTitle}>
-          Transakcje ze Skrótów
+          {copy.noteTitle}
         </Text>
         <Text maxFontSizeMultiplier={1.5} style={styles.completionNoteText}>
-          Będą dodawane automatycznie po zapisaniu i włączeniu automatyzacji
-          w aplikacji Skróty. Możesz też dodawać je ręcznie.
+          {copy.noteText}
         </Text>
       </View>
     </View>

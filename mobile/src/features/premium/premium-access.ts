@@ -23,9 +23,3 @@ export function lockedPeriods(isPremium: boolean): ReadonlySet<SpendingPeriod> {
 export function canCreateLimit(existingLimitCount: number, isPremium: boolean): boolean {
   return isPremium || existingLimitCount < freeLimitCount;
 }
-
-export const premiumReasonMessages: Record<PremiumReason, string> = {
-  period: 'Ostatni rok i cała historia są dostępne w Premium.',
-  limit: 'Bez Premium możesz mieć jeden limit wydatków.',
-  widget: 'Widżety na ekranie głównym i blokady są dostępne w Premium.',
-};

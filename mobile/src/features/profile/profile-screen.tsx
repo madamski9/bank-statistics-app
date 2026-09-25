@@ -4,17 +4,21 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { languageNames, useCopy, useLanguage } from '@/features/localization/language';
 import { PremiumCard } from '@/features/premium/premium-card';
 import type { PremiumStatus } from '@/features/premium/use-premium';
 import { accountInitial } from '@/features/profile/account-identity';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { syncStatusLabel, type SyncStatus } from '@/features/sync/sync-status';
 
+import { profileCopy } from './profile-copy';
+
 interface ProfileScreenProps {
   onOpenAlerts: () => void;
   onOpenData: () => void;
   onOpenPrivacy: () => void;
   onOpenPremium: () => void;
+  onOpenLanguage: () => void;
   premium: PremiumStatus | undefined;
   syncStatus: SyncStatus;
 }
@@ -24,6 +28,7 @@ export function ProfileScreen({
   onOpenData,
   onOpenPrivacy,
   onOpenPremium,
+  onOpenLanguage,
   premium,
   syncStatus,
 }: ProfileScreenProps) {
@@ -33,8 +38,10 @@ export function ProfileScreen({
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const email = user?.primaryEmailAddress?.emailAddress ?? 'Brak adresu e-mail';
-  const name = user?.fullName ?? user?.firstName ?? 'Twoje konto';
+  const copy = useCopy(profileCopy);
+  const language = useLanguage();
+  const email = user?.primaryEmailAddress?.emailAddress ?? copy.noEmail;
+  const name = user?.fullName ?? user?.firstName ?? copy.yourAccount;
   const initial = accountInitial(user);
   const [now, setNow] = useState(() => Date.now());
   const syncLabel = syncStatusLabel(syncStatus, now);
@@ -52,10 +59,10 @@ export function ProfileScreen({
     try {
       await signOut();
     } catch {
-      setError('Nie udało się wylogować. Spróbuj ponownie.');
+      setError(copy.signOutFailed);
       setIsSigningOut(false);
     }
-  }, [signOut]);
+  }, [copy.signOutFailed, signOut]);
 
   return (
     <View style={styles.screen}>
@@ -83,10 +90,10 @@ export function ProfileScreen({
 
         <View style={styles.section}>
           <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
-            KONTO
+            {copy.accountSection}
           </Text>
           <View style={styles.card}>
-            <View accessible accessibilityLabel={`Adres e-mail: ${email}`} style={styles.row}>
+            <View accessible accessibilityLabel={copy.emailLabel(email)} style={styles.row}>
               <View accessibilityElementsHidden importantForAccessibility="no" style={styles.rowIcon}>
                 <SymbolView
                   name={{ ios: 'envelope.fill', android: 'mail', web: 'mail' }}
@@ -96,7 +103,7 @@ export function ProfileScreen({
               </View>
               <View style={styles.rowCopy}>
                 <Text maxFontSizeMultiplier={1.4} style={styles.rowLabel}>
-                  Adres e-mail
+                  {copy.email}
                 </Text>
                 <Text maxFontSizeMultiplier={1.5} numberOfLines={1} style={styles.rowValue}>
                   {email}
@@ -105,7 +112,7 @@ export function ProfileScreen({
             </View>
             <View
               accessible
-              accessibilityLabel={`Synchronizacja: ${syncLabel}`}
+              accessibilityLabel={copy.syncLabel(syncLabel)}
               accessibilityLiveRegion="polite"
               style={styles.row}
             >
@@ -122,7 +129,7 @@ export function ProfileScreen({
               </View>
               <View style={styles.rowCopy}>
                 <Text maxFontSizeMultiplier={1.4} style={styles.rowLabel}>
-                  Synchronizacja
+                  {copy.sync}
                 </Text>
                 <Text maxFontSizeMultiplier={1.5} style={styles.rowValue}>
                   {syncLabel}
@@ -134,11 +141,11 @@ export function ProfileScreen({
 
         <View style={styles.section}>
           <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
-            APLIKACJA
+            {copy.appSection}
           </Text>
           <View style={styles.card}>
             <Pressable
-              accessibilityHint="Otwiera limity wydatków i powiadomienia"
+              accessibilityHint={copy.alertsHint}
               accessibilityRole="button"
               onPress={onOpenAlerts}
               style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
@@ -155,7 +162,7 @@ export function ProfileScreen({
                 />
               </View>
               <Text maxFontSizeMultiplier={1.4} style={styles.actionLabel}>
-                Limity i alerty
+                {copy.alerts}
               </Text>
               <SymbolView
                 accessibilityElementsHidden
@@ -166,7 +173,7 @@ export function ProfileScreen({
               />
             </Pressable>
             <Pressable
-              accessibilityHint="Otwiera eksport danych, listę urządzeń i usuwanie konta"
+              accessibilityHint={copy.dataHint}
               accessibilityRole="button"
               onPress={onOpenData}
               style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
@@ -183,7 +190,7 @@ export function ProfileScreen({
                 />
               </View>
               <Text maxFontSizeMultiplier={1.4} style={styles.actionLabel}>
-                Twoje dane i urządzenia
+                {copy.data}
               </Text>
               <SymbolView
                 accessibilityElementsHidden
@@ -194,7 +201,7 @@ export function ProfileScreen({
               />
             </Pressable>
             <Pressable
-              accessibilityHint="Otwiera blokadę aplikacji, tryb prywatny i ustawienia widżetu"
+              accessibilityHint={copy.privacyHint}
               accessibilityRole="button"
               onPress={onOpenPrivacy}
               style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
@@ -211,7 +218,35 @@ export function ProfileScreen({
                 />
               </View>
               <Text maxFontSizeMultiplier={1.4} style={styles.actionLabel}>
-                Prywatność i blokada
+                {copy.privacy}
+              </Text>
+              <SymbolView
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+                name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+                size={17}
+                tintColor={overviewColors.textDisabled}
+              />
+            </Pressable>
+            <Pressable
+              accessibilityHint={copy.languageHint}
+              accessibilityLabel={`${copy.language}: ${languageNames[language]}`}
+              accessibilityRole="button"
+              onPress={onOpenLanguage}
+              style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
+            >
+              <View accessibilityElementsHidden importantForAccessibility="no" style={styles.rowIcon}>
+                <SymbolView
+                  name={{ ios: 'globe', android: 'language', web: 'language' }}
+                  size={18}
+                  tintColor={overviewColors.textSecondary}
+                />
+              </View>
+              <Text maxFontSizeMultiplier={1.4} style={styles.actionLabel}>
+                {copy.language}
+              </Text>
+              <Text maxFontSizeMultiplier={1.4} style={styles.languageValue}>
+                {languageNames[language]}
               </Text>
               <SymbolView
                 accessibilityElementsHidden
@@ -250,7 +285,7 @@ export function ProfileScreen({
                 tintColor={overviewColors.negative}
               />
               <Text maxFontSizeMultiplier={1.4} style={styles.signOutLabel}>
-                Wyloguj się
+                {copy.signOut}
               </Text>
             </>
           )}
@@ -356,6 +391,10 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     color: overviewColors.textPrimary,
+  },
+  languageValue: {
+    fontSize: 15,
+    color: overviewColors.textSecondary,
   },
   actionLabel: {
     flex: 1,

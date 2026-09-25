@@ -1,17 +1,5 @@
-const monthsInGenitive = [
-  'stycznia',
-  'lutego',
-  'marca',
-  'kwietnia',
-  'maja',
-  'czerwca',
-  'lipca',
-  'sierpnia',
-  'września',
-  'października',
-  'listopada',
-  'grudnia',
-];
+import { calendarCopy } from '@/features/localization/calendar-copy';
+import { currentCopy } from '@/features/localization/language';
 
 /** Stable per-day grouping key in local time. */
 export function dayKey(date: Date): string {
@@ -25,14 +13,15 @@ export function formatDayHeading(date: Date, reference: Date): string {
   yesterday.setDate(yesterday.getDate() - 1);
 
   if (dayKey(date) === today) {
-    return 'Dziś';
+    return currentCopy(calendarCopy).today;
   }
 
   if (dayKey(date) === dayKey(yesterday)) {
-    return 'Wczoraj';
+    return currentCopy(calendarCopy).yesterday;
   }
 
-  const day = `${date.getDate()} ${monthsInGenitive[date.getMonth()]}`;
+  const calendar = currentCopy(calendarCopy);
+  const day = calendar.dayMonth(date.getDate(), calendar.monthsInGenitive[date.getMonth()]);
 
   return date.getFullYear() === reference.getFullYear()
     ? day

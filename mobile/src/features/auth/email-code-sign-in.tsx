@@ -2,6 +2,10 @@ import { useSignIn, useSignUp } from '@clerk/expo';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { useCopy } from '@/features/localization/language';
+
+import { authCopy } from './auth-copy';
+
 type Step = 'email' | 'code';
 type Mode = 'sign-in' | 'sign-up';
 
@@ -20,6 +24,7 @@ const colors = {
 };
 
 export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
+  const copy = useCopy(authCopy);
   const { signIn } = useSignIn();
   const { signUp } = useSignUp();
   const [step, setStep] = useState<Step>('email');
@@ -34,7 +39,7 @@ export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail.includes('@')) {
-      setError('Wpisz poprawny adres e-mail.');
+      setError(copy.invalidEmail);
       return;
     }
 
@@ -49,7 +54,7 @@ export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
       });
 
       if (attempt.error) {
-        setError('Nie udało się wysłać kodu. Spróbuj ponownie.');
+        setError(copy.sendFailed);
         return;
       }
 
@@ -57,14 +62,14 @@ export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
         const created = await signUp.create({ emailAddress: normalizedEmail, transfer: true });
 
         if (created.error) {
-          setError('Nie udało się utworzyć konta. Spróbuj ponownie.');
+          setError(copy.createFailed);
           return;
         }
 
         const sent = await signUp.verifications.sendEmailCode();
 
         if (sent.error) {
-          setError('Nie udało się wysłać kodu. Spróbuj ponownie.');
+          setError(copy.sendFailed);
           return;
         }
 
@@ -73,7 +78,7 @@ export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
         const sent = await signIn.emailCode.sendCode();
 
         if (sent.error) {
-          setError('Nie udało się wysłać kodu. Spróbuj ponownie.');
+          setError(copy.sendFailed);
           return;
         }
 
@@ -84,15 +89,15 @@ export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
       setStep('code');
       onStepChange?.('code');
     } catch {
-      setError('Nie udało się połączyć. Sprawdź internet i spróbuj ponownie.');
+      setError(copy.connectionFailed);
     } finally {
       setIsSubmitting(false);
     }
-  }, [email, onStepChange, signIn, signUp]);
+  }, [copy, email, onStepChange, signIn, signUp]);
 
   const verifyCode = useCallback(async () => {
     if (code.trim().length === 0) {
-      setError('Wpisz kod z wiadomości e-mail.');
+      setError(copy.enterCode);
       return;
     }
 
@@ -105,7 +110,7 @@ export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
         const result = await signIn.emailCode.verifyCode({ code: code.trim() });
 
         if (result.error) {
-          setError('Kod jest nieprawidłowy lub stracił ważność.');
+          setError(copy.invalidCode);
           return;
         }
 
@@ -119,7 +124,7 @@ export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
       const result = await signUp.verifications.verifyEmailCode({ code: code.trim() });
 
       if (result.error) {
-        setError('Kod jest nieprawidłowy lub stracił ważność.');
+        setError(copy.invalidCode);
         return;
       }
 
@@ -127,11 +132,11 @@ export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
         await signUp.finalize();
       }
     } catch {
-      setError('Nie udało się zweryfikować kodu. Spróbuj ponownie.');
+      setError(copy.verifyFailed);
     } finally {
       setIsSubmitting(false);
     }
-  }, [code, mode, signIn, signUp]);
+  }, [code, copy, mode, signIn, signUp]);
 
   const resendCode = useCallback(async () => {
     setError(null);
@@ -145,17 +150,17 @@ export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
           : await signUp.verifications.sendEmailCode();
 
       if (result.error) {
-        setError('Nie udało się wysłać nowego kodu.');
+        setError(copy.resendFailed);
         return;
       }
 
-      setMessage('Nowy kod został wysłany.');
+      setMessage(copy.resent);
     } catch {
-      setError('Nie udało się wysłać nowego kodu.');
+      setError(copy.resendFailed);
     } finally {
       setIsSubmitting(false);
     }
-  }, [mode, signIn, signUp]);
+  }, [copy, mode, signIn, signUp]);
 
   const changeEmail = useCallback(() => {
     signIn.reset();
@@ -175,10 +180,10 @@ export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
       {step === 'email' ? (
         <View style={styles.fieldGroup}>
           <Text maxFontSizeMultiplier={1.4} style={styles.label}>
-            Adres e-mail
+            {copy.emailAddress}
           </Text>
           <TextInput
-            accessibilityLabel="Adres e-mail"
+            accessibilityLabel={copy.emailAddress}
             autoCapitalize="none"
             autoComplete="email"
             autoCorrect={false}
@@ -199,10 +204,10 @@ export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
           <View style={styles.codeHeading}>
             <View style={styles.codeCopy}>
               <Text maxFontSizeMultiplier={1.4} style={styles.label}>
-                Kod z e-maila
+                {copy.emailCode}
               </Text>
               <Text maxFontSizeMultiplier={1.5} style={styles.helper}>
-                Wysłaliśmy go na {email}
+                {copy.sentTo(email)}
               </Text>
             </View>
             <Pressable
@@ -213,12 +218,12 @@ export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
               style={({ pressed }) => [styles.textButton, pressed ? styles.pressed : null]}
             >
               <Text maxFontSizeMultiplier={1.4} style={styles.textButtonLabel}>
-                Zmień
+                {copy.change}
               </Text>
             </Pressable>
           </View>
           <TextInput
-            accessibilityLabel="Kod z e-maila"
+            accessibilityLabel={copy.emailCode}
             autoComplete="one-time-code"
             editable={!isSubmitting}
             keyboardType="number-pad"
@@ -262,7 +267,7 @@ export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
           <ActivityIndicator color={colors.onAccent} />
         ) : (
           <Text maxFontSizeMultiplier={1.4} style={styles.primaryButtonLabel}>
-            {step === 'email' ? 'Wyślij kod' : 'Zaloguj się'}
+            {step === 'email' ? copy.sendCode : copy.signIn}
           </Text>
         )}
       </Pressable>
@@ -275,7 +280,7 @@ export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
           style={({ pressed }) => [styles.resendButton, pressed ? styles.pressed : null]}
         >
           <Text maxFontSizeMultiplier={1.4} style={styles.resendLabel}>
-            Wyślij kod ponownie
+            {copy.resendCode}
           </Text>
         </Pressable>
       ) : null}

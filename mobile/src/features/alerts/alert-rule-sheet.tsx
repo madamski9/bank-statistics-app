@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { currentCopy, useCopy } from '@/features/localization/language';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { parseAmountMinor } from '@/features/transactions/manual-transaction';
 import { impactLight, selectionChanged } from '@/haptics';
@@ -19,6 +20,7 @@ import { impactLight, selectionChanged } from '@/haptics';
 import type { AlertPeriod } from './alert-period';
 import type { AlertMetric, AlertRule, AlertScope } from './alert-rule';
 import { scopeLabel } from './alert-message';
+import { alertsCopy } from './alerts-copy';
 
 interface AlertRuleSheetProps {
   scope: AlertScope;
@@ -32,19 +34,11 @@ interface AlertRuleSheetProps {
   onRequestPermission: () => Promise<boolean>;
 }
 
-const metrics: { value: AlertMetric; label: string }[] = [
-  { value: 'expense', label: 'Wydatki' },
-  { value: 'income', label: 'Przychody' },
-  { value: 'netFlow', label: 'Bilans' },
-];
+const metrics: AlertMetric[] = ['expense', 'income', 'netFlow'];
 
 type RepeatingPeriod = Exclude<AlertPeriod, { kind: 'custom' }>['kind'];
 
-const periods: { value: RepeatingPeriod; label: string }[] = [
-  { value: 'week', label: 'Tydzień' },
-  { value: 'month', label: 'Miesiąc' },
-  { value: 'year', label: 'Rok' },
-];
+const periods: RepeatingPeriod[] = ['week', 'month', 'year'];
 
 const approachShares = [0.5, 0.8, 0.9] as const;
 
@@ -57,7 +51,7 @@ const merchantRowGap = 8;
 const visibleMerchantRows = 3;
 
 function amountFromMinor(minor: number): string {
-  return `${Math.trunc(minor / 100)},${String(minor % 100).padStart(2, '0')}`;
+  return `${Math.trunc(minor / 100)}${currentCopy(alertsCopy).decimalSeparator}${String(minor % 100).padStart(2, '0')}`;
 }
 
 function ruleIdentifier(now: Date, random: () => number): string {
@@ -75,6 +69,7 @@ export function AlertRuleSheet({
   onDelete,
   onRequestPermission,
 }: AlertRuleSheetProps) {
+  const copy = useCopy(alertsCopy);
   const insets = useSafeAreaInsets();
   const [metric, setMetric] = useState<AlertMetric>(rule?.metric ?? 'expense');
   const [selectedScope, setSelectedScope] = useState<AlertScope>(scope);
@@ -109,7 +104,7 @@ export function AlertRuleSheet({
     const targetMinor = parseAmountMinor(amount);
 
     if (targetMinor === null || !Number.isSafeInteger(targetMinor)) {
-      setError('Podaj kwotę większą od zera.');
+      setError(copy.enterAmount);
 
       return;
     }
@@ -120,7 +115,7 @@ export function AlertRuleSheet({
     try {
       if (!(await onRequestPermission())) {
         setError(
-          'Bez zgody na powiadomienia nie damy znać o progu. Możesz ją włączyć w Ustawieniach systemu.',
+          copy.permissionDenied,
         );
 
         return;
@@ -149,6 +144,7 @@ export function AlertRuleSheet({
   }, [
     amount,
     approachShare,
+    copy,
     metric,
     missingIncome,
     onRequestPermission,
@@ -171,11 +167,11 @@ export function AlertRuleSheet({
           style={({ pressed }) => [styles.headerAction, pressed ? styles.pressed : null]}
         >
           <Text maxFontSizeMultiplier={1.3} style={styles.headerActionLabel}>
-            Anuluj
+            {copy.cancel}
           </Text>
         </Pressable>
         <Text maxFontSizeMultiplier={1.3} style={styles.title}>
-          {rule === null ? 'Nowy limit' : 'Limit'}
+          {rule === null ? copy.newLimit : copy.limit}
         </Text>
         <Pressable
           accessibilityRole="button"
@@ -192,7 +188,7 @@ export function AlertRuleSheet({
             <ActivityIndicator color={overviewColors.textPrimary} />
           ) : (
             <Text maxFontSizeMultiplier={1.3} style={styles.submitLabel}>
-              Zapisz
+              {copy.save}
             </Text>
           )}
         </Pressable>
@@ -205,13 +201,13 @@ export function AlertRuleSheet({
         {!isScopeLocked && (scope.kind === 'all' || scope.kind === 'merchant') ? (
           <View style={styles.merchantSection}>
             <Text maxFontSizeMultiplier={1.4} style={styles.approachLabel}>
-              Zakres limitu
+              {copy.scopeSection}
             </Text>
             <TextInput
-              accessibilityLabel="Szukaj sklepu"
+              accessibilityLabel={copy.searchShop}
               autoCapitalize="none"
               onChangeText={setMerchantSearch}
-              placeholder="Szukaj w historii transakcji"
+              placeholder={copy.searchPlaceholder}
               placeholderTextColor={overviewColors.textDisabled}
               selectionColor={overviewColors.textPrimary}
               style={styles.merchantSearch}
@@ -226,7 +222,7 @@ export function AlertRuleSheet({
               }}
               style={({ pressed }) => [styles.merchantOption, pressed ? styles.pressed : null]}
             >
-              <Text style={styles.merchantOptionLabel}>Wszystkie wydatki</Text>
+              <Text style={styles.merchantOptionLabel}>{copy.allSpendingOption}</Text>
               {selectedScope.kind === 'all' ? <Text style={styles.selectedMark}>✓</Text> : null}
             </Pressable>
             {visibleMerchants.length > 0 ? (
@@ -259,9 +255,9 @@ export function AlertRuleSheet({
               </ScrollView>
             ) : null}
             {merchants.length === 0 ? (
-              <Text style={styles.note}>Sklepy pojawią się po dodaniu lub przechwyceniu transakcji w PLN.</Text>
+              <Text style={styles.note}>{copy.noMerchants}</Text>
             ) : visibleMerchants.length === 0 ? (
-              <Text style={styles.note}>Nie znaleziono sklepu. Spróbuj innej nazwy.</Text>
+              <Text style={styles.note}>{copy.noMatchingMerchant}</Text>
             ) : null}
           </View>
         ) : (
@@ -272,7 +268,7 @@ export function AlertRuleSheet({
 
         {isScopeLocked ? null : (
           <View style={styles.chips}>
-            {metrics.map((option) => (
+            {metrics.map((value) => ({ value, label: copy.metrics[value] })).map((option) => (
               <Pressable
                 accessibilityRole="button"
                 accessibilityState={{ selected: option.value === metric }}
@@ -304,17 +300,17 @@ export function AlertRuleSheet({
 
         <View style={styles.approach}>
           <Text maxFontSizeMultiplier={1.4} style={styles.approachLabel}>
-            Kwota limitu
+            {copy.amount}
           </Text>
           <View style={styles.amountRow}>
             <TextInput
-              accessibilityLabel="Kwota limitu"
+              accessibilityLabel={copy.amount}
               keyboardType="decimal-pad"
               onChangeText={(next) => {
                 setError(null);
                 setAmount(next);
               }}
-              placeholder="0,00"
+              placeholder={copy.amountPlaceholder}
               placeholderTextColor={overviewColors.textDisabled}
               selectionColor={overviewColors.textPrimary}
               style={styles.amountInput}
@@ -328,10 +324,10 @@ export function AlertRuleSheet({
 
         <View style={styles.approach}>
           <Text maxFontSizeMultiplier={1.4} style={styles.approachLabel}>
-            Okres limitu
+            {copy.period}
           </Text>
           <View style={styles.chips}>
-            {periods.map((option) => (
+            {periods.map((value) => ({ value, label: copy.periodNames[value] })).map((option) => (
               <Pressable
                 accessibilityRole="button"
                 accessibilityState={{ selected: option.value === period }}
@@ -359,9 +355,9 @@ export function AlertRuleSheet({
 
         {metric === 'income' ? (
           <Toggle
-            hint="Damy znać po zakończeniu okresu, jeśli wpływ nie nadejdzie."
+            hint={copy.missingIncomeHint}
             isOn={missingIncome}
-            label="Ostrzeż, gdy wpływ nie nadejdzie"
+            label={copy.missingIncomeLabel}
             onToggle={() => {
               selectionChanged();
               setMissingIncome((current) => !current);
@@ -372,7 +368,7 @@ export function AlertRuleSheet({
         {missingIncome ? null : (
           <View style={styles.approach}>
             <Text maxFontSizeMultiplier={1.4} style={styles.approachLabel}>
-              Uprzedź, gdy wydasz
+              {copy.warnWhen}
             </Text>
             <View style={styles.chips}>
               {[...approachShares, null].map((share) => (
@@ -397,7 +393,7 @@ export function AlertRuleSheet({
                       share === approachShare ? styles.chipLabelActive : null,
                     ]}
                   >
-                    {share === null ? 'Bez uprzedzenia' : `${Math.round(share * 100)}%`}
+                    {share === null ? copy.noWarning : `${Math.round(share * 100)}%`}
                   </Text>
                 </Pressable>
               ))}
@@ -407,7 +403,7 @@ export function AlertRuleSheet({
 
         {isFirstRule && rule === null ? (
           <Text maxFontSizeMultiplier={1.5} style={styles.note}>
-            Zapytamy o zgodę na powiadomienia. Limit sprawdzamy po aktualizacji transakcji w aplikacji.
+            {copy.permissionNote}
           </Text>
         ) : null}
 
@@ -425,7 +421,7 @@ export function AlertRuleSheet({
             style={({ pressed }) => [styles.deleteButton, pressed ? styles.pressed : null]}
           >
             <Text maxFontSizeMultiplier={1.4} style={styles.deleteLabel}>
-              Usuń limit
+              {copy.delete}
             </Text>
           </Pressable>
         ) : null}

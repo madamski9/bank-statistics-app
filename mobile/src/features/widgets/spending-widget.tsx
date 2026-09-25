@@ -32,30 +32,19 @@ function spendingWidgetLayout(
 ) {
   'widget';
 
-  const dark = environment.colorScheme !== 'light';
-  const palette = dark
-    ? {
-        background: '#111B2B',
-        backgroundEnd: '#18283C',
-        surface: '#22334A',
-        primary: '#F4F7FC',
-        secondary: '#AFBFD2',
-        accent: '#8BBDFF',
-        calm: '#75DDB9',
-        caution: '#FFD08A',
-        over: '#FFA0AC',
-      }
-    : {
-        background: '#F8FAFF',
-        backgroundEnd: '#EAF1FC',
-        surface: '#E0EAF8',
-        primary: '#172B46',
-        secondary: '#52647C',
-        accent: '#245EB2',
-        calm: '#176E53',
-        caution: '#895000',
-        over: '#AF304C',
-      };
+  const palette = {
+    background: '#000000',
+    backgroundEnd: '#1A1A1D',
+    surface: '#1C1C1F',
+    primary: '#FFFFFF',
+    secondary: '#8E8E93',
+    spending: '#FF5C8A',
+    income: '#3DE8A0',
+    calm: '#34E39B',
+    caution: '#FFC46B',
+    over: '#FF5C7A',
+  };
+  const labels = props.labels;
   const family = environment.widgetFamily;
   const accessory = family.startsWith('accessory');
   const wide = family === 'systemMedium' || family === 'systemLarge';
@@ -74,8 +63,8 @@ function spendingWidgetLayout(
     accessory ? '#00000000' : {
       type: 'linearGradient',
       colors: [palette.background, palette.backgroundEnd],
-      startPoint: { x: 0, y: 0 },
-      endPoint: { x: 1, y: 1 },
+      startPoint: { x: 0.2, y: 0 },
+      endPoint: { x: 0.8, y: 1 },
     },
     'widget',
   );
@@ -107,7 +96,11 @@ function spendingWidgetLayout(
     ]} />
   );
 
-  const header = (title: string, symbol: 'chart.bar.fill' | 'gauge.with.dots.needle.67percent' | 'slider.horizontal.3' | 'bag.fill', color = palette.accent) => (
+  const header = (
+    title: string,
+    symbol: 'chart.bar.fill' | 'gauge.with.dots.needle.67percent' | 'slider.horizontal.3' | 'bag.fill',
+    color = palette.spending,
+  ) => (
     <HStack spacing={6}>
       <Image systemName={symbol} size={13} color={color} modifiers={[accessibilityHidden(true)]} />
       <Text modifiers={[font({ size: 12, weight: 'semibold' }), foregroundStyle(color), lineLimit(1), minimumScaleFactor(0.85)]}>
@@ -141,7 +134,7 @@ function spendingWidgetLayout(
         {amount(`${Math.round(limit.share * 100)}%`, 12, toneColor(limit.tone))}
       </HStack>
       {progress(limit.share, toneColor(limit.tone))}
-      {caption(`${limit.spentLabel} z ${limit.targetLabel}`)}
+      {caption(limit.spentOfTargetLabel)}
     </VStack>
   );
 
@@ -149,7 +142,7 @@ function spendingWidgetLayout(
     <HStack key={shop.name} spacing={8}>
       <Text modifiers={[
         font({ size: 11, weight: 'semibold', design: 'rounded' }),
-        foregroundStyle(palette.accent),
+        foregroundStyle(palette.spending),
         frame({ width: 22, height: 26 }),
         background(palette.surface),
         cornerRadius(7),
@@ -161,10 +154,10 @@ function spendingWidgetLayout(
         <Text modifiers={[font({ size: wide ? 13 : 12, weight: 'medium' }), foregroundStyle(palette.primary), lineLimit(1)]}>
           {shop.name}
         </Text>
-        {wide ? null : amount(shop.amountLabel, 12, palette.secondary)}
+        {wide ? null : amount(shop.amountLabel, 12, palette.spending)}
       </VStack>
       <Spacer minLength={0} />
-      {wide ? amount(shop.amountLabel, 13) : null}
+      {wide ? amount(shop.amountLabel, 13, palette.spending) : null}
     </HStack>
   );
 
@@ -178,7 +171,7 @@ function spendingWidgetLayout(
       );
     }
     if (props.status !== 'ready' || newMonth) {
-      return <Text modifiers={[container, ...opensApp]}>Otwórz BankStats</Text>;
+      return <Text modifiers={[container, ...opensApp]}>{labels.openApp}</Text>;
     }
     if (family === 'accessoryInline') {
       return (
@@ -189,7 +182,7 @@ function spendingWidgetLayout(
     }
     return (
       <VStack alignment="leading" spacing={2} modifiers={[container, ...opensApp]}>
-        <Text modifiers={[font({ size: 12, weight: 'medium' }), lineLimit(1)]}>{`Wydatki · ${props.monthLabel}`}</Text>
+        <Text modifiers={[font({ size: 12, weight: 'medium' }), lineLimit(1)]}>{`${labels.spending} · ${props.monthLabel}`}</Text>
         <Text modifiers={[font({ size: 22, weight: 'bold', design: 'rounded' }), monospacedDigit(), lineLimit(1), minimumScaleFactor(0.6)]}>
           {props.expenseLabel}
         </Text>
@@ -200,80 +193,81 @@ function spendingWidgetLayout(
 
   const month = () => (
     <VStack alignment="leading" spacing={4}>
-      {header(wide ? 'Wydatki' : props.monthLabel, 'chart.bar.fill')}
+      {header(wide ? labels.spending : props.monthLabel, 'chart.bar.fill')}
       <Spacer minLength={0} />
       <HStack alignment="center" spacing={16}>
         <VStack alignment="leading" spacing={4} modifiers={[frame({ maxWidth: 10_000, alignment: 'leading' })]}>
-          {caption('W tym miesiącu')}
-          {amount(props.expenseLabel, wide ? 36 : 30)}
+          {caption(labels.thisMonth)}
+          {amount(props.expenseLabel, wide ? 36 : 30, palette.spending)}
           {caption(props.countLabel)}
         </VStack>
         {wide ? (
           <VStack alignment="leading" spacing={5} modifiers={[
             padding({ all: 12 }), background(palette.surface), cornerRadius(14),
           ]}>
-            <Image systemName="calendar" size={17} color={palette.accent} modifiers={[accessibilityHidden(true)]} />
-            {caption('Średnio dziennie')}
-            {amount(props.dailyAmountLabel ?? props.dailyLabel, 19, palette.accent)}
+            {caption(labels.income)}
+            {amount(props.incomeLabel, 19, palette.income)}
+            {caption(labels.dailyAverage)}
+            {amount(props.dailyAmountLabel ?? props.dailyLabel, 15)}
           </VStack>
         ) : null}
       </HStack>
       <Spacer minLength={0} />
-      {caption(wide ? `Stan na ${props.updatedLabel}` : props.dailyLabel)}
+      {caption(wide ? labels.asOf : props.dailyLabel)}
     </VStack>
   );
 
   const watch = () => (
     <VStack alignment="leading" spacing={4}>
-      {header('Najbliżej limitu', 'gauge.with.dots.needle.67percent')}
+      {header(labels.closestLimit, 'gauge.with.dots.needle.67percent')}
       {urgent ? (
         <VStack alignment="leading" spacing={4}>
           <Spacer minLength={0} />
           {caption(urgent.name, palette.primary)}
-          {caption(urgent.tone === 'over' ? 'Ponad limit' : 'Do wykorzystania', toneColor(urgent.tone))}
+          {caption(urgent.tone === 'over' ? labels.overLimit : labels.available, toneColor(urgent.tone))}
           {amount(urgent.remainingAmountLabel ?? urgent.remainingLabel, wide ? 32 : 28, toneColor(urgent.tone))}
           {progress(urgent.share, toneColor(urgent.tone))}
-          {caption(`${urgent.spentLabel} z ${urgent.targetLabel}`)}
+          {caption(urgent.spentOfTargetLabel)}
           <Spacer minLength={0} />
           {wide ? caption(urgent.daysLeftLabel) : null}
         </VStack>
-      ) : empty('Spokojnie, bez limitów', 'Dodaj limit w aplikacji, żeby śledzić wydatki.')}
+      ) : empty(labels.noLimitsTitle, labels.noLimitsDetail)}
     </VStack>
   );
 
   const limitList = () => (
     <VStack alignment="leading" spacing={8}>
-      {header('Twoje limity', 'slider.horizontal.3')}
+      {header(labels.yourLimits, 'slider.horizontal.3')}
       {limits.length > 0 ? (
         <VStack alignment="leading" spacing={8}>
           <Spacer minLength={0} />
           {limits.slice(0, 2).map(limitRow)}
           <Spacer minLength={0} />
         </VStack>
-      ) : empty('Twój plan wydatków', 'Ustaw pierwszy limit w aplikacji.')}
+      ) : empty(labels.noLimitListTitle, labels.noLimitListDetail)}
     </VStack>
   );
 
   const shopList = () => (
     <VStack alignment="leading" spacing={8}>
-      {header(wide ? 'Najwięcej w sklepach' : 'Sklepy', 'bag.fill')}
+      {header(wide ? labels.shopsWide : labels.shopsShort, 'bag.fill')}
       {shops.length > 0 ? (
         <VStack alignment="leading" spacing={wide ? 8 : 4}>
           {shops.slice(0, 3).map(shopRow)}
           <Spacer minLength={0} />
         </VStack>
-      ) : empty('Jeszcze bez zakupów', 'Pierwsza płatność pojawi się tutaj automatycznie.')}
+      ) : empty(labels.noShopsTitle, labels.noShopsDetail)}
     </VStack>
   );
 
   const content = props.status === 'signedOut'
-    ? empty('Twoje wydatki pod ręką', 'Zaloguj się w BankStats.')
+    ? empty(labels.signedOutTitle, labels.signedOutDetail)
     : props.status === 'locked'
-      ? empty('Widżety w Premium', 'Odblokuj BankStats Premium w aplikacji.')
+      ? empty(labels.lockedTitle, labels.lockedDetail)
     : props.status !== 'ready'
-      ? empty('Witaj w BankStats', 'Otwórz aplikację, żeby włączyć widżet.')
+      ? empty(labels.welcomeTitle, labels.welcomeDetail)
       : newMonth
-        ? empty('Nowy miesiąc', 'Otwórz aplikację lub poczekaj na pierwszą transakcję.')
+        ? empty(labels.newMonthTitle, labels.newMonthDetail)
         : screen === 'watch'
           ? watch()
           : screen === 'limits'
@@ -294,7 +288,7 @@ function spendingWidgetLayout(
         </VStack>
         <VStack spacing={6}>
           <Image systemName="lock.fill" size={20} color={palette.primary} modifiers={[accessibilityHidden(true)]} />
-          {caption('Dotknij, aby odsłonić', palette.primary)}
+          {caption(labels.tapToReveal, palette.primary)}
         </VStack>
       </ZStack>
     );

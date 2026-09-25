@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { impactLight, selectionChanged } from '@/haptics';
+import { useCopy } from '@/features/localization/language';
 import { overviewColors } from '@/features/spending-overview/overview-theme';
 
 import {
@@ -9,6 +10,7 @@ import {
   maximumAccountNameLength,
   type FinancialAccount,
 } from './financial-account';
+import { financialAccountsCopy } from './financial-accounts-copy';
 
 interface AccountPickerProps {
   accounts: FinancialAccount[];
@@ -18,6 +20,7 @@ interface AccountPickerProps {
 }
 
 export function AccountPicker({ accounts, selectedId, onSelect, onCreate }: AccountPickerProps) {
+  const copy = useCopy(financialAccountsCopy);
   const [newName, setNewName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -43,7 +46,7 @@ export function AccountPicker({ accounts, selectedId, onSelect, onCreate }: Acco
       setNewName(null);
       setError(null);
     } catch {
-      setError('Nie udało się dodać konta. Spróbuj ponownie.');
+      setError(copy.addFailed);
     } finally {
       setIsCreating(false);
     }
@@ -52,7 +55,7 @@ export function AccountPicker({ accounts, selectedId, onSelect, onCreate }: Acco
   return (
     <View style={styles.section}>
       <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
-        Konto
+        {copy.account}
       </Text>
       <View style={styles.chips}>
         {accounts.map((account) => {
@@ -92,7 +95,7 @@ export function AccountPicker({ accounts, selectedId, onSelect, onCreate }: Acco
             style={({ pressed }) => [styles.chip, pressed ? styles.pressed : null]}
           >
             <Text maxFontSizeMultiplier={1.3} style={styles.chipLabel}>
-              + Nowe konto
+              {copy.newAccount}
             </Text>
           </Pressable>
         ) : null}
@@ -101,7 +104,7 @@ export function AccountPicker({ accounts, selectedId, onSelect, onCreate }: Acco
         <View style={styles.card}>
           <View style={styles.field}>
             <TextInput
-              accessibilityLabel="Nazwa nowego konta"
+              accessibilityLabel={copy.newAccountName}
               autoFocus
               maxLength={maximumAccountNameLength}
               onChangeText={(value) => {
@@ -109,7 +112,7 @@ export function AccountPicker({ accounts, selectedId, onSelect, onCreate }: Acco
                 setNewName(value);
               }}
               onSubmitEditing={() => void handleCreate()}
-              placeholder="Na przykład Oszczędnościowe"
+              placeholder={copy.namePlaceholder}
               placeholderTextColor={overviewColors.textDisabled}
               returnKeyType="done"
               selectionColor={overviewColors.textPrimary}
@@ -127,7 +130,7 @@ export function AccountPicker({ accounts, selectedId, onSelect, onCreate }: Acco
                 <ActivityIndicator color={overviewColors.textPrimary} />
               ) : (
                 <Text maxFontSizeMultiplier={1.3} style={styles.addLabel}>
-                  Dodaj
+                  {copy.add}
                 </Text>
               )}
             </Pressable>

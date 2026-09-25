@@ -5,6 +5,9 @@ import {
   withGeneralAccounts,
   type FinancialAccount,
 } from '@/features/financial-accounts/financial-account';
+import { currentCopy } from '@/features/localization/language';
+
+import { dataExportCopy } from './data-export-copy';
 
 export type ExportFormat = 'csv' | 'json';
 
@@ -55,12 +58,6 @@ const csvColumns: (keyof ExportedTransaction)[] = [
   'id',
 ];
 
-const exportNotes = [
-  'Kwoty są dodatnie; kierunek (expense - wydatek, income - wpływ) jest w kolumnie direction.',
-  'amountMinor to kwota w groszach lub centach waluty z kolumny currency.',
-  'Transakcje odczytane z powiadomień banku (origin: capture) mogą nie obejmować wszystkich operacji na koncie.',
-  'Eksport nie zawiera treści powiadomień bankowych.',
-];
 
 function decimalAmount(minor: number): string {
   const units = Math.trunc(minor / 100);
@@ -113,7 +110,7 @@ export function buildTransactionExport(
     format: 'bankstats-transactions',
     version: 1,
     exportedAt: now.toISOString(),
-    notes: exportNotes,
+    notes: currentCopy(dataExportCopy).notes,
     accounts: withGeneralAccounts(accounts).map(({ id, name, bank, isGeneral }) => ({
       id,
       name,

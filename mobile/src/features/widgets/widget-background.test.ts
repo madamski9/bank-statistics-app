@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { runInNewContext } from 'node:vm';
 
+import { setCurrentLanguage } from '@/features/localization/language';
+
 import { buildWidgetCalculator } from './build-calculator.cjs';
 import { snapshot, timeline, type WidgetBackgroundConfiguration } from './widget-background';
 
@@ -44,7 +46,10 @@ function record(id: string, amountMinor = 10_000): IngestionRecord {
 }
 
 const directory = mkdtempSync(path.join(tmpdir(), 'bankstats-widget-test-'));
-afterAll(() => rmSync(directory, { recursive: true, force: true }));
+afterAll(() => {
+  rmSync(directory, { recursive: true, force: true });
+  setCurrentLanguage('pl');
+});
 
 describe('background widget snapshots', () => {
   test('recalculates amounts, category limits and shops after captures and edits', () => {
@@ -128,6 +133,21 @@ describe('background widget snapshots', () => {
     const expired = timeline(revealedConfiguration, [record('new')], until);
     expect(expired).toHaveLength(1);
     expect(expired[0].props.isBlurred).toBe(true);
+  });
+
+  test('builds every widget text in the language the app passes in', () => {
+    const polish = snapshot({ ...configuration, language: 'pl' }, [record('one')], reference);
+    const english = snapshot({ ...configuration, language: 'en' }, [record('one')], reference);
+    setCurrentLanguage('pl');
+
+    expect(polish.monthLabel).toBe('Wrzesień');
+    expect(polish.labels.thisMonth).toBe('W tym miesiącu');
+    expect(english.monthLabel).toBe('September');
+    expect(english.countLabel).toBe('1 payment');
+    expect(english.labels.thisMonth).toBe('This month');
+    expect(english.labels.asOf).toBe('As of Sep 25, 12:00');
+    expect(polish.labels.asOf).toBe('Stan na 25.09, 12:00');
+    expect(english.limits[0].spentOfTargetLabel).toBe('100\u00A0zł of 200\u00A0zł');
   });
 
   test('the standalone native calculator runs without React Native and matches the app', () => {

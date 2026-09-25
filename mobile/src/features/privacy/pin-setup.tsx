@@ -2,7 +2,9 @@ import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { overviewColors } from '@/features/spending-overview/overview-theme';
+import { useCopy } from '@/features/localization/language';
 
+import { privacyCopy } from './privacy-copy';
 import { pinLength } from './pin';
 import { PinDots, PinPad } from './pin-pad';
 
@@ -11,6 +13,7 @@ interface PinSetupProps {
 }
 
 export function PinSetup({ onComplete }: PinSetupProps) {
+  const copy = useCopy(privacyCopy);
   const [firstPin, setFirstPin] = useState<string | null>(null);
   const [pin, setPin] = useState('');
   const [message, setMessage] = useState<string | null>(null);
@@ -37,7 +40,7 @@ export function PinSetup({ onComplete }: PinSetupProps) {
         setFirstPin(null);
         setPin('');
         setHasError(true);
-        setMessage('Kody się różnią. Ustaw PIN jeszcze raz.');
+        setMessage(copy.pinsDiffer);
         return;
       }
 
@@ -49,18 +52,18 @@ export function PinSetup({ onComplete }: PinSetupProps) {
         setFirstPin(null);
         setPin('');
         setHasError(true);
-        setMessage('Nie udało się zapisać kodu PIN. Spróbuj ponownie.');
+        setMessage(copy.pinSaveFailed);
       } finally {
         setIsSaving(false);
       }
     },
-    [firstPin, onComplete],
+    [copy, firstPin, onComplete],
   );
 
   return (
     <View style={styles.setup}>
       <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={1.4} style={styles.prompt}>
-        {firstPin === null ? 'Wpisz nowy 4-cyfrowy PIN' : 'Powtórz PIN'}
+        {firstPin === null ? copy.newPin : copy.repeatPin}
       </Text>
       <PinDots filled={pin.length} hasError={hasError} />
       <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={1.5} style={styles.message}>

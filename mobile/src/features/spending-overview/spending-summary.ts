@@ -2,12 +2,14 @@ import type { IngestionRecord } from '@bankstats/ingestion-native';
 
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
 import { classifyTransaction } from '@/features/classification/classify-transaction';
+import { currentCopy } from '@/features/localization/language';
 import {
   partyGroupReference,
   type PartyGroupReference,
 } from '@/features/classification/spending-groups';
 
 import { isWithinWindow, windowDays, type PeriodWindow } from './periods';
+import { spendingOverviewCopy } from './spending-overview-copy';
 
 export type SpendingSourceKind = NonNullable<IngestionRecord['transactionType']> | 'other';
 
@@ -38,18 +40,6 @@ export interface SpendingSummary {
 }
 
 const maximumSources = 6;
-
-const bankNames: Record<IngestionRecord['bank'], string> = {
-  millennium: 'Millennium',
-  manual: 'Wpis ręczny',
-};
-
-const transactionTypeLabels: Record<SpendingSourceKind, string> = {
-  cardPayment: 'Płatności kartą',
-  outgoingTransfer: 'Przelewy wychodzące',
-  incomingTransfer: 'Przelewy przychodzące',
-  other: 'Inne',
-};
 
 function dominantCurrency(records: IngestionRecord[]): string {
   const countsByCurrency = new Map<string, number>();
@@ -88,7 +78,9 @@ function sourceParty(
 }
 
 function accountLabel(record: IngestionRecord): string {
-  return `${bankNames[record.bank]} · ${record.accountName ?? 'Konto główne'}`;
+  const copy = currentCopy(spendingOverviewCopy);
+
+  return `${copy.banks[record.bank]} · ${record.accountName ?? copy.mainAccount}`;
 }
 
 function groupSources(
@@ -106,7 +98,7 @@ function groupSources(
     if (existing === undefined) {
       sourcesByKey.set(key, {
         key,
-        label: name ?? transactionTypeLabels[sourceKind(record)],
+        label: name ?? currentCopy(spendingOverviewCopy).sourceKinds[sourceKind(record)],
         kind: sourceKind(record),
         amountMinor: record.amountMinor,
         share: 0,
@@ -129,7 +121,7 @@ function groupSources(
   if (remainder.length > 0) {
     sources.push({
       key: 'remainder',
-      label: 'Pozostałe',
+      label: currentCopy(spendingOverviewCopy).remainder,
       kind: 'other',
       amountMinor: remainder.reduce((sum, source) => sum + source.amountMinor, 0),
       share: 0,

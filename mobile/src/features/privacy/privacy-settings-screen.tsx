@@ -3,13 +3,15 @@ import { useCallback, useState, type ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useCopy } from '@/features/localization/language';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 
 import { biometricLabels } from './biometrics';
 import { LockScreen } from './lock-screen';
 import { PinSetup } from './pin-setup';
 import { usePrivacy } from './privacy-provider';
-import { lockTimeoutLabels, lockTimeouts, type PrivacySettings } from './privacy-settings';
+import { privacyCopy } from './privacy-copy';
+import { lockTimeouts, type PrivacySettings } from './privacy-settings';
 
 interface PrivacySettingsScreenProps {
   onClose: () => void;
@@ -20,6 +22,7 @@ type PendingStep =
   | { kind: 'setPin'; then: () => Promise<void> | void };
 
 export function PrivacySettingsScreen({ onClose }: PrivacySettingsScreenProps) {
+  const copy = useCopy(privacyCopy);
   const insets = useSafeAreaInsets();
   const { settings, hasPin, biometric, updateSettings, changePin } = usePrivacy();
   const [pending, setPending] = useState<PendingStep | null>(null);
@@ -33,10 +36,10 @@ export function PrivacySettingsScreen({ onClose }: PrivacySettingsScreenProps) {
       try {
         await updateSettings(patch);
       } catch {
-        setError('Nie udało się zapisać ustawień. Spróbuj ponownie.');
+        setError(copy.saveFailed);
       }
     },
-    [updateSettings],
+    [copy, updateSettings],
   );
 
   const withPin = useCallback(
@@ -81,13 +84,13 @@ export function PrivacySettingsScreen({ onClose }: PrivacySettingsScreenProps) {
   };
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top + 14 }]}>
+    <View style={[styles.screen, styles.sheetTop]}>
       <View style={styles.header}>
         <Text accessibilityRole="header" maxFontSizeMultiplier={1.35} style={styles.title}>
-          Prywatność
+          {copy.title}
         </Text>
         <Pressable
-          accessibilityLabel="Zamknij ustawienia prywatności"
+          accessibilityLabel={copy.closeLabel}
           accessibilityRole="button"
           hitSlop={8}
           onPress={onClose}
@@ -105,14 +108,14 @@ export function PrivacySettingsScreen({ onClose }: PrivacySettingsScreenProps) {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Section label="BLOKADA APLIKACJI">
+        <Section label={copy.lockSection}>
           <ToggleRow
             description={
               biometricName === null
-                ? 'Przy otwieraniu aplikacji zapytamy o kod PIN.'
-                : `Przy otwieraniu aplikacji użyjesz ${biometricName}, a gdy się nie uda - kodu PIN.`
+                ? copy.lockWithPinDescription
+                : copy.lockWithBiometricDescription(biometricName)
             }
-            label={biometricName === null ? 'Blokuj kodem PIN' : `Blokuj przez ${biometricName}`}
+            label={biometricName === null ? copy.lockWithPin : copy.lockWithBiometric(biometricName)}
             onChange={toggleLock}
             value={settings.isLockEnabled}
           />
@@ -126,7 +129,7 @@ export function PrivacySettingsScreen({ onClose }: PrivacySettingsScreenProps) {
                   style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
                 >
                   <Text maxFontSizeMultiplier={1.4} style={styles.rowLabel}>
-                    {lockTimeoutLabels[timeout]}
+                    {copy.lockTimeouts[timeout]}
                   </Text>
                   {settings.lockTimeout === timeout ? (
                     <SymbolView
@@ -144,7 +147,7 @@ export function PrivacySettingsScreen({ onClose }: PrivacySettingsScreenProps) {
             style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
           >
             <Text maxFontSizeMultiplier={1.4} style={styles.rowLabel}>
-              {hasPin ? 'Zmień kod PIN' : 'Ustaw kod PIN'}
+              {hasPin ? copy.changePin : copy.setPin}
             </Text>
             <SymbolView
               accessibilityElementsHidden
@@ -156,20 +159,20 @@ export function PrivacySettingsScreen({ onClose }: PrivacySettingsScreenProps) {
           </Pressable>
         </Section>
 
-        <Section label="PRYWATNOŚĆ">
+        <Section label={copy.privacySection}>
           <ToggleRow
-            description="Kwoty w aplikacji zamienią się w kropki. Przydaje się, gdy ktoś patrzy Ci przez ramię."
-            label="Tryb prywatny"
+            description={copy.privacyModeDescription}
+            label={copy.privacyMode}
             onChange={(isEnabled) => void save({ isPrivacyModeEnabled: isEnabled })}
             value={settings.isPrivacyModeEnabled}
           />
           <ToggleRow
             description={
               biometricName === null
-                ? 'Widżet będzie rozmyty. Dotknij go i wpisz PIN, żeby go odsłonić na 5 minut.'
-                : `Widżet będzie rozmyty. Dotknij go i użyj ${biometricName}, żeby go odsłonić na 5 minut.`
+                ? copy.blurWidgetPinDescription
+                : copy.blurWidgetBiometricDescription(biometricName)
             }
-            label="Rozmyj widżet"
+            label={copy.blurWidget}
             onChange={toggleWidgetBlur}
             value={settings.isWidgetBlurred}
           />
@@ -192,9 +195,9 @@ export function PrivacySettingsScreen({ onClose }: PrivacySettingsScreenProps) {
           <LockScreen
             onCancel={() => setPending(null)}
             onUnlocked={() => void finishPending()}
-            promptMessage="Potwierdź zmianę ustawień"
-            subtitle="Potwierdź, że to Ty, zanim zmienisz zabezpieczenia."
-            title="Potwierdź tożsamość"
+            promptMessage={copy.confirmPrompt}
+            subtitle={copy.confirmSubtitle}
+            title={copy.confirmTitle}
           />
         ) : pending?.kind === 'setPin' ? (
           <View style={[styles.pinSheet, { paddingTop: insets.top + 14, paddingBottom: insets.bottom + 24 }]}>
@@ -205,7 +208,7 @@ export function PrivacySettingsScreen({ onClose }: PrivacySettingsScreenProps) {
               style={({ pressed }) => [styles.cancel, pressed ? styles.pressed : null]}
             >
               <Text maxFontSizeMultiplier={1.3} style={styles.cancelLabel}>
-                Anuluj
+                {copy.cancel}
               </Text>
             </Pressable>
             <PinSetup
@@ -265,6 +268,9 @@ function ToggleRow({
 }
 
 const styles = StyleSheet.create({
+  sheetTop: {
+    paddingTop: 14,
+  },
   screen: {
     flex: 1,
     backgroundColor: overviewColors.background,

@@ -3,13 +3,17 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useCopy } from '@/features/localization/language';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
+
+import { foreignDeviceCopy } from './sync-copy';
 
 interface ForeignDeviceScreenProps {
   onTakeOver: () => Promise<void>;
 }
 
 export function ForeignDeviceScreen({ onTakeOver }: ForeignDeviceScreenProps) {
+  const copy = useCopy(foreignDeviceCopy);
   const insets = useSafeAreaInsets();
   const { signOut } = useClerk();
   const [isBusy, setIsBusy] = useState(false);
@@ -29,20 +33,15 @@ export function ForeignDeviceScreen({ onTakeOver }: ForeignDeviceScreenProps) {
   }, []);
 
   const confirmTakeOver = useCallback(() => {
-    Alert.alert(
-      'Usunąć dane z tego telefonu?',
-      'Transakcje, konta, reguły i limity poprzedniej osoby znikną z tego telefonu. To, co zdążyło się zsynchronizować, zostaje na jej koncie.',
-      [
-        { text: 'Anuluj', style: 'cancel' },
-        {
-          text: 'Usuń i kontynuuj',
-          style: 'destructive',
-          onPress: () =>
-            void run(onTakeOver, 'Nie udało się usunąć danych z telefonu. Spróbuj ponownie.'),
-        },
-      ],
-    );
-  }, [onTakeOver, run]);
+    Alert.alert(copy.confirmTitle, copy.confirmBody, [
+      { text: copy.cancel, style: 'cancel' },
+      {
+        text: copy.removeAndContinue,
+        style: 'destructive',
+        onPress: () => void run(onTakeOver, copy.removeFailed),
+      },
+    ]);
+  }, [copy, onTakeOver, run]);
 
   return (
     <View
@@ -53,15 +52,13 @@ export function ForeignDeviceScreen({ onTakeOver }: ForeignDeviceScreenProps) {
     >
       <View style={styles.copy}>
         <Text accessibilityRole="header" maxFontSizeMultiplier={1.35} style={styles.title}>
-          Ten telefon należy do innego konta
+          {copy.title}
         </Text>
         <Text maxFontSizeMultiplier={1.5} style={styles.body}>
-          Na tym telefonie są dane osoby, która wcześniej używała tu BankStats. Nie pokażemy ich i nie
-          wyślemy na Twoje konto.
+          {copy.ownerBody}
         </Text>
         <Text maxFontSizeMultiplier={1.5} style={styles.body}>
-          Wyloguj się, żeby ta osoba mogła wrócić, albo usuń jej dane z telefonu i korzystaj z niego
-          na swoim koncie.
+          {copy.choiceBody}
         </Text>
       </View>
 
@@ -75,14 +72,14 @@ export function ForeignDeviceScreen({ onTakeOver }: ForeignDeviceScreenProps) {
         <Pressable
           accessibilityRole="button"
           disabled={isBusy}
-          onPress={() => void run(signOut, 'Nie udało się wylogować. Spróbuj ponownie.')}
+          onPress={() => void run(signOut, copy.signOutFailed)}
           style={({ pressed }) => [styles.primary, pressed ? styles.pressed : null]}
         >
           {isBusy ? (
             <ActivityIndicator color={overviewColors.textPrimary} />
           ) : (
             <Text maxFontSizeMultiplier={1.4} style={styles.primaryLabel}>
-              Wyloguj się
+              {copy.signOut}
             </Text>
           )}
         </Pressable>
@@ -93,7 +90,7 @@ export function ForeignDeviceScreen({ onTakeOver }: ForeignDeviceScreenProps) {
           style={({ pressed }) => [styles.destructive, pressed ? styles.pressed : null]}
         >
           <Text maxFontSizeMultiplier={1.4} style={styles.destructiveLabel}>
-            Usuń dane z telefonu i kontynuuj
+            {copy.removeData}
           </Text>
         </Pressable>
       </View>

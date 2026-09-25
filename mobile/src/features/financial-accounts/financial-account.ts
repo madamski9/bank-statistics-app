@@ -1,3 +1,7 @@
+import { currentCopy } from '@/features/localization/language';
+
+import { financialAccountsCopy } from './financial-accounts-copy';
+
 const financialAccountBanks = ['manual', 'millennium'] as const;
 
 export type FinancialAccountBank = (typeof financialAccountBanks)[number];
@@ -21,14 +25,30 @@ export const generalManualAccountId = 'general-manual';
 
 export const maximumAccountNameLength = 60;
 
-const generalAccounts: FinancialAccount[] = [
-  { id: generalManualAccountId, bank: 'manual', name: 'Gotówka i inne', isGeneral: true },
-  { id: 'general-millennium', bank: 'millennium', name: 'Millennium', isGeneral: true },
-];
+function generalAccounts(): FinancialAccount[] {
+  return [
+    {
+      id: generalManualAccountId,
+      bank: 'manual',
+      name: currentCopy(financialAccountsCopy).cashAndOther,
+      isGeneral: true,
+    },
+    { id: 'general-millennium', bank: 'millennium', name: 'Millennium', isGeneral: true },
+  ];
+}
 
 export function withGeneralAccounts(stored: FinancialAccount[]): FinancialAccount[] {
   const storedById = new Map(stored.map((account) => [account.id, account]));
-  const general = generalAccounts.map((account) => storedById.get(account.id) ?? account);
+  const defaultNames = new Set(Object.values(financialAccountsCopy).map((copy) => copy.cashAndOther));
+  const general = generalAccounts().map((account) => {
+    const stored = storedById.get(account.id);
+
+    if (stored === undefined) {
+      return account;
+    }
+
+    return defaultNames.has(stored.name) ? { ...stored, name: account.name } : stored;
+  });
   const added = stored
     .filter((account) => !account.isGeneral)
     .sort((left, right) => left.name.localeCompare(right.name, 'pl'));
@@ -53,17 +73,17 @@ export function accountNameError(name: string, existing: FinancialAccount[]): st
   const trimmed = name.trim();
 
   if (trimmed === '') {
-    return 'Podaj nazwę konta.';
+    return currentCopy(financialAccountsCopy).enterName;
   }
 
   if (trimmed.length > maximumAccountNameLength) {
-    return `Nazwa konta może mieć najwyżej ${maximumAccountNameLength} znaków.`;
+    return currentCopy(financialAccountsCopy).nameTooLong(maximumAccountNameLength);
   }
 
   const lowered = trimmed.toLocaleLowerCase('pl');
 
   if (existing.some((account) => account.name.toLocaleLowerCase('pl') === lowered)) {
-    return 'Masz już konto o tej nazwie.';
+    return currentCopy(financialAccountsCopy).duplicateName;
   }
 
   return null;

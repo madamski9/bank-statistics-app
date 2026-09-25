@@ -1,42 +1,65 @@
+import { currentCopy, defineCopy, getCurrentLanguage, type Language } from '@/features/localization/language';
+import { englishPlural, polishPlural } from '@/features/localization/plural';
+
 const nonBreakingSpace = ' ';
 const minusSign = '−';
+
+const numberStyles: Record<Language, { decimal: string; group: string; millions: string }> = {
+  pl: { decimal: ',', group: nonBreakingSpace, millions: 'mln' },
+  en: { decimal: '.', group: ',', millions: 'M' },
+};
+
+const countCopy = defineCopy({
+  pl: {
+    transactions: (count: number) =>
+      `${count} ${polishPlural(count, 'transakcja', 'transakcje', 'transakcji')}`,
+  },
+  en: {
+    transactions: (count: number) => `${count} ${englishPlural(count, 'transaction', 'transactions')}`,
+  },
+});
+
+function currencySuffix(currency: string): string {
+  return currency === 'PLN' ? 'zł' : currency;
+}
+
+function groupDigits(units: number): string {
+  return String(units).replace(/\B(?=(\d{3})+(?!\d))/g, numberStyles[getCurrentLanguage()].group);
+}
 
 export function formatAmount(minor: number, currency: string): string {
   const units = Math.trunc(Math.abs(minor) / 100);
   const fraction = Math.abs(minor % 100);
-  const groupedUnits = String(units).replace(/\B(?=(\d{3})+(?!\d))/g, nonBreakingSpace);
-  const suffix = currency === 'PLN' ? 'zł' : currency;
+  const { decimal } = numberStyles[getCurrentLanguage()];
 
-  return `${groupedUnits},${String(fraction).padStart(2, '0')}${nonBreakingSpace}${suffix}`;
+  return `${groupDigits(units)}${decimal}${String(fraction).padStart(2, '0')}${nonBreakingSpace}${currencySuffix(currency)}`;
 }
 
 export function formatSignedAmount(minor: number, currency: string): string {
   return `${minor < 0 ? minusSign : '+'}${formatAmount(minor, currency)}`;
 }
 
-/** Whole units only, so the amount still fits inside the smaller bubbles. */
 export function formatCompactAmount(minor: number, currency: string): string {
-  const suffix = currency === 'PLN' ? 'zł' : currency;
   const units = Math.round(Math.abs(minor) / 100);
+  const { decimal, millions } = numberStyles[getCurrentLanguage()];
 
   if (units >= 1_000_000) {
-    const millions = (units / 1_000_000).toFixed(1).replace('.', ',');
+    const scaled = (units / 1_000_000).toFixed(1).replace('.', decimal);
 
-    return `${millions}${nonBreakingSpace}mln${nonBreakingSpace}${suffix}`;
+    return `${scaled}${nonBreakingSpace}${millions}${nonBreakingSpace}${currencySuffix(currency)}`;
   }
 
-  const groupedUnits = String(units).replace(/\B(?=(\d{3})+(?!\d))/g, nonBreakingSpace);
-
-  return `${groupedUnits}${nonBreakingSpace}${suffix}`;
+  return `${groupDigits(units)}${nonBreakingSpace}${currencySuffix(currency)}`;
 }
 
 export function formatSignedCompactAmount(minor: number, currency: string): string {
   return `${minor < 0 ? minusSign : '+'}${formatCompactAmount(minor, currency)}`;
 }
 
-/** Magnitude only - the direction is carried by the caret and its colour. */
 export function formatChange(change: number): string {
-  return `${Math.abs(change * 100).toFixed(1).replace('.', ',')}${nonBreakingSpace}%`;
+  const { decimal } = numberStyles[getCurrentLanguage()];
+
+  return `${Math.abs(change * 100).toFixed(1).replace('.', decimal)}${nonBreakingSpace}%`;
 }
 
 export function formatShare(share: number): string {
@@ -44,14 +67,5 @@ export function formatShare(share: number): string {
 }
 
 export function formatTransactionCount(count: number): string {
-  if (count === 1) {
-    return '1 transakcja';
-  }
-
-  const lastDigit = count % 10;
-  const lastTwoDigits = count % 100;
-  const takesPluralNominative =
-    lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14);
-
-  return `${count} ${takesPluralNominative ? 'transakcje' : 'transakcji'}`;
+  return currentCopy(countCopy).transactions(count);
 }

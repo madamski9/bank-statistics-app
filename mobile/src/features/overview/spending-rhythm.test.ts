@@ -29,7 +29,7 @@ function record(day: number, overrides: Partial<IngestionRecord> = {}): Ingestio
 
 describe('expense rhythm', () => {
   test('buckets only expenses in the summary currency, one bar per day of the week', () => {
-    const buckets = expenseRhythm(
+    const { buckets } = expenseRhythm(
       [
         record(20, { amountMinor: 2500 }),
         record(20, { amountMinor: 500 }),
@@ -48,9 +48,16 @@ describe('expense rhythm', () => {
   });
 
   test('averages over every bar, including the empty ones', () => {
-    const buckets = expenseRhythm([record(24, { amountMinor: 8000 })], 'PLN', periodWindow('week', reference), 'week');
+    const { buckets } = expenseRhythm([record(24, { amountMinor: 8000 })], 'PLN', periodWindow('week', reference), 'week');
 
     expect(rhythmAverageMinor(buckets)).toBe(1000);
+  });
+
+  test('splits a short all-time history into days instead of one month', () => {
+    const rhythm = expenseRhythm([record(10), record(24)], 'PLN', periodWindow('all', reference), 'all');
+
+    expect(rhythm.size).toBe('day');
+    expect(rhythm.buckets.length).toBeGreaterThan(10);
   });
 
   test('has no peak and a zero average without spending', () => {

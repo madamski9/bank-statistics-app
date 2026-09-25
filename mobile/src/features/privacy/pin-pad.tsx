@@ -2,9 +2,11 @@ import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { impactLight } from '@/haptics';
+import { useCopy } from '@/features/localization/language';
 import { overviewColors } from '@/features/spending-overview/overview-theme';
 
 import { pinLength } from './pin';
+import { privacyCopy } from './privacy-copy';
 
 interface PinPadProps {
   value: string;
@@ -20,9 +22,10 @@ const digitRows = [
 ] as const;
 
 export function PinDots({ filled, hasError = false }: { filled: number; hasError?: boolean }) {
+  const copy = useCopy(privacyCopy);
   return (
     <View
-      accessibilityLabel={`Wpisano ${filled} z ${pinLength} cyfr`}
+      accessibilityLabel={copy.pinProgress(filled, pinLength)}
       accessible
       style={styles.dots}
     >
@@ -41,6 +44,7 @@ export function PinDots({ filled, hasError = false }: { filled: number; hasError
 }
 
 export function PinPad({ value, onChange, isDisabled = false, biometric }: PinPadProps) {
+  const copy = useCopy(privacyCopy);
   const press = (digit: string) => {
     if (isDisabled || value.length >= pinLength) {
       return;
@@ -70,7 +74,7 @@ export function PinPad({ value, onChange, isDisabled = false, biometric }: PinPa
       <View style={styles.row}>
         {biometric !== undefined ? (
           <Pressable
-            accessibilityLabel={`Użyj ${biometric.label}`}
+            accessibilityLabel={copy.useBiometric(biometric.label)}
             accessibilityRole="button"
             disabled={isDisabled}
             onPress={biometric.onPress}
@@ -87,7 +91,7 @@ export function PinPad({ value, onChange, isDisabled = false, biometric }: PinPa
         )}
         <Key disabled={isDisabled} label="0" onPress={() => press('0')} />
         <Pressable
-          accessibilityLabel="Usuń ostatnią cyfrę"
+          accessibilityLabel={copy.deleteDigit}
           accessibilityRole="button"
           disabled={isDisabled || value.length === 0}
           onPress={erase}

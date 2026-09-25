@@ -5,7 +5,9 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, Vi
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
+import { useCopy } from '@/features/localization/language';
 
+import { accountDataCopy } from './account-data-copy';
 import { subscriptionManagementUrl } from './account-links';
 import { EmailReverification } from './email-reverification';
 
@@ -19,6 +21,7 @@ const maximumDeletionRounds = 200;
 
 export function DeleteAccountScreen({ onCancel }: DeleteAccountScreenProps) {
   const insets = useSafeAreaInsets();
+  const copy = useCopy(accountDataCopy);
   const deleteData = useMutation(api.account.deleteData);
   const [step, setStep] = useState<Step>('explain');
 
@@ -56,30 +59,28 @@ export function DeleteAccountScreen({ onCancel }: DeleteAccountScreenProps) {
         style={({ pressed }) => [styles.cancel, pressed ? styles.pressed : null]}
       >
         <Text maxFontSizeMultiplier={1.3} style={styles.cancelLabel}>
-          Anuluj
+          {copy.cancel}
         </Text>
       </Pressable>
 
       <Text accessibilityRole="header" maxFontSizeMultiplier={1.35} style={styles.title}>
-        Usuń konto BankStats
+        {copy.deleteTitle}
       </Text>
 
       {step === 'explain' ? (
         <View style={styles.block}>
           <Text maxFontSizeMultiplier={1.5} style={styles.body}>
-            Usuniemy zsynchronizowane transakcje, konta finansowe i listę urządzeń, potem dane na
-            tym telefonie, a na końcu samo konto logowania. Tego nie da się cofnąć.
+            {copy.deleteBody}
           </Text>
           <Text maxFontSizeMultiplier={1.5} style={styles.body}>
-            Jeśli chcesz zachować kopię, najpierw wyeksportuj dane do CSV albo JSON.
+            {copy.deleteExportHint}
           </Text>
           <View style={styles.notice}>
             <Text maxFontSizeMultiplier={1.4} style={styles.noticeTitle}>
-              Usunięcie konta nie anuluje subskrypcji
+              {copy.subscriptionTitle}
             </Text>
             <Text maxFontSizeMultiplier={1.5} style={styles.noticeBody}>
-              Płatności w App Store prowadzi Apple. Jeśli masz aktywną subskrypcję, anuluj ją w
-              ustawieniach subskrypcji, zanim usuniesz konto.
+              {copy.subscriptionBody}
             </Text>
             <Pressable
               accessibilityRole="link"
@@ -87,7 +88,7 @@ export function DeleteAccountScreen({ onCancel }: DeleteAccountScreenProps) {
               style={({ pressed }) => [styles.link, pressed ? styles.pressed : null]}
             >
               <Text maxFontSizeMultiplier={1.4} style={styles.linkLabel}>
-                Zarządzaj subskrypcjami
+                {copy.manageSubscriptions}
               </Text>
             </Pressable>
           </View>
@@ -97,7 +98,7 @@ export function DeleteAccountScreen({ onCancel }: DeleteAccountScreenProps) {
             style={({ pressed }) => [styles.danger, pressed ? styles.pressed : null]}
           >
             <Text maxFontSizeMultiplier={1.4} style={styles.dangerLabel}>
-              Kontynuuj
+              {copy.continue}
             </Text>
           </Pressable>
         </View>
@@ -106,7 +107,7 @@ export function DeleteAccountScreen({ onCancel }: DeleteAccountScreenProps) {
       {step === 'verify' ? (
         <View style={styles.block}>
           <Text maxFontSizeMultiplier={1.5} style={styles.body}>
-            Potwierdź, że to Ty. Bez tego nie usuniemy konta.
+            {copy.confirmIdentity}
           </Text>
           <EmailReverification onVerified={() => void deleteSynchronizedData()} />
         </View>
@@ -116,7 +117,7 @@ export function DeleteAccountScreen({ onCancel }: DeleteAccountScreenProps) {
         <View style={styles.progress}>
           <ActivityIndicator color={overviewColors.textPrimary} />
           <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={1.5} style={styles.body}>
-            Usuwamy zsynchronizowane dane…
+            {copy.deleting}
           </Text>
         </View>
       ) : null}
@@ -124,8 +125,7 @@ export function DeleteAccountScreen({ onCancel }: DeleteAccountScreenProps) {
       {step === 'failed' ? (
         <View style={styles.block}>
           <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={1.5} style={styles.error}>
-            Nie udało się usunąć wszystkich danych. Część mogła już zniknąć - ponowienie dokończy
-            usuwanie od miejsca, w którym się zatrzymało.
+            {copy.deleteFailed}
           </Text>
           <Pressable
             accessibilityRole="button"
@@ -133,7 +133,7 @@ export function DeleteAccountScreen({ onCancel }: DeleteAccountScreenProps) {
             style={({ pressed }) => [styles.danger, pressed ? styles.pressed : null]}
           >
             <Text maxFontSizeMultiplier={1.4} style={styles.dangerLabel}>
-              Spróbuj ponownie
+              {copy.retry}
             </Text>
           </Pressable>
         </View>

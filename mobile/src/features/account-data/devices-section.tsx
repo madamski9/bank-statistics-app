@@ -6,10 +6,13 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'rea
 
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { useInstallationId } from '@/features/sync/use-installation-id';
+import { useCopy } from '@/features/localization/language';
 
+import { accountDataCopy } from './account-data-copy';
 import { devicePlatformName, lastSeenLabel } from './device-labels';
 
 export function DevicesSection() {
+  const copy = useCopy(accountDataCopy);
   const installationId = useInstallationId();
   const devices = useQuery(api.devices.list, installationId === null ? 'skip' : { installationId });
   const revoke = useMutation(api.devices.revoke);
@@ -19,12 +22,12 @@ export function DevicesSection() {
 
   const confirmRevoke = (deviceId: Id<'devices'>, name: string) => {
     Alert.alert(
-      `Odłączyć ${name}?`,
-      'To urządzenie przestanie synchronizować dane, a przy następnym połączeniu usunie z siebie Twoje transakcje i wyloguje się.',
+      copy.revokeTitle(name),
+      copy.revokeBody,
       [
-        { text: 'Anuluj', style: 'cancel' },
+        { text: copy.cancel, style: 'cancel' },
         {
-          text: 'Odłącz',
+          text: copy.revoke,
           style: 'destructive',
           onPress: () => {
             if (installationId === null) {
@@ -34,7 +37,7 @@ export function DevicesSection() {
             setError(null);
             setRevokingId(deviceId);
             void revoke({ installationId, deviceId })
-              .catch(() => setError('Nie udało się odłączyć urządzenia. Spróbuj ponownie.'))
+              .catch(() => setError(copy.revokeFailed))
               .finally(() => setRevokingId(null));
           },
         },
@@ -47,7 +50,7 @@ export function DevicesSection() {
       <View style={styles.placeholder}>
         {installationId === null ? null : <ActivityIndicator color={overviewColors.textSecondary} />}
         <Text maxFontSizeMultiplier={1.5} style={styles.meta}>
-          Lista urządzeń pojawi się po połączeniu z internetem.
+          {copy.devicesOffline}
         </Text>
       </View>
     );
@@ -62,7 +65,7 @@ export function DevicesSection() {
           <View key={device.id} style={styles.row}>
             <View style={styles.copy}>
               <Text maxFontSizeMultiplier={1.4} style={styles.name}>
-                {device.isCurrent ? `${name} (to urządzenie)` : name}
+                {device.isCurrent ? copy.thisDevice(name) : name}
               </Text>
               <Text maxFontSizeMultiplier={1.5} style={styles.meta}>
                 {lastSeenLabel(device.lastSeenAt, now)}
@@ -70,7 +73,7 @@ export function DevicesSection() {
             </View>
             {device.isCurrent ? null : (
               <Pressable
-                accessibilityLabel={`Odłącz ${name}`}
+                accessibilityLabel={copy.revokeLabel(name)}
                 accessibilityRole="button"
                 disabled={revokingId !== null}
                 hitSlop={8}
@@ -81,7 +84,7 @@ export function DevicesSection() {
                   <ActivityIndicator color={overviewColors.negative} />
                 ) : (
                   <Text maxFontSizeMultiplier={1.4} style={styles.revokeLabel}>
-                    Odłącz
+                    {copy.revoke}
                   </Text>
                 )}
               </Pressable>

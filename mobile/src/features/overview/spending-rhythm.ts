@@ -3,21 +3,29 @@ import type { IngestionRecord } from '@bankstats/ingestion-native';
 import {
   bucketSizeFor,
   bucketSpending,
+  earliestOccurredMs,
+  type BucketSize,
   type SpendBucket,
 } from '@/features/merchants/merchant-summary';
 import type { PeriodWindow, SpendingPeriod } from '@/features/spending-overview/periods';
+
+export interface ExpenseRhythm {
+  size: BucketSize;
+  buckets: SpendBucket[];
+}
 
 export function expenseRhythm(
   records: IngestionRecord[],
   currency: string,
   window: PeriodWindow,
   period: SpendingPeriod,
-): SpendBucket[] {
+): ExpenseRhythm {
   const expenses = records.filter(
     (record) => record.direction === 'expense' && record.currency === currency,
   );
+  const size = bucketSizeFor(period, earliestOccurredMs(expenses), window.endMs);
 
-  return bucketSpending(expenses, window, bucketSizeFor(period));
+  return { size, buckets: bucketSpending(expenses, window, size) };
 }
 
 export function rhythmAverageMinor(buckets: SpendBucket[]): number {

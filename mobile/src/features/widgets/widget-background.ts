@@ -1,5 +1,7 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 
+import { setCurrentLanguage, type Language } from '@/features/localization/language';
+
 import {
   buildSpendingWidgetProps,
   lockedWidgetProps,
@@ -17,6 +19,7 @@ export interface WidgetBackgroundConfiguration {
   openUrl: string;
   revealUrl?: string;
   privacy?: WidgetPrivacy;
+  language?: Language;
 }
 
 export function snapshot(
@@ -25,6 +28,10 @@ export function snapshot(
   referenceMs: number,
 ) {
   const reference = new Date(referenceMs);
+
+  if (configuration.language !== undefined) {
+    setCurrentLanguage(configuration.language);
+  }
 
   if (!configuration.enabled) {
     return signedOutWidgetProps(reference, configuration.openUrl);

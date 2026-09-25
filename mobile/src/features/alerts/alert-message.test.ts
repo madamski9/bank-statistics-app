@@ -1,4 +1,6 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
+
+import { setCurrentLanguage } from '@/features/localization/language';
 
 import { alertMessage, scopeLabel } from './alert-message';
 import type { AlertRule } from './alert-rule';
@@ -91,5 +93,22 @@ describe('wording follows the metric the rule watches', () => {
     expect(alertMessage(balance, raised(1, 50_000)).body).toBe(
       'Bilans w tym miesiącu: 500,00 zł przy progu 500,00 zł.',
     );
+  });
+});
+
+describe('alertMessage in English', () => {
+  afterEach(() => setCurrentLanguage('pl'));
+
+  test('writes the warning and the reached limit in English', () => {
+    setCurrentLanguage('en');
+
+    const warning = alertMessage(rule(), raised(0.8, 40_000));
+    const reached = alertMessage(rule(), raised(1, 50_000));
+
+    expect(warning.title).toBe('Close to your limit at Żabka');
+    expect(warning.body).toBe(
+      'Spending this month: 400.00\u00a0zł of 500.00\u00a0zł. 100.00\u00a0zł left.',
+    );
+    expect(`${reached.title} ${reached.body}`).not.toMatch(/Wydatki|osiągnięty|Zostało/);
   });
 });

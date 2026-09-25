@@ -5,6 +5,9 @@ import {
   withGeneralAccounts,
   type FinancialAccount,
 } from '@/features/financial-accounts/financial-account';
+import { currentCopy } from '@/features/localization/language';
+
+import { transactionsCopy } from './transactions-copy';
 
 export type TransactionDirection = IngestionRecord['direction'];
 
@@ -22,28 +25,26 @@ export interface TransactionDraft {
   time: string;
 }
 
-export const transactionKindOptions: Record<
-  TransactionDirection,
-  { value: TransactionKind; label: string }[]
-> = {
-  expense: [
-    { value: 'cardPayment', label: 'Karta lub Apple Pay' },
-    { value: 'outgoingTransfer', label: 'Przelew' },
-    { value: 'other', label: 'Inne' },
-  ],
-  income: [
-    { value: 'incomingTransfer', label: 'Przelew' },
-    { value: 'other', label: 'Inne' },
-  ],
+const transactionKindsByDirection: Record<TransactionDirection, TransactionKind[]> = {
+  expense: ['cardPayment', 'outgoingTransfer', 'other'],
+  income: ['incomingTransfer', 'other'],
 };
+
+export function transactionKindOptions(
+  direction: TransactionDirection,
+): { value: TransactionKind; label: string }[] {
+  const labels = currentCopy(transactionsCopy).kindOptions;
+
+  return transactionKindsByDirection[direction].map((value) => ({ value, label: labels[value] }));
+}
 
 export function kindForDirection(
   direction: TransactionDirection,
   kind: TransactionKind,
 ): TransactionKind {
-  const options = transactionKindOptions[direction];
+  const options = transactionKindsByDirection[direction];
 
-  return options.some((option) => option.value === kind) ? kind : options[0].value;
+  return options.includes(kind) ? kind : options[0];
 }
 
 const datePattern = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/;
@@ -137,15 +138,15 @@ export function parseDraftMoment(date: string, time: string): Date | null {
 
 export function draftError(draft: TransactionDraft): string | null {
   if (parseAmountMinor(draft.amount) === null) {
-    return 'Podaj kwotę większą od zera.';
+    return currentCopy(transactionsCopy).enterAmount;
   }
 
   if (!currencyPattern.test(draft.currency.trim().toUpperCase())) {
-    return 'Waluta to trzyliterowy kod, na przykład PLN.';
+    return currentCopy(transactionsCopy).currencyFormat;
   }
 
   if (parseDraftMoment(draft.date, draft.time) === null) {
-    return 'Podaj datę jako DD.MM.RRRR i godzinę jako GG:MM.';
+    return currentCopy(transactionsCopy).dateFormat;
   }
 
   return null;

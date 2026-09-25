@@ -1,33 +1,32 @@
-const platformNames = {
-  ios: 'iPhone',
-  android: 'Android',
-  web: 'Przeglądarka',
-} as const;
+import { currentCopy } from '@/features/localization/language';
 
-export type DevicePlatform = keyof typeof platformNames;
+import { accountDataCopy } from './account-data-copy';
+
+export type DevicePlatform = 'ios' | 'android' | 'web';
 
 export function devicePlatformName(platform: DevicePlatform): string {
-  return platformNames[platform];
+  return currentCopy(accountDataCopy).platforms[platform];
 }
 
 export function lastSeenLabel(lastSeenAt: number, now: number): string {
+  const copy = currentCopy(accountDataCopy);
   const minutes = Math.floor((now - lastSeenAt) / 60_000);
 
   if (minutes < 5) {
-    return 'aktywne teraz';
+    return copy.activeNow;
   }
 
   if (minutes < 60) {
-    return `aktywne ${minutes} min temu`;
+    return copy.activeMinutesAgo(minutes);
   }
 
   const hours = Math.floor(minutes / 60);
 
   if (hours < 24) {
-    return `aktywne ${hours} godz. temu`;
+    return copy.activeHoursAgo(hours);
   }
 
   const days = Math.floor(hours / 24);
 
-  return days === 1 ? 'aktywne wczoraj' : `aktywne ${days} dni temu`;
+  return days === 1 ? copy.activeYesterday : copy.activeDaysAgo(days);
 }

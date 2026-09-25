@@ -1,8 +1,10 @@
 import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useCopy } from '@/features/localization/language';
 import { overviewColors } from '@/features/spending-overview/overview-theme';
 
+import { premiumCopy } from './premium-copy';
 import { formatPremiumSince } from './premium-date';
 import type { PremiumStatus } from './use-premium';
 
@@ -12,17 +14,18 @@ interface PremiumCardProps {
 }
 
 export function PremiumCard({ status, onPress }: PremiumCardProps) {
+  const copy = useCopy(premiumCopy);
   const isPremium = status?.isPremium === true;
   const subtitle = isPremium
     ? status.premiumSince === null
-      ? 'Dziękujemy za wsparcie'
-      : `Aktywne od ${formatPremiumSince(status.premiumSince)}`
-    : 'Więcej analiz, widżetów i limitów';
+      ? copy.thanks
+      : copy.activeSince(formatPremiumSince(status.premiumSince))
+    : copy.pitch;
 
   return (
     <Pressable
-      accessibilityHint={isPremium ? 'Pokazuje szczegóły Premium' : 'Pokazuje, co daje Premium'}
-      accessibilityLabel={`BankStats Premium. ${isPremium ? 'Aktywne' : 'Nieaktywne'}. ${subtitle}`}
+      accessibilityHint={isPremium ? copy.detailsHint : copy.pitchHint}
+      accessibilityLabel={copy.cardLabel(isPremium, subtitle)}
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed ? styles.pressed : null]}
@@ -36,7 +39,7 @@ export function PremiumCard({ status, onPress }: PremiumCardProps) {
       </View>
       <View style={styles.copy}>
         <Text maxFontSizeMultiplier={1.35} style={styles.title}>
-          {isPremium ? 'Masz Premium' : 'BankStats Premium'}
+          {isPremium ? copy.youHavePremium : 'BankStats Premium'}
         </Text>
         <Text maxFontSizeMultiplier={1.5} numberOfLines={1} style={styles.subtitle}>
           {subtitle}
@@ -53,7 +56,7 @@ export function PremiumCard({ status, onPress }: PremiumCardProps) {
       ) : (
         <View style={styles.cta}>
           <Text maxFontSizeMultiplier={1.3} style={styles.ctaLabel}>
-            Zobacz
+            {copy.see}
           </Text>
         </View>
       )}

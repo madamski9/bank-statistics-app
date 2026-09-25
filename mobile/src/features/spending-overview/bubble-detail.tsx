@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -39,12 +38,19 @@ import {
 } from './formatting';
 import { bubbleTints, overviewColors, overviewMotion, type BubbleKey } from './overview-theme';
 import { periodOption, type SpendingPeriod } from './periods';
+import { useCopy } from '@/features/localization/language';
+
+import { AreaChart, type AreaSeries } from './area-chart';
 import { RangeSwitcher } from './range-switcher';
 import type { SpendingSource, SpendingSourceKind, SpendingSummary } from './spending-summary';
+import { spendingOverviewCopy } from './spending-overview-copy';
+import type { SpendingTrend } from './spending-trend';
+import { TintedScrollView } from './tinted-scroll-view';
 
 interface BubbleDetailProps {
   selection: BubbleSelection;
   summary: SpendingSummary;
+  trend: SpendingTrend;
   change: number | null;
   period: SpendingPeriod;
   onChangePeriod: (period: SpendingPeriod) => void;
@@ -67,15 +73,21 @@ const sourceSymbols = {
   other: { ios: 'square.grid.2x2.fill', android: 'grid_view', web: 'grid_view' },
 } as const satisfies Record<SpendingSourceKind, { ios: string; android: string; web: string }>;
 
-const titles: Record<BubbleKey, string> = {
-  expense: 'Wydatki',
-  income: 'Przychody',
-  net: 'Przepływ',
-};
+function trendSeries(key: BubbleKey, trend: SpendingTrend, titles: Record<BubbleKey, string>): AreaSeries[] {
+  const expense = { key: 'expense', label: titles.expense, color: bubbleTints.expense.film, values: trend.expense };
+  const income = { key: 'income', label: titles.income, color: bubbleTints.income.film, values: trend.income };
+
+  if (key === 'expense') {
+    return [expense];
+  }
+
+  return key === 'income' ? [income] : [income, expense];
+}
 
 export function BubbleDetail({
   selection,
   summary,
+  trend,
   change,
   period,
   onChangePeriod,
@@ -84,6 +96,8 @@ export function BubbleDetail({
   onClosed,
 }: BubbleDetailProps) {
   const { formatAmount, formatSignedAmount } = useAmountFormatting();
+  const copy = useCopy(spendingOverviewCopy);
+  const titles = copy.titles;
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
@@ -300,15 +314,15 @@ export function BubbleDetail({
                 {titles[key]}
               </Text>
               <Pressable
-                accessibilityHint="Zamyka szczegóły"
-                accessibilityLabel={`Zamknij szczegóły: ${titles[key]}`}
+                accessibilityHint={copy.closeHint}
+                accessibilityLabel={copy.closeLabel(titles[key])}
                 accessibilityRole="button"
                 hitSlop={10}
                 onPress={requestClose}
                 style={({ pressed }) => [styles.closeButton, pressed ? styles.pressed : null]}
               >
                 <Text maxFontSizeMultiplier={1.4} style={styles.closeLabel}>
-                  Zamknij
+                  {copy.close}
                 </Text>
               </Pressable>
             </View>
@@ -338,7 +352,7 @@ export function BubbleDetail({
                     { color: changeIsWelcome ? overviewColors.positive : overviewColors.negative },
                   ]}
                 >
-                  {change >= 0 ? '▲' : '▼'} {formatChange(change)} vs {option.previousLabel}
+                  {change >= 0 ? '▲' : '▼'} {formatChange(change)} {copy.versus} {option.previousLabel}
                 </Text>
               ) : null}
             </View>
@@ -347,27 +361,34 @@ export function BubbleDetail({
           </Animated.View>
         </GestureDetector>
 
-        <ScrollView
+        <TintedScrollView
+          color={tint.film}
           contentContainerStyle={styles.listContent}
-          indicatorStyle="white"
           style={styles.list}
         >
           {contentReady ? (
             <>
+          <View style={styles.trend}>
+            <AreaChart
+              formatValue={(minor) => formatAmount(minor, summary.currency)}
+              points={trend.points}
+              series={trendSeries(key, trend, copy.titles)}
+            />
+          </View>
           {key === 'net' ? (
             <View style={styles.netBlock}>
               <Text maxFontSizeMultiplier={1.6} style={styles.explainer}>
-                Przepływ to przychody minus wydatki w wybranym okresie. To nie jest saldo konta.
+                {copy.netExplainer}
               </Text>
               <NetRow
                 amount={formatAmount(summary.incomeMinor, summary.currency)}
                 color={overviewColors.positive}
-                label="Przychody"
+                label={titles.income}
               />
               <NetRow
                 amount={`− ${formatAmount(summary.expenseMinor, summary.currency)}`}
                 color={overviewColors.negative}
-                label="Wydatki"
+                label={titles.expense}
               />
               <View style={styles.divider} />
               <NetRow
@@ -375,21 +396,21 @@ export function BubbleDetail({
                 color={
                   summary.netMinor < 0 ? overviewColors.negative : overviewColors.positive
                 }
-                label="Przepływ"
+                label={titles.net}
               />
             </View>
           ) : sources.length === 0 ? (
             <Text maxFontSizeMultiplier={1.6} style={styles.explainer}>
               {Platform.OS === 'ios'
-                ? `Brak danych w okresie „${option.label}”. Wybierz Max, aby zobaczyć wszystko, co udało się przechwycić.`
-                : 'Przechwytywanie powiadomień działa na razie tylko na iOS.'}
+                ? copy.noDataInPeriod(option.label)
+                : copy.captureIosOnly}
             </Text>
           ) : (
             sources.map((source) => (
               <Pressable
                 accessibilityHint={
                   key === 'expense' && source.group !== null
-                    ? 'Otwiera historię i wykres wydatków'
+                    ? copy.sourceHint
                     : undefined
                 }
                 accessibilityLabel={`${source.label}, ${formatAmount(
@@ -449,12 +470,12 @@ export function BubbleDetail({
 
           {summary.accounts.length > 0 ? (
             <Text maxFontSizeMultiplier={1.6} style={styles.footnote}>
-              Dane z: {summary.accounts.join(', ')}
+              {copy.dataFrom(summary.accounts.join(', '))}
             </Text>
           ) : null}
             </>
           ) : null}
-        </ScrollView>
+        </TintedScrollView>
       </Animated.View>
     </Animated.View>
   );
@@ -490,6 +511,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  trend: {
+    paddingBottom: 8,
   },
   content: {
     position: 'absolute',
@@ -557,9 +581,11 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
+    marginHorizontal: -horizontalPadding,
   },
   listContent: {
     gap: 18,
+    paddingHorizontal: horizontalPadding,
     paddingTop: 16,
     paddingBottom: 32,
   },

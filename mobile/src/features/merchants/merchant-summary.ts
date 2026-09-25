@@ -1,6 +1,13 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 
+import { calendarCopy } from '@/features/localization/calendar-copy';
+import { currentCopy, defineCopy } from '@/features/localization/language';
 import type { PeriodWindow, SpendingPeriod } from '@/features/spending-overview/periods';
+
+const bucketCopy = defineCopy({
+  pl: { weekFrom: (day: string) => `tydzień od ${day}` },
+  en: { weekFrom: (day: string) => `week of ${day}` },
+});
 
 export type BucketSize = 'day' | 'week' | 'month';
 
@@ -17,47 +24,40 @@ export interface SpendBucket {
 
 const dayMs = 86_400_000;
 
-const shortMonths = [
-  'sty',
-  'lut',
-  'mar',
-  'kwi',
-  'maj',
-  'cze',
-  'lip',
-  'sie',
-  'wrz',
-  'paź',
-  'lis',
-  'gru',
-];
-
-const longMonths = [
-  'stycznia',
-  'lutego',
-  'marca',
-  'kwietnia',
-  'maja',
-  'czerwca',
-  'lipca',
-  'sierpnia',
-  'września',
-  'października',
-  'listopada',
-  'grudnia',
-];
-
 function occurredMs(record: IngestionRecord): number {
   return new Date(record.occurredAt).getTime();
 }
 
-/** Keep the bar count readable: a year of days would be 365 slivers. */
-export function bucketSizeFor(period: SpendingPeriod): BucketSize {
+export function earliestOccurredMs(records: IngestionRecord[]): number | null {
+  const times = records.map(occurredMs).filter((time) => !Number.isNaN(time));
+
+  return times.length === 0 ? null : Math.min(...times);
+}
+
+export function bucketSizeFor(
+  period: SpendingPeriod,
+  earliestMs: number | null = null,
+  endMs: number = Date.now(),
+): BucketSize {
   if (period === 'week' || period === 'month') {
     return 'day';
   }
 
-  return period === 'quarter' ? 'week' : 'month';
+  if (period === 'quarter') {
+    return 'week';
+  }
+
+  if (period === 'year' || earliestMs === null) {
+    return 'month';
+  }
+
+  const spanDays = (endMs - earliestMs) / dayMs;
+
+  if (spanDays <= 62) {
+    return 'day';
+  }
+
+  return spanDays <= 210 ? 'week' : 'month';
 }
 
 function startOfBucket(date: Date, size: BucketSize): Date {
@@ -90,19 +90,21 @@ function nextBucket(start: Date, size: BucketSize): Date {
 }
 
 function bucketLabels(start: Date, size: BucketSize): { label: string; spokenLabel: string } {
+  const calendar = currentCopy(calendarCopy);
+
   if (size === 'month') {
     return {
-      label: shortMonths[start.getMonth()],
-      spokenLabel: `${longMonths[start.getMonth()]} ${start.getFullYear()}`,
+      label: calendar.shortMonths[start.getMonth()],
+      spokenLabel: `${calendar.monthNames[start.getMonth()]} ${start.getFullYear()}`,
     };
   }
 
   const day = `${start.getDate()}.${String(start.getMonth() + 1).padStart(2, '0')}`;
-  const spokenDay = `${start.getDate()} ${longMonths[start.getMonth()]}`;
+  const spokenDay = calendar.dayMonth(start.getDate(), calendar.monthsInGenitive[start.getMonth()]);
 
   return {
     label: day,
-    spokenLabel: size === 'week' ? `tydzień od ${spokenDay}` : spokenDay,
+    spokenLabel: size === 'week' ? currentCopy(bucketCopy).weekFrom(spokenDay) : spokenDay,
   };
 }
 
@@ -153,8 +155,9 @@ export function bucketSpending(
 
 export function formatDayMonth(ms: number): string {
   const date = new Date(ms);
+  const calendar = currentCopy(calendarCopy);
 
-  return `${date.getDate()} ${longMonths[date.getMonth()]}`;
+  return calendar.dayMonth(date.getDate(), calendar.monthsInGenitive[date.getMonth()]);
 }
 
 export const millisecondsPerDay = dayMs;

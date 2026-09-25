@@ -9,7 +9,9 @@ import type { ExportFormat } from '@/features/data-export/transaction-export';
 import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
 import { formatTransactionCount } from '@/features/spending-overview/formatting';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
+import { useCopy } from '@/features/localization/language';
 
+import { accountDataCopy } from './account-data-copy';
 import { DeleteAccountScreen } from './delete-account-screen';
 import { DevicesSection } from './devices-section';
 
@@ -19,31 +21,27 @@ interface DataScreenProps {
   onClose: () => void;
 }
 
-const exportLabels: Record<ExportFormat, string> = {
-  csv: 'Eksportuj do CSV',
-  json: 'Eksportuj do JSON',
-};
-
 export function DataScreen({ records, accounts, onClose }: DataScreenProps) {
   const insets = useSafeAreaInsets();
+  const copy = useCopy(accountDataCopy);
   const [isDeleting, setIsDeleting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
   const exportAs = (format: ExportFormat) => {
     setExportError(null);
     void shareTransactionExport(format, records, accounts).catch(() =>
-      setExportError('Nie udało się przygotować pliku. Spróbuj ponownie.'),
+      setExportError(copy.exportFailed),
     );
   };
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top + 14 }]}>
+    <View style={[styles.screen, styles.sheetTop]}>
       <View style={styles.header}>
         <Text accessibilityRole="header" maxFontSizeMultiplier={1.35} style={styles.title}>
-          Twoje dane
+          {copy.title}
         </Text>
         <Pressable
-          accessibilityLabel="Zamknij"
+          accessibilityLabel={copy.close}
           accessibilityRole="button"
           hitSlop={8}
           onPress={onClose}
@@ -63,19 +61,19 @@ export function DataScreen({ records, accounts, onClose }: DataScreenProps) {
       >
         <View style={styles.section}>
           <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
-            EKSPORT
+            {copy.exportSection}
           </Text>
           <View style={styles.card}>
             {(['csv', 'json'] as const).map((format) => (
               <Pressable
-                accessibilityHint="Otwiera arkusz udostępniania z plikiem"
+                accessibilityHint={copy.exportHint}
                 accessibilityRole="button"
                 key={format}
                 onPress={() => exportAs(format)}
                 style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
               >
                 <Text maxFontSizeMultiplier={1.4} style={styles.rowLabel}>
-                  {exportLabels[format]}
+                  {copy.exportLabels[format]}
                 </Text>
                 <SymbolView
                   accessibilityElementsHidden
@@ -88,26 +86,25 @@ export function DataScreen({ records, accounts, onClose }: DataScreenProps) {
             ))}
           </View>
           <Text maxFontSizeMultiplier={1.5} style={styles.footnote}>
-            {exportError ??
-              `${formatTransactionCount(records.length)} z tego telefonu, z kontem, kategorią i statusem. Bez treści powiadomień bankowych.`}
+            {exportError ?? copy.exportFootnote(formatTransactionCount(records.length))}
           </Text>
         </View>
 
         <View style={styles.section}>
           <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
-            URZĄDZENIA
+            {copy.devicesSection}
           </Text>
           <View style={styles.card}>
             <DevicesSection />
           </View>
           <Text maxFontSizeMultiplier={1.5} style={styles.footnote}>
-            Odłącz telefon, którego już nie używasz albo który zgubiłeś.
+            {copy.devicesFootnote}
           </Text>
         </View>
 
         <View style={styles.section}>
           <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
-            KONTO
+            {copy.accountSection}
           </Text>
           <View style={styles.card}>
             <Pressable
@@ -116,7 +113,7 @@ export function DataScreen({ records, accounts, onClose }: DataScreenProps) {
               style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
             >
               <Text maxFontSizeMultiplier={1.4} style={styles.dangerLabel}>
-                Usuń konto
+                {copy.deleteAccount}
               </Text>
             </Pressable>
           </View>
@@ -136,6 +133,9 @@ export function DataScreen({ records, accounts, onClose }: DataScreenProps) {
 }
 
 const styles = StyleSheet.create({
+  sheetTop: {
+    paddingTop: 14,
+  },
   screen: {
     flex: 1,
     backgroundColor: overviewColors.background,

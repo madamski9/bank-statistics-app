@@ -2,7 +2,9 @@ import type { IngestionRecord } from '@bankstats/ingestion-native';
 
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
 import type { SpendingGroup } from '@/features/classification/spending-groups';
+import { currentCopy } from '@/features/localization/language';
 
+import { alertsCopy } from './alerts-copy';
 import { alertProgress } from './alert-evaluation';
 import type { AlertRule, AlertScope } from './alert-rule';
 
@@ -14,13 +16,6 @@ export interface GroupLimit {
   currency: string;
   periodLabel: string;
 }
-
-const periodLabels = {
-  week: 'tygodniowy',
-  month: 'miesięczny',
-  year: 'roczny',
-  custom: 'w wybranym okresie',
-} as const;
 
 export function scopeForGroup(group: SpendingGroup): AlertScope {
   if (group.dimension === 'merchant') {
@@ -79,6 +74,6 @@ export function groupLimit(
     targetMinor: progress.targetMinor,
     share: progress.share,
     currency: progress.currency,
-    periodLabel: periodLabels[rule.period.kind],
+    periodLabel: currentCopy(alertsCopy).limitPeriods[rule.period.kind],
   };
 }

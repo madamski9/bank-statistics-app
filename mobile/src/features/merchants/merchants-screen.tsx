@@ -9,7 +9,9 @@ import { formatShare } from '@/features/spending-overview/formatting';
 import { bubbleTints, overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { periodOption, type SpendingPeriod } from '@/features/spending-overview/periods';
 import { RangeSwitcher } from '@/features/spending-overview/range-switcher';
+import { useCopy } from '@/features/localization/language';
 
+import { merchantsCopy } from './merchants-copy';
 import { DimensionSwitcher } from './dimension-switcher';
 import { groupCount, transactionCount } from './group-counts';
 
@@ -26,15 +28,6 @@ interface MerchantsScreenProps {
   isLoading: boolean;
 }
 
-const emptyByDimension: Record<SpendingDimension, string> = {
-  merchant:
-    'Brak sklepów w tym okresie. Nazwy sklepów przychodzą z powiadomień Portfela - wybierz Max, aby zobaczyć wszystko.',
-  counterparty:
-    'Brak przelewów do osób w tym okresie. Przelew z nazwą odbiorcy trafi tutaj, a nie do statystyk sklepów.',
-  category:
-    'Brak wydatków w tym okresie. Kategoria pojawi się, gdy transakcja zostanie rozpoznana lub poprawiona.',
-};
-
 /** Where the money actually goes: shops, people and categories, biggest spend first. */
 function MerchantsScreenComponent({
   groups,
@@ -50,6 +43,7 @@ function MerchantsScreenComponent({
 }: MerchantsScreenProps) {
   const { formatAmount } = useAmountFormatting();
   const insets = useSafeAreaInsets();
+  const copy = useCopy(merchantsCopy);
   const option = periodOption(period);
   const tint = bubbleTints.expense;
 
@@ -57,10 +51,10 @@ function MerchantsScreenComponent({
     error !== null
       ? error
       : Platform.OS !== 'ios'
-        ? 'Przechwytywanie powiadomień działa na razie tylko na iOS.'
+        ? copy.captureIosOnly
         : isLoading
-          ? 'Wczytywanie…'
-          : emptyByDimension[dimension];
+          ? copy.loading
+          : copy.empty[dimension];
 
   return (
     <View style={styles.page}>
@@ -70,8 +64,8 @@ function MerchantsScreenComponent({
             {groupCount(groups.length, dimension)} · {option.label}
           </Text>
           <Pressable
-            accessibilityHint="Otwiera formularz wyboru sklepu i kwoty limitu"
-            accessibilityLabel="Ustaw limit sklepu"
+            accessibilityHint={copy.createLimitHint}
+            accessibilityLabel={copy.createLimitLabel}
             accessibilityRole="button"
             hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
             onPress={onCreateLimit}
@@ -84,7 +78,7 @@ function MerchantsScreenComponent({
               weight="semibold"
             />
             <Text maxFontSizeMultiplier={1.3} style={styles.limitActionLabel}>
-              Limit
+              {copy.limit}
             </Text>
           </Pressable>
         </View>
@@ -106,8 +100,8 @@ function MerchantsScreenComponent({
         ) : (
           groups.map((group, index) => (
             <Pressable
-              accessibilityHint="Otwiera historię i wykres wydatków"
-              accessibilityLabel={`${index + 1}. ${group.name}, ${formatAmount(group.totalMinor, group.currency)}, ${transactionCount(group.count, dimension)}, ${formatShare(group.share)} wydatków`}
+              accessibilityHint={copy.groupHint}
+              accessibilityLabel={`${index + 1}. ${group.name}, ${formatAmount(group.totalMinor, group.currency)}, ${transactionCount(group.count, dimension)}, ${copy.shareOfSpending(formatShare(group.share))}`}
               accessibilityRole="button"
               key={group.key}
               onPress={() => onSelectGroup(group)}
@@ -137,7 +131,7 @@ function MerchantsScreenComponent({
                   />
                 </View>
                 <Text maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.meta}>
-                  {transactionCount(group.count, dimension)} · {formatShare(group.share)} wydatków
+                  {transactionCount(group.count, dimension)} · {copy.shareOfSpending(formatShare(group.share))}
                   {group.subtitle !== undefined ? ` · ${group.subtitle}` : ''}
                 </Text>
               </View>

@@ -2,41 +2,16 @@ import { SymbolView, type SFSymbol } from 'expo-symbols';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useCopy } from '@/features/localization/language';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 
-import { premiumReasonMessages, type PremiumReason } from './premium-access';
+import type { PremiumReason } from './premium-access';
+import { premiumCopy } from './premium-copy';
 import { formatPremiumSince } from './premium-date';
 import { setPreviewWithoutPremium, usePreviewWithoutPremium } from './premium-preview';
 import type { PremiumStatus } from './use-premium';
 
-interface PremiumBenefit {
-  symbol: SFSymbol;
-  title: string;
-  detail: string;
-}
-
-const benefits: PremiumBenefit[] = [
-  {
-    symbol: 'chart.bar.xaxis',
-    title: 'Głębsze analizy',
-    detail: 'Porównania okresów i trendy w sklepach oraz kategoriach.',
-  },
-  {
-    symbol: 'square.grid.2x2',
-    title: 'Więcej widżetów',
-    detail: 'Wszystkie widoki widżetów na ekranie głównym i blokady.',
-  },
-  {
-    symbol: 'bell.badge',
-    title: 'Limity bez ograniczeń',
-    detail: 'Dowolna liczba limitów dla sklepów i kategorii.',
-  },
-  {
-    symbol: 'heart',
-    title: 'Wsparcie rozwoju',
-    detail: 'Pomagasz rozwijać BankStats bez reklam i sprzedaży danych.',
-  },
-];
+const benefitSymbols: SFSymbol[] = ['chart.bar.xaxis', 'square.grid.2x2', 'bell.badge', 'heart'];
 
 interface PremiumScreenProps {
   status: PremiumStatus | undefined;
@@ -46,18 +21,19 @@ interface PremiumScreenProps {
 
 export function PremiumScreen({ status, reason, onClose }: PremiumScreenProps) {
   const insets = useSafeAreaInsets();
+  const copy = useCopy(premiumCopy);
   const isPremium = status?.isPremium === true;
   const isPreviewingWithoutPremium = usePreviewWithoutPremium();
 
   const purchase = () => {
-    Alert.alert('BankStats Premium', 'Zakup Premium w aplikacji będzie dostępny wkrótce.');
+    Alert.alert('BankStats Premium', copy.purchaseSoon);
   };
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top + 14 }]}>
+    <View style={[styles.screen, styles.sheetTop]}>
       <View style={styles.header}>
         <Pressable
-          accessibilityLabel="Zamknij"
+          accessibilityLabel={copy.close}
           accessibilityRole="button"
           hitSlop={8}
           onPress={onClose}
@@ -82,7 +58,7 @@ export function PremiumScreen({ status, reason, onClose }: PremiumScreenProps) {
               tintColor={overviewColors.textPrimary}
             />
             <Text maxFontSizeMultiplier={1.5} style={styles.reasonLabel}>
-              {premiumReasonMessages[reason]}
+              {copy.reasons[reason]}
             </Text>
           </View>
         ) : null}
@@ -96,19 +72,19 @@ export function PremiumScreen({ status, reason, onClose }: PremiumScreenProps) {
             />
           </View>
           <Text accessibilityRole="header" maxFontSizeMultiplier={1.3} style={styles.title}>
-            {isPremium ? 'Masz Premium' : 'BankStats Premium'}
+            {isPremium ? copy.youHavePremium : 'BankStats Premium'}
           </Text>
           <Text maxFontSizeMultiplier={1.5} style={styles.tagline}>
             {isPremium
               ? status.premiumSince === null
-                ? 'Dziękujemy, że wspierasz BankStats.'
-                : `Aktywne od ${formatPremiumSince(status.premiumSince)}. Dziękujemy, że wspierasz BankStats.`
-              : 'Pełny obraz Twoich wydatków, bez reklam i bez sprzedawania danych.'}
+                ? copy.thanksLong
+                : copy.activeSinceLong(formatPremiumSince(status.premiumSince))
+              : copy.tagline}
           </Text>
         </View>
 
         <View style={styles.benefits}>
-          {benefits.map((benefit) => (
+          {copy.benefits.map((benefit, index) => (
             <View
               accessible
               accessibilityLabel={`${benefit.title}. ${benefit.detail}`}
@@ -117,7 +93,7 @@ export function PremiumScreen({ status, reason, onClose }: PremiumScreenProps) {
             >
               <View style={styles.benefitIcon}>
                 <SymbolView
-                  name={{ ios: benefit.symbol, android: 'check', web: 'check' }}
+                  name={{ ios: benefitSymbols[index], android: 'check', web: 'check' }}
                   size={18}
                   tintColor={overviewColors.textPrimary}
                 />
@@ -148,10 +124,10 @@ export function PremiumScreen({ status, reason, onClose }: PremiumScreenProps) {
             style={({ pressed }) => [styles.preview, pressed ? styles.pressed : null]}
           >
             <Text maxFontSizeMultiplier={1.4} style={styles.previewLabel}>
-              {isPreviewingWithoutPremium ? 'Wróć do Premium' : 'Podgląd bez Premium'}
+              {isPreviewingWithoutPremium ? copy.previewOff : copy.previewOn}
             </Text>
             <Text maxFontSizeMultiplier={1.4} style={styles.previewDetail}>
-              Tylko w wersji deweloperskiej. Premium na koncie się nie zmienia.
+              {copy.previewDetail}
             </Text>
           </Pressable>
         ) : null}
@@ -165,11 +141,11 @@ export function PremiumScreen({ status, reason, onClose }: PremiumScreenProps) {
             style={({ pressed }) => [styles.purchase, pressed ? styles.pressed : null]}
           >
             <Text maxFontSizeMultiplier={1.3} style={styles.purchaseLabel}>
-              Kup Premium
+              {copy.buy}
             </Text>
           </Pressable>
           <Text maxFontSizeMultiplier={1.4} style={styles.footnote}>
-            Płatność i odnawianie obsługuje App Store. Możesz zrezygnować w każdej chwili.
+            {copy.footnote}
           </Text>
         </View>
       )}
@@ -178,6 +154,9 @@ export function PremiumScreen({ status, reason, onClose }: PremiumScreenProps) {
 }
 
 const styles = StyleSheet.create({
+  sheetTop: {
+    paddingTop: 14,
+  },
   screen: {
     flex: 1,
     backgroundColor: overviewColors.background,
