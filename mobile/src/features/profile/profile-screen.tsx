@@ -9,19 +9,15 @@ import { overviewColors, overviewSpacing } from '@/features/spending-overview/ov
 import { syncStatusLabel, type SyncStatus } from '@/features/sync/sync-status';
 
 interface ProfileScreenProps {
-  onClose: () => void;
   onOpenAlerts: () => void;
   onOpenData: () => void;
-  onOpenDiagnostics: () => void;
   onOpenPrivacy: () => void;
   syncStatus: SyncStatus;
 }
 
 export function ProfileScreen({
-  onClose,
   onOpenAlerts,
   onOpenData,
-  onOpenDiagnostics,
   onOpenPrivacy,
   syncStatus,
 }: ProfileScreenProps) {
@@ -56,26 +52,7 @@ export function ProfileScreen({
   }, [signOut]);
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top + 14 }]}>
-      <View style={styles.header}>
-        <Text maxFontSizeMultiplier={1.35} style={styles.title}>
-          Profil
-        </Text>
-        <Pressable
-          accessibilityLabel="Zamknij profil"
-          accessibilityRole="button"
-          hitSlop={8}
-          onPress={onClose}
-          style={({ pressed }) => [styles.closeButton, pressed ? styles.pressed : null]}
-        >
-          <SymbolView
-            name={{ ios: 'xmark', android: 'close', web: 'close' }}
-            size={18}
-            tintColor={overviewColors.textPrimary}
-          />
-        </Pressable>
-      </View>
-
+    <View style={styles.screen}>
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
@@ -236,34 +213,6 @@ export function ProfileScreen({
                 tintColor={overviewColors.textDisabled}
               />
             </Pressable>
-            <Pressable
-              accessibilityHint="Otwiera stan przechwytywania powiadomień bankowych"
-              accessibilityRole="button"
-              onPress={onOpenDiagnostics}
-              style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
-            >
-              <View accessibilityElementsHidden importantForAccessibility="no" style={styles.rowIcon}>
-                <SymbolView
-                  name={{
-                    ios: 'waveform.path.ecg',
-                    android: 'monitor_heart',
-                    web: 'monitor_heart',
-                  }}
-                  size={18}
-                  tintColor={overviewColors.textSecondary}
-                />
-              </View>
-              <Text maxFontSizeMultiplier={1.4} style={styles.actionLabel}>
-                Diagnostyka powiadomień
-              </Text>
-              <SymbolView
-                accessibilityElementsHidden
-                importantForAccessibility="no"
-                name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
-                size={17}
-                tintColor={overviewColors.textDisabled}
-              />
-            </Pressable>
           </View>
         </View>
 
@@ -314,31 +263,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: overviewColors.background,
   },
-  header: {
-    minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: overviewSpacing.gutter,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    letterSpacing: -0.8,
-    color: overviewColors.textPrimary,
-  },
-  closeButton: {
-    width: 38,
-    height: 38,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 19,
-    backgroundColor: overviewColors.surfacePressed,
-  },
   content: {
     gap: 28,
     paddingHorizontal: overviewSpacing.gutter,
-    paddingTop: 22,
+    paddingTop: overviewSpacing.tight,
   },
   identity: {
     flexDirection: 'row',

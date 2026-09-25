@@ -1,7 +1,8 @@
 import { memo } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { bucketSizeFor, type SpendBucket } from '@/features/merchants/merchant-summary';
 import { BubbleField, type BubbleDescriptor } from '@/features/spending-overview/bubble-field';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { formatChange, formatTransactionCount } from '@/features/spending-overview/formatting';
@@ -15,10 +16,14 @@ import { periodOption, type SpendingPeriod } from '@/features/spending-overview/
 import { RangeSwitcher } from '@/features/spending-overview/range-switcher';
 import type { SpendingSummary } from '@/features/spending-overview/spending-summary';
 
+import { SpendingRhythmCard } from './spending-rhythm-card';
+import { rhythmPeak } from './spending-rhythm';
+
 const unavailableValue = '-';
 
 interface OverviewScreenProps {
   summary: SpendingSummary;
+  rhythm: SpendBucket[];
   expenseChange: number | null;
   period: SpendingPeriod;
   onChangePeriod: (period: SpendingPeriod) => void;
@@ -30,6 +35,7 @@ interface OverviewScreenProps {
 
 function OverviewScreenComponent({
   summary,
+  rhythm,
   expenseChange,
   period,
   onChangePeriod,
@@ -78,12 +84,19 @@ function OverviewScreenComponent({
     },
   ];
 
-  const tiles = [
+  const bucketSize = bucketSizeFor(period);
+  const peak = rhythmPeak(rhythm);
+  const peakLabels = { day: 'Maks. / dzień', week: 'Maks. / tydz.', month: 'Maks. / mies.' };
+  const stats = [
     { key: 'count', label: 'Transakcje', value: String(summary.expenseCount + summary.incomeCount) },
-    { key: 'daily', label: 'Średnio dziennie', value: amount(summary.dailyExpenseMinor, true) },
+    {
+      key: 'peak',
+      label: peakLabels[bucketSize],
+      value: peak === null ? unavailableValue : amount(peak.totalMinor, true),
+    },
     {
       key: 'largest',
-      label: 'Największe źródło',
+      label: 'Top źródło',
       value: summary.largestExpense?.label ?? unavailableValue,
     },
   ];
@@ -129,28 +142,14 @@ function OverviewScreenComponent({
         </Text>
       ) : null}
 
-      <ScrollView
-        contentContainerStyle={[styles.tileRow, { paddingBottom: insets.bottom + 16 }]}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.tileScroll}
-      >
-        {tiles.map((tile) => (
-          <View
-            accessible
-            accessibilityLabel={`${tile.label}: ${tile.value}`}
-            key={tile.key}
-            style={styles.tile}
-          >
-            <Text maxFontSizeMultiplier={1.6} style={styles.tileLabel}>
-              {tile.label}
-            </Text>
-            <Text maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.tileValue}>
-              {tile.value}
-            </Text>
-          </View>
-        ))}
-      </ScrollView>
+      <View style={{ paddingBottom: insets.bottom + 16 }}>
+        <SpendingRhythmCard
+          bucketSize={bucketSize}
+          buckets={rhythm}
+          formatAverage={(minor) => amount(minor, true)}
+          stats={stats}
+        />
+      </View>
     </View>
   );
 }
@@ -189,30 +188,5 @@ const styles = StyleSheet.create({
     paddingBottom: overviewSpacing.row,
     fontSize: 13,
     color: overviewColors.negative,
-  },
-  tileScroll: {
-    flexGrow: 0,
-  },
-  tileRow: {
-    gap: overviewSpacing.row,
-    paddingHorizontal: overviewSpacing.gutter,
-  },
-  tile: {
-    minWidth: 138,
-    gap: 6,
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: overviewColors.surface,
-  },
-  tileLabel: {
-    fontSize: 13,
-    color: overviewColors.textSecondary,
-  },
-  tileValue: {
-    fontSize: 17,
-    fontWeight: '600',
-    letterSpacing: -0.3,
-    color: overviewColors.textPrimary,
   },
 });

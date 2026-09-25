@@ -46,3 +46,16 @@ This is a known Xcode 15+ incompatibility, not specific to this script. The docu
 turn sandboxing off (`ENABLE_USER_SCRIPT_SANDBOXING = NO`); it must be set on every build
 configuration, since both the project level and the target level enforce it independently. This
 plugin sets it on every build configuration in the generated Xcode project on each prebuild.
+
+## `withoutPushEntitlement.js`
+
+BankStats only schedules local notifications (spending limit alerts), which need no entitlement.
+The `expo-notifications` plugin still adds `aps-environment` to the entitlements on every
+prebuild, and a personal development team cannot sign an app with it:
+
+```
+Personal development teams, including "…", do not support the Push Notifications capability.
+```
+
+This plugin removes `aps-environment` after `expo-notifications` adds it. It is listed before `expo-notifications` because Expo runs plugin mods in reverse order. Remove it if the app
+starts using remote push notifications.

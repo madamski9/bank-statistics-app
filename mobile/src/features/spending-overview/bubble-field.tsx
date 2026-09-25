@@ -36,7 +36,7 @@ export function BubbleField({ bubbles, onSelect }: BubbleFieldProps) {
     );
   };
 
-  const reference = Math.min(field.width, field.height * 0.95);
+  const reference = Math.min(field.width, field.height * 0.85);
 
   return (
     <View onLayout={handleLayout} style={styles.field}>

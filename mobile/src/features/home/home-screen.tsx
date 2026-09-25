@@ -13,10 +13,12 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import Animated, {
+  interpolate,
+  interpolateColor,
   ReduceMotion,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -36,8 +38,8 @@ import {
 import { useCategorizationRules } from '@/features/classification/use-categorization-rules';
 import { DataScreen } from '@/features/account-data/data-screen';
 import { accountInitial } from '@/features/profile/account-identity';
-import { IngestionDiagnosticsCard } from '@/features/ingestion-diagnostics/ingestion-diagnostics-card';
 import { OverviewScreen } from '@/features/overview/overview-screen';
+import { expenseRhythm } from '@/features/overview/spending-rhythm';
 import { BubbleDetail } from '@/features/spending-overview/bubble-detail';
 import {
   bubbleSelectionReducer,
@@ -79,8 +81,13 @@ const pages = [
   { key: 'merchants', label: 'Sklepy' },
 ] as const;
 
-type PageKey = (typeof pages)[number]['key'];
-type SheetKey = 'profile' | 'diagnostics' | 'alerts' | 'data' | 'privacy';
+type TabKey = (typeof pages)[number]['key'];
+type PageKey = TabKey | 'profile';
+
+const navLabelFontSize = 24;
+
+const pageOrder: readonly PageKey[] = [...pages.map((entry) => entry.key), 'profile'];
+type SheetKey = 'alerts' | 'data' | 'privacy';
 
 interface AlertEditor {
   scope: AlertScope;
@@ -107,8 +114,9 @@ export function HomeScreen() {
   const [group, setGroup] = useState<SpendingGroup | null>(null);
   const [dimension, setDimension] = useState<SpendingDimension>('merchant');
   const [activeSheet, setActiveSheet] = useState<SheetKey | null>(null);
-  const [titleOffsets, setTitleOffsets] = useState<Partial<Record<PageKey, number>>>({});
-  const navOffset = useSharedValue(0);
+  const [navViewportWidth, setNavViewportWidth] = useState(0);
+  const [navFontSize, setNavFontSize] = useState(navLabelFontSize);
+  const profileTabProgress = useSharedValue(0);
   const { error, isLoading, records, refresh } = useCapturedSpending();
   const financialAccounts = useFinancialAccounts();
   const { reload: reloadAccounts } = financialAccounts;
@@ -138,6 +146,10 @@ export function HomeScreen() {
   const summary = useMemo(
     () => summarizeSpending(countedRecords, spendWindow, rules),
     [countedRecords, rules, spendWindow],
+  );
+  const rhythm = useMemo(
+    () => expenseRhythm(countedRecords, summary.currency, spendWindow, period),
+    [countedRecords, period, spendWindow, summary.currency],
   );
   const previousSummary = useMemo(
     () =>
@@ -220,10 +232,7 @@ export function HomeScreen() {
     [alerts],
   );
 
-  const pageIndex = Math.max(
-    pages.findIndex((entry) => entry.key === page),
-    0,
-  );
+  const pageIndex = Math.max(pageOrder.indexOf(page), 0);
   const alignedWidth = useRef(width);
 
   /**
@@ -244,7 +253,7 @@ export function HomeScreen() {
     (next: PageKey) => {
       setPage(next);
       pagerRef.current?.scrollTo({
-        x: Math.max(pages.findIndex((entry) => entry.key === next), 0) * width,
+        x: Math.max(pageOrder.indexOf(next), 0) * width,
         animated: true,
       });
     },
@@ -285,39 +294,42 @@ export function HomeScreen() {
   }, []);
 
   /**
-   * Three titles at this size do not fit a phone, so the row slides instead of shrinking: the
-   * active one sits in the gutter and its neighbours stay half-visible as an affordance.
-   */
-  useEffect(() => {
-    const offset = titleOffsets[page];
-
-    if (offset === undefined) {
-      return;
-    }
-
-    navOffset.set(
-      withSpring(-offset, { duration: 420, dampingRatio: 0.9, reduceMotion: ReduceMotion.System }),
-    );
-  }, [navOffset, page, titleOffsets]);
-
-  /**
    * Fires per frame, but only ever calls setState when the pager crosses the halfway mark, so
    * the tab label tracks the finger at the cost of one render per page change.
    */
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const index = Math.min(
       Math.max(Math.round(event.nativeEvent.contentOffset.x / Math.max(width, 1)), 0),
-      pages.length - 1,
+      pageOrder.length - 1,
     );
-    const next = pages[index].key;
+    const next = pageOrder[index];
 
     if (next !== page) {
       setPage(next);
     }
   };
 
-  const navStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: navOffset.get() }],
+  useEffect(() => {
+    profileTabProgress.set(
+      withTiming(page === 'profile' ? 1 : 0, { duration: 220, reduceMotion: ReduceMotion.System }),
+    );
+  }, [page, profileTabProgress]);
+
+  const profileTabStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: interpolate(profileTabProgress.get(), [0, 1], [1, 1.12]) }],
+    backgroundColor: interpolateColor(
+      profileTabProgress.get(),
+      [0, 1],
+      [overviewColors.surfacePressed, overviewColors.textPrimary],
+    ),
+  }));
+
+  const profileInitialStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(
+      profileTabProgress.get(),
+      [0, 1],
+      [overviewColors.textPrimary, overviewColors.background],
+    ),
   }));
 
   const expenseChange =
@@ -340,8 +352,24 @@ export function HomeScreen() {
       <StatusBar style="light" />
 
       <View style={[styles.nav, { paddingTop: insets.top + 12 }]}>
-        <View accessibilityRole="tablist" style={styles.navViewport}>
-          <Animated.View style={[styles.navRow, navStyle]}>
+        <View
+          accessibilityRole="tablist"
+          onLayout={(event) => {
+            setNavViewportWidth(event.nativeEvent.layout.width);
+            setNavFontSize(navLabelFontSize);
+          }}
+          style={styles.navViewport}
+        >
+          <View
+            onLayout={(event) => {
+              const rowWidth = event.nativeEvent.layout.width;
+
+              if (navViewportWidth > 0 && rowWidth > navViewportWidth) {
+                setNavFontSize((current) => Math.floor(current * (navViewportWidth / rowWidth) * 10) / 10);
+              }
+            }}
+            style={styles.navRow}
+          >
             {pages.map((entry) => {
               const isActive = entry.key === page;
 
@@ -351,38 +379,38 @@ export function HomeScreen() {
                   accessibilityState={{ selected: isActive }}
                   hitSlop={8}
                   key={entry.key}
-                  onLayout={(event) => {
-                    const { x } = event.nativeEvent.layout;
-
-                    setTitleOffsets((current) =>
-                      current[entry.key] === x ? current : { ...current, [entry.key]: x },
-                    );
-                  }}
                   onPress={() => goToPage(entry.key)}
                   style={({ pressed }) => [styles.navTab, pressed ? styles.pressed : null]}
                 >
                   <Text
                     maxFontSizeMultiplier={1.4}
-                    style={[styles.navLabel, isActive ? styles.navLabelActive : null]}
+                    style={[
+                      styles.navLabel,
+                      { fontSize: navFontSize },
+                      isActive ? styles.navLabelActive : null,
+                    ]}
                   >
                     {entry.label}
                   </Text>
                 </Pressable>
               );
             })}
-          </Animated.View>
+          </View>
         </View>
         <Pressable
-          accessibilityHint="Otwiera profil i ustawienia konta"
+          accessibilityHint="Pokazuje profil i ustawienia konta"
           accessibilityLabel={user?.firstName ? `Konto: ${user.firstName}` : 'Konto'}
-          accessibilityRole="button"
+          accessibilityRole="tab"
+          accessibilityState={{ selected: page === 'profile' }}
           hitSlop={8}
-          onPress={() => setActiveSheet('profile')}
-          style={({ pressed }) => [styles.avatar, pressed ? styles.pressed : null]}
+          onPress={() => goToPage('profile')}
+          style={({ pressed }) => (pressed ? styles.pressed : null)}
         >
-          <Text maxFontSizeMultiplier={1.3} style={styles.avatarInitial}>
-            {initial}
-          </Text>
+          <Animated.View style={[styles.avatar, profileTabStyle]}>
+            <Animated.Text maxFontSizeMultiplier={1.3} style={[styles.avatarInitial, profileInitialStyle]}>
+              {initial}
+            </Animated.Text>
+          </Animated.View>
         </Pressable>
       </View>
 
@@ -406,6 +434,7 @@ export function HomeScreen() {
             onChangePeriod={setPeriod}
             onSelectBubble={handleSelectBubble}
             period={period}
+            rhythm={rhythm}
             summary={summary}
           />
         </View>
@@ -432,6 +461,14 @@ export function HomeScreen() {
             onCreateLimit={() => setAlertEditor({ scope: { kind: 'all' }, rule: null })}
             onSelectGroup={setGroup}
             period={period}
+          />
+        </View>
+        <View style={{ width }}>
+          <ProfileScreen
+            onOpenAlerts={() => setActiveSheet('alerts')}
+            onOpenData={() => setActiveSheet('data')}
+            onOpenPrivacy={() => setActiveSheet('privacy')}
+            syncStatus={syncStatus}
           />
         </View>
       </ScrollView>
@@ -478,49 +515,21 @@ export function HomeScreen() {
             rule={alertEditor.rule}
             scope={alertEditor.scope}
           />
-        ) : activeSheet === 'profile' ? (
-          <ProfileScreen
-            onClose={() => setActiveSheet(null)}
-            onOpenAlerts={() => setActiveSheet('alerts')}
-            onOpenData={() => setActiveSheet('data')}
-            onOpenDiagnostics={() => setActiveSheet('diagnostics')}
-            onOpenPrivacy={() => setActiveSheet('privacy')}
-            syncStatus={syncStatus}
-          />
         ) : activeSheet === 'data' ? (
           <DataScreen
             accounts={financialAccounts.accounts}
-            onClose={() => setActiveSheet('profile')}
+            onClose={() => setActiveSheet(null)}
             records={records}
           />
         ) : activeSheet === 'privacy' ? (
-          <PrivacySettingsScreen onClose={() => setActiveSheet('profile')} />
-        ) : activeSheet === 'alerts' ? (
+          <PrivacySettingsScreen onClose={() => setActiveSheet(null)} />
+        ) : (
           <AlertsScreen
             entries={alertEntries}
             onClose={() => setActiveSheet(null)}
             onCreate={() => setAlertEditor({ scope: { kind: 'all' }, rule: null })}
             onEdit={(rule) => setAlertEditor({ scope: rule.scope, rule })}
           />
-        ) : (
-          <View style={styles.sheet}>
-            <View style={styles.sheetHeader}>
-              <Text maxFontSizeMultiplier={1.4} style={styles.sheetTitle}>
-                Diagnostyka
-              </Text>
-              <Pressable
-                accessibilityRole="button"
-                hitSlop={8}
-                onPress={() => setActiveSheet(null)}
-                style={({ pressed }) => [styles.sheetClose, pressed ? styles.pressed : null]}
-              >
-                <Text maxFontSizeMultiplier={1.3} style={styles.sheetCloseLabel}>
-                  Gotowe
-                </Text>
-              </Pressable>
-            </View>
-            <IngestionDiagnosticsCard />
-          </View>
         )}
       </Modal>
 
@@ -555,9 +564,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   navRow: {
+    alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 16,
   },
   navTab: {
     minHeight: 44,
@@ -567,9 +577,8 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   navLabel: {
-    fontSize: 28,
     fontWeight: '700',
-    letterSpacing: -0.8,
+    letterSpacing: -0.6,
     color: overviewColors.textSecondary,
   },
   navLabelActive: {
@@ -588,33 +597,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: overviewColors.textPrimary,
-  },
-  sheet: {
-    flex: 1,
-    gap: overviewSpacing.tight,
-    paddingHorizontal: overviewSpacing.gutter,
-    paddingTop: overviewSpacing.gutter,
-    backgroundColor: overviewColors.background,
-  },
-  sheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  sheetTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    letterSpacing: -0.6,
-    color: overviewColors.textPrimary,
-  },
-  sheetClose: {
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  sheetCloseLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: overviewColors.textSecondary,
   },
   pager: {
     flex: 1,
