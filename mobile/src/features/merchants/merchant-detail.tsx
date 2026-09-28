@@ -37,7 +37,7 @@ import { transactionParty } from './transaction-party';
 import { merchantsCopy } from './merchants-copy';
 import { DailySpendChart } from './daily-spend-chart';
 import { transactionCount } from './group-counts';
-import { bucketSizeFor, bucketSpending, earliestOccurredMs } from './merchant-summary';
+import { bucketSizeFor, bucketSpending, chartWindow, earliestOccurredMs } from './merchant-summary';
 
 interface MerchantDetailProps {
   group: SpendingGroup;
@@ -67,15 +67,12 @@ export function MerchantDetail({
   const dragContext = useSharedValue(0);
   const [selectedBucket, setSelectedBucket] = useState<string | null>(null);
 
-  const buckets = useMemo(
-    () =>
-      bucketSpending(
-        group.records,
-        spendWindow,
-        bucketSizeFor(period, earliestOccurredMs(group.records), spendWindow.endMs),
-      ),
-    [group.records, period, spendWindow],
-  );
+  const buckets = useMemo(() => {
+    const earliestMs = earliestOccurredMs(group.records);
+    const size = bucketSizeFor(period, earliestMs, spendWindow.endMs);
+
+    return bucketSpending(group.records, chartWindow(spendWindow, size, earliestMs), size);
+  }, [group.records, period, spendWindow]);
 
   const isCategory = group.dimension === 'category';
 
