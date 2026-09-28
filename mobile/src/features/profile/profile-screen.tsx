@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { languageNames, useCopy, useLanguage } from '@/features/localization/language';
+import { replayOnboarding } from '@/features/onboarding/onboarding-replay';
 import { PremiumCard } from '@/features/premium/premium-card';
 import type { PremiumStatus } from '@/features/premium/use-premium';
 import { accountInitial } from '@/features/profile/account-identity';
@@ -256,6 +257,24 @@ export function ProfileScreen({
                 tintColor={overviewColors.textDisabled}
               />
             </Pressable>
+            {__DEV__ ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={replayOnboarding}
+                style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
+              >
+                <View accessibilityElementsHidden importantForAccessibility="no" style={styles.rowIcon}>
+                  <SymbolView
+                    name={{ ios: 'arrow.counterclockwise', android: 'replay', web: 'replay' }}
+                    size={18}
+                    tintColor={overviewColors.textSecondary}
+                  />
+                </View>
+                <Text maxFontSizeMultiplier={1.4} style={styles.actionLabel}>
+                  {copy.replayOnboarding}
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         </View>
 
