@@ -8,6 +8,9 @@ public struct IngestMillenniumNotificationIntent: AppIntent {
   )
   public static let supportedModes: IntentModes = .background
 
+  @Parameter(title: "Notification Title")
+  public var notificationTitle: String?
+
   @Parameter(title: "Notification Subtitle")
   public var notificationSubtitle: String
 
@@ -26,6 +29,7 @@ public struct IngestMillenniumNotificationIntent: AppIntent {
   public func perform() async throws -> some IntentResult & ProvidesDialog {
     do {
       let outcome = try EncryptedOutbox.shared.ingest(
+        title: notificationTitle ?? "",
         subtitle: notificationSubtitle,
         body: notificationBody,
         sourceApp: sourceApp

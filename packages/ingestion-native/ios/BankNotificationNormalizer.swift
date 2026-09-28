@@ -2,6 +2,7 @@ import Foundation
 
 struct BankNotificationNormalizer {
   func normalize(
+    title: String = "",
     subtitle: String,
     body: String,
     sourceApp: String,
@@ -16,11 +17,15 @@ struct BankNotificationNormalizer {
       return .record(record)
     }
 
-    return try MillenniumNotificationNormalizer().normalize(
+    return try MillenniumNotificationNormalizer(walletBank: walletBank(title: title)).normalize(
       subtitle: subtitle,
       body: body,
       sourceApp: sourceApp,
       capturedAt: capturedAt
     )
+  }
+
+  private func walletBank(title: String) -> String {
+    title.range(of: #"(?i)\bpko\b"#, options: .regularExpression) != nil ? "pko" : "millennium"
   }
 }

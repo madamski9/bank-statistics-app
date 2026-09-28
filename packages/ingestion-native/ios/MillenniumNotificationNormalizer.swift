@@ -1,6 +1,8 @@
 import Foundation
 
 struct MillenniumNotificationNormalizer {
+  var walletBank = "millennium"
+
   private static let groupedAmountPattern = NotificationAmount.groupedPattern
   private let cardPaymentExpression = try! NSRegularExpression(
     pattern: #"(?i)^płatność kartą:?\s*("# + groupedAmountPattern + #")\s*([A-Z]{3})\s+(?:w|u)\s+(.+?)\.?$"#
@@ -168,7 +170,7 @@ struct MillenniumNotificationNormalizer {
 
     return NormalizedRecord(
       id: UUID().uuidString.lowercased(),
-      bank: "millennium",
+      bank: walletBank,
       direction: "expense",
       transactionType: "cardPayment",
       amountMinor: amount.minor,

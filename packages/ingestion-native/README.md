@@ -24,8 +24,9 @@ A PKO BP push from IKO has no subtitle and a multi-line body — `Otrzymano prze
 telefonu`, `Data: 2026-09-28 13:14:57`, `Kwota: 30,00 PLN` — and is saved as a `pko` transfer:
 `Otrzymano przelew…` is income, `Wysłano`/`Wykonano`/`Zlecono przelew…` is an expense. The same
 action serves both banks; the shared shortcut decides which apps trigger it (IKO, Millennium,
-Portfel). A Wallet push still records its bank as Millennium, because the automation does not pass
-the notification title that names the card's bank.
+Portfel). A Wallet push's title names the card's bank (`Bank Millennium S.A.`, `PKO BP`), so the
+automation maps it to the optional `Notification Title`: a title containing `PKO` records the card
+payment as `pko`, anything else — including an unmapped title — as `millennium`.
 
 A Wallet push whose body carries an amount with no currency symbol is still captured, as a Review
 Item flagged `currency`: the transaction reaches the timeline but stays out of statistics until the
