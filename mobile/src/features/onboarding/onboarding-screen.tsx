@@ -74,9 +74,9 @@ const banks = [
 const pinStep = 5;
 const stepCount = 6;
 const shortcutUrls = {
-  millennium: 'https://www.icloud.com/shortcuts/3e16ea95fa2f488baffd3cb3b8bf9763',
-  pko: 'https://www.icloud.com/shortcuts/284ef542abfa42c2bfd95b48d8cfa314',
-  millenniumAndPko: 'https://www.icloud.com/shortcuts/7c5d94e5e0eb45a5b46979e9a6f63499',
+  millennium: 'https://www.icloud.com/shortcuts/45c335f2b7ad450885f9613939fe7b1f',
+  pko: 'https://www.icloud.com/shortcuts/fc6262c04b8c4a218b88a9a92ce8f381',
+  millenniumAndPko: 'https://www.icloud.com/shortcuts/8920bdb2274d4782b71ae72b1732ea0e',
 };
 
 function shortcutUrlFor(selectedBanks: string[]): string {
