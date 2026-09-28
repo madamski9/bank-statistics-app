@@ -597,6 +597,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
           onClosed={handleGroupClosed}
           onEditLimit={handleEditLimit}
           period={period}
+          rules={rules}
           spendWindow={spendWindow}
         />
       ) : null}

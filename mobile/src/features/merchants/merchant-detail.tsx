@@ -20,6 +20,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import type { CategorizationRule } from '@/features/classification/categorization-rule';
 import type { SpendingGroup } from '@/features/classification/spending-groups';
 import type { GroupLimit } from '@/features/alerts/group-limit';
 import { LimitProgressBar } from '@/features/alerts/limit-progress-bar';
@@ -32,6 +33,7 @@ import { impactLight } from '@/haptics';
 import { project, rubberband } from '@/motion';
 import { useCopy } from '@/features/localization/language';
 
+import { categoryBreakdown, transactionParty } from './category-breakdown';
 import { merchantsCopy } from './merchants-copy';
 import { DailySpendChart } from './daily-spend-chart';
 import { transactionCount } from './group-counts';
@@ -39,6 +41,7 @@ import { bucketSizeFor, bucketSpending, earliestOccurredMs } from './merchant-su
 
 interface MerchantDetailProps {
   group: SpendingGroup;
+  rules: CategorizationRule[];
   limit: GroupLimit | null;
   onEditLimit: () => void;
   spendWindow: PeriodWindow;
@@ -49,6 +52,7 @@ interface MerchantDetailProps {
 
 export function MerchantDetail({
   group,
+  rules,
   limit,
   onEditLimit,
   spendWindow,
@@ -71,6 +75,12 @@ export function MerchantDetail({
         bucketSizeFor(period, earliestOccurredMs(group.records), spendWindow.endMs),
       ),
     [group.records, period, spendWindow],
+  );
+
+  const isCategory = group.dimension === 'category';
+  const breakdown = useMemo(
+    () => (isCategory ? categoryBreakdown(group.records, rules) : []),
+    [group.records, isCategory, rules],
   );
 
   useEffect(() => {
@@ -260,24 +270,66 @@ export function MerchantDetail({
             />
           ) : null}
 
+          {breakdown.length > 0 ? (
+            <View style={styles.breakdown}>
+              <Text maxFontSizeMultiplier={1.5} style={styles.historyTitle}>
+                {copy.spentOn}
+              </Text>
+              {breakdown.map((entry) => (
+                <View
+                  accessible
+                  accessibilityLabel={`${entry.label}, ${formatAmount(entry.amountMinor, group.currency)}, ${formatShare(entry.share)}, ${transactionCount(entry.count, 'category')}`}
+                  key={entry.key}
+                  style={styles.breakdownRow}
+                >
+                  <View style={styles.breakdownHeading}>
+                    <Text maxFontSizeMultiplier={1.5} numberOfLines={1} style={styles.breakdownLabel}>
+                      {entry.label}
+                    </Text>
+                    <Text maxFontSizeMultiplier={1.5} style={styles.historyAmount}>
+                      {formatAmount(entry.amountMinor, group.currency)}
+                    </Text>
+                  </View>
+                  <View style={styles.barTrack}>
+                    <View style={[styles.barFill, { width: `${Math.max(entry.share * 100, 2)}%` }]} />
+                  </View>
+                  <Text maxFontSizeMultiplier={1.5} style={styles.breakdownMeta}>
+                    {formatShare(entry.share)} · {transactionCount(entry.count, 'category')}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
           <View style={styles.history}>
             <Text maxFontSizeMultiplier={1.5} style={styles.historyTitle}>
               {copy.history}
             </Text>
             {group.records.map((record) => {
               const occurredAt = new Date(record.occurredAt);
+              const party = isCategory ? transactionParty(record, rules) : null;
 
               return (
                 <View
                   accessible
-                  accessibilityLabel={`${formatDayHeading(occurredAt, new Date())}, ${formatTime(occurredAt)}, ${formatAmount(record.amountMinor, record.currency)}`}
+                  accessibilityLabel={`${party === null ? '' : `${party}, `}${formatDayHeading(occurredAt, new Date())}, ${formatTime(occurredAt)}, ${formatAmount(record.amountMinor, record.currency)}`}
                   key={record.id}
                   style={styles.historyRow}
                 >
-                  <Text maxFontSizeMultiplier={1.5} style={styles.historyDate}>
-                    {formatDayHeading(occurredAt, new Date())}
-                    <Text style={styles.historyTime}> · {formatTime(occurredAt)}</Text>
-                  </Text>
+                  <View style={styles.historyCopy}>
+                    {party !== null ? (
+                      <Text maxFontSizeMultiplier={1.5} numberOfLines={1} style={styles.historyParty}>
+                        {party}
+                      </Text>
+                    ) : null}
+                    <Text
+                      maxFontSizeMultiplier={1.5}
+                      style={party === null ? styles.historyDate : styles.historyTime}
+                    >
+                      {formatDayHeading(occurredAt, new Date())}
+                      <Text style={styles.historyTime}> · {formatTime(occurredAt)}</Text>
+                    </Text>
+                  </View>
                   <Text maxFontSizeMultiplier={1.5} style={styles.historyAmount}>
                     − {formatAmount(record.amountMinor, record.currency)}
                   </Text>
@@ -421,6 +473,48 @@ const styles = StyleSheet.create({
   history: {
     gap: 2,
   },
+  breakdown: {
+    gap: 14,
+  },
+  breakdownRow: {
+    gap: 6,
+  },
+  breakdownHeading: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  breakdownLabel: {
+    flexShrink: 1,
+    fontSize: 15,
+    fontWeight: '500',
+    color: overviewColors.textPrimary,
+  },
+  breakdownMeta: {
+    fontSize: 12,
+    color: overviewColors.textSecondary,
+  },
+  barTrack: {
+    height: 5,
+    overflow: 'hidden',
+    borderRadius: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.10)',
+  },
+  barFill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: overviewColors.textSecondary,
+  },
+  historyCopy: {
+    flexShrink: 1,
+    gap: 2,
+  },
+  historyParty: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: overviewColors.textPrimary,
+  },
   historyTitle: {
     fontSize: 15,
     fontWeight: '600',
@@ -429,7 +523,7 @@ const styles = StyleSheet.create({
   },
   historyRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
     paddingVertical: 9,
