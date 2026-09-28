@@ -67,14 +67,28 @@ const banks = [
     id: 'pko',
     name: 'PKO BP',
     logo: require('./assets/pko.png'),
-    available: false,
+    available: true,
   },
 ] as const;
 
 const pinStep = 5;
 const stepCount = 6;
-const millenniumShortcutUrl =
-  'https://www.icloud.com/shortcuts/3e16ea95fa2f488baffd3cb3b8bf9763';
+const shortcutUrls = {
+  millennium: 'https://www.icloud.com/shortcuts/45c335f2b7ad450885f9613939fe7b1f',
+  pko: 'https://www.icloud.com/shortcuts/fc6262c04b8c4a218b88a9a92ce8f381',
+  millenniumAndPko: 'https://www.icloud.com/shortcuts/8920bdb2274d4782b71ae72b1732ea0e',
+};
+
+function shortcutUrlFor(selectedBanks: string[]): string {
+  const includesMillennium = selectedBanks.includes('millennium');
+  const includesPko = selectedBanks.includes('pko');
+
+  if (includesMillennium && includesPko) {
+    return shortcutUrls.millenniumAndPko;
+  }
+
+  return includesPko ? shortcutUrls.pko : shortcutUrls.millennium;
+}
 
 function pendingReturnKey(userId: string): string {
   return `bankstats.onboarding.shortcuts-return.v1.${userId}`;
@@ -186,7 +200,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
     leftApp.current = false;
 
     try {
-      await Linking.openURL(millenniumShortcutUrl);
+      await Linking.openURL(shortcutUrlFor(selectedBanks));
     } catch {
       launchedShortcuts.current = false;
       if (userId != null) {

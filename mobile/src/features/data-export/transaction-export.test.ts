@@ -124,7 +124,7 @@ describe('export file', () => {
   test('lists the accounts so the transactions can be interpreted', () => {
     const data = buildTransactionExport([], [], now);
 
-    expect(data.accounts.map((account) => account.id)).toEqual(['general-manual', 'general-millennium']);
+    expect(data.accounts.map((account) => account.id)).toEqual(['general-manual', 'general-millennium', 'general-pko']);
     expect(data.notes.length).toBeGreaterThan(0);
   });
 });

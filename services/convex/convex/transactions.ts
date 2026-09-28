@@ -26,8 +26,10 @@ function isIsoTimestamp(value: string): boolean {
   return isoTimestampPattern.test(value) && !Number.isNaN(Date.parse(value));
 }
 
+const captureBanks = new Set(['millennium', 'pko']);
+
 function assertValidChange(change: TransactionChange) {
-  if (change.origin === 'capture' && change.bank !== 'millennium') {
+  if (change.origin === 'capture' && !captureBanks.has(change.bank)) {
     throw new ConvexError('Only enabled banks can synchronize captured transactions.');
   }
 
@@ -53,7 +55,7 @@ function assertValidChange(change: TransactionChange) {
   assertValidRevision(change);
 }
 
-const generalAccountIds = new Set(['general-manual', 'general-millennium']);
+const generalAccountIds = new Set(['general-manual', 'general-millennium', 'general-pko']);
 
 async function assertOwnedAccount(ctx: QueryCtx, ownerId: string, change: TransactionChange) {
   const accountId = change.accountId;

@@ -2,7 +2,7 @@ import { currentCopy } from '@/features/localization/language';
 
 import { financialAccountsCopy } from './financial-accounts-copy';
 
-const financialAccountBanks = ['manual', 'millennium'] as const;
+const financialAccountBanks = ['manual', 'millennium', 'pko'] as const;
 
 export type FinancialAccountBank = (typeof financialAccountBanks)[number];
 
@@ -34,6 +34,7 @@ function generalAccounts(): FinancialAccount[] {
       isGeneral: true,
     },
     { id: 'general-millennium', bank: 'millennium', name: 'Millennium', isGeneral: true },
+    { id: 'general-pko', bank: 'pko', name: 'PKO BP', isGeneral: true },
   ];
 }
 

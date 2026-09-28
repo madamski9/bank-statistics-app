@@ -2,11 +2,14 @@ import AppIntents
 
 @available(iOS 27.0, *)
 public struct IngestMillenniumNotificationIntent: AppIntent {
-  public static let title: LocalizedStringResource = "Capture Millennium Notification"
+  public static let title: LocalizedStringResource = "Capture Bank Notification"
   public static let description = IntentDescription(
-    "Normalizes a Millennium notification locally and saves it in the encrypted BankStats outbox."
+    "Normalizes a Millennium or PKO BP notification locally and saves it in the encrypted BankStats outbox."
   )
   public static let supportedModes: IntentModes = .background
+
+  @Parameter(title: "Notification Title")
+  public var notificationTitle: String?
 
   @Parameter(title: "Notification Subtitle")
   public var notificationSubtitle: String
@@ -26,6 +29,7 @@ public struct IngestMillenniumNotificationIntent: AppIntent {
   public func perform() async throws -> some IntentResult & ProvidesDialog {
     do {
       let outcome = try EncryptedOutbox.shared.ingest(
+        title: notificationTitle ?? "",
         subtitle: notificationSubtitle,
         body: notificationBody,
         sourceApp: sourceApp

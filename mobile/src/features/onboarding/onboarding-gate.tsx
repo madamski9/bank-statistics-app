@@ -2,6 +2,7 @@ import { useAuth } from '@clerk/expo';
 import * as SecureStore from 'expo-secure-store';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
+import { finishOnboardingReplay, useOnboardingReplay } from './onboarding-replay';
 import { OnboardingScreen } from './onboarding-screen';
 
 interface OnboardingGateProps {
@@ -24,6 +25,7 @@ function banksKey(userId: string): string {
 export function OnboardingGate({ children }: OnboardingGateProps) {
   const { userId } = useAuth();
   const [state, setState] = useState<OnboardingState | null>(null);
+  const isReplaying = useOnboardingReplay();
 
   useEffect(() => {
     if (userId == null) {
@@ -61,6 +63,7 @@ export function OnboardingGate({ children }: OnboardingGateProps) {
       );
       await SecureStore.setItemAsync(completedKey(userId), 'true');
       setState({ userId, completed: true });
+      finishOnboardingReplay();
     },
     [userId],
   );
@@ -69,5 +72,5 @@ export function OnboardingGate({ children }: OnboardingGateProps) {
     return null;
   }
 
-  return state.completed ? children : <OnboardingScreen onComplete={finish} />;
+  return state.completed && !isReplaying ? children : <OnboardingScreen onComplete={finish} />;
 }
