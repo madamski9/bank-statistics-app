@@ -153,6 +153,20 @@ export function bucketSpending(
   return buckets;
 }
 
+const minimumChartDays = 14;
+
+export function chartWindow(
+  window: PeriodWindow,
+  size: BucketSize,
+  earliestMs: number | null,
+): PeriodWindow {
+  if (window.startMs !== null || size !== 'day' || earliestMs === null) {
+    return window;
+  }
+
+  return { ...window, startMs: Math.min(earliestMs, window.endMs - minimumChartDays * dayMs) };
+}
+
 export function formatDayMonth(ms: number): string {
   const date = new Date(ms);
   const calendar = currentCopy(calendarCopy);

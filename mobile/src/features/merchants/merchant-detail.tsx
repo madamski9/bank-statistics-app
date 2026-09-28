@@ -20,6 +20,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import type { CategorizationRule } from '@/features/classification/categorization-rule';
 import type { SpendingGroup } from '@/features/classification/spending-groups';
 import type { GroupLimit } from '@/features/alerts/group-limit';
 import { LimitProgressBar } from '@/features/alerts/limit-progress-bar';
@@ -32,13 +33,15 @@ import { impactLight } from '@/haptics';
 import { project, rubberband } from '@/motion';
 import { useCopy } from '@/features/localization/language';
 
+import { transactionParty } from './transaction-party';
 import { merchantsCopy } from './merchants-copy';
 import { DailySpendChart } from './daily-spend-chart';
 import { transactionCount } from './group-counts';
-import { bucketSizeFor, bucketSpending, earliestOccurredMs } from './merchant-summary';
+import { bucketSizeFor, bucketSpending, chartWindow, earliestOccurredMs } from './merchant-summary';
 
 interface MerchantDetailProps {
   group: SpendingGroup;
+  rules: CategorizationRule[];
   limit: GroupLimit | null;
   onEditLimit: () => void;
   spendWindow: PeriodWindow;
@@ -49,6 +52,7 @@ interface MerchantDetailProps {
 
 export function MerchantDetail({
   group,
+  rules,
   limit,
   onEditLimit,
   spendWindow,
@@ -63,15 +67,14 @@ export function MerchantDetail({
   const dragContext = useSharedValue(0);
   const [selectedBucket, setSelectedBucket] = useState<string | null>(null);
 
-  const buckets = useMemo(
-    () =>
-      bucketSpending(
-        group.records,
-        spendWindow,
-        bucketSizeFor(period, earliestOccurredMs(group.records), spendWindow.endMs),
-      ),
-    [group.records, period, spendWindow],
-  );
+  const buckets = useMemo(() => {
+    const earliestMs = earliestOccurredMs(group.records);
+    const size = bucketSizeFor(period, earliestMs, spendWindow.endMs);
+
+    return bucketSpending(group.records, chartWindow(spendWindow, size, earliestMs), size);
+  }, [group.records, period, spendWindow]);
+
+  const isCategory = group.dimension === 'category';
 
   useEffect(() => {
     translateY.set(
@@ -266,18 +269,29 @@ export function MerchantDetail({
             </Text>
             {group.records.map((record) => {
               const occurredAt = new Date(record.occurredAt);
+              const party = isCategory ? transactionParty(record, rules) : null;
 
               return (
                 <View
                   accessible
-                  accessibilityLabel={`${formatDayHeading(occurredAt, new Date())}, ${formatTime(occurredAt)}, ${formatAmount(record.amountMinor, record.currency)}`}
+                  accessibilityLabel={`${party === null ? '' : `${party}, `}${formatDayHeading(occurredAt, new Date())}, ${formatTime(occurredAt)}, ${formatAmount(record.amountMinor, record.currency)}`}
                   key={record.id}
                   style={styles.historyRow}
                 >
-                  <Text maxFontSizeMultiplier={1.5} style={styles.historyDate}>
-                    {formatDayHeading(occurredAt, new Date())}
-                    <Text style={styles.historyTime}> · {formatTime(occurredAt)}</Text>
-                  </Text>
+                  <View style={styles.historyCopy}>
+                    {party !== null ? (
+                      <Text maxFontSizeMultiplier={1.5} numberOfLines={1} style={styles.historyParty}>
+                        {party}
+                      </Text>
+                    ) : null}
+                    <Text
+                      maxFontSizeMultiplier={1.5}
+                      style={party === null ? styles.historyDate : styles.historyTime}
+                    >
+                      {formatDayHeading(occurredAt, new Date())}
+                      <Text style={styles.historyTime}> · {formatTime(occurredAt)}</Text>
+                    </Text>
+                  </View>
                   <Text maxFontSizeMultiplier={1.5} style={styles.historyAmount}>
                     − {formatAmount(record.amountMinor, record.currency)}
                   </Text>
@@ -421,6 +435,15 @@ const styles = StyleSheet.create({
   history: {
     gap: 2,
   },
+  historyCopy: {
+    flexShrink: 1,
+    gap: 2,
+  },
+  historyParty: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: overviewColors.textPrimary,
+  },
   historyTitle: {
     fontSize: 15,
     fontWeight: '600',
@@ -429,7 +452,7 @@ const styles = StyleSheet.create({
   },
   historyRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
     paddingVertical: 9,
