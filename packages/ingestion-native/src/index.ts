@@ -1,7 +1,7 @@
 import { requireOptionalNativeModule } from 'expo-modules-core';
 import { Platform } from 'react-native';
 
-export type IngestionRecordSource = 'millennium' | 'manual';
+export type IngestionRecordSource = 'millennium' | 'pko' | 'manual';
 
 export type IngestionRecordOrigin = 'capture' | 'manual';
 

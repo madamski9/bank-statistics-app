@@ -6,6 +6,15 @@ import { generalManualAccountId } from '@/features/financial-accounts/financial-
 
 import { withoutUndefined, type SyncCodec } from './sync-plan';
 
+const captureSourceApps = {
+  millennium: 'pl.millenniumbank.bankmillennium',
+  pko: 'pl.pkobp.iko',
+} as const;
+
+function isCaptureBank(bank: string): bank is keyof typeof captureSourceApps {
+  return bank === 'millennium' || bank === 'pko';
+}
+
 export type PushedTransaction = FunctionArgs<typeof api.transactions.push>['changes'][number];
 
 export type TransactionChange = Omit<PushedTransaction, 'revision' | 'deleted'>;
@@ -39,7 +48,7 @@ export function changeFromRecord(record: IngestionRecord): TransactionChange {
 function recordFromChange(change: TransactionChange): IngestionRecord {
   return withoutUndefined({
     id: change.clientId,
-    bank: change.bank === 'millennium' ? 'millennium' : 'manual',
+    bank: isCaptureBank(change.bank) ? change.bank : 'manual',
     direction: change.direction,
     transactionType: change.transactionType,
     amountMinor: change.amountMinor,
@@ -53,7 +62,9 @@ function recordFromChange(change: TransactionChange): IngestionRecord {
     capturedAt: change.capturedAt,
     sourceApp:
       change.sourceApp ??
-      (change.origin === 'capture' ? 'pl.millenniumbank.bankmillennium' : 'manual'),
+      (change.origin === 'capture' && isCaptureBank(change.bank)
+        ? captureSourceApps[change.bank]
+        : 'manual'),
     status: change.status,
     origin: change.origin,
   });
@@ -62,7 +73,7 @@ function recordFromChange(change: TransactionChange): IngestionRecord {
 export const transactionCodec: SyncCodec<IngestionRecord, TransactionChange> = {
   includes: (record) =>
     record.origin === 'manual' ||
-    (record.bank === 'millennium' && record.merchant !== 'SKLEP TEST'),
+    (isCaptureBank(record.bank) && record.merchant !== 'SKLEP TEST'),
   idOf: (record) => record.id,
   toChange: changeFromRecord,
   fromChange: recordFromChange,

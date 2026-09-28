@@ -72,6 +72,23 @@ describe('planSync', () => {
     expect(result.push[0]).not.toHaveProperty('accountId');
   });
 
+  test('pushes a captured PKO BP transfer and reads it back as PKO BP', () => {
+    const captured = manual({
+      id: 'capture-pko',
+      bank: 'pko',
+      origin: 'capture',
+      direction: 'income',
+      transactionType: 'incomingTransfer',
+      accountId: undefined,
+      sourceApp: 'pl.pkobp.iko',
+    });
+
+    const result = plan({ local: [captured], remote: [], ledger: {}, now });
+
+    expect(result.push[0]).toMatchObject({ bank: 'pko', origin: 'capture' });
+    expect(transactionCodec.fromChange(result.push[0])).toMatchObject({ bank: 'pko' });
+  });
+
   test('does not upload synthetic captured transactions', () => {
     const synthetic = manual({
       id: 'capture-test',

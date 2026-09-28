@@ -8,7 +8,7 @@ final class EncryptedOutbox: @unchecked Sendable {
   private let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
   func ingest(subtitle: String, body: String, sourceApp: String) throws -> NormalizationOutcome {
-    let outcome = try MillenniumNotificationNormalizer().normalize(
+    let outcome = try BankNotificationNormalizer().normalize(
       subtitle: subtitle,
       body: body,
       sourceApp: sourceApp

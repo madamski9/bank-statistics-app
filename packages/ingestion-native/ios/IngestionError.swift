@@ -19,7 +19,7 @@ enum IngestionError: LocalizedError {
     case .database(let message):
       return "Encrypted outbox operation failed: \(message)"
     case .unsupportedNotification:
-      return "The notification does not match a supported Millennium format"
+      return "The notification does not match a supported bank format"
     }
   }
 

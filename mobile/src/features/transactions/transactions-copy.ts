@@ -2,7 +2,7 @@ import { defineCopy } from '@/features/localization/language';
 
 export const transactionsCopy = defineCopy({
   pl: {
-    banks: { millennium: 'Millennium', manual: 'Wpis ręczny' },
+    banks: { millennium: 'Millennium', pko: 'PKO BP', manual: 'Wpis ręczny' },
     types: {
       cardPayment: 'Płatność kartą',
       outgoingTransfer: 'Przelew wychodzący',
@@ -65,7 +65,7 @@ export const transactionsCopy = defineCopy({
     add: 'Dodaj transakcję',
   },
   en: {
-    banks: { millennium: 'Millennium', manual: 'Manual entry' },
+    banks: { millennium: 'Millennium', pko: 'PKO BP', manual: 'Manual entry' },
     types: {
       cardPayment: 'Card payment',
       outgoingTransfer: 'Outgoing transfer',

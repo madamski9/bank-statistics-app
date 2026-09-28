@@ -1,7 +1,7 @@
 # @bankstats/ingestion-native
 
 The Expo native module that owns transaction ingestion outside the React Native runtime. Its one
-iOS App Intent, `Capture Millennium Notification`, is fed by a single Shortcuts automation that
+iOS App Intent, `Capture Bank Notification` (`IngestMillenniumNotificationIntent`), is fed by a single Shortcuts automation that
 triggers on a notification from **either** Millennium **or** Portfel (Wallet) and normalizes
 whichever text arrives:
 
@@ -19,6 +19,13 @@ whichever text arrives:
   its body. Nothing keys off the currency, so a payment abroad is captured in the currency it was
   made in. The location suffix after the double space is stripped from the merchant when it ends in
   a voivodeship.
+
+A PKO BP push from IKO has no subtitle and a multi-line body — `Otrzymano przelew na numer
+telefonu`, `Data: 2026-09-28 13:14:57`, `Kwota: 30,00 PLN` — and is saved as a `pko` transfer:
+`Otrzymano przelew…` is income, `Wysłano`/`Wykonano`/`Zlecono przelew…` is an expense. The same
+action serves both banks; the shared shortcut decides which apps trigger it (IKO, Millennium,
+Portfel). A Wallet push still records its bank as Millennium, because the automation does not pass
+the notification title that names the card's bank.
 
 A Wallet push whose body carries an amount with no currency symbol is still captured, as a Review
 Item flagged `currency`: the transaction reaches the timeline but stays out of statistics until the

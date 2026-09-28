@@ -19,7 +19,7 @@ const financialAccountChange = v.object({
 type FinancialAccountChange = Infer<typeof financialAccountChange>;
 
 const maximumNameLength = 60;
-const financialAccountBanks = new Set(['manual', 'millennium']);
+const financialAccountBanks = new Set(['manual', 'millennium', 'pko']);
 
 function assertValidChange(change: FinancialAccountChange) {
   const name = change.name.trim();

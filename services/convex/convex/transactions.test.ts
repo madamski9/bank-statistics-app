@@ -300,6 +300,27 @@ describe('transactions', () => {
     ]);
   });
 
+  test('accepts a captured PKO BP transfer with no Financial Account', async () => {
+    const { user } = await signedIn(alice, 'phone');
+
+    await user.mutation(api.transactions.push, {
+      installationId: 'phone',
+      changes: [lunch({
+        clientId: 'capture-pko',
+        bank: 'pko',
+        origin: 'capture',
+        direction: 'income',
+        transactionType: 'incomingTransfer',
+        accountId: undefined,
+        sourceApp: 'pl.pkobp.iko',
+      })],
+    });
+
+    expect(await user.query(api.transactions.list, { installationId: 'phone' })).toEqual([
+      expect.objectContaining({ clientId: 'capture-pko', bank: 'pko', direction: 'income' }),
+    ]);
+  });
+
   test('keeps captured Millennium transactions under the signed-in owner', async () => {
     const { backend, user } = await signedIn(alice, 'phone');
     await user.mutation(api.transactions.push, {
