@@ -140,11 +140,6 @@ interface AlertEditor {
   isScopeLocked?: boolean;
 }
 
-/**
- * The persistent shell: Overview and Transactions side by side in a pager, the settings avatar,
- * and the bubble detail on top of both so its expansion is measured against the window.
- */
-
 interface HomeScreenProps {
   initialPage?: PageKey;
 }
@@ -229,15 +224,9 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   const countedRecords = useMemo(() => statisticalRecords(records), [records]);
   const awaitingConversion = useMemo(() => awaitingConversionCount(records), [records]);
 
-  /**
-   * One window, shared by every page so the bubbles, the shop ranking and a shop's chart can
-   * never disagree about which days they are describing. `records` is a real dependency: it
-   * re-anchors the rolling window to "now" when fresh captures arrive, which is the only
-   * moment the app learns that time has passed.
-   */
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const spendWindow = useMemo(() => periodWindow(period, new Date()), [period, records]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const previousWindow = useMemo(() => previousPeriodWindow(period, new Date()), [period, records]);
   const summary = useMemo(
     () => summarizeSpending(countedRecords, spendWindow, rules),
@@ -420,11 +409,6 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   const pageIndex = Math.max(pageOrder.indexOf(page), 0);
   const alignedWidth = useRef(width);
 
-  /**
-   * Realign only when the viewport itself changes, e.g. on rotation. Reacting to the page as
-   * well would fire an instant scroll in the middle of the animated one a tab tap starts, and
-   * would yank the pager out from under a finger mid-swipe.
-   */
   useEffect(() => {
     if (alignedWidth.current === width) {
       return;
@@ -445,7 +429,6 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
     [width],
   );
 
-  /** Stable, so memoised OverviewScreen survives a selection or a page change untouched. */
   const handleSelectBubble = useCallback((key: BubbleKey, origin: BubbleOrigin) => {
     dispatchSelection({ type: 'select', selection: { key, origin } });
   }, []);
@@ -478,10 +461,6 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
     setGroup(null);
   }, []);
 
-  /**
-   * Fires per frame, but only ever calls setState when the pager crosses the halfway mark, so
-   * the tab label tracks the finger at the cost of one render per page change.
-   */
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const index = Math.min(
       Math.max(Math.round(event.nativeEvent.contentOffset.x / Math.max(width, 1)), 0),

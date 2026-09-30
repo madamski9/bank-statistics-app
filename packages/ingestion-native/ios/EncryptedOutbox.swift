@@ -197,9 +197,6 @@ final class EncryptedOutbox: @unchecked Sendable {
         "cipherVersion": try scalar("PRAGMA cipher_version", database: database),
         "databasePath": configuration.databaseURL.path,
       ]
-      // Surfaces whether the background App Intent has fired at all, and whether its last
-      // attempt succeeded, so an empty outbox can be told apart from an automation that
-      // never ran.
       values.merge(IngestionAttemptLog(configuration: configuration).snapshot()) { _, new in new }
       return values
     }

@@ -26,9 +26,6 @@ enum IngestionError: LocalizedError {
     }
   }
 
-  /// A coarse, stable code safe to persist in the shared App Group attempt log. Unlike
-  /// `errorDescription`, this never varies with interpolated detail, so it can be recorded
-  /// without risking that a future case starts embedding notification content.
   var reasonCode: String {
     switch self {
     case .missingAppGroupConfiguration:

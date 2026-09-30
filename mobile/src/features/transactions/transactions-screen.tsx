@@ -107,7 +107,6 @@ function buildSections(records: IngestionRecord[], reference: Date): DaySection[
   return [...sections.values()];
 }
 
-/** The plain log behind the Overview: every captured transaction, newest first. */
 function TransactionsScreenComponent({
   records,
   accounts,
@@ -376,7 +375,6 @@ function TransactionsScreenComponent({
   );
 }
 
-/** Memoised: swiping the pager re-renders the shell once per crossing, not this list. */
 export const TransactionsScreen = memo(TransactionsScreenComponent);
 
 const styles = StyleSheet.create({
