@@ -17,6 +17,11 @@ struct TransactionInput: Record {
   @Field var review: String?
   @Field var category: String?
   @Field var accountId: String?
+  @Field var eventId: String?
+  @Field var reportingAmountMinor: Int?
+  @Field var exchangeRate: String?
+  @Field var exchangeRateDate: String?
+  @Field var exchangeRateTable: String?
 
   func normalized() -> NormalizedRecord {
     let timestamp = ISO8601DateFormatter().string(from: Date())
@@ -37,7 +42,12 @@ struct TransactionInput: Record {
       origin: origin,
       review: review,
       category: category,
-      accountId: accountId
+      accountId: accountId,
+      eventId: eventId,
+      reportingAmountMinor: reportingAmountMinor,
+      exchangeRate: exchangeRate,
+      exchangeRateDate: exchangeRateDate,
+      exchangeRateTable: exchangeRateTable
     )
   }
 }

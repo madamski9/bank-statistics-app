@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
 import { finishOnboardingReplay, useOnboardingReplay } from './onboarding-replay';
 import { OnboardingScreen } from './onboarding-screen';
+import { banksKey } from './selected-banks';
 
 interface OnboardingGateProps {
   children: ReactNode;
@@ -16,10 +17,6 @@ interface OnboardingState {
 
 function completedKey(userId: string): string {
   return `bankstats.onboarding.v1.${userId}`;
-}
-
-function banksKey(userId: string): string {
-  return `bankstats.onboarding.banks.v1.${userId}`;
 }
 
 export function OnboardingGate({ children }: OnboardingGateProps) {

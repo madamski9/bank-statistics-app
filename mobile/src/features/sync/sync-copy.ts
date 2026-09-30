@@ -34,3 +34,38 @@ export const foreignDeviceCopy = defineCopy({
     removeData: 'Remove data from this phone and continue',
   },
 });
+
+export const cloudSyncCopy = defineCopy({
+  pl: {
+    section: 'SYNCHRONIZACJA Z CHMURĄ',
+    label: 'Synchronizuj przez chmurę',
+    onFootnote:
+      'Znormalizowane transakcje (kwota, sklep, kategoria, data) trafiają do chmury w UE, żeby działały inne urządzenia i kopia zapasowa. Treść powiadomień banku nigdy nie opuszcza telefonu.',
+    offFootnote:
+      'Tryb tylko na tym telefonie: nic nie wysyłamy do chmury. Jeśli zgubisz telefon albo usuniesz aplikację, dane znikną. Kursy NBP nadal pobieramy, podając tylko walutę i datę.',
+    offTitle: 'Zostawić dane tylko na tym telefonie?',
+    offBody:
+      'Przestaniemy synchronizować transakcje. Możesz też usunąć kopię, która jest już w chmurze. Inne zalogowane urządzenia mogą nadal wysyłać swoje dane.',
+    keepCloudCopy: 'Wyłącz, zostaw kopię',
+    deleteCloudCopy: 'Wyłącz i usuń kopię z chmury',
+    cancel: 'Anuluj',
+    failed: 'Nie udało się usunąć kopii z chmury. Spróbuj ponownie, gdy będziesz online.',
+    deleting: 'Usuwamy kopię z chmury…',
+  },
+  en: {
+    section: 'CLOUD SYNC',
+    label: 'Sync through the cloud',
+    onFootnote:
+      'Normalized transactions (amount, shop, category, date) go to the cloud in the EU so your other devices and backups work. Bank notification text never leaves the phone.',
+    offFootnote:
+      'This-phone-only mode: nothing is sent to the cloud. If you lose the phone or delete the app, the data is gone. NBP rates are still fetched using only the currency and date.',
+    offTitle: 'Keep your data on this phone only?',
+    offBody:
+      'We will stop syncing transactions. You can also delete the copy already in the cloud. Other signed-in devices may keep sending their data.',
+    keepCloudCopy: 'Turn off, keep the copy',
+    deleteCloudCopy: 'Turn off and delete the cloud copy',
+    cancel: 'Cancel',
+    failed: 'Could not delete the cloud copy. Try again when you are online.',
+    deleting: 'Deleting the cloud copy…',
+  },
+});

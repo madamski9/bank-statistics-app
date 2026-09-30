@@ -28,6 +28,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { impactLight } from '@/haptics';
 import { project, rubberband } from '@/motion';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
+import { transactionKindSymbols } from '@/features/transactions/transaction-kind-symbols';
 
 import { BubbleSkin } from './bubble-skin';
 import type { BubbleSelection } from './bubble-selection';
@@ -42,7 +43,7 @@ import { useCopy } from '@/features/localization/language';
 
 import { AreaChart, type AreaSeries } from './area-chart';
 import { RangeSwitcher } from './range-switcher';
-import type { SpendingSource, SpendingSourceKind, SpendingSummary } from './spending-summary';
+import type { SpendingSource, SpendingSummary } from './spending-summary';
 import { spendingOverviewCopy } from './spending-overview-copy';
 import type { SpendingTrend } from './spending-trend';
 import { TintedScrollView } from './tinted-scroll-view';
@@ -61,17 +62,6 @@ interface BubbleDetailProps {
 
 const detailAmountFontSize = 44;
 const horizontalPadding = 20;
-
-const sourceSymbols = {
-  cardPayment: { ios: 'creditcard.fill', android: 'credit_card', web: 'credit_card' },
-  outgoingTransfer: { ios: 'arrow.up.forward', android: 'arrow_outward', web: 'arrow_outward' },
-  incomingTransfer: {
-    ios: 'arrow.down.backward',
-    android: 'arrow_downward',
-    web: 'arrow_downward',
-  },
-  other: { ios: 'square.grid.2x2.fill', android: 'grid_view', web: 'grid_view' },
-} as const satisfies Record<SpendingSourceKind, { ios: string; android: string; web: string }>;
 
 function trendSeries(key: BubbleKey, trend: SpendingTrend, titles: Record<BubbleKey, string>): AreaSeries[] {
   const expense = { key: 'expense', label: titles.expense, color: bubbleTints.expense.film, values: trend.expense };
@@ -425,7 +415,7 @@ export function BubbleDetail({
               >
                 <View style={styles.sourceIcon}>
                   <SymbolView
-                    name={sourceSymbols[source.kind]}
+                    name={transactionKindSymbols[source.kind]}
                     size={17}
                     tintColor={overviewColors.textSecondary}
                   />

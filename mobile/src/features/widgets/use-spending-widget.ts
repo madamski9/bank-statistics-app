@@ -6,6 +6,7 @@ import { AppState, Platform } from 'react-native';
 
 import type { AlertRule } from '@/features/alerts/alert-rule';
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
+import type { CustomCategory } from '@/features/classification/categories';
 import { useLanguage } from '@/features/localization/language';
 
 import type { WidgetBackgroundConfiguration } from './widget-background';
@@ -28,6 +29,7 @@ interface SpendingWidgetSources {
   records: IngestionRecord[];
   alertRules: AlertRule[];
   categorizationRules: CategorizationRule[];
+  customCategories: CustomCategory[];
 }
 
 function loadSpendingWidgets() {
@@ -73,7 +75,15 @@ function useForegroundTick(): number {
   return tick;
 }
 
-export function useSpendingWidget({ isReady, isPremium, records, alertRules, categorizationRules, privacy }: SpendingWidgetSources): void {
+export function useSpendingWidget({
+  isReady,
+  isPremium,
+  records,
+  alertRules,
+  categorizationRules,
+  customCategories,
+  privacy,
+}: SpendingWidgetSources): void {
   const foregroundTick = useForegroundTick();
   const language = useLanguage();
 
@@ -90,6 +100,7 @@ export function useSpendingWidget({ isReady, isPremium, records, alertRules, cat
         isPremium,
         alertRules,
         categorizationRules,
+        customCategories,
         openUrl,
         revealUrl,
         privacy,
@@ -110,6 +121,7 @@ export function useSpendingWidget({ isReady, isPremium, records, alertRules, cat
   }, [
     alertRules,
     categorizationRules,
+    customCategories,
     foregroundTick,
     isPremium,
     isReady,

@@ -56,6 +56,10 @@ _Avoid_: Merchant, category
 A classification used to group transactions by purpose. Transactions may remain uncategorized without being excluded from cash-flow statistics.
 _Avoid_: Merchant, transaction type
 
+**Custom Category**:
+A category the user creates and names in addition to the built-in categories. Deleting it returns its transactions to automatic recognition.
+_Avoid_: Tag, label
+
 **Categorization Rule**:
 A user-approved rule that assigns a category to future matching transactions.
 _Avoid_: Correction, merchant alias
@@ -73,8 +77,28 @@ The value of a transaction expressed in the user's reporting currency for statis
 _Avoid_: Original amount, current value
 
 **Exchange Rate Snapshot**:
-The NBP exchange rate assigned to a transaction for its occurrence date and retained so historical reporting amounts remain stable.
+The NBP mid rate published on or before a transaction's occurrence date in Poland, together with its effective date and table number, retained on the transaction so historical reporting amounts remain stable.
 _Avoid_: Current rate, live rate
+
+**Event**:
+A named period such as a trip or a renovation that gathers the transactions made while it lasts, whatever their category. A transaction can be assigned to an event or excluded from it by hand.
+_Avoid_: Tag, budget, project
+
+**Recurring Payment**:
+A payment to the same merchant or counterparty that repeats at a regular weekly, monthly, quarterly, or yearly interval with a similar amount, such as a subscription or rent. It is inferred from history, never declared by the bank.
+_Avoid_: Standing order, subscription plan
+
+**Spending Forecast**:
+An estimate of the current calendar month's expenses from the spending so far, the discretionary daily pace, and recurring payments still due. It is an estimate, never a promise or a balance.
+_Avoid_: Budget, prediction
+
+**Monthly Summary**:
+A review of one calendar month's expenses, income, categories, merchants, recurring payments, and events compared with the previous month.
+_Avoid_: Statement, report
+
+**Capture Health**:
+The evidence-based state of a Capture Configuration: working, requiring attention, or unconfigured, derived from captured transactions and recent automation runs.
+_Avoid_: Connection status
 
 **Alert Rule**:
 A user-defined condition over transactions, a scope, and a time period that determines when the product sends an alert.

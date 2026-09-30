@@ -6,8 +6,9 @@ import {
   assertBoundedText,
   assertPushSize,
   assertValidRevision,
+  isIsoTimestamp,
   requireDevice,
-  rowFromChange,
+  storeChanges,
   withoutServerFields,
 } from './syncedRows';
 
@@ -20,11 +21,8 @@ const transactionChange = v.object({
 type TransactionChange = Infer<typeof transactionChange>;
 
 const currencyPattern = /^[A-Z]{3}$/;
-const isoTimestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
-
-function isIsoTimestamp(value: string): boolean {
-  return isoTimestampPattern.test(value) && !Number.isNaN(Date.parse(value));
-}
+const decimalRatePattern = /^\d{1,6}(?:\.\d{1,8})?$/;
+const calendarDatePattern = /^\d{4}-\d{2}-\d{2}$/;
 
 const captureBanks = new Set(['millennium', 'pko']);
 
@@ -49,9 +47,31 @@ function assertValidChange(change: TransactionChange) {
     throw new ConvexError('Occurrence and capture times are ISO 8601 timestamps.');
   }
 
-  [change.bank, change.merchant, change.category, change.sourceApp, change.accountId, change.accountName].forEach(
-    assertBoundedText,
-  );
+  if (
+    change.reportingAmountMinor !== undefined &&
+    (!Number.isSafeInteger(change.reportingAmountMinor) || change.reportingAmountMinor <= 0)
+  ) {
+    throw new ConvexError('A reporting amount is a positive whole number of minor units.');
+  }
+
+  if (change.exchangeRate !== undefined && !decimalRatePattern.test(change.exchangeRate)) {
+    throw new ConvexError('An exchange rate is a decimal number.');
+  }
+
+  if (change.exchangeRateDate !== undefined && !calendarDatePattern.test(change.exchangeRateDate)) {
+    throw new ConvexError('An exchange rate date is a calendar date.');
+  }
+
+  [
+    change.bank,
+    change.merchant,
+    change.category,
+    change.sourceApp,
+    change.accountId,
+    change.accountName,
+    change.eventId,
+    change.exchangeRateTable,
+  ].forEach(assertBoundedText);
   assertValidRevision(change);
 }
 
@@ -83,29 +103,7 @@ export const push = mutation({
     await Promise.all(
       changes.map((change) => assertOwnedAccount(ctx, owner.ownerId, change)),
     );
-    const now = Date.now();
-
-    for (const change of changes) {
-      const stored = await ctx.db
-        .query('transactions')
-        .withIndex('by_owner_client', (index) =>
-          index.eq('ownerId', owner.ownerId).eq('clientId', change.clientId),
-        )
-        .unique();
-      const row = rowFromChange(change, stored, owner, now);
-
-      if (row === null) {
-        continue;
-      }
-
-      if (stored === null) {
-        await ctx.db.insert('transactions', row);
-      } else {
-        await ctx.db.replace(stored._id, row);
-      }
-    }
-
-    await ctx.db.patch(owner.device._id, { lastSeenAt: now });
+    await storeChanges(ctx, 'transactions', owner, changes);
   },
 });
 

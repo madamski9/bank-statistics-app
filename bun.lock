@@ -74,6 +74,7 @@
       "name": "@bankstats/ingestion-native",
       "version": "0.0.0",
       "dependencies": {
+        "@bankstats/parser-rules": "workspace:*",
         "expo-modules-core": "~57.0.18",
       },
       "peerDependencies": {
@@ -84,6 +85,10 @@
     "packages/parser-rules": {
       "name": "@bankstats/parser-rules",
       "version": "0.0.0",
+      "devDependencies": {
+        "@types/bun": "^1.2.0",
+        "typescript": "~6.0.3",
+      },
     },
     "services/convex": {
       "name": "@bankstats/convex",

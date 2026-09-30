@@ -2,7 +2,8 @@ import { mutation, type QueryCtx } from './_generated/server';
 import { requireOwnerId } from './owner';
 
 const deletionBatchSize = 500;
-const ownedTables = ['transactions', 'financialAccounts', 'devices', 'profiles'] as const;
+const cloudCopyTables = ['transactions', 'financialAccounts', 'categories', 'events'] as const;
+const ownedTables = [...cloudCopyTables, 'devices', 'profiles'] as const;
 
 export async function isAccountDeleted(ctx: QueryCtx, ownerId: string): Promise<boolean> {
   const deletion = await ctx.db
@@ -25,6 +26,26 @@ export const deleteData = mutation({
     let isComplete = true;
 
     for (const table of ownedTables) {
+      const rows = await ctx.db
+        .query(table)
+        .withIndex('by_owner', (index) => index.eq('ownerId', ownerId))
+        .take(deletionBatchSize);
+
+      await Promise.all(rows.map((row) => ctx.db.delete(row._id)));
+      isComplete &&= rows.length < deletionBatchSize;
+    }
+
+    return { isComplete };
+  },
+});
+
+export const deleteCloudCopy = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const ownerId = await requireOwnerId(ctx.auth);
+    let isComplete = true;
+
+    for (const table of cloudCopyTables) {
       const rows = await ctx.db
         .query(table)
         .withIndex('by_owner', (index) => index.eq('ownerId', ownerId))

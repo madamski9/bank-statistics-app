@@ -8,6 +8,38 @@ export interface CategoryOption {
 
 export const uncategorizedCategory = 'uncategorized';
 
+export interface CustomCategory {
+  id: string;
+  name: string;
+}
+
+const customCategoryPrefix = 'category-';
+let registeredCustomCategories: CustomCategory[] = [];
+
+export function setCustomCategories(categories: CustomCategory[]): void {
+  registeredCustomCategories = categories;
+}
+
+export function customCategories(): CustomCategory[] {
+  return registeredCustomCategories;
+}
+
+export function isCustomCategoryId(category: string): boolean {
+  return category.startsWith(customCategoryPrefix);
+}
+
+function customCategoryName(category: string): string | undefined {
+  return registeredCustomCategories.find((candidate) => candidate.id === category)?.name;
+}
+
+export function knownCategory(category: string | undefined): string | undefined {
+  if (category === undefined || !isCustomCategoryId(category)) {
+    return category;
+  }
+
+  return customCategoryName(category) === undefined ? undefined : category;
+}
+
 const categoryCopy = defineCopy({
   pl: {
     uncategorized: 'Bez kategorii',
@@ -60,10 +92,19 @@ export function uncategorizedLabel(): string {
   return currentCopy(categoryCopy).uncategorized;
 }
 
-export function categoryOptions(): CategoryOption[] {
+export function builtInCategoryLabels(): string[] {
   const { labels } = currentCopy(categoryCopy);
 
-  return categoryIds.map((id) => ({ id, label: labels[id] }));
+  return categoryIds.map((id) => labels[id]);
+}
+
+export function categoryOptions(): CategoryOption[] {
+  const { labels } = currentCopy(categoryCopy);
+  const custom = [...registeredCustomCategories]
+    .sort((left, right) => left.name.localeCompare(right.name, 'pl'))
+    .map((category) => ({ id: category.id, label: category.name }));
+
+  return [...categoryIds.map((id) => ({ id, label: labels[id] })), ...custom];
 }
 
 function isCategoryId(category: string): category is CategoryId {
@@ -331,6 +372,10 @@ export function suggestedCategory(merchantName: string): string | null {
 export function categoryLabel(category: string | undefined): string {
   if (category === undefined || category.trim() === '' || category === uncategorizedCategory) {
     return uncategorizedLabel();
+  }
+
+  if (isCustomCategoryId(category)) {
+    return customCategoryName(category) ?? uncategorizedLabel();
   }
 
   return isCategoryId(category) ? currentCopy(categoryCopy).labels[category] : category;

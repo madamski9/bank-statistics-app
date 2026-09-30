@@ -11,8 +11,13 @@ export const transactionFields = {
   transactionType: v.optional(
     v.union(
       v.literal('cardPayment'),
+      v.literal('blikPayment'),
       v.literal('outgoingTransfer'),
       v.literal('incomingTransfer'),
+      v.literal('atmWithdrawal'),
+      v.literal('refund'),
+      v.literal('fee'),
+      v.literal('interest'),
     ),
   ),
   amountMinor: v.number(),
@@ -33,6 +38,11 @@ export const transactionFields = {
   occurredAt: v.string(),
   capturedAt: v.string(),
   status: v.union(v.literal('pending'), v.literal('posted'), v.literal('reversed')),
+  eventId: v.optional(v.string()),
+  reportingAmountMinor: v.optional(v.number()),
+  exchangeRate: v.optional(v.string()),
+  exchangeRateDate: v.optional(v.string()),
+  exchangeRateTable: v.optional(v.string()),
 };
 
 export const financialAccountFields = {
@@ -40,6 +50,18 @@ export const financialAccountFields = {
   bank: v.string(),
   name: v.string(),
   isGeneral: v.boolean(),
+};
+
+export const categoryFields = {
+  clientId: v.string(),
+  name: v.string(),
+};
+
+export const eventFields = {
+  clientId: v.string(),
+  name: v.string(),
+  startedAt: v.string(),
+  endedAt: v.optional(v.string()),
 };
 
 export const syncedRowFields = {
@@ -78,4 +100,20 @@ export default defineSchema({
     .index('by_owner', ['ownerId'])
     .index('by_owner_client', ['ownerId', 'clientId'])
     .index('by_deleted_at', ['deletedAt']),
+  categories: defineTable({ ...categoryFields, ...syncedRowFields })
+    .index('by_owner', ['ownerId'])
+    .index('by_owner_client', ['ownerId', 'clientId'])
+    .index('by_deleted_at', ['deletedAt']),
+  events: defineTable({ ...eventFields, ...syncedRowFields })
+    .index('by_owner', ['ownerId'])
+    .index('by_owner_client', ['ownerId', 'clientId'])
+    .index('by_deleted_at', ['deletedAt']),
+  exchangeRates: defineTable({
+    currency: v.string(),
+    requestedDate: v.string(),
+    effectiveDate: v.string(),
+    mid: v.string(),
+    table: v.string(),
+    fetchedAt: v.number(),
+  }).index('by_currency_date', ['currency', 'requestedDate']),
 });

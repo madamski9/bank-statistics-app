@@ -1,0 +1,351 @@
+{
+  "capturedAt": "2026-09-28T10:00:00Z",
+  "examples": [
+    {
+      "name": "Wallet card payment names the merchant and drops the voivodeship",
+      "input": {
+        "title": "Bank Millennium S.A.",
+        "subtitle": "Lidl  Gdańsk, Pomorskie",
+        "body": "5,08 zł",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "millennium",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 508,
+          "currency": "PLN",
+          "merchant": "Lidl",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.millenniumbank.bankmillennium",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Wallet card payment for a PKO card is attributed to PKO",
+      "input": {
+        "title": "PKO BP",
+        "subtitle": "Biedronka  Warszawa, Mazowieckie",
+        "body": "1 234,56 zł",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "pko",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 123456,
+          "currency": "PLN",
+          "merchant": "Biedronka",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.millenniumbank.bankmillennium",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Wallet card payment abroad keeps the currency it was paid in",
+      "input": {
+        "title": "",
+        "subtitle": "Cafe de Flore  Paris",
+        "body": "€ 12,50",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "millennium",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 1250,
+          "currency": "EUR",
+          "merchant": "Cafe de Flore  Paris",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.millenniumbank.bankmillennium",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Wallet card payment with a currency code suffix",
+      "input": {
+        "title": "Bank Millennium S.A.",
+        "subtitle": "Amazon",
+        "body": "19.99 USD",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "millennium",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 1999,
+          "currency": "USD",
+          "merchant": "Amazon",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.millenniumbank.bankmillennium",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Wallet amount without a currency is kept for review in PLN",
+      "input": {
+        "title": "Bank Millennium S.A.",
+        "subtitle": "Kiosk",
+        "body": "12,34",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "millennium",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 1234,
+          "currency": "PLN",
+          "merchant": "Kiosk",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.millenniumbank.bankmillennium",
+          "status": "pending",
+          "review": "currency"
+        }
+      }
+    },
+    {
+      "name": "Wallet push with a zero amount is not a transaction",
+      "input": {
+        "title": "Bank Millennium S.A.",
+        "subtitle": "Apple",
+        "body": "0,00 zł",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": { "outcome": "ignored", "reason": "notTransaction" }
+    },
+    {
+      "name": "Millennium card payment naming the merchant",
+      "input": {
+        "title": "",
+        "subtitle": "",
+        "body": "Płatność kartą: 12,34 PLN w SKLEP TEST.",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "millennium",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 1234,
+          "currency": "PLN",
+          "merchant": "SKLEP TEST",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.millenniumbank.bankmillennium",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Millennium card payment strips a location ending in a voivodeship",
+      "input": {
+        "title": "",
+        "subtitle": "",
+        "body": "Płatność kartą 45,20 pln u ORLEN STACJA  Gdynia, pomorskie",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "millennium",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 4520,
+          "currency": "PLN",
+          "merchant": "ORLEN STACJA",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.millenniumbank.bankmillennium",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Millennium card push without a merchant waits for the Wallet push",
+      "input": {
+        "title": "",
+        "subtitle": "",
+        "body": "Płatność kartą debetową: Kwota: -21,00 PLN, Karta:Mastercard 360 **** **** **** 6899, Data: 28/09/2026 12:01",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": { "outcome": "ignored", "reason": "cardPaymentAwaitingApplePay" }
+    },
+    {
+      "name": "Declined Millennium card payment never becomes a transaction",
+      "input": {
+        "title": "",
+        "subtitle": "",
+        "body": "Płatność kartą odrzucona: 20,00 PLN w SKLEP. Brak środków.",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": { "outcome": "ignored", "reason": "cardPaymentAwaitingApplePay" }
+    },
+    {
+      "name": "Millennium outgoing transfer in summer time",
+      "input": {
+        "title": "",
+        "subtitle": "",
+        "body": "Przelew wychodzący: Kwota: 150,00 PLN, z rachunku: Konto 360, Data: 28/09/2026 13:14",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "millennium",
+          "direction": "expense",
+          "transactionType": "outgoingTransfer",
+          "amountMinor": 15000,
+          "currency": "PLN",
+          "accountName": "Konto 360",
+          "occurredAt": "2026-09-28T11:14:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.millenniumbank.bankmillennium",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Millennium incoming transfer in winter time across lines",
+      "input": {
+        "title": "",
+        "subtitle": "",
+        "body": "Przelew przychodzący:\nKwota: 2 500,00 EUR,\nna rachunek: Konto walutowe,\nData: 15/01/2026 09:05",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "millennium",
+          "direction": "income",
+          "transactionType": "incomingTransfer",
+          "amountMinor": 250000,
+          "currency": "EUR",
+          "accountName": "Konto walutowe",
+          "occurredAt": "2026-01-15T08:05:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.millenniumbank.bankmillennium",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Millennium transfer with an impossible date is not guessed",
+      "input": {
+        "title": "",
+        "subtitle": "",
+        "body": "Przelew przychodzący: Kwota: 10,00 PLN, na rachunek: Konto 360, Data: 31/02/2026 09:05",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": { "outcome": "ignored", "reason": "notTransaction" }
+    },
+    {
+      "name": "PKO incoming phone transfer spread over three lines",
+      "input": {
+        "title": "",
+        "subtitle": "",
+        "body": "Otrzymano przelew na numer telefonu\nData: 2026-09-28 13:14:57\nKwota: 30,00 PLN",
+        "sourceApp": "pl.pkobp.iko"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "pko",
+          "direction": "income",
+          "transactionType": "incomingTransfer",
+          "amountMinor": 3000,
+          "currency": "PLN",
+          "occurredAt": "2026-09-28T11:14:57Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.pkobp.iko",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "PKO outgoing transfer with a signed amount and no seconds",
+      "input": {
+        "title": "",
+        "subtitle": " ",
+        "body": "Wysłano przelew na numer telefonu\nData: 2026-01-15 09:05\nKwota: -1 250,00 PLN.",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "pko",
+          "direction": "expense",
+          "transactionType": "outgoingTransfer",
+          "amountMinor": 125000,
+          "currency": "PLN",
+          "occurredAt": "2026-01-15T08:05:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.pkobp.iko",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "PKO standing order",
+      "input": {
+        "title": "",
+        "subtitle": "",
+        "body": "Zlecono przelew zdefiniowany Data: 2026-03-01 07:00:00 Kwota: 2 100,00 PLN",
+        "sourceApp": "pl.pkobp.iko"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "pko",
+          "direction": "expense",
+          "transactionType": "outgoingTransfer",
+          "amountMinor": 210000,
+          "currency": "PLN",
+          "occurredAt": "2026-03-01T06:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.pkobp.iko",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "An advertisement is read and ignored",
+      "input": {
+        "title": "",
+        "subtitle": "",
+        "body": "Oceń naszą aplikację i zgarnij bonus!",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": { "outcome": "ignored", "reason": "notTransaction" }
+    },
+    {
+      "name": "A PKO login notice is ignored",
+      "input": {
+        "title": "",
+        "subtitle": "",
+        "body": "Zalogowano do serwisu iPKO. Data: 2026-09-28 13:14:57",
+        "sourceApp": "pl.pkobp.iko"
+      },
+      "expected": { "outcome": "ignored", "reason": "notTransaction" }
+    }
+  ]
+}

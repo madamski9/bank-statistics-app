@@ -1,0 +1,3 @@
+# Assign transactions to events by time
+
+An Event collects the transactions whose occurrence time falls between its start and end, so captured notifications join a running Event without the native collector knowing about Events at all. A transaction may carry an explicit event identifier to join an Event outside its window, or the value `none` to be excluded; an identifier of a deleted Event falls back to the time window. Only one Event runs at a time, and starting a new one ends the previous one. Membership is computed wherever it is needed rather than stored, so editing an Event's dates reclassifies its transactions consistently on every device.

@@ -32,7 +32,15 @@ A Wallet push whose body carries an amount with no currency symbol is still capt
 Item flagged `currency`: the transaction reaches the timeline but stays out of statistics until the
 user confirms the currency.
 
-Records persist in an App Group SQLCipher outbox. The JavaScript API exposes synthetic ingestion
+Recognition is data-driven: the native `BankNotificationInterpreter` applies the shared rule bundle
+from [`@bankstats/parser-rules`](../parser-rules/README.md), which the config plugin copies into the
+`BankStatsParserRules` resource bundle at prebuild. The rules above are described there together
+with the examples every interpreter must reproduce.
+
+Records persist in an App Group SQLCipher outbox. The same database holds a `documents` table for
+the application's other encrypted state (Financial Accounts, the synchronization ledger, Custom
+Categories, Events), exposed as `readEncryptedDocument`, `writeEncryptedDocument` and
+`deleteEncryptedDocument`. The JavaScript API exposes synthetic ingestion
 for both notification shapes, stored records, storage diagnostics, and writes — `saveIngestionRecord`
 (insert or replace by identifier, used for manual transactions, corrections and review decisions)
 and `deleteIngestionRecord` — to the mobile application.

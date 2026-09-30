@@ -1,8 +1,12 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 
+import type { CustomCategory } from '@/features/classification/categories';
+import type { SpendingEvent } from '@/features/events/spending-event';
 import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
 
 import { accountCodec, type AccountChange } from './account-codec';
+import { categoryCodec, type CategoryChange } from './category-codec';
+import { eventCodec, type EventChange } from './event-codec';
 import { planSync, type SyncCodec, type SyncLedger, type Versioned } from './sync-plan';
 import { transactionCodec, type TransactionChange } from './transaction-codec';
 
@@ -27,6 +31,8 @@ export interface SyncPorts {
   ownerId: string;
   transactions: EntityPorts<IngestionRecord, TransactionChange>;
   accounts: EntityPorts<FinancialAccount, AccountChange>;
+  categories: EntityPorts<CustomCategory, CategoryChange>;
+  events: EntityPorts<SpendingEvent, EventChange>;
   ledger: LedgerStorage;
   now: () => number;
 }
@@ -37,12 +43,14 @@ export interface SyncResult {
   isForeignDevice: boolean;
 }
 
-type LedgerSection = 'transactions' | 'accounts';
+const ledgerSections = ['transactions', 'accounts', 'categories', 'events'] as const;
 
-interface StoredLedger {
-  ownerId: string;
-  transactions: SyncLedger;
-  accounts: SyncLedger;
+type LedgerSection = (typeof ledgerSections)[number];
+
+type StoredLedger = { ownerId: string } & Record<LedgerSection, SyncLedger>;
+
+function emptyLedger(ownerId: string): StoredLedger {
+  return { ownerId, transactions: {}, accounts: {}, categories: {}, events: {} };
 }
 
 function isLedgerEntry(value: unknown): boolean {
@@ -78,13 +86,20 @@ function parseLedger(stored: string): StoredLedger | null {
       return null;
     }
 
-    const { ownerId, transactions, accounts } = parsed as Record<string, unknown>;
+    const sections = parsed as Record<string, unknown>;
+    const ownerId = sections.ownerId;
 
     if (typeof ownerId !== 'string') {
       return null;
     }
 
-    return { ownerId, transactions: parseSection(transactions), accounts: parseSection(accounts) };
+    const ledger = emptyLedger(ownerId);
+
+    for (const section of ledgerSections) {
+      ledger[section] = parseSection(sections[section]);
+    }
+
+    return ledger;
   } catch {
     return null;
   }
@@ -116,7 +131,7 @@ export async function claimDevice(storage: LedgerStorage, ownerId: string): Prom
   const reading = await readLedger(storage);
 
   if (reading.kind === 'missing') {
-    await writeLedger(storage, { ownerId, transactions: {}, accounts: {} });
+    await writeLedger(storage, emptyLedger(ownerId));
 
     return true;
   }
@@ -169,10 +184,7 @@ export async function runSync(ports: SyncPorts): Promise<SyncResult> {
     return { pushed: 0, pulled: 0, isForeignDevice: true };
   }
 
-  const ledger =
-    reading.kind === 'owned'
-      ? reading.ledger
-      : { ownerId: ports.ownerId, transactions: {}, accounts: {} };
+  const ledger = reading.kind === 'owned' ? reading.ledger : emptyLedger(ports.ownerId);
   const now = ports.now();
   const accounts = await syncEntity(
     ports.accounts,
@@ -182,6 +194,15 @@ export async function runSync(ports: SyncPorts): Promise<SyncResult> {
     ports.ledger,
     now,
   );
+  const categories = await syncEntity(
+    ports.categories,
+    categoryCodec,
+    ledger,
+    'categories',
+    ports.ledger,
+    now,
+  );
+  const events = await syncEntity(ports.events, eventCodec, ledger, 'events', ports.ledger, now);
   const transactions = await syncEntity(
     ports.transactions,
     transactionCodec,
@@ -190,10 +211,15 @@ export async function runSync(ports: SyncPorts): Promise<SyncResult> {
     ports.ledger,
     now,
   );
+  const results = [accounts, categories, events, transactions];
 
   return {
-    pushed: accounts.pushed + transactions.pushed,
-    pulled: accounts.pulled + transactions.pulled,
+    pushed: results.reduce((sum, result) => sum + result.pushed, 0),
+    pulled: results.reduce((sum, result) => sum + result.pulled, 0),
     isForeignDevice: false,
   };
+}
+
+export async function forgetSyncedState(storage: LedgerStorage, ownerId: string): Promise<void> {
+  await writeLedger(storage, emptyLedger(ownerId));
 }

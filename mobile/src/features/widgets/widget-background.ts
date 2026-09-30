@@ -1,5 +1,6 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 
+import { setCustomCategories, type CustomCategory } from '@/features/classification/categories';
 import { setCurrentLanguage, type Language } from '@/features/localization/language';
 
 import {
@@ -16,6 +17,7 @@ export interface WidgetBackgroundConfiguration {
   isPremium?: boolean;
   alertRules: SnapshotSources['alertRules'];
   categorizationRules: SnapshotSources['categorizationRules'];
+  customCategories?: CustomCategory[];
   openUrl: string;
   revealUrl?: string;
   privacy?: WidgetPrivacy;
@@ -32,6 +34,8 @@ export function snapshot(
   if (configuration.language !== undefined) {
     setCurrentLanguage(configuration.language);
   }
+
+  setCustomCategories(configuration.customCategories ?? []);
 
   if (!configuration.enabled) {
     return signedOutWidgetProps(reference, configuration.openUrl);

@@ -10,15 +10,20 @@ import { useConvex, useConvexAuth, useQuery } from 'convex/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 
+import type { CustomCategory } from '@/features/classification/categories';
+import { customCategoryStore } from '@/features/classification/custom-category-storage';
+import { eventStore } from '@/features/events/event-storage';
+import type { SpendingEvent } from '@/features/events/spending-event';
 import {
   loadAccounts,
   removeAccount,
   upsertAccount,
 } from '@/features/financial-accounts/account-storage';
 import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
-import { fileAccountStorage } from '@/features/financial-accounts/file-account-storage';
+import { encryptedAccountStorage } from '@/features/financial-accounts/encrypted-account-storage';
 
-import { fileLedgerStorage } from './file-ledger-storage';
+import { useCloudSyncEnabled } from './cloud-sync-preference';
+import { encryptedLedgerStorage } from './encrypted-ledger-storage';
 import { loadInstallationId } from './installation-id';
 import { claimDevice, runSync, type SyncPorts } from './sync-runner';
 import type { SyncStatus } from './sync-status';
@@ -34,10 +39,18 @@ interface Registration {
 interface CloudSyncOptions {
   records: IngestionRecord[];
   accounts: FinancialAccount[];
+  categories: CustomCategory[];
+  events: SpendingEvent[];
   onPulled: () => void | Promise<void>;
 }
 
-export function useCloudSync({ records, accounts, onPulled }: CloudSyncOptions): SyncStatus {
+export function useCloudSync({
+  records,
+  accounts,
+  categories,
+  events,
+  onPulled,
+}: CloudSyncOptions): SyncStatus {
   const convex = useConvex();
   const { isAuthenticated } = useConvexAuth();
   const { userId } = useAuth();
@@ -46,12 +59,15 @@ export function useCloudSync({ records, accounts, onPulled }: CloudSyncOptions):
   const [isConnected, setIsConnected] = useState(
     () => convex.connectionState().isWebSocketConnected,
   );
-  const isSupported = Platform.OS === 'ios';
+  const isCloudEnabled = useCloudSyncEnabled();
+  const isSupported = Platform.OS === 'ios' && isCloudEnabled === true;
   const installationId =
     registration !== null && registration.userId === userId ? registration.installationId : null;
   const isReady = isSupported && isAuthenticated && installationId !== null;
   const remoteTransactions = useQuery(api.transactions.list, isReady ? { installationId } : 'skip');
   const remoteAccounts = useQuery(api.financialAccounts.list, isReady ? { installationId } : 'skip');
+  const remoteCategories = useQuery(api.categories.list, isReady ? { installationId } : 'skip');
+  const remoteEvents = useQuery(api.events.list, isReady ? { installationId } : 'skip');
   const [registrationAttempt, setRegistrationAttempt] = useState(0);
   const isRunning = useRef(false);
   const isRerunNeeded = useRef(false);
@@ -63,7 +79,7 @@ export function useCloudSync({ records, accounts, onPulled }: CloudSyncOptions):
 
     let isActive = true;
 
-    claimDevice(fileLedgerStorage, userId)
+    claimDevice(encryptedLedgerStorage, userId)
       .then(async (isOwnDevice) => {
         if (!isOwnDevice) {
           return;
@@ -115,9 +131,9 @@ export function useCloudSync({ records, accounts, onPulled }: CloudSyncOptions):
       },
       accounts: {
         local: {
-          list: () => loadAccounts(fileAccountStorage),
-          save: (account) => upsertAccount(fileAccountStorage, account),
-          remove: (id) => removeAccount(fileAccountStorage, id),
+          list: () => loadAccounts(encryptedAccountStorage),
+          save: (account) => upsertAccount(encryptedAccountStorage, account),
+          remove: (id) => removeAccount(encryptedAccountStorage, id),
         },
         cloud: {
           list: () => convex.query(api.financialAccounts.list, { installationId }),
@@ -125,7 +141,29 @@ export function useCloudSync({ records, accounts, onPulled }: CloudSyncOptions):
             convex.mutation(api.financialAccounts.push, { installationId, changes }),
         },
       },
-      ledger: fileLedgerStorage,
+      categories: {
+        local: {
+          list: customCategoryStore.load,
+          save: customCategoryStore.upsert,
+          remove: customCategoryStore.remove,
+        },
+        cloud: {
+          list: () => convex.query(api.categories.list, { installationId }),
+          push: (changes) => convex.mutation(api.categories.push, { installationId, changes }),
+        },
+      },
+      events: {
+        local: {
+          list: eventStore.load,
+          save: eventStore.upsert,
+          remove: eventStore.remove,
+        },
+        cloud: {
+          list: () => convex.query(api.events.list, { installationId }),
+          push: (changes) => convex.mutation(api.events.push, { installationId, changes }),
+        },
+      },
+      ledger: encryptedLedgerStorage,
       now: Date.now,
     };
 
@@ -152,7 +190,17 @@ export function useCloudSync({ records, accounts, onPulled }: CloudSyncOptions):
     const timeout = setTimeout(() => void synchronize(), triggerDebounceMs);
 
     return () => clearTimeout(timeout);
-  }, [accounts, records, remoteAccounts, remoteTransactions, synchronize]);
+  }, [
+    accounts,
+    categories,
+    events,
+    records,
+    remoteAccounts,
+    remoteCategories,
+    remoteEvents,
+    remoteTransactions,
+    synchronize,
+  ]);
 
   useEffect(() => {
     if (status.state !== 'failed') {
@@ -194,6 +242,10 @@ export function useCloudSync({ records, accounts, onPulled }: CloudSyncOptions):
       subscription.remove();
     };
   }, [convex, synchronize]);
+
+  if (isCloudEnabled === false) {
+    return { state: 'disabled', lastSyncedAt: status.lastSyncedAt };
+  }
 
   if (!isConnected) {
     return { state: 'offline', lastSyncedAt: status.lastSyncedAt };

@@ -29,6 +29,11 @@ struct NormalizedRecord: Codable, Sendable {
   var review: String? = nil
   var category: String? = nil
   var accountId: String? = nil
+  var eventId: String? = nil
+  var reportingAmountMinor: Int? = nil
+  var exchangeRate: String? = nil
+  var exchangeRateDate: String? = nil
+  var exchangeRateTable: String? = nil
 
   var dictionary: [String: Any] {
     var value: [String: Any] = [
@@ -50,6 +55,11 @@ struct NormalizedRecord: Codable, Sendable {
     value["review"] = review
     value["category"] = category
     value["accountId"] = accountId
+    value["eventId"] = eventId
+    value["reportingAmountMinor"] = reportingAmountMinor
+    value["exchangeRate"] = exchangeRate
+    value["exchangeRateDate"] = exchangeRateDate
+    value["exchangeRateTable"] = exchangeRateTable
 
     return value
   }

@@ -1,4 +1,5 @@
 import { useUser } from '@clerk/expo';
+import * as Notifications from 'expo-notifications';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
@@ -36,7 +37,24 @@ import {
   type SpendingDimension,
   type SpendingGroup,
 } from '@/features/classification/spending-groups';
+import { CustomCategoriesScreen } from '@/features/classification/custom-categories-screen';
 import { useCategorizationRules } from '@/features/classification/use-categorization-rules';
+import { useCustomCategories } from '@/features/classification/use-custom-categories';
+import { CaptureHealthScreen } from '@/features/capture-health/capture-health-screen';
+import { useCurrencyConversion } from '@/features/currency-conversion/use-currency-conversion';
+import { summarizeEvent } from '@/features/events/event-summary';
+import { EventsScreen } from '@/features/events/events-screen';
+import { activeEvent } from '@/features/events/spending-event';
+import { useEvents } from '@/features/events/use-events';
+import { monthForecast } from '@/features/forecast/month-forecast';
+import { InsightsScreen } from '@/features/insights/insights-screen';
+import { monthOf, shiftMonth, summarizeMonth } from '@/features/monthly-summary/monthly-summary';
+import { summaryMonthFromNotification } from '@/features/monthly-summary/monthly-summary-reminder';
+import { MonthlySummaryScreen } from '@/features/monthly-summary/monthly-summary-screen';
+import { useMonthlySummaryReminder } from '@/features/monthly-summary/use-monthly-summary-reminder';
+import { detectRecurringPayments } from '@/features/subscriptions/recurring-payments';
+import { SubscriptionsScreen } from '@/features/subscriptions/subscriptions-screen';
+import { useDismissedSubscriptions } from '@/features/subscriptions/use-dismissed-subscriptions';
 import { DataScreen } from '@/features/account-data/data-screen';
 import { accountInitial } from '@/features/profile/account-identity';
 import { OverviewScreen } from '@/features/overview/overview-screen';
@@ -68,6 +86,7 @@ import { useFinancialAccounts } from '@/features/financial-accounts/use-financia
 import { MerchantDetail } from '@/features/merchants/merchant-detail';
 import { MerchantsScreen } from '@/features/merchants/merchants-screen';
 import {
+  canCreateCustomCategory,
   canCreateLimit,
   fallbackPeriod,
   lockedPeriods,
@@ -81,7 +100,7 @@ import { LanguageScreen } from '@/features/localization/language-screen';
 import { usePrivacy } from '@/features/privacy/privacy-provider';
 import { ProfileScreen } from '@/features/profile/profile-screen';
 import { useCloudSync } from '@/features/sync/use-cloud-sync';
-import { affectsStatistics } from '@/features/transactions/transaction-record';
+import { awaitingConversionCount, statisticalRecords } from '@/features/transactions/transaction-record';
 import { TransactionsScreen } from '@/features/transactions/transactions-screen';
 import { useSpendingWidget } from '@/features/widgets/use-spending-widget';
 import { WidgetPreview } from '@/features/widgets/widget-preview';
@@ -89,7 +108,12 @@ import { buildSpendingWidgetProps } from '@/features/widgets/widget-snapshot';
 
 import { homeCopy } from './home-copy';
 
-const pages = [{ key: 'overview' }, { key: 'transactions' }, { key: 'merchants' }] as const;
+const pages = [
+  { key: 'overview' },
+  { key: 'transactions' },
+  { key: 'merchants' },
+  { key: 'insights' },
+] as const;
 
 type TabKey = (typeof pages)[number]['key'];
 export type PageKey = TabKey | 'profile';
@@ -98,7 +122,17 @@ const navLabelFontSize = 24;
 const navFadeWidth = 40;
 
 const pageOrder: readonly PageKey[] = [...pages.map((entry) => entry.key), 'profile'];
-type SheetKey = 'alerts' | 'data' | 'privacy' | 'premium' | 'language';
+type SheetKey =
+  | 'alerts'
+  | 'data'
+  | 'privacy'
+  | 'premium'
+  | 'language'
+  | 'events'
+  | 'recurring'
+  | 'monthlySummary'
+  | 'captureHealth'
+  | 'categories';
 
 interface AlertEditor {
   scope: AlertScope;
@@ -140,15 +174,29 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   const { error, isLoading, records, refresh } = useCapturedSpending();
   const financialAccounts = useFinancialAccounts();
   const { reload: reloadAccounts } = financialAccounts;
+  const customCategories = useCustomCategories();
+  const { reload: reloadCategories } = customCategories;
+  const spendingEvents = useEvents();
+  const { reload: reloadEvents } = spendingEvents;
   const refreshAfterPull = useCallback(
-    () => Promise.all([refresh(), reloadAccounts()]).then(() => undefined),
-    [refresh, reloadAccounts],
+    () =>
+      Promise.all([refresh(), reloadAccounts(), reloadCategories(), reloadEvents()]).then(
+        () => undefined,
+      ),
+    [refresh, reloadAccounts, reloadCategories, reloadEvents],
   );
   const syncStatus = useCloudSync({
     records,
     accounts: financialAccounts.accounts,
+    categories: customCategories.categories,
+    events: spendingEvents.events,
     onPulled: refreshAfterPull,
   });
+  useCurrencyConversion(records, refresh);
+  const dismissedSubscriptions = useDismissedSubscriptions();
+  const monthlySummaryReminder = useMonthlySummaryReminder();
+  const [eventsSheetTarget, setEventsSheetTarget] = useState<string | null>(null);
+  const [summaryMonthKey, setSummaryMonthKey] = useState<string | null>(null);
   const { remember, rules } = useCategorizationRules();
   const premium = usePremium();
   const hasPremiumAccess = premium === undefined || premium.isPremium;
@@ -178,7 +226,8 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
     [openPremium, periodLocks],
   );
   const [alertEditor, setAlertEditor] = useState<AlertEditor | null>(null);
-  const countedRecords = useMemo(() => records.filter(affectsStatistics), [records]);
+  const countedRecords = useMemo(() => statisticalRecords(records), [records]);
+  const awaitingConversion = useMemo(() => awaitingConversionCount(records), [records]);
 
   /**
    * One window, shared by every page so the bubbles, the shop ranking and a shop's chart can
@@ -214,6 +263,71 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
     [countedRecords, dimension, rules, spendWindow],
   );
   const alerts = useAlerts({ records: countedRecords, categorizationRules: rules });
+  const insightsNow = useMemo(() => new Date(spendWindow.endMs), [spendWindow.endMs]);
+  const recurringPayments = useMemo(
+    () =>
+      detectRecurringPayments(countedRecords, rules, insightsNow, dismissedSubscriptions.dismissed),
+    [countedRecords, dismissedSubscriptions.dismissed, insightsNow, rules],
+  );
+  const monthlyLimitTarget = useMemo(
+    () =>
+      alerts.rules.find(
+        (rule) =>
+          rule.isActive &&
+          rule.metric === 'expense' &&
+          rule.condition === 'threshold' &&
+          rule.scope.kind === 'all' &&
+          rule.period.kind === 'month',
+      )?.targetMinor ?? null,
+    [alerts.rules],
+  );
+  const forecast = useMemo(
+    () => monthForecast(countedRecords, recurringPayments, insightsNow, monthlyLimitTarget),
+    [countedRecords, insightsNow, monthlyLimitTarget, recurringPayments],
+  );
+  const runningEvent = useMemo(() => activeEvent(spendingEvents.events), [spendingEvents.events]);
+  const runningEventSummary = useMemo(
+    () =>
+      runningEvent === null
+        ? null
+        : summarizeEvent(countedRecords, runningEvent, spendingEvents.events, rules, insightsNow),
+    [countedRecords, insightsNow, rules, runningEvent, spendingEvents.events],
+  );
+  const lastMonthSummary = useMemo(
+    () =>
+      summarizeMonth(countedRecords, shiftMonth(monthOf(insightsNow), -1), {
+        rules,
+        events: spendingEvents.events,
+        recurring: recurringPayments,
+        now: insightsNow,
+      }),
+    [countedRecords, insightsNow, recurringPayments, rules, spendingEvents.events],
+  );
+  const openEvents = useCallback((eventId: string | null) => {
+    setEventsSheetTarget(eventId);
+    setActiveSheet('events');
+  }, []);
+  const openRecurring = useCallback(() => setActiveSheet('recurring'), []);
+  const openMonthlySummary = useCallback((month: string | null = null) => {
+    setSummaryMonthKey(month);
+    setActiveSheet('monthlySummary');
+  }, []);
+  const requireCategoryPremium = useCallback(() => openPremium('category'), [openPremium]);
+
+  useEffect(() => {
+    const openFromNotification = (response: Notifications.NotificationResponse | null) => {
+      const month = summaryMonthFromNotification(response);
+
+      if (month !== null) {
+        openMonthlySummary(month);
+      }
+    };
+
+    openFromNotification(Notifications.getLastNotificationResponse());
+    const subscription = Notifications.addNotificationResponseReceivedListener(openFromNotification);
+
+    return () => subscription.remove();
+  }, [openMonthlySummary]);
   const { settings: privacySettings, widgetRevealedUntilMs, isWidgetPreviewOpen, closeWidgetPreview } =
     usePrivacy();
   const widgetPrivacy = useMemo(
@@ -226,6 +340,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
     records,
     alertRules: alerts.rules,
     categorizationRules: rules,
+    customCategories: customCategories.categories,
     privacy: widgetPrivacy,
   });
   const widgetPreviewProps = useMemo(
@@ -386,7 +501,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   }, [page, profileTabProgress]);
 
   useEffect(() => {
-    const target = titleOffsets[page === 'profile' ? 'merchants' : page];
+    const target = titleOffsets[page === 'profile' ? 'insights' : page];
 
     if (target === undefined || navViewportWidth === 0 || navRowWidth === 0) {
       return;
@@ -546,6 +661,11 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
             onRememberRule={remember}
             records={records}
             rules={rules}
+            events={spendingEvents.events}
+            customCategories={customCategories.categories}
+            canCreateCategory={canCreateCustomCategory(hasPremiumAccess)}
+            onCreateCategory={customCategories.create}
+            onRequirePremium={requireCategoryPremium}
           />
         </View>
         <View style={{ width }}>
@@ -563,8 +683,25 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
           />
         </View>
         <View style={{ width }}>
+          <InsightsScreen
+            activeEvent={runningEventSummary}
+            awaitingConversion={awaitingConversion}
+            eventCount={spendingEvents.events.length}
+            forecast={forecast}
+            lastMonth={lastMonthSummary}
+            onEndEvent={spendingEvents.end}
+            onOpenEvents={openEvents}
+            onOpenMonthlySummary={openMonthlySummary}
+            onOpenRecurring={openRecurring}
+            onStartEvent={spendingEvents.start}
+            recurring={recurringPayments}
+          />
+        </View>
+        <View style={{ width }}>
           <ProfileScreen
             onOpenAlerts={() => setActiveSheet('alerts')}
+            onOpenCaptureHealth={() => setActiveSheet('captureHealth')}
+            onOpenCategories={() => setActiveSheet('categories')}
             onOpenData={() => setActiveSheet('data')}
             onOpenLanguage={() => setActiveSheet('language')}
             onOpenPremium={() => openPremium(null)}
@@ -636,6 +773,48 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
           <LanguageScreen onClose={() => setActiveSheet(null)} />
         ) : activeSheet === 'privacy' ? (
           <PrivacySettingsScreen onClose={() => setActiveSheet(null)} />
+        ) : activeSheet === 'events' ? (
+          <EventsScreen
+            events={spendingEvents.events}
+            initialEventId={eventsSheetTarget}
+            onClose={() => setActiveSheet(null)}
+            onDelete={spendingEvents.remove}
+            onEnd={spendingEvents.end}
+            onSave={spendingEvents.save}
+            onStart={spendingEvents.start}
+            records={countedRecords}
+            rules={rules}
+          />
+        ) : activeSheet === 'recurring' ? (
+          <SubscriptionsScreen
+            hasDismissed={dismissedSubscriptions.dismissed.size > 0}
+            onClose={() => setActiveSheet(null)}
+            onDismiss={dismissedSubscriptions.dismiss}
+            onRestoreAll={dismissedSubscriptions.restoreAll}
+            payments={recurringPayments}
+          />
+        ) : activeSheet === 'monthlySummary' ? (
+          <MonthlySummaryScreen
+            events={spendingEvents.events}
+            initialMonth={summaryMonthKey}
+            onClose={() => setActiveSheet(null)}
+            records={countedRecords}
+            recurring={recurringPayments}
+            reminder={monthlySummaryReminder}
+            rules={rules}
+          />
+        ) : activeSheet === 'captureHealth' ? (
+          <CaptureHealthScreen onClose={() => setActiveSheet(null)} records={records} />
+        ) : activeSheet === 'categories' ? (
+          <CustomCategoriesScreen
+            canCreate={canCreateCustomCategory(hasPremiumAccess)}
+            categories={customCategories.categories}
+            onClose={() => setActiveSheet(null)}
+            onCreate={customCategories.create}
+            onDelete={customCategories.remove}
+            onRename={customCategories.rename}
+            onRequirePremium={requireCategoryPremium}
+          />
         ) : (
           <AlertsScreen
             entries={alertEntries}

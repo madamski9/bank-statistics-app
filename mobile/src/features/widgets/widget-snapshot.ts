@@ -11,7 +11,7 @@ import { currentCopy } from '@/features/localization/language';
 import { formatCompactAmount } from '@/features/spending-overview/formatting';
 import type { PeriodWindow } from '@/features/spending-overview/periods';
 import { summarizeSpending } from '@/features/spending-overview/spending-summary';
-import { affectsStatistics } from '@/features/transactions/transaction-record';
+import { statisticalRecords } from '@/features/transactions/transaction-record';
 
 import { widgetsCopy } from './widgets-copy';
 
@@ -188,7 +188,7 @@ export function buildSpendingWidgetProps({
   openUrl,
   revealUrl = openUrl,
 }: SnapshotSources): SpendingWidgetProps {
-  const counted = records.filter(affectsStatistics);
+  const counted = statisticalRecords(records);
   const month = alertWindow({ kind: 'month' }, reference);
   const window: PeriodWindow = { startMs: month.startMs, endMs: reference.getTime() };
   const summary = summarizeSpending(counted, window, categorizationRules);

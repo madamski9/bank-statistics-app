@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
 import { clearLocalData } from './clear-local-data';
-import { fileLedgerStorage } from './file-ledger-storage';
+import { encryptedLedgerStorage } from './encrypted-ledger-storage';
 import { claimDevice } from './sync-runner';
 
 export type DeviceOwnership = 'checking' | 'own' | 'foreign';
@@ -30,7 +30,7 @@ export function useDeviceOwnership(): DeviceOwnershipState {
 
     let isActive = true;
 
-    claimDevice(fileLedgerStorage, userId)
+    claimDevice(encryptedLedgerStorage, userId)
       .then((isOwnDevice) => {
         if (isActive) {
           setCheck({ userId, ownership: isOwnDevice ? 'own' : 'foreign' });
@@ -53,7 +53,7 @@ export function useDeviceOwnership(): DeviceOwnershipState {
     }
 
     await clearLocalData();
-    await claimDevice(fileLedgerStorage, userId);
+    await claimDevice(encryptedLedgerStorage, userId);
     setCheck({ userId, ownership: 'own' });
   }, [userId]);
 

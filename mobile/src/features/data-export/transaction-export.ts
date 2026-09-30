@@ -27,6 +27,10 @@ export interface ExportedTransaction {
   status: string;
   transactionType: string | null;
   needsReview: boolean;
+  amountPln: string | null;
+  exchangeRate: string | null;
+  exchangeRateDate: string | null;
+  eventId: string | null;
 }
 
 export interface TransactionExport {
@@ -54,6 +58,10 @@ const csvColumns: (keyof ExportedTransaction)[] = [
   'status',
   'transactionType',
   'needsReview',
+  'amountPln',
+  'exchangeRate',
+  'exchangeRateDate',
+  'eventId',
   'capturedAt',
   'id',
 ];
@@ -98,6 +106,15 @@ export function exportedTransactions(
       status: record.status,
       transactionType: record.transactionType ?? null,
       needsReview: record.review !== undefined,
+      amountPln:
+        record.currency === 'PLN'
+          ? decimalAmount(record.amountMinor)
+          : record.reportingAmountMinor === undefined
+            ? null
+            : decimalAmount(record.reportingAmountMinor),
+      exchangeRate: record.exchangeRate ?? null,
+      exchangeRateDate: record.exchangeRateDate ?? null,
+      eventId: record.eventId ?? null,
     }));
 }
 

@@ -7,6 +7,7 @@ enum IngestionError: LocalizedError {
   case keychain(OSStatus)
   case database(String)
   case unsupportedNotification
+  case parserRulesUnavailable
 
   var errorDescription: String? {
     switch self {
@@ -20,6 +21,8 @@ enum IngestionError: LocalizedError {
       return "Encrypted outbox operation failed: \(message)"
     case .unsupportedNotification:
       return "The notification does not match a supported bank format"
+    case .parserRulesUnavailable:
+      return "The bundled bank notification rules could not be loaded"
     }
   }
 
@@ -38,6 +41,8 @@ enum IngestionError: LocalizedError {
       return "database"
     case .unsupportedNotification:
       return "unsupportedNotification"
+    case .parserRulesUnavailable:
+      return "parserRulesUnavailable"
     }
   }
 }
