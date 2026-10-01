@@ -105,7 +105,7 @@ const config: ExpoConfig = {
           {
             name: 'SpendingWidget',
             displayName: 'Wydatki',
-            description: 'Wydatki w tym miesiącu, limity bliskie końca i sklepy, w których wydajesz najwięcej.',
+            description: 'Wydatki z ostatnich 30 dni, limity bliskie końca i sklepy, w których wydajesz najwięcej.',
             ios: {
               supportedFamilies: [
                 'systemSmall',
@@ -122,7 +122,7 @@ const config: ExpoConfig = {
                     type: 'enum',
                     default: 'month',
                     values: [
-                      { name: 'Ten miesiąc', value: 'month' },
+                      { name: 'Ostatnie 30 dni', value: 'month' },
                       { name: 'Uważaj na limit', value: 'watch' },
                       { name: 'Limity', value: 'limits' },
                       { name: 'Sklepy', value: 'shops' },

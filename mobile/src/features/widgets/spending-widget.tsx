@@ -54,9 +54,6 @@ function spendingWidgetLayout(
   const limits = props.limits ?? [];
   const shops = props.shops ?? [];
   const urgent = limits[0];
-  const now = environment.date;
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const newMonth = props.status === 'ready' && props.monthKey !== monthKey;
   const toneColor = (tone: WidgetLimit['tone']) =>
     tone === 'over' ? palette.over : tone === 'caution' ? palette.caution : palette.calm;
   const container = containerBackground(
@@ -107,7 +104,7 @@ function spendingWidgetLayout(
         {title}
       </Text>
       <Spacer minLength={0} />
-      {wide ? caption(props.monthLabel) : null}
+      {wide ? caption(props.periodLabel) : null}
     </HStack>
   );
 
@@ -170,19 +167,19 @@ function spendingWidgetLayout(
         </HStack>
       );
     }
-    if (props.status !== 'ready' || newMonth) {
+    if (props.status !== 'ready') {
       return <Text modifiers={[container, ...opensApp]}>{labels.openApp}</Text>;
     }
     if (family === 'accessoryInline') {
       return (
         <Text modifiers={[container, ...opensApp]}>
-          {`${props.monthLabel}: ${props.expenseLabel}`}
+          {`${labels.spending}: ${props.expenseLabel}`}
         </Text>
       );
     }
     return (
       <VStack alignment="leading" spacing={2} modifiers={[container, ...opensApp]}>
-        <Text modifiers={[font({ size: 12, weight: 'medium' }), lineLimit(1)]}>{`${labels.spending} · ${props.monthLabel}`}</Text>
+        <Text modifiers={[font({ size: 12, weight: 'medium' }), lineLimit(1)]}>{`${labels.spending} · ${props.periodLabel}`}</Text>
         <Text modifiers={[font({ size: 22, weight: 'bold', design: 'rounded' }), monospacedDigit(), lineLimit(1), minimumScaleFactor(0.6)]}>
           {props.expenseLabel}
         </Text>
@@ -193,11 +190,11 @@ function spendingWidgetLayout(
 
   const month = () => (
     <VStack alignment="leading" spacing={4}>
-      {header(wide ? labels.spending : props.monthLabel, 'chart.bar.fill')}
+      {header(labels.spending, 'chart.bar.fill')}
       <Spacer minLength={0} />
       <HStack alignment="center" spacing={16}>
         <VStack alignment="leading" spacing={4} modifiers={[frame({ maxWidth: 10_000, alignment: 'leading' })]}>
-          {caption(labels.thisMonth)}
+          {caption(labels.lastThirtyDays)}
           {amount(props.expenseLabel, wide ? 36 : 30, palette.spending)}
           {caption(props.countLabel)}
         </VStack>
@@ -266,15 +263,13 @@ function spendingWidgetLayout(
       ? empty(labels.lockedTitle, labels.lockedDetail)
     : props.status !== 'ready'
       ? empty(labels.welcomeTitle, labels.welcomeDetail)
-      : newMonth
-        ? empty(labels.newMonthTitle, labels.newMonthDetail)
-        : screen === 'watch'
-          ? watch()
-          : screen === 'limits'
-            ? limitList()
-            : screen === 'shops'
-              ? shopList()
-              : month();
+      : screen === 'watch'
+        ? watch()
+        : screen === 'limits'
+          ? limitList()
+          : screen === 'shops'
+            ? shopList()
+            : month();
 
   if (isBlurred) {
     return (

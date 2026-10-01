@@ -28,6 +28,7 @@ export function snapshot(
   configuration: WidgetBackgroundConfiguration,
   records: IngestionRecord[],
   referenceMs: number,
+  updatedAtMs: number = referenceMs,
 ) {
   const reference = new Date(referenceMs);
 
@@ -49,6 +50,7 @@ export function snapshot(
     ...configuration,
     records: records.filter((record) => record.merchant !== 'SKLEP TEST' || record.origin === 'manual'),
     reference,
+    updatedAt: new Date(updatedAtMs),
   });
 }
 
@@ -58,7 +60,7 @@ export function timeline(
   referenceMs: number,
 ) {
   return widgetEntries(
-    snapshot(configuration, records, referenceMs),
+    (moment) => snapshot(configuration, records, moment.getTime(), referenceMs),
     configuration.privacy ?? { isBlurred: false, revealedUntilMs: 0 },
     new Date(referenceMs),
   ).map((entry) => ({ timestamp: entry.date.getTime(), props: entry.props }));

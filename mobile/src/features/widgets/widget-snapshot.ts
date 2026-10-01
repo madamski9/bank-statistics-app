@@ -1,15 +1,14 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 
 import { alertProgress } from '@/features/alerts/alert-evaluation';
-import { alertWindow } from '@/features/alerts/alert-period';
 import type { AlertRule, AlertScope } from '@/features/alerts/alert-rule';
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
 import { categoryLabel } from '@/features/classification/categories';
 import { groupSpending } from '@/features/classification/spending-groups';
-import { calendarCopy } from '@/features/localization/calendar-copy';
 import { currentCopy } from '@/features/localization/language';
-import { formatCompactAmount } from '@/features/spending-overview/formatting';
-import type { PeriodWindow } from '@/features/spending-overview/periods';
+import { expenseRhythm, rhythmAverageMinor } from '@/features/overview/spending-rhythm';
+import { formatAmount, formatCompactAmount } from '@/features/spending-overview/formatting';
+import { periodWindow, type SpendingPeriod } from '@/features/spending-overview/periods';
 import { summarizeSpending } from '@/features/spending-overview/spending-summary';
 import { statisticalRecords } from '@/features/transactions/transaction-record';
 
@@ -41,8 +40,7 @@ export type WidgetLabels = {
 
 export interface SpendingWidgetProps {
   status: 'ready' | 'signedOut' | 'locked';
-  monthKey: string;
-  monthLabel: string;
+  periodLabel: string;
   updatedAtMs: number;
   updatedLabel: string;
   expenseLabel: string;
@@ -74,6 +72,7 @@ export interface SnapshotSources {
   alertRules: AlertRule[];
   categorizationRules: CategorizationRule[];
   reference: Date;
+  updatedAt?: Date;
   openUrl: string;
   revealUrl?: string;
 }
@@ -82,17 +81,15 @@ const dayMs = 86_400_000;
 const cautionShare = 0.8;
 const maximumLimits = 4;
 const maximumShops = 4;
+const widgetPeriod: SpendingPeriod = 'month';
+const refreshDays = 7;
 
 function pad(value: number): string {
   return String(value).padStart(2, '0');
 }
 
-export function widgetMonthKey(reference: Date): string {
-  return `${reference.getFullYear()}-${pad(reference.getMonth() + 1)}`;
-}
-
-function monthLabel(reference: Date): string {
-  return currentCopy(calendarCopy).monthNames[reference.getMonth()];
+function periodLabel(): string {
+  return currentCopy(widgetsCopy).periodShort;
 }
 
 export function widgetLabels(reference: Date): WidgetLabels {
@@ -185,18 +182,15 @@ export function buildSpendingWidgetProps({
   alertRules,
   categorizationRules,
   reference,
+  updatedAt = reference,
   openUrl,
   revealUrl = openUrl,
 }: SnapshotSources): SpendingWidgetProps {
   const counted = statisticalRecords(records);
-  const month = alertWindow({ kind: 'month' }, reference);
-  const window: PeriodWindow = { startMs: month.startMs, endMs: reference.getTime() };
+  const window = periodWindow(widgetPeriod, reference);
   const summary = summarizeSpending(counted, window, categorizationRules);
-  const elapsedDays = Math.max(Math.ceil((reference.getTime() - month.startMs) / dayMs), 1);
-  const dailyAmountLabel = formatCompactAmount(
-    Math.round(summary.expenseMinor / elapsedDays),
-    summary.currency,
-  );
+  const rhythm = expenseRhythm(counted, summary.currency, window, widgetPeriod);
+  const dailyAmountLabel = formatCompactAmount(rhythmAverageMinor(rhythm.buckets), summary.currency);
   const copy = currentCopy(widgetsCopy);
   const shops = groupSpending(
     counted.filter((record) => record.currency === summary.currency),
@@ -211,11 +205,10 @@ export function buildSpendingWidgetProps({
 
   return {
     status: 'ready',
-    monthKey: widgetMonthKey(reference),
-    monthLabel: monthLabel(reference),
-    updatedAtMs: reference.getTime(),
-    updatedLabel: updatedLabel(reference),
-    expenseLabel: formatCompactAmount(summary.expenseMinor, summary.currency),
+    periodLabel: periodLabel(),
+    updatedAtMs: updatedAt.getTime(),
+    updatedLabel: updatedLabel(updatedAt),
+    expenseLabel: formatAmount(summary.expenseMinor, summary.currency),
     dailyAmountLabel,
     dailyLabel: copy.perDay(dailyAmountLabel),
     incomeLabel: formatCompactAmount(summary.incomeMinor, summary.currency),
@@ -225,7 +218,7 @@ export function buildSpendingWidgetProps({
     openUrl,
     isBlurred: false,
     revealUrl,
-    labels: widgetLabels(reference),
+    labels: widgetLabels(updatedAt),
   };
 }
 
@@ -244,8 +237,7 @@ function emptyWidgetProps(
 ): SpendingWidgetProps {
   return {
     status,
-    monthKey: widgetMonthKey(reference),
-    monthLabel: monthLabel(reference),
+    periodLabel: periodLabel(),
     updatedAtMs: reference.getTime(),
     updatedLabel: updatedLabel(reference),
     expenseLabel: '',
@@ -262,21 +254,30 @@ function emptyWidgetProps(
   };
 }
 
+export function widgetRefreshMoments(now: Date, privacy: WidgetPrivacy): Date[] {
+  const moments = [now.getTime()];
+
+  for (let day = 1; day <= refreshDays; day += 1) {
+    moments.push(new Date(now.getFullYear(), now.getMonth(), now.getDate() + day).getTime());
+  }
+
+  if (privacy.isBlurred && privacy.revealedUntilMs > now.getTime()) {
+    moments.push(privacy.revealedUntilMs);
+  }
+
+  return [...new Set(moments)].sort((left, right) => left - right).map((moment) => new Date(moment));
+}
+
 export function widgetEntries(
-  props: SpendingWidgetProps,
+  propsAt: (moment: Date) => SpendingWidgetProps,
   privacy: WidgetPrivacy,
   now: Date,
 ): SpendingWidgetEntry[] {
-  if (!privacy.isBlurred || props.status !== 'ready') {
-    return [{ date: now, props: { ...props, isBlurred: false } }];
-  }
+  return widgetRefreshMoments(now, privacy).map((date) => {
+    const props = propsAt(date);
+    const isBlurred =
+      privacy.isBlurred && props.status === 'ready' && privacy.revealedUntilMs <= date.getTime();
 
-  if (privacy.revealedUntilMs > now.getTime()) {
-    return [
-      { date: now, props: { ...props, isBlurred: false } },
-      { date: new Date(privacy.revealedUntilMs), props: { ...props, isBlurred: true } },
-    ];
-  }
-
-  return [{ date: now, props: { ...props, isBlurred: true } }];
+    return { date, props: { ...props, isBlurred } };
+  });
 }
