@@ -1,4 +1,5 @@
 import type { api } from '@bankstats/convex/convex/_generated/api';
+import { transactionChangeProblem } from '@bankstats/convex/convex/changeRules';
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import type { FunctionArgs, FunctionReturnType } from 'convex/server';
 
@@ -77,4 +78,5 @@ export const transactionCodec: SyncCodec<IngestionRecord, TransactionChange> = {
   idOf: (record) => record.id,
   toChange: changeFromRecord,
   fromChange: recordFromChange,
+  isPushable: (change) => transactionChangeProblem(change) === null,
 };

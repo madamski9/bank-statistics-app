@@ -1,11 +1,10 @@
 import { ConvexError, v, type Infer } from 'convex/values';
 
 import { mutation, query, type QueryCtx } from './_generated/server';
+import { transactionChangeProblem } from './changeRules';
 import { transactionFields } from './schema';
 import {
-  assertBoundedText,
   assertPushSize,
-  assertValidRevision,
   requireDevice,
   rowFromChange,
   withoutServerFields,
@@ -19,40 +18,12 @@ const transactionChange = v.object({
 
 type TransactionChange = Infer<typeof transactionChange>;
 
-const currencyPattern = /^[A-Z]{3}$/;
-const isoTimestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
-
-function isIsoTimestamp(value: string): boolean {
-  return isoTimestampPattern.test(value) && !Number.isNaN(Date.parse(value));
-}
-
-const captureBanks = new Set(['millennium', 'pko']);
-
 function assertValidChange(change: TransactionChange) {
-  if (change.origin === 'capture' && !captureBanks.has(change.bank)) {
-    throw new ConvexError('Only enabled banks can synchronize captured transactions.');
-  }
+  const problem = transactionChangeProblem(change);
 
-  if (change.origin === 'manual' && (change.accountId === undefined || change.accountId.trim() === '')) {
-    throw new ConvexError('A manual transaction belongs to a Financial Account.');
+  if (problem !== null) {
+    throw new ConvexError(problem);
   }
-
-  if (!Number.isSafeInteger(change.amountMinor) || change.amountMinor <= 0) {
-    throw new ConvexError('An amount is a positive whole number of minor units.');
-  }
-
-  if (!currencyPattern.test(change.currency)) {
-    throw new ConvexError('A currency is a three-letter ISO code.');
-  }
-
-  if (!isIsoTimestamp(change.occurredAt) || !isIsoTimestamp(change.capturedAt)) {
-    throw new ConvexError('Occurrence and capture times are ISO 8601 timestamps.');
-  }
-
-  [change.bank, change.merchant, change.category, change.sourceApp, change.accountId, change.accountName].forEach(
-    assertBoundedText,
-  );
-  assertValidRevision(change);
 }
 
 const generalAccountIds = new Set(['general-manual', 'general-millennium', 'general-pko']);

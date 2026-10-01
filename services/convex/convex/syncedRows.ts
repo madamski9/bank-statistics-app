@@ -3,6 +3,7 @@ import { ConvexError } from 'convex/values';
 import { internal } from './_generated/api';
 import type { Doc } from './_generated/dataModel';
 import { internalMutation, type QueryCtx } from './_generated/server';
+import { maximumChangesPerPush, textProblem } from './changeRules';
 import { requireActiveDevice } from './devices';
 
 type SyncedTable = 'transactions' | 'financialAccounts';
@@ -16,9 +17,6 @@ interface SyncedChange {
 const syncedTables: SyncedTable[] = ['transactions', 'financialAccounts'];
 const tombstoneRetentionMs = 90 * 24 * 60 * 60 * 1000;
 const purgeBatchSize = 500;
-const maximumChangesPerPush = 500;
-const maximumTextLength = 200;
-
 export function assertPushSize(changes: unknown[]) {
   if (changes.length > maximumChangesPerPush) {
     throw new ConvexError(`A push carries at most ${maximumChangesPerPush} changes.`);
@@ -26,17 +24,11 @@ export function assertPushSize(changes: unknown[]) {
 }
 
 export function assertBoundedText(value: string | undefined) {
-  if (value !== undefined && value.length > maximumTextLength) {
-    throw new ConvexError(`A text field has at most ${maximumTextLength} characters.`);
-  }
-}
+  const problem = textProblem(value);
 
-export function assertValidRevision(change: SyncedChange) {
-  if (!Number.isSafeInteger(change.revision) || change.revision < 0) {
-    throw new ConvexError('A revision is a non-negative whole number.');
+  if (problem !== null) {
+    throw new ConvexError(problem);
   }
-
-  assertBoundedText(change.clientId);
 }
 
 export function requireDevice(ctx: QueryCtx, installationId: string) {
