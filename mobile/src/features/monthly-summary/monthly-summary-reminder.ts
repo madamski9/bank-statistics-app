@@ -3,21 +3,18 @@ import * as Notifications from 'expo-notifications';
 import { calendarCopy } from '@/features/localization/calendar-copy';
 import { currentCopy } from '@/features/localization/language';
 
-import { monthKey, monthOf } from './monthly-summary';
+import { monthKey, monthOf, shiftMonth } from './monthly-summary';
 import { monthlySummaryCopy } from './monthly-summary-copy';
+import { nextReminderDate } from './reminder-schedule';
 
 export const monthlySummaryNotificationKind = 'monthlySummary';
 
 const reminderIdentifier = 'bankstats-monthly-summary';
-const reminderHour = 9;
-
-export function nextReminderDate(now: Date): Date {
-  return new Date(now.getFullYear(), now.getMonth() + 1, 1, reminderHour, 0, 0, 0);
-}
 
 export async function scheduleMonthlySummaryReminder(now: Date): Promise<void> {
   const copy = currentCopy(monthlySummaryCopy);
-  const summarized = monthOf(now);
+  const reminderDate = nextReminderDate(now);
+  const summarized = shiftMonth(monthOf(reminderDate), -1);
   const monthName = currentCopy(calendarCopy).monthNames[summarized.month] ?? '';
 
   await Notifications.cancelScheduledNotificationAsync(reminderIdentifier);
@@ -30,7 +27,7 @@ export async function scheduleMonthlySummaryReminder(now: Date): Promise<void> {
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
-      date: nextReminderDate(now),
+      date: reminderDate,
     },
   });
 }

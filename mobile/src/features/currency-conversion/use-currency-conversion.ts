@@ -1,5 +1,9 @@
 import { api } from '@bankstats/convex/convex/_generated/api';
-import { saveIngestionRecord, type IngestionRecord } from '@bankstats/ingestion-native';
+import {
+  listIngestionRecords,
+  saveIngestionRecord,
+  type IngestionRecord,
+} from '@bankstats/ingestion-native';
 import { useConvex, useConvexAuth } from 'convex/react';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
@@ -42,7 +46,7 @@ export function useCurrencyConversion(
     void convex
       .action(api.exchangeRates.snapshots, { requests })
       .then(async (snapshots) => {
-        const updated = convertedRecords(records, snapshots);
+        const updated = convertedRecords(await listIngestionRecords(), snapshots);
 
         for (const record of updated) {
           await saveIngestionRecord(record);

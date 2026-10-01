@@ -16,8 +16,11 @@ export async function keepDataOnThisDeviceOnly(
   for (let round = 0; round < maximumRounds; round += 1) {
     const { isComplete } = await convex.mutation(api.account.deleteCloudCopy, {});
 
-    if (isComplete) {
+    if (round === 0) {
       await forgetSyncedState(encryptedLedgerStorage, ownerId);
+    }
+
+    if (isComplete) {
       return;
     }
   }

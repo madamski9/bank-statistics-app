@@ -12,14 +12,12 @@ export function documentList<Item extends { id: string }>(
 ): DocumentList<Item> {
   let pending: Promise<unknown> = Promise.resolve();
 
-  const load = async (): Promise<Item[]> => {
+  const parse = (stored: string | null): Item[] => {
+    if (stored === null) {
+      return [];
+    }
+
     try {
-      const stored = await storage.read();
-
-      if (stored === null) {
-        return [];
-      }
-
       const parsed: unknown = JSON.parse(stored);
 
       return Array.isArray(parsed) ? parsed.filter(isItem) : [];
@@ -28,10 +26,18 @@ export function documentList<Item extends { id: string }>(
     }
   };
 
+  const load = async (): Promise<Item[]> => {
+    try {
+      return parse(await storage.read());
+    } catch {
+      return [];
+    }
+  };
+
   const update = (change: (items: Item[]) => Item[]): Promise<void> => {
     const next = pending
       .catch(() => undefined)
-      .then(async () => storage.write(JSON.stringify(change(await load()))));
+      .then(async () => storage.write(JSON.stringify(change(parse(await storage.read())))));
 
     pending = next;
 

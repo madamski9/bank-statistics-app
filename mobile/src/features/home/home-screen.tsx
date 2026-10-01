@@ -32,6 +32,7 @@ import { requestAlertPermission } from '@/features/alerts/expo-alert-notifier';
 import { groupLimit, ruleForScope, scopeForGroup } from '@/features/alerts/group-limit';
 import { merchantOptions } from '@/features/alerts/merchant-options';
 import { useAlerts } from '@/features/alerts/use-alerts';
+import { setCustomCategories } from '@/features/classification/categories';
 import {
   groupSpending,
   type SpendingDimension,
@@ -221,7 +222,11 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
     [openPremium, periodLocks],
   );
   const [alertEditor, setAlertEditor] = useState<AlertEditor | null>(null);
-  const countedRecords = useMemo(() => statisticalRecords(records), [records]);
+  const countedRecords = useMemo(() => {
+    setCustomCategories(customCategories.categories);
+
+    return statisticalRecords(records);
+  }, [records, customCategories.categories]);
   const awaitingConversion = useMemo(() => awaitingConversionCount(records), [records]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps

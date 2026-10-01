@@ -44,4 +44,35 @@ describe('document list', () => {
       await documentList(memoryStorage('[{"id":"a","name":"A"},{"id":1}]'), isNamed).load(),
     ).toEqual([{ id: 'a', name: 'A' }]);
   });
+
+  test('keeps the stored list when reading it fails during a write', async () => {
+    let value: string | null = '[{"id":"a","name":"A"}]';
+    let failRead = true;
+    const list = documentList(
+      {
+        read: async () => {
+          if (failRead) {
+            throw new Error('locked');
+          }
+
+          return value;
+        },
+        write: async (next: string) => {
+          value = next;
+        },
+      },
+      isNamed,
+    );
+
+    await expect(list.upsert({ id: 'b', name: 'B' })).rejects.toThrow('locked');
+    expect(value).toBe('[{"id":"a","name":"A"}]');
+
+    failRead = false;
+    await list.upsert({ id: 'b', name: 'B' });
+
+    expect(await list.load()).toEqual([
+      { id: 'a', name: 'A' },
+      { id: 'b', name: 'B' },
+    ]);
+  });
 });
