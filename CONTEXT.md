@@ -92,9 +92,9 @@ _Avoid_: Standing order, subscription plan
 An estimate of the current calendar month's expenses from the spending so far, the discretionary daily pace, and recurring payments still due. It is an estimate, never a promise or a balance.
 _Avoid_: Budget, prediction
 
-**Monthly Summary**:
-A review of one calendar month's expenses, income, categories, merchants, recurring payments, and events compared with the previous month.
-_Avoid_: Statement, report
+**Monthly Report**:
+A Premium review of one calendar month in the spirit of a screen time report: the daily average expense compared with the previous month, spending day by day, where the money goes, where the user pays most often, highlights such as the most expensive day and no-spend days, and the month's income, recurring payments, and events.
+_Avoid_: Statement, monthly summary
 
 **Capture Health**:
 The evidence-based state of a Capture Configuration: working, requiring attention, or unconfigured, derived from captured transactions and recent automation runs.

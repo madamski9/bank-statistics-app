@@ -17,12 +17,13 @@ import { RangeSwitcher } from '@/features/spending-overview/range-switcher';
 import type { SpendingSummary } from '@/features/spending-overview/spending-summary';
 
 import { overviewCopy } from './overview-copy';
+import { OverviewShortcuts, type OverviewShortcutsProps } from './overview-shortcuts';
 import { SpendingRhythmCard } from './spending-rhythm-card';
 import { rhythmPeak, type ExpenseRhythm } from './spending-rhythm';
 
 const unavailableValue = '-';
 
-interface OverviewScreenProps {
+interface OverviewScreenProps extends OverviewShortcutsProps {
   summary: SpendingSummary;
   rhythm: ExpenseRhythm;
   expenseChange: number | null;
@@ -46,6 +47,7 @@ function OverviewScreenComponent({
   error,
   isLoading,
   hasData,
+  ...shortcuts
 }: OverviewScreenProps) {
   const { formatAmount, formatCompactAmount, formatSignedCompactAmount } = useAmountFormatting();
   const insets = useSafeAreaInsets();
@@ -148,7 +150,8 @@ function OverviewScreenComponent({
         </Text>
       ) : null}
 
-      <View style={{ paddingBottom: insets.bottom + 16 }}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+        <OverviewShortcuts {...shortcuts} />
         <SpendingRhythmCard
           bucketSize={bucketSize}
           buckets={rhythm.buckets}
@@ -188,6 +191,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: overviewColors.textSecondary,
+  },
+  footer: {
+    gap: overviewSpacing.section,
   },
   error: {
     paddingHorizontal: overviewSpacing.gutter,

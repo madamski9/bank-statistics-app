@@ -1,6 +1,6 @@
 import type { SpendingPeriod } from '@/features/spending-overview/periods';
 
-export type PremiumReason = 'period' | 'limit' | 'widget' | 'category';
+export type PremiumReason = 'period' | 'limit' | 'widget' | 'category' | 'report';
 
 const freePeriods: readonly SpendingPeriod[] = ['week', 'month', 'quarter'];
 
@@ -25,5 +25,9 @@ export function canCreateLimit(existingLimitCount: number, isPremium: boolean): 
 }
 
 export function canCreateCustomCategory(isPremium: boolean): boolean {
+  return isPremium;
+}
+
+export function canOpenMonthlyReport(isPremium: boolean): boolean {
   return isPremium;
 }

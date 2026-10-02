@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 
 import { reportingCurrency } from '@/features/currency-conversion/exchange-rate';
-import { SheetButton, SheetLayout, SheetRow, SheetSection } from '@/features/insights/sheet-layout';
+import { SheetButton, SheetLayout, SheetRow, SheetSection } from '@/features/sheets/sheet-layout';
 import { useCopy } from '@/features/localization/language';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { overviewColors } from '@/features/spending-overview/overview-theme';
