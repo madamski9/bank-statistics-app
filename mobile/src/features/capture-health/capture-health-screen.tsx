@@ -2,7 +2,7 @@ import type { IngestionRecord } from '@bankstats/ingestion-native';
 import * as Linking from 'expo-linking';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
-import { SheetButton, SheetLayout, SheetRow, SheetSection } from '@/features/insights/sheet-layout';
+import { SheetButton, SheetLayout, SheetRow, SheetSection } from '@/features/sheets/sheet-layout';
 import { useCopy } from '@/features/localization/language';
 import { shortcutUrlFor } from '@/features/onboarding/shortcut-links';
 import { overviewColors } from '@/features/spending-overview/overview-theme';

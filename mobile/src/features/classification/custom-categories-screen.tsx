@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Alert, StyleSheet, Text } from 'react-native';
 
-import { NamePrompt } from '@/features/insights/name-prompt';
-import { SheetButton, SheetLayout, SheetRow, SheetSection } from '@/features/insights/sheet-layout';
+import { NamePrompt } from '@/features/sheets/name-prompt';
+import { SheetButton, SheetLayout, SheetRow, SheetSection } from '@/features/sheets/sheet-layout';
 import { useCopy } from '@/features/localization/language';
 import { overviewColors } from '@/features/spending-overview/overview-theme';
 

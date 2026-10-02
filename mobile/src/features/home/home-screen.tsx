@@ -47,13 +47,16 @@ import { summarizeEvent } from '@/features/events/event-summary';
 import { EventsScreen } from '@/features/events/events-screen';
 import { activeEvent } from '@/features/events/spending-event';
 import { useEvents } from '@/features/events/use-events';
+import { ForecastScreen } from '@/features/forecast/forecast-screen';
 import { monthForecast } from '@/features/forecast/month-forecast';
-import { InsightsScreen } from '@/features/insights/insights-screen';
-import { monthOf, shiftMonth, summarizeMonth } from '@/features/monthly-summary/monthly-summary';
+import { monthOf, shiftMonth } from '@/features/monthly-summary/monthly-summary';
 import { summaryMonthFromNotification } from '@/features/monthly-summary/monthly-summary-reminder';
 import { MonthlySummaryScreen } from '@/features/monthly-summary/monthly-summary-screen';
 import { useMonthlySummaryReminder } from '@/features/monthly-summary/use-monthly-summary-reminder';
-import { detectRecurringPayments } from '@/features/subscriptions/recurring-payments';
+import {
+  detectRecurringPayments,
+  monthlyRecurringCost,
+} from '@/features/subscriptions/recurring-payments';
 import { SubscriptionsScreen } from '@/features/subscriptions/subscriptions-screen';
 import { useDismissedSubscriptions } from '@/features/subscriptions/use-dismissed-subscriptions';
 import { DataScreen } from '@/features/account-data/data-screen';
@@ -89,6 +92,7 @@ import { MerchantsScreen } from '@/features/merchants/merchants-screen';
 import {
   canCreateCustomCategory,
   canCreateLimit,
+  canOpenMonthlyReport,
   fallbackPeriod,
   lockedPeriods,
   type PremiumReason,
@@ -113,7 +117,6 @@ const pages = [
   { key: 'overview' },
   { key: 'transactions' },
   { key: 'merchants' },
-  { key: 'insights' },
 ] as const;
 
 type TabKey = (typeof pages)[number]['key'];
@@ -132,6 +135,7 @@ type SheetKey =
   | 'events'
   | 'recurring'
   | 'monthlySummary'
+  | 'forecast'
   | 'captureHealth'
   | 'categories';
 
@@ -287,33 +291,46 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
         : summarizeEvent(countedRecords, runningEvent, spendingEvents.events, rules, insightsNow),
     [countedRecords, insightsNow, rules, runningEvent, spendingEvents.events],
   );
-  const lastMonthSummary = useMemo(
-    () =>
-      summarizeMonth(countedRecords, shiftMonth(monthOf(insightsNow), -1), {
-        rules,
-        events: spendingEvents.events,
-        recurring: recurringPayments,
-        now: insightsNow,
-      }),
-    [countedRecords, insightsNow, recurringPayments, rules, spendingEvents.events],
+  const recurringMonthlyMinor = useMemo(() => monthlyRecurringCost(recurringPayments), [recurringPayments]);
+  const recurringCount = useMemo(
+    () => recurringPayments.filter((payment) => payment.isActive).length,
+    [recurringPayments],
   );
-  const openEvents = useCallback((eventId: string | null) => {
-    setEventsSheetTarget(eventId);
+  const reportMonth = shiftMonth(monthOf(insightsNow), -1).month;
+  const isReportLocked = !canOpenMonthlyReport(hasPremiumAccess);
+  const openEvents = useCallback(() => {
+    setEventsSheetTarget(runningEvent?.id ?? null);
     setActiveSheet('events');
-  }, []);
+  }, [runningEvent]);
   const openRecurring = useCallback(() => setActiveSheet('recurring'), []);
-  const openMonthlySummary = useCallback((month: string | null = null) => {
-    setSummaryMonthKey(month);
-    setActiveSheet('monthlySummary');
-  }, []);
+  const openForecast = useCallback(() => setActiveSheet('forecast'), []);
+  const openMonthlySummary = useCallback(
+    (month: string | null = null) => {
+      if (!canOpenMonthlyReport(hasPremiumAccess)) {
+        openPremium('report');
+        return;
+      }
+
+      setSummaryMonthKey(month);
+      setActiveSheet('monthlySummary');
+    },
+    [hasPremiumAccess, openPremium],
+  );
+  const openReport = useCallback(() => openMonthlySummary(null), [openMonthlySummary]);
   const requireCategoryPremium = useCallback(() => openPremium('category'), [openPremium]);
+
+  const openMonthlySummaryRef = useRef(openMonthlySummary);
+
+  useEffect(() => {
+    openMonthlySummaryRef.current = openMonthlySummary;
+  }, [openMonthlySummary]);
 
   useEffect(() => {
     const openFromNotification = (response: Notifications.NotificationResponse | null) => {
       const month = summaryMonthFromNotification(response);
 
       if (month !== null) {
-        openMonthlySummary(month);
+        openMonthlySummaryRef.current(month);
       }
     };
 
@@ -321,7 +338,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
     const subscription = Notifications.addNotificationResponseReceivedListener(openFromNotification);
 
     return () => subscription.remove();
-  }, [openMonthlySummary]);
+  }, []);
   const { settings: privacySettings, widgetRevealedUntilMs, isWidgetPreviewOpen, closeWidgetPreview } =
     usePrivacy();
   const widgetPrivacy = useMemo(
@@ -485,7 +502,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   }, [page, profileTabProgress]);
 
   useEffect(() => {
-    const target = titleOffsets[page === 'profile' ? 'insights' : page];
+    const target = titleOffsets[page === 'profile' ? 'merchants' : page];
 
     if (target === undefined || navViewportWidth === 0 || navRowWidth === 0) {
       return;
@@ -624,13 +641,23 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
         <View style={{ width }}>
           <OverviewScreen
             error={error}
+            activeEvent={runningEventSummary}
             expenseChange={expenseChange}
+            forecast={forecast}
             hasData={records.length > 0}
             isLoading={isLoading}
+            isReportLocked={isReportLocked}
             lockedPeriods={periodLocks}
             onChangePeriod={changePeriod}
+            onOpenEvents={openEvents}
+            onOpenForecast={openForecast}
+            onOpenRecurring={openRecurring}
+            onOpenReport={openReport}
             onSelectBubble={handleSelectBubble}
             period={period}
+            recurringCount={recurringCount}
+            recurringMonthlyMinor={recurringMonthlyMinor}
+            reportMonth={reportMonth}
             rhythm={rhythm}
             summary={summary}
           />
@@ -664,21 +691,6 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
             onCreateLimit={() => requestNewLimit({ kind: 'all' })}
             onSelectGroup={setGroup}
             period={period}
-          />
-        </View>
-        <View style={{ width }}>
-          <InsightsScreen
-            activeEvent={runningEventSummary}
-            awaitingConversion={awaitingConversion}
-            eventCount={spendingEvents.events.length}
-            forecast={forecast}
-            lastMonth={lastMonthSummary}
-            onEndEvent={spendingEvents.end}
-            onOpenEvents={openEvents}
-            onOpenMonthlySummary={openMonthlySummary}
-            onOpenRecurring={openRecurring}
-            onStartEvent={spendingEvents.start}
-            recurring={recurringPayments}
           />
         </View>
         <View style={{ width }}>
@@ -786,6 +798,12 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
             recurring={recurringPayments}
             reminder={monthlySummaryReminder}
             rules={rules}
+          />
+        ) : activeSheet === 'forecast' ? (
+          <ForecastScreen
+            awaitingConversion={awaitingConversion}
+            forecast={forecast}
+            onClose={() => setActiveSheet(null)}
           />
         ) : activeSheet === 'captureHealth' ? (
           <CaptureHealthScreen onClose={() => setActiveSheet(null)} records={records} />

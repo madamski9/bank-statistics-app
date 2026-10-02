@@ -7,6 +7,7 @@ export const premiumCopy = defineCopy({
       limit: 'Bez Premium możesz mieć jeden limit wydatków.',
       widget: 'Widżety na ekranie głównym i blokady są dostępne w Premium.',
       category: 'Własne kategorie są dostępne w Premium.',
+      report: 'Miesięczny raport wydatków jest dostępny w Premium.',
     },
     thanks: 'Dziękujemy za wsparcie',
     activeSince: (date: string) => `Aktywne od ${date}`,
@@ -22,6 +23,7 @@ export const premiumCopy = defineCopy({
     activeSinceLong: (date: string) => `Aktywne od ${date}. Dziękujemy, że wspierasz BankStats.`,
     tagline: 'Pełny obraz Twoich wydatków, bez reklam i bez sprzedawania danych.',
     benefits: [
+      { title: 'Raport miesięczny', detail: 'Średnia dzienna, wykres dzień po dniu i to, na co idą pieniądze.' },
       { title: 'Głębsze analizy', detail: 'Porównania okresów i trendy w sklepach oraz kategoriach.' },
       { title: 'Więcej widżetów', detail: 'Wszystkie widoki widżetów na ekranie głównym i blokady.' },
       { title: 'Limity bez ograniczeń', detail: 'Dowolna liczba limitów dla sklepów i kategorii.' },
@@ -41,6 +43,7 @@ export const premiumCopy = defineCopy({
       limit: 'Without Premium you can have one spending limit.',
       widget: 'Home Screen and Lock Screen widgets are available with Premium.',
       category: 'Custom categories are available with Premium.',
+      report: 'The monthly spending report is available with Premium.',
     },
     thanks: 'Thank you for your support',
     activeSince: (date: string) => `Active since ${date}`,
@@ -56,6 +59,7 @@ export const premiumCopy = defineCopy({
     activeSinceLong: (date: string) => `Active since ${date}. Thank you for supporting BankStats.`,
     tagline: 'The full picture of your spending, with no ads and no selling of your data.',
     benefits: [
+      { title: 'Monthly report', detail: 'Your daily average, a day-by-day chart and where the money goes.' },
       { title: 'Deeper insights', detail: 'Period comparisons and trends across shops and categories.' },
       { title: 'More widgets', detail: 'Every widget view on your Home Screen and Lock Screen.' },
       { title: 'Unlimited limits', detail: 'As many limits for shops and categories as you need.' },

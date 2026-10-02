@@ -15,9 +15,22 @@ export interface EventInMonth {
   expenseMinor: number;
 }
 
+export interface BusiestDay {
+  day: number;
+  totalMinor: number;
+}
+
 export interface MonthlySummary {
   month: SummaryMonth;
   isComplete: boolean;
+  dayCount: number;
+  elapsedDays: number;
+  dailyExpensesMinor: number[];
+  previousDailyExpenseMinor: number;
+  dailyExpenseChange: number | null;
+  noSpendDays: number;
+  busiestDay: BusiestDay | null;
+  transactionsPerDay: number;
   expenseMinor: number;
   incomeMinor: number;
   netMinor: number;
@@ -69,6 +82,34 @@ function monthBounds(month: SummaryMonth): { startMs: number; endMs: number } {
   };
 }
 
+function daysIn(month: SummaryMonth): number {
+  return new Date(month.year, month.month + 1, 0).getDate();
+}
+
+function dailyTotals(expenses: IngestionRecord[], dayCount: number): number[] {
+  const totals = Array.from({ length: dayCount }, () => 0);
+
+  for (const record of expenses) {
+    const day = new Date(record.occurredAt).getDate() - 1;
+
+    if (day >= 0 && day < dayCount) {
+      totals[day] = (totals[day] ?? 0) + record.amountMinor;
+    }
+  }
+
+  return totals;
+}
+
+function busiestOf(totals: number[]): BusiestDay | null {
+  return totals.reduce<BusiestDay | null>(
+    (busiest, totalMinor, index) =>
+      totalMinor > 0 && (busiest === null || totalMinor > busiest.totalMinor)
+        ? { day: index + 1, totalMinor }
+        : busiest,
+    null,
+  );
+}
+
 function within(records: IngestionRecord[], startMs: number, endMs: number): IngestionRecord[] {
   return records.filter((record) => {
     const occurredMs = new Date(record.occurredAt).getTime();
@@ -109,7 +150,8 @@ export function summarizeMonth(
   },
 ): MonthlySummary {
   const { startMs, endMs } = monthBounds(month);
-  const previous = monthBounds(shiftMonth(month, -1));
+  const previousMonth = shiftMonth(month, -1);
+  const previous = monthBounds(previousMonth);
   const inMonth = within(records, startMs, endMs);
   const expenses = inMonth.filter((record) => record.direction === 'expense');
   const incomes = inMonth.filter((record) => record.direction === 'income');
@@ -120,10 +162,15 @@ export function summarizeMonth(
   const incomeMinor = sum(incomes);
   const window = { startMs, endMs };
   const isComplete = options.now.getTime() >= endMs;
-  const elapsedDays = Math.max(
-    1,
-    Math.ceil((Math.min(options.now.getTime(), endMs) - startMs) / 86_400_000),
+  const dayCount = daysIn(month);
+  const elapsedDays = Math.min(
+    dayCount,
+    Math.max(1, Math.ceil((Math.min(options.now.getTime(), endMs) - startMs) / 86_400_000)),
   );
+  const dailyExpensesMinor = dailyTotals(expenses, dayCount);
+  const dailyExpenseMinor = Math.round(expenseMinor / elapsedDays);
+  const previousDailyExpenseMinor = Math.round(previousExpenseMinor / daysIn(previousMonth));
+  const merchants = groupSpending(inMonth, { window, rules: options.rules, dimension: 'merchant' });
   const recurringIds = new Set(
     options.recurring.flatMap((payment) => payment.records.map((record) => record.id)),
   );
@@ -131,12 +178,23 @@ export function summarizeMonth(
   return {
     month,
     isComplete,
+    dayCount,
+    elapsedDays,
+    dailyExpensesMinor,
+    previousDailyExpenseMinor,
+    dailyExpenseChange:
+      previousDailyExpenseMinor === 0
+        ? null
+        : (dailyExpenseMinor - previousDailyExpenseMinor) / previousDailyExpenseMinor,
+    noSpendDays: dailyExpensesMinor.slice(0, elapsedDays).filter((total) => total === 0).length,
+    busiestDay: busiestOf(dailyExpensesMinor),
+    transactionsPerDay: expenses.length / elapsedDays,
     expenseMinor,
     incomeMinor,
     netMinor: incomeMinor - expenseMinor,
     expenseCount: expenses.length,
     incomeCount: incomes.length,
-    dailyExpenseMinor: Math.round(expenseMinor / elapsedDays),
+    dailyExpenseMinor,
     previousExpenseMinor,
     expenseChange:
       previousExpenseMinor === 0 ? null : (expenseMinor - previousExpenseMinor) / previousExpenseMinor,
@@ -144,10 +202,9 @@ export function summarizeMonth(
       0,
       maximumCategories,
     ),
-    merchants: groupSpending(inMonth, { window, rules: options.rules, dimension: 'merchant' }).slice(
-      0,
-      maximumMerchants,
-    ),
+    merchants: merchants
+      .sort((left, right) => right.count - left.count || right.totalMinor - left.totalMinor)
+      .slice(0, maximumMerchants),
     largestExpense: expenses.reduce<IngestionRecord | null>(
       (largest, record) => (largest === null || record.amountMinor > largest.amountMinor ? record : largest),
       null,
@@ -156,9 +213,7 @@ export function summarizeMonth(
     events: options.events
       .map((event) => ({
         event,
-        expenseMinor: sum(
-          recordsOfEvent(expenses, event, options.events),
-        ),
+        expenseMinor: sum(recordsOfEvent(expenses, event, options.events)),
       }))
       .filter((entry) => entry.expenseMinor > 0)
       .sort((left, right) => right.expenseMinor - left.expenseMinor),

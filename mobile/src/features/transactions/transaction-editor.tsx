@@ -25,7 +25,7 @@ import { customCategoriesCopy } from '@/features/classification/custom-categorie
 import { customCategoryNameError } from '@/features/classification/custom-category';
 import { eventsCopy } from '@/features/events/events-copy';
 import { noEventId, sortedEvents, type SpendingEvent } from '@/features/events/spending-event';
-import { NamePrompt } from '@/features/insights/name-prompt';
+import { NamePrompt } from '@/features/sheets/name-prompt';
 import { AccountPicker } from '@/features/financial-accounts/account-picker';
 import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';

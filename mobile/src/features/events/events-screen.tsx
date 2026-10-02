@@ -5,13 +5,13 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
 import { reportingCurrency } from '@/features/currency-conversion/exchange-rate';
-import { NamePrompt } from '@/features/insights/name-prompt';
+import { NamePrompt } from '@/features/sheets/name-prompt';
 import {
   SheetButton,
   SheetLayout,
   SheetRow,
   SheetSection,
-} from '@/features/insights/sheet-layout';
+} from '@/features/sheets/sheet-layout';
 import { useCopy } from '@/features/localization/language';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { formatShare } from '@/features/spending-overview/formatting';
