@@ -11,7 +11,14 @@ import { formatPremiumSince } from './premium-date';
 import { setPreviewWithoutPremium, usePreviewWithoutPremium } from './premium-preview';
 import type { PremiumStatus } from './use-premium';
 
-const benefitSymbols: SFSymbol[] = ['chart.bar.xaxis', 'square.grid.2x2', 'bell.badge', 'heart'];
+const benefitSymbols: SFSymbol[] = [
+  'chart.bar.xaxis',
+  'chart.line.uptrend.xyaxis',
+  'square.grid.2x2',
+  'bell.badge',
+  'tag',
+  'heart',
+];
 
 interface PremiumScreenProps {
   status: PremiumStatus | undefined;
