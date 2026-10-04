@@ -43,6 +43,11 @@ export function changeFromRecord(record: IngestionRecord): TransactionChange {
     occurredAt: record.occurredAt,
     capturedAt: record.capturedAt,
     status: record.status,
+    eventId: record.eventId,
+    reportingAmountMinor: record.reportingAmountMinor,
+    exchangeRate: record.exchangeRate,
+    exchangeRateDate: record.exchangeRateDate,
+    exchangeRateTable: record.exchangeRateTable,
   });
 }
 
@@ -68,6 +73,11 @@ function recordFromChange(change: TransactionChange): IngestionRecord {
         : 'manual'),
     status: change.status,
     origin: change.origin,
+    eventId: change.eventId,
+    reportingAmountMinor: change.reportingAmountMinor,
+    exchangeRate: change.exchangeRate,
+    exchangeRateDate: change.exchangeRateDate,
+    exchangeRateTable: change.exchangeRateTable,
   });
 }
 

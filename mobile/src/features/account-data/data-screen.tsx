@@ -10,6 +10,7 @@ import type { FinancialAccount } from '@/features/financial-accounts/financial-a
 import { formatTransactionCount } from '@/features/spending-overview/formatting';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { useCopy } from '@/features/localization/language';
+import { CloudSyncSection } from '@/features/sync/cloud-sync-section';
 
 import { accountDataCopy } from './account-data-copy';
 import { DeleteAccountScreen } from './delete-account-screen';
@@ -89,6 +90,8 @@ export function DataScreen({ records, accounts, onClose }: DataScreenProps) {
             {exportError ?? copy.exportFootnote(formatTransactionCount(records.length))}
           </Text>
         </View>
+
+        <CloudSyncSection />
 
         <View style={styles.section}>
           <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>

@@ -1,4 +1,3 @@
-import { maximumTextLength } from '@bankstats/convex/convex/changeRules';
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { useCallback, useState } from 'react';
 import {
@@ -21,6 +20,12 @@ import {
   uncategorizedLabel,
 } from '@/features/classification/categories';
 import { supportsCategoryRule } from '@/features/classification/categorization-rule';
+import type { CustomCategory } from '@/features/classification/categories';
+import { customCategoriesCopy } from '@/features/classification/custom-categories-copy';
+import { customCategoryNameError } from '@/features/classification/custom-category';
+import { eventsCopy } from '@/features/events/events-copy';
+import { noEventId, sortedEvents, type SpendingEvent } from '@/features/events/spending-event';
+import { NamePrompt } from '@/features/app-shell/name-prompt';
 import { AccountPicker } from '@/features/financial-accounts/account-picker';
 import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
@@ -49,7 +54,14 @@ interface TransactionEditorProps {
   onSubmit: (record: IngestionRecord, options: { rememberCategory: boolean }) => void;
   onConfirm?: () => void;
   onDelete?: () => void;
+  events?: SpendingEvent[];
+  customCategories?: CustomCategory[];
+  canCreateCategory?: boolean;
+  onCreateCategory?: (name: string) => Promise<CustomCategory>;
+  onRequirePremium?: () => void;
 }
+
+const maximumEventChips = 6;
 
 const directionOrder: TransactionDirection[] = ['expense', 'income'];
 
@@ -63,9 +75,24 @@ export function TransactionEditor({
   onSubmit,
   onConfirm,
   onDelete,
+  events = [],
+  customCategories = [],
+  canCreateCategory = false,
+  onCreateCategory,
+  onRequirePremium,
 }: TransactionEditorProps) {
   const insets = useSafeAreaInsets();
   const copy = useCopy(transactionsCopy);
+  const eventCopy = useCopy(eventsCopy);
+  const categoryCopy = useCopy(customCategoriesCopy);
+  const [isNamingCategory, setIsNamingCategory] = useState(false);
+  const eventOptions = [
+    { id: '', label: eventCopy.automatic },
+    { id: noEventId, label: eventCopy.none },
+    ...sortedEvents(events)
+      .slice(0, maximumEventChips)
+      .map((event) => ({ id: event.id, label: event.name })),
+  ];
   const [draft, setDraft] = useState<TransactionDraft>(() =>
     record === null ? emptyDraft(new Date()) : draftFromRecord(record),
   );
@@ -257,7 +284,6 @@ export function TransactionEditor({
         <View style={styles.card}>
           <EditorField
             label={copy.name}
-            maxLength={maximumTextLength}
             onChangeText={(name) => update({ name })}
             placeholder={copy.namePlaceholder}
             value={draft.name}
@@ -325,6 +351,25 @@ export function TransactionEditor({
                 </Pressable>
               );
             })}
+            {onCreateCategory !== undefined ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  selectionChanged();
+
+                  if (canCreateCategory) {
+                    setIsNamingCategory(true);
+                  } else {
+                    onRequirePremium?.();
+                  }
+                }}
+                style={({ pressed }) => [styles.chip, pressed ? styles.pressed : null]}
+              >
+                <Text maxFontSizeMultiplier={1.3} style={styles.chipLabel}>
+                  {categoryCopy.newChip}
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
           {canRemember ? (
             <Pressable
@@ -349,6 +394,44 @@ export function TransactionEditor({
             </Pressable>
           ) : null}
         </View>
+
+        {events.length > 0 ? (
+          <View style={styles.categories}>
+            <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
+              {eventCopy.eventLabel}
+            </Text>
+            <View style={styles.chips}>
+              {eventOptions.map((option) => {
+                const isActive = option.id === draft.eventId;
+
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isActive }}
+                    key={option.id === '' ? 'automatic' : option.id}
+                    onPress={() => {
+                      selectionChanged();
+                      update({ eventId: option.id });
+                    }}
+                    style={({ pressed }) => [
+                      styles.chip,
+                      isActive ? styles.chipActive : null,
+                      pressed ? styles.pressed : null,
+                    ]}
+                  >
+                    <Text
+                      maxFontSizeMultiplier={1.3}
+                      numberOfLines={1}
+                      style={[styles.chipLabel, isActive ? styles.chipLabelActive : null]}
+                    >
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        ) : null}
 
         <View style={styles.card}>
           <EditorField
@@ -387,6 +470,25 @@ export function TransactionEditor({
           </Pressable>
         ) : null}
       </ScrollView>
+
+      <NamePrompt
+        cancelLabel={categoryCopy.cancel}
+        confirmLabel={categoryCopy.create}
+        onCancel={() => setIsNamingCategory(false)}
+        onConfirm={async (name) => {
+          if (onCreateCategory === undefined) {
+            return;
+          }
+
+          const category = await onCreateCategory(name);
+          update({ category: category.id });
+          setIsNamingCategory(false);
+        }}
+        placeholder={categoryCopy.placeholder}
+        title={categoryCopy.addTitle}
+        validate={(name) => customCategoryNameError(name, customCategories)}
+        visible={isNamingCategory}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -396,7 +498,6 @@ interface EditorFieldProps {
   value: string;
   placeholder: string;
   keyboardType?: 'default' | 'numbers-and-punctuation';
-  maxLength?: number;
   onChangeText: (value: string) => void;
 }
 
@@ -405,7 +506,6 @@ function EditorField({
   value,
   placeholder,
   keyboardType = 'default',
-  maxLength,
   onChangeText,
 }: EditorFieldProps) {
   return (
@@ -417,7 +517,6 @@ function EditorField({
         accessibilityLabel={label}
         autoCorrect={false}
         keyboardType={keyboardType}
-        maxLength={maxLength}
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={overviewColors.textDisabled}

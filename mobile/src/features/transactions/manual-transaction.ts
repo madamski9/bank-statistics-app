@@ -5,6 +5,7 @@ import {
   withGeneralAccounts,
   type FinancialAccount,
 } from '@/features/financial-accounts/financial-account';
+import { withoutExchangeRate } from '@/features/currency-conversion/exchange-rate';
 import { currentCopy } from '@/features/localization/language';
 
 import { transactionsCopy } from './transactions-copy';
@@ -21,13 +22,14 @@ export interface TransactionDraft {
   name: string;
   category: string;
   accountId: string;
+  eventId: string;
   date: string;
   time: string;
 }
 
 const transactionKindsByDirection: Record<TransactionDirection, TransactionKind[]> = {
-  expense: ['cardPayment', 'outgoingTransfer', 'other'],
-  income: ['incomingTransfer', 'other'],
+  expense: ['cardPayment', 'blikPayment', 'outgoingTransfer', 'atmWithdrawal', 'fee', 'other'],
+  income: ['incomingTransfer', 'refund', 'interest', 'other'],
 };
 
 export function transactionKindOptions(
@@ -72,6 +74,7 @@ export function emptyDraft(now: Date): TransactionDraft {
     name: '',
     category: '',
     accountId: generalManualAccountId,
+    eventId: '',
     date: formatDraftDate(now),
     time: formatDraftTime(now),
   };
@@ -91,6 +94,7 @@ export function draftFromRecord(record: IngestionRecord): TransactionDraft {
     name: record.merchant ?? '',
     category: record.category ?? '',
     accountId: record.origin === 'manual' ? (record.accountId ?? generalManualAccountId) : '',
+    eventId: record.eventId ?? '',
     date: formatDraftDate(moment),
     time: formatDraftTime(moment),
   };
@@ -217,18 +221,28 @@ export function recordFromDraft(
     origin: 'manual' as const,
   };
 
-  return {
+  const currency = draft.currency.trim().toUpperCase();
+  const occurredAt = moment.toISOString();
+  const keepsConversion =
+    record !== null &&
+    record.amountMinor === amountMinor &&
+    record.currency === currency &&
+    new Date(record.occurredAt).getTime() === moment.getTime();
+  const next: IngestionRecord = {
     ...base,
     review: undefined,
     direction: draft.direction,
     transactionType: draft.kind === 'other' ? undefined : draft.kind,
     amountMinor,
-    currency: draft.currency.trim().toUpperCase(),
+    currency,
     merchant: optional(draft.name),
     category: optional(draft.category),
+    eventId: draft.eventId === '' ? undefined : draft.eventId,
     ...accountFields(draft, base, accounts),
-    occurredAt: moment.toISOString(),
+    occurredAt,
   };
+
+  return keepsConversion ? next : withoutExchangeRate(next);
 }
 
 export function confirmedRecord(record: IngestionRecord): IngestionRecord {

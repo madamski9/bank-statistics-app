@@ -29,6 +29,11 @@ struct NormalizedRecord: Codable, Sendable {
   var review: String? = nil
   var category: String? = nil
   var accountId: String? = nil
+  var eventId: String? = nil
+  var reportingAmountMinor: Int? = nil
+  var exchangeRate: String? = nil
+  var exchangeRateDate: String? = nil
+  var exchangeRateTable: String? = nil
 
   var dictionary: [String: Any] {
     var value: [String: Any] = [
@@ -50,15 +55,16 @@ struct NormalizedRecord: Codable, Sendable {
     value["review"] = review
     value["category"] = category
     value["accountId"] = accountId
+    value["eventId"] = eventId
+    value["reportingAmountMinor"] = reportingAmountMinor
+    value["exchangeRate"] = exchangeRate
+    value["exchangeRateDate"] = exchangeRateDate
+    value["exchangeRateTable"] = exchangeRateTable
 
     return value
   }
 }
 
-/// A bank notification can normalize to a record, or it can be recognized-but-intentionally-
-/// dropped - Millennium's own card-payment push never carries a merchant name, so it is deferred
-/// to the Apple Pay Wallet transaction (captured separately, with the merchant) rather than saved
-/// as a second, poorer-detail record for the same purchase.
 enum NormalizationOutcome {
   case record(NormalizedRecord)
   case ignored(reasonCode: String)

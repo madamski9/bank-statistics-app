@@ -1,6 +1,6 @@
 import type { SpendingPeriod } from '@/features/spending-overview/periods';
 
-export type PremiumReason = 'period' | 'limit' | 'widget';
+export type PremiumReason = 'period' | 'limit' | 'widget' | 'category' | 'report';
 
 const freePeriods: readonly SpendingPeriod[] = ['week', 'month', 'quarter'];
 
@@ -22,4 +22,12 @@ export function lockedPeriods(isPremium: boolean): ReadonlySet<SpendingPeriod> {
 
 export function canCreateLimit(existingLimitCount: number, isPremium: boolean): boolean {
   return isPremium || existingLimitCount < freeLimitCount;
+}
+
+export function canCreateCustomCategory(isPremium: boolean): boolean {
+  return isPremium;
+}
+
+export function canOpenMonthlyReport(isPremium: boolean): boolean {
+  return isPremium;
 }

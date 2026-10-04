@@ -6,7 +6,7 @@ import { financialAccountFields } from './schema';
 import {
   assertPushSize,
   requireDevice,
-  rowFromChange,
+  storeChanges,
   withoutServerFields,
 } from './syncedRows';
 
@@ -32,29 +32,7 @@ export const push = mutation({
     const owner = await requireDevice(ctx, installationId);
     assertPushSize(changes);
     changes.forEach(assertValidChange);
-    const now = Date.now();
-
-    for (const change of changes) {
-      const stored = await ctx.db
-        .query('financialAccounts')
-        .withIndex('by_owner_client', (index) =>
-          index.eq('ownerId', owner.ownerId).eq('clientId', change.clientId),
-        )
-        .unique();
-      const row = rowFromChange(change, stored, owner, now);
-
-      if (row === null) {
-        continue;
-      }
-
-      if (stored === null) {
-        await ctx.db.insert('financialAccounts', row);
-      } else {
-        await ctx.db.replace(stored._id, row);
-      }
-    }
-
-    await ctx.db.patch(owner.device._id, { lastSeenAt: now });
+    await storeChanges(ctx, 'financialAccounts', owner, changes);
   },
 });
 

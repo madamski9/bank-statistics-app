@@ -14,6 +14,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
+import type { CustomCategory } from '@/features/classification/categories';
+import type { SpendingEvent } from '@/features/events/spending-event';
 import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
 import { impactLight } from '@/haptics';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
@@ -21,7 +23,6 @@ import {
   overviewColors,
   overviewSpacing,
 } from '@/features/spending-overview/overview-theme';
-import type { SpendingSourceKind } from '@/features/spending-overview/spending-summary';
 import { useCopy } from '@/features/localization/language';
 
 import { transactionsCopy } from './transactions-copy';
@@ -29,6 +30,7 @@ import { dayKey, formatDayHeading, formatTime } from './format-date';
 import { confirmedRecord } from './manual-transaction';
 import { TransactionDetail } from './transaction-detail';
 import { TransactionEditor } from './transaction-editor';
+import { transactionKindSymbols } from './transaction-kind-symbols';
 import {
   affectsStatistics,
   transactionBadge,
@@ -47,6 +49,11 @@ interface TransactionsScreenProps {
   isLoading: boolean;
   onChanged: () => void | Promise<void>;
   onRememberRule: (merchantLabel: string, category: string) => Promise<void>;
+  events: SpendingEvent[];
+  customCategories: CustomCategory[];
+  canCreateCategory: boolean;
+  onCreateCategory: (name: string) => Promise<CustomCategory>;
+  onRequirePremium: () => void;
 }
 
 interface DaySection {
@@ -60,17 +67,6 @@ interface DaySection {
 type EditorTarget =
   | { mode: 'detail'; record: IngestionRecord }
   | { mode: 'edit'; record: IngestionRecord | null };
-
-const sourceSymbols = {
-  cardPayment: { ios: 'creditcard.fill', android: 'credit_card', web: 'credit_card' },
-  outgoingTransfer: { ios: 'arrow.up.forward', android: 'arrow_outward', web: 'arrow_outward' },
-  incomingTransfer: {
-    ios: 'arrow.down.backward',
-    android: 'arrow_downward',
-    web: 'arrow_downward',
-  },
-  other: { ios: 'square.grid.2x2.fill', android: 'grid_view', web: 'grid_view' },
-} as const satisfies Record<SpendingSourceKind, { ios: string; android: string; web: string }>;
 
 function buildSections(records: IngestionRecord[], reference: Date): DaySection[] {
   const sections = new Map<string, DaySection>();
@@ -111,7 +107,6 @@ function buildSections(records: IngestionRecord[], reference: Date): DaySection[
   return [...sections.values()];
 }
 
-/** The plain log behind the Overview: every captured transaction, newest first. */
 function TransactionsScreenComponent({
   records,
   accounts,
@@ -121,6 +116,11 @@ function TransactionsScreenComponent({
   isLoading,
   onChanged,
   onRememberRule,
+  events,
+  customCategories,
+  canCreateCategory,
+  onCreateCategory,
+  onRequirePremium,
 }: TransactionsScreenProps) {
   const { formatAmount } = useAmountFormatting();
   const insets = useSafeAreaInsets();
@@ -241,7 +241,7 @@ function TransactionsScreenComponent({
             >
               <View style={styles.icon}>
                 <SymbolView
-                  name={sourceSymbols[transactionKind(item)]}
+                  name={transactionKindSymbols[transactionKind(item)]}
                   size={17}
                   tintColor={overviewColors.textSecondary}
                 />
@@ -340,6 +340,7 @@ function TransactionsScreenComponent({
             onClose={closeEditor}
             onDelete={handleDelete}
             onEdit={() => setEditor({ mode: 'edit', record: editor.record })}
+            events={events}
             record={editor.record}
             rules={rules}
             writeError={writeError}
@@ -347,6 +348,9 @@ function TransactionsScreenComponent({
         ) : (
           <TransactionEditor
             accounts={accounts}
+            canCreateCategory={canCreateCategory}
+            customCategories={customCategories}
+            events={events}
             isWriting={isWriting}
             key={editor.record?.id ?? 'new'}
             onCancel={() => {
@@ -354,6 +358,11 @@ function TransactionsScreenComponent({
               setEditor(editor.record === null ? null : { mode: 'detail', record: editor.record });
             }}
             onCreateAccount={onCreateAccount}
+            onCreateCategory={onCreateCategory}
+            onRequirePremium={() => {
+              closeEditor();
+              onRequirePremium();
+            }}
             onConfirm={editor.record?.review === undefined ? undefined : handleConfirm}
             onDelete={editor.record !== null ? handleDelete : undefined}
             onSubmit={handleSubmit}
@@ -366,7 +375,6 @@ function TransactionsScreenComponent({
   );
 }
 
-/** Memoised: swiping the pager re-renders the shell once per crossing, not this list. */
 export const TransactionsScreen = memo(TransactionsScreenComponent);
 
 const styles = StyleSheet.create({

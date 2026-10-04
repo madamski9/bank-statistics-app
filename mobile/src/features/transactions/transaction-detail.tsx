@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
 import { classifyTransaction } from '@/features/classification/classify-transaction';
+import { reportingCurrency } from '@/features/currency-conversion/exchange-rate';
+import { eventIdForRecord, type SpendingEvent } from '@/features/events/spending-event';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { useCopy } from '@/features/localization/language';
@@ -23,6 +25,7 @@ import {
 interface TransactionDetailProps {
   record: IngestionRecord;
   rules: CategorizationRule[];
+  events?: SpendingEvent[];
   isWriting: boolean;
   writeError: string | null;
   onClose: () => void;
@@ -33,6 +36,7 @@ interface TransactionDetailProps {
 export function TransactionDetail({
   record,
   rules,
+  events = [],
   isWriting,
   writeError,
   onClose,
@@ -59,6 +63,32 @@ export function TransactionDetail({
 
   if (classified.merchantLocation !== undefined) {
     details.push({ label: copy.detail.place, value: classified.merchantLocation });
+  }
+
+  const eventId = eventIdForRecord(record, events);
+  const event = events.find((candidate) => candidate.id === eventId);
+
+  if (event !== undefined) {
+    details.push({ label: copy.detail.event, value: event.name });
+  }
+
+  if (record.currency !== reportingCurrency) {
+    if (record.reportingAmountMinor === undefined) {
+      details.push({ label: copy.detail.inPln, value: copy.awaitingRate });
+    } else {
+      details.push({
+        label: copy.detail.inPln,
+        value: formatAmount(record.reportingAmountMinor, reportingCurrency),
+      });
+      details.push({
+        label: copy.detail.rate,
+        value: copy.rateValue(
+          record.exchangeRate ?? '',
+          record.exchangeRateDate ?? '',
+          record.exchangeRateTable ?? '',
+        ),
+      });
+    }
   }
 
   return (

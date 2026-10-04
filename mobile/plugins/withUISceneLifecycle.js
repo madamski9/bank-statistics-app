@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { withInfoPlist, withAppDelegate, withXcodeProject, IOSConfig } = require('@expo/config-plugins');
+const { withInfoPlist, withAppDelegate, withXcodeProject, IOSConfig } = require('expo/config-plugins');
 
 const SCENE_DELEGATE_SOURCE = `import React
 import UIKit

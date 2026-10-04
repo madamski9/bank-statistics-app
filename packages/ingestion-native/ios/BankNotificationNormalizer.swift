@@ -1,6 +1,8 @@
 import Foundation
 
 struct BankNotificationNormalizer {
+  var interpreter: BankNotificationInterpreter?
+
   func normalize(
     title: String = "",
     subtitle: String,
@@ -8,24 +10,12 @@ struct BankNotificationNormalizer {
     sourceApp: String,
     capturedAt: Date = Date()
   ) throws -> NormalizationOutcome {
-    let flattenedBody = body
-      .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-
-    if subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-      let record = PkoNotificationNormalizer().record(body: flattenedBody, capturedAt: capturedAt) {
-      return .record(record)
-    }
-
-    return try MillenniumNotificationNormalizer(walletBank: walletBank(title: title)).normalize(
+    try (interpreter ?? BankNotificationInterpreter.bundled()).normalize(
+      title: title,
       subtitle: subtitle,
       body: body,
       sourceApp: sourceApp,
       capturedAt: capturedAt
     )
-  }
-
-  private func walletBank(title: String) -> String {
-    title.range(of: #"(?i)\bpko\b"#, options: .regularExpression) != nil ? "pko" : "millennium"
   }
 }

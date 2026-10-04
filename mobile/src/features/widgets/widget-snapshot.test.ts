@@ -2,6 +2,10 @@ import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { describe, expect, test } from 'bun:test';
 
 import type { AlertRule } from '@/features/alerts/alert-rule';
+import { expenseRhythm, rhythmAverageMinor } from '@/features/overview/spending-rhythm';
+import { formatAmount, formatCompactAmount } from '@/features/spending-overview/formatting';
+import { periodWindow } from '@/features/spending-overview/periods';
+import { summarizeSpending } from '@/features/spending-overview/spending-summary';
 
 import {
   buildSpendingWidgetProps,
@@ -56,15 +60,33 @@ function build(records: IngestionRecord[], alertRules: AlertRule[] = []) {
 }
 
 describe('buildSpendingWidgetProps', () => {
-  test('counts only the calendar month so far', () => {
-    const lastMonth = record({ occurredAt: new Date(2026, 7, 31, 12, 0).toISOString() });
-    const props = build([record(), record({ amountMinor: 5_000 }), lastMonth]);
+  test('counts the same last 30 days as the overview', () => {
+    const endOfLastMonth = record({ occurredAt: new Date(2026, 7, 31, 12, 0).toISOString() });
+    const tooOld = record({ occurredAt: new Date(2026, 7, 20, 12, 0).toISOString() });
+    const props = build([record(), record({ amountMinor: 5_000 }), endOfLastMonth, tooOld]);
 
     expect(props.status).toBe('ready');
-    expect(props.monthKey).toBe('2026-09');
-    expect(props.monthLabel).toBe('Wrzesień');
-    expect(props.expenseLabel).toBe('150 zł');
-    expect(props.countLabel).toBe('2 płatności');
+    expect(props.periodLabel).toBe('30 dni');
+    expect(props.expenseLabel).toBe('250,00 zł');
+    expect(props.countLabel).toBe('3 płatności');
+  });
+
+  test('shows the same spending and daily average as the overview on 1M', () => {
+    const records = [
+      record({ amountMinor: 12_345 }),
+      record({ amountMinor: 6_789, occurredAt: new Date(2026, 8, 2, 9, 0).toISOString() }),
+      record({ amountMinor: 50_000, direction: 'income' }),
+    ];
+    const window = periodWindow('month', reference);
+    const summary = summarizeSpending(records, window, []);
+    const rhythm = expenseRhythm(records, summary.currency, window, 'month');
+    const props = build(records);
+
+    expect(props.expenseLabel).toBe(formatAmount(summary.expenseMinor, summary.currency));
+    expect(props.incomeLabel).toBe(formatCompactAmount(summary.incomeMinor, summary.currency));
+    expect(props.dailyAmountLabel).toBe(
+      formatCompactAmount(rhythmAverageMinor(rhythm.buckets), summary.currency),
+    );
   });
 
   test('leaves review items and reversed transactions out of the total', () => {
@@ -74,7 +96,7 @@ describe('buildSpendingWidgetProps', () => {
       record({ status: 'reversed' }),
     ]);
 
-    expect(props.expenseLabel).toBe('100 zł');
+    expect(props.expenseLabel).toBe('100,00 zł');
   });
 
   test('ranks the shops by what was spent there', () => {
@@ -94,9 +116,9 @@ describe('buildSpendingWidgetProps', () => {
       record({ amountMinor: 90_000, currency: 'EUR' }),
     ]);
 
-    expect(props.expenseLabel).toBe('150 zł');
+    expect(props.expenseLabel).toBe('150,00 zł');
     expect(props.shops[0].amountLabel).toBe('150 zł');
-    expect(props.dailyAmountLabel).toBe('6 zł');
+    expect(props.dailyAmountLabel).toBe('5 zł');
   });
 });
 
@@ -162,15 +184,15 @@ describe('widgetEntries', () => {
     });
 
   test('shows the widget plainly unless the user asked to blur it', () => {
-    const entries = widgetEntries(ready(), { isBlurred: false, revealedUntilMs: 0 }, reference);
+    const entries = widgetEntries(() => ready(), { isBlurred: false, revealedUntilMs: 0 }, reference);
 
-    expect(entries).toHaveLength(1);
-    expect(entries[0].props.isBlurred).toBe(false);
-    expect(entries[0].props.expenseLabel).toBe('100\u00A0zł');
+    expect(entries).toHaveLength(8);
+    expect(entries.every((entry) => !entry.props.isBlurred)).toBe(true);
+    expect(entries[0].props.expenseLabel).toBe('100,00 zł');
   });
 
   test('blurs the widget and points a tap at the reveal link', () => {
-    const [entry] = widgetEntries(ready(), { isBlurred: true, revealedUntilMs: 0 }, reference);
+    const [entry] = widgetEntries(() => ready(), { isBlurred: true, revealedUntilMs: 0 }, reference);
 
     expect(entry.props.isBlurred).toBe(true);
     expect(entry.props.revealUrl).toBe('bankstats://?widget=reveal');
@@ -178,15 +200,37 @@ describe('widgetEntries', () => {
 
   test('reveals a blurred widget until the reveal window ends, then blurs it again', () => {
     const until = reference.getTime() + 5 * 60_000;
-    const entries = widgetEntries(ready(), { isBlurred: true, revealedUntilMs: until }, reference);
+    const entries = widgetEntries(() => ready(), { isBlurred: true, revealedUntilMs: until }, reference);
 
-    expect(entries.map((entry) => entry.props.isBlurred)).toEqual([false, true]);
+    expect(entries.map((entry) => entry.props.isBlurred).slice(0, 3)).toEqual([false, true, true]);
     expect(entries[1].date.getTime()).toBe(until);
+  });
+
+  test('precomputes the next days so the widget stays right without new transactions', () => {
+    const oldest = record({ occurredAt: new Date(2026, 7, 26, 12, 0).toISOString() });
+    const entries = widgetEntries(
+      (moment) =>
+        buildSpendingWidgetProps({
+          records: [record(), oldest],
+          alertRules: [],
+          categorizationRules: [],
+          reference: moment,
+          updatedAt: reference,
+          openUrl: 'bankstats://',
+        }),
+      { isBlurred: false, revealedUntilMs: 0 },
+      reference,
+    );
+
+    expect(entries[1].date).toEqual(new Date(2026, 8, 25));
+    expect(entries[0].props.expenseLabel).toBe('200,00\u00A0zł');
+    expect(entries[3].props.expenseLabel).toBe('100,00\u00A0zł');
+    expect(entries[3].props.updatedAtMs).toBe(reference.getTime());
   });
 
   test('never blurs the signed-out message', () => {
     const [entry] = widgetEntries(
-      signedOutWidgetProps(reference, 'bankstats://'),
+      () => signedOutWidgetProps(reference, 'bankstats://'),
       { isBlurred: true, revealedUntilMs: 0 },
       reference,
     );

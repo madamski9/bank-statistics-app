@@ -76,7 +76,58 @@ final class EncryptedOutbox: @unchecked Sendable {
       let database = try openDatabase(configuration: configuration)
       defer { sqlite3_close(database) }
       try execute("DELETE FROM outbox", database: database)
+      try execute("DELETE FROM documents", database: database)
       IngestionAttemptLog(configuration: configuration).reset()
+    }
+  }
+
+  func readDocument(key: String) throws -> String? {
+    try queue.sync {
+      let database = try openDatabase()
+      defer { sqlite3_close(database) }
+      let sql = "SELECT value FROM documents WHERE key = ?"
+      var statement: OpaquePointer?
+      try check(sqlite3_prepare_v2(database, sql, -1, &statement, nil), database)
+      defer { sqlite3_finalize(statement) }
+      try check(sqlite3_bind_text(statement, 1, key, -1, transient), database)
+      let status = sqlite3_step(statement)
+
+      if status == SQLITE_DONE {
+        return nil
+      }
+
+      try check(status, database, accepted: [SQLITE_ROW])
+      guard let value = sqlite3_column_text(statement, 0) else {
+        return nil
+      }
+      return String(cString: value)
+    }
+  }
+
+  func writeDocument(key: String, value: String) throws {
+    try queue.sync {
+      let database = try openDatabase()
+      defer { sqlite3_close(database) }
+      let sql = "INSERT OR REPLACE INTO documents (key, value) VALUES (?, ?)"
+      var statement: OpaquePointer?
+      try check(sqlite3_prepare_v2(database, sql, -1, &statement, nil), database)
+      defer { sqlite3_finalize(statement) }
+      try check(sqlite3_bind_text(statement, 1, key, -1, transient), database)
+      try check(sqlite3_bind_text(statement, 2, value, -1, transient), database)
+      try check(sqlite3_step(statement), database, accepted: [SQLITE_DONE])
+    }
+  }
+
+  func deleteDocument(key: String) throws {
+    try queue.sync {
+      let database = try openDatabase()
+      defer { sqlite3_close(database) }
+      let sql = "DELETE FROM documents WHERE key = ?"
+      var statement: OpaquePointer?
+      try check(sqlite3_prepare_v2(database, sql, -1, &statement, nil), database)
+      defer { sqlite3_finalize(statement) }
+      try check(sqlite3_bind_text(statement, 1, key, -1, transient), database)
+      try check(sqlite3_step(statement), database, accepted: [SQLITE_DONE])
     }
   }
 
@@ -146,9 +197,6 @@ final class EncryptedOutbox: @unchecked Sendable {
         "cipherVersion": try scalar("PRAGMA cipher_version", database: database),
         "databasePath": configuration.databaseURL.path,
       ]
-      // Surfaces whether the background App Intent has fired at all, and whether its last
-      // attempt succeeded, so an empty outbox can be told apart from an automation that
-      // never ran.
       values.merge(IngestionAttemptLog(configuration: configuration).snapshot()) { _, new in new }
       return values
     }
@@ -204,6 +252,10 @@ final class EncryptedOutbox: @unchecked Sendable {
       try execute("PRAGMA journal_mode = WAL", database: database)
       try execute(
         "CREATE TABLE IF NOT EXISTS outbox (id TEXT PRIMARY KEY, payload BLOB NOT NULL, captured_at TEXT NOT NULL)",
+        database: database
+      )
+      try execute(
+        "CREATE TABLE IF NOT EXISTS documents (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
         database: database
       )
       return database

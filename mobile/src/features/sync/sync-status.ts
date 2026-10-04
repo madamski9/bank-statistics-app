@@ -1,6 +1,6 @@
 import { currentCopy, defineCopy } from '@/features/localization/language';
 
-export type SyncState = 'waiting' | 'syncing' | 'synced' | 'offline' | 'failed';
+export type SyncState = 'waiting' | 'syncing' | 'synced' | 'offline' | 'failed' | 'disabled';
 
 export interface SyncStatus {
   state: SyncState;
@@ -17,6 +17,7 @@ const syncCopy = defineCopy({
     failed: 'Nie udało się zsynchronizować. Spróbujemy ponownie.',
     syncing: 'Synchronizowanie…',
     waiting: 'Łączenie…',
+    disabled: 'Wyłączona. Dane zostają tylko na tym telefonie.',
   },
   en: {
     at: (time: string) => `at ${time}`,
@@ -27,6 +28,7 @@ const syncCopy = defineCopy({
     failed: 'Could not sync. We will try again.',
     syncing: 'Syncing…',
     waiting: 'Connecting…',
+    disabled: 'Off. Your data stays on this phone only.',
   },
 });
 
@@ -70,5 +72,7 @@ export function syncStatusLabel(status: SyncStatus, now: number): string {
       return copy.syncing;
     case 'waiting':
       return copy.waiting;
+    case 'disabled':
+      return copy.disabled;
   }
 }

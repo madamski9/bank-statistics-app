@@ -1,4 +1,4 @@
-const { withEntitlementsPlist } = require('@expo/config-plugins');
+const { withEntitlementsPlist } = require('expo/config-plugins');
 
 module.exports = function withoutPushEntitlement(config) {
   return withEntitlementsPlist(config, (config) => {

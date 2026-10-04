@@ -6,6 +6,7 @@ import { AppState, Platform } from 'react-native';
 
 import type { AlertRule } from '@/features/alerts/alert-rule';
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
+import type { CustomCategory } from '@/features/classification/categories';
 import { useLanguage } from '@/features/localization/language';
 
 import type { WidgetBackgroundConfiguration } from './widget-background';
@@ -20,6 +21,7 @@ import {
 } from './widget-snapshot';
 
 const publishDebounceMs = 400;
+const syntheticMerchant = 'SKLEP TEST';
 
 interface SpendingWidgetSources {
   isReady: boolean;
@@ -28,6 +30,7 @@ interface SpendingWidgetSources {
   records: IngestionRecord[];
   alertRules: AlertRule[];
   categorizationRules: CategorizationRule[];
+  customCategories: CustomCategory[];
 }
 
 function loadSpendingWidgets() {
@@ -42,18 +45,19 @@ function loadSpendingWidgets() {
 
 const spendingWidgets = loadSpendingWidgets();
 
-function publish(props: SpendingWidgetProps, privacy: WidgetPrivacy): void {
+function publish(propsAt: (moment: Date) => SpendingWidgetProps, privacy: WidgetPrivacy): void {
+  const now = new Date();
+
   for (const { screen, widget } of spendingWidgets) {
-    widget.updateTimeline(widgetEntries({ ...props, screen }, privacy, new Date()));
+    widget.updateTimeline(widgetEntries((moment) => ({ ...propsAt(moment), screen }), privacy, now));
   }
 }
 
-function configure(configuration: WidgetBackgroundConfiguration): boolean {
+function configure(configuration: WidgetBackgroundConfiguration): void {
   try {
-    return configureSpendingWidget(JSON.stringify(configuration));
+    configureSpendingWidget(JSON.stringify(configuration));
   } catch (error) {
     console.warn('Could not configure background widget updates', error);
-    return false;
   }
 }
 
@@ -73,7 +77,15 @@ function useForegroundTick(): number {
   return tick;
 }
 
-export function useSpendingWidget({ isReady, isPremium, records, alertRules, categorizationRules, privacy }: SpendingWidgetSources): void {
+export function useSpendingWidget({
+  isReady,
+  isPremium,
+  records,
+  alertRules,
+  categorizationRules,
+  customCategories,
+  privacy,
+}: SpendingWidgetSources): void {
   const foregroundTick = useForegroundTick();
   const language = useLanguage();
 
@@ -85,31 +97,43 @@ export function useSpendingWidget({ isReady, isPremium, records, alertRules, cat
     const timer = setTimeout(() => {
       const openUrl = Linking.createURL('/');
       const revealUrl = Linking.createURL('/', { queryParams: widgetRevealParams });
-      const configured = configure({
+      const updatedAt = new Date();
+
+      configure({
         enabled: true,
         isPremium,
         alertRules,
         categorizationRules,
+        customCategories,
         openUrl,
         revealUrl,
         privacy,
         language,
       });
-
-      if (!configured) {
-        publish(
+      publish(
+        (moment) =>
           isPremium
-            ? buildSpendingWidgetProps({ records, alertRules, categorizationRules, reference: new Date(), openUrl, revealUrl })
-            : lockedWidgetProps(new Date(), openUrl),
-          privacy,
-        );
-      }
+            ? buildSpendingWidgetProps({
+                records: records.filter(
+                  (record) => record.merchant !== syntheticMerchant || record.origin === 'manual',
+                ),
+                alertRules,
+                categorizationRules,
+                reference: moment,
+                updatedAt,
+                openUrl,
+                revealUrl,
+              })
+            : lockedWidgetProps(moment, openUrl),
+        privacy,
+      );
     }, publishDebounceMs);
 
     return () => clearTimeout(timer);
   }, [
     alertRules,
     categorizationRules,
+    customCategories,
     foregroundTick,
     isPremium,
     isReady,
@@ -125,7 +149,7 @@ export function SignedOutSpendingWidget(): null {
   useEffect(() => {
     const openUrl = Linking.createURL('/');
     configure({ enabled: false, alertRules: [], categorizationRules: [], openUrl, language });
-    publish(signedOutWidgetProps(new Date(), openUrl), { isBlurred: false, revealedUntilMs: 0 });
+    publish((moment) => signedOutWidgetProps(moment, openUrl), { isBlurred: false, revealedUntilMs: 0 });
   }, [language]);
 
   return null;

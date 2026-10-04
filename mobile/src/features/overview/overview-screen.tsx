@@ -17,14 +17,12 @@ import { RangeSwitcher } from '@/features/spending-overview/range-switcher';
 import type { SpendingSummary } from '@/features/spending-overview/spending-summary';
 
 import { overviewCopy } from './overview-copy';
-import { SpendingRhythmCard } from './spending-rhythm-card';
-import { rhythmPeak, type ExpenseRhythm } from './spending-rhythm';
+import { OverviewShortcuts, type OverviewShortcutsProps } from './overview-shortcuts';
 
 const unavailableValue = '-';
 
-interface OverviewScreenProps {
+interface OverviewScreenProps extends OverviewShortcutsProps {
   summary: SpendingSummary;
-  rhythm: ExpenseRhythm;
   expenseChange: number | null;
   period: SpendingPeriod;
   onChangePeriod: (period: SpendingPeriod) => void;
@@ -37,7 +35,6 @@ interface OverviewScreenProps {
 
 function OverviewScreenComponent({
   summary,
-  rhythm,
   expenseChange,
   period,
   onChangePeriod,
@@ -46,6 +43,7 @@ function OverviewScreenComponent({
   error,
   isLoading,
   hasData,
+  ...shortcuts
 }: OverviewScreenProps) {
   const { formatAmount, formatCompactAmount, formatSignedCompactAmount } = useAmountFormatting();
   const insets = useSafeAreaInsets();
@@ -92,22 +90,6 @@ function OverviewScreenComponent({
     },
   ];
 
-  const bucketSize = rhythm.size;
-  const peak = rhythmPeak(rhythm.buckets);
-  const stats = [
-    { key: 'count', label: copy.transactions, value: String(summary.expenseCount + summary.incomeCount) },
-    {
-      key: 'peak',
-      label: copy.peak[bucketSize],
-      value: peak === null ? unavailableValue : amount(peak.totalMinor, true),
-    },
-    {
-      key: 'largest',
-      label: copy.topSource,
-      value: summary.largestExpense?.label ?? unavailableValue,
-    },
-  ];
-
   return (
     <View style={styles.page}>
       <View style={styles.header}>
@@ -148,13 +130,8 @@ function OverviewScreenComponent({
         </Text>
       ) : null}
 
-      <View style={{ paddingBottom: insets.bottom + 16 }}>
-        <SpendingRhythmCard
-          bucketSize={bucketSize}
-          buckets={rhythm.buckets}
-          formatAverage={(minor) => amount(minor, true)}
-          stats={stats}
-        />
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+        <OverviewShortcuts {...shortcuts} />
       </View>
     </View>
   );
@@ -188,6 +165,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: overviewColors.textSecondary,
+  },
+  footer: {
+    paddingHorizontal: overviewSpacing.gutter,
   },
   error: {
     paddingHorizontal: overviewSpacing.gutter,

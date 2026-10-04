@@ -2,11 +2,11 @@ import { ConvexError } from 'convex/values';
 
 import { internal } from './_generated/api';
 import type { Doc } from './_generated/dataModel';
-import { internalMutation, type QueryCtx } from './_generated/server';
+import { internalMutation, type MutationCtx, type QueryCtx } from './_generated/server';
 import { maximumChangesPerPush, textProblem } from './changeRules';
 import { requireActiveDevice } from './devices';
 
-type SyncedTable = 'transactions' | 'financialAccounts';
+type SyncedTable = 'transactions' | 'financialAccounts' | 'categories' | 'events';
 
 interface SyncedChange {
   clientId: string;
@@ -14,9 +14,16 @@ interface SyncedChange {
   deleted: boolean;
 }
 
-const syncedTables: SyncedTable[] = ['transactions', 'financialAccounts'];
+export const syncedTables: SyncedTable[] = ['transactions', 'financialAccounts', 'categories', 'events'];
 const tombstoneRetentionMs = 90 * 24 * 60 * 60 * 1000;
 const purgeBatchSize = 500;
+const isoTimestampPattern =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
+
+export function isIsoTimestamp(value: string): boolean {
+  return isoTimestampPattern.test(value) && !Number.isNaN(Date.parse(value));
+}
+
 export function assertPushSize(changes: unknown[]) {
   if (changes.length > maximumChangesPerPush) {
     throw new ConvexError(`A push carries at most ${maximumChangesPerPush} changes.`);
@@ -57,6 +64,39 @@ export function rowFromChange<Change extends SyncedChange>(
     lastDeviceId: owner.device._id,
     deletedAt: change.deleted ? (stored?.deletedAt ?? now) : undefined,
   };
+}
+
+type SyncOwner = { ownerId: string; device: Doc<'devices'> };
+
+export async function storeChanges<Change extends SyncedChange>(
+  ctx: MutationCtx,
+  table: SyncedTable,
+  owner: SyncOwner,
+  changes: Change[],
+) {
+  const now = Date.now();
+
+  for (const change of changes) {
+    const stored = await ctx.db
+      .query(table)
+      .withIndex('by_owner_client', (index) =>
+        index.eq('ownerId', owner.ownerId).eq('clientId', change.clientId),
+      )
+      .unique();
+    const row = rowFromChange(change, stored, owner, now);
+
+    if (row === null) {
+      continue;
+    }
+
+    if (stored === null) {
+      await ctx.db.insert(table, row as never);
+    } else {
+      await ctx.db.replace(stored._id, row as never);
+    }
+  }
+
+  await ctx.db.patch(owner.device._id, { lastSeenAt: now });
 }
 
 interface ServerFields {

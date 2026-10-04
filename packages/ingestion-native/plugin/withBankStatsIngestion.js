@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const {
+  withDangerousMod,
   withEntitlementsPlist,
   withInfoPlist,
   withPodfile,
@@ -28,8 +29,32 @@ function resolveAppGroup(config) {
   return `group.${bundleIdentifier}.ingestion`;
 }
 
+const PARSER_RULES_SOURCE = require.resolve(
+  '@bankstats/parser-rules/rules/bank-notification-rules.json',
+);
+const PARSER_RULES_DESTINATION = path.join(
+  __dirname,
+  '..',
+  'ios',
+  'Resources',
+  'BankNotificationRules.json',
+);
+
+function copyParserRules() {
+  fs.mkdirSync(path.dirname(PARSER_RULES_DESTINATION), { recursive: true });
+  fs.copyFileSync(PARSER_RULES_SOURCE, PARSER_RULES_DESTINATION);
+}
+
 function withBankStatsIngestion(config) {
   const appGroup = resolveAppGroup(config);
+
+  config = withDangerousMod(config, [
+    'ios',
+    (result) => {
+      copyParserRules();
+      return result;
+    },
+  ]);
 
   config = withEntitlementsPlist(config, (result) => {
     result.modResults['com.apple.security.application-groups'] = [appGroup];
@@ -104,3 +129,4 @@ function withBankStatsIngestion(config) {
 }
 
 module.exports = withBankStatsIngestion;
+module.exports.copyParserRules = copyParserRules;

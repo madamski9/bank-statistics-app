@@ -7,6 +7,7 @@ enum IngestionError: LocalizedError {
   case keychain(OSStatus)
   case database(String)
   case unsupportedNotification
+  case parserRulesUnavailable
   case invalidRecord
 
   var errorDescription: String? {
@@ -21,14 +22,13 @@ enum IngestionError: LocalizedError {
       return "Encrypted outbox operation failed: \(message)"
     case .unsupportedNotification:
       return "The notification does not match a supported bank format"
+    case .parserRulesUnavailable:
+      return "The bundled bank notification rules could not be loaded"
     case .invalidRecord:
       return "The transaction needs a positive amount, a direction and a three-letter currency"
     }
   }
 
-  /// A coarse, stable code safe to persist in the shared App Group attempt log. Unlike
-  /// `errorDescription`, this never varies with interpolated detail, so it can be recorded
-  /// without risking that a future case starts embedding notification content.
   var reasonCode: String {
     switch self {
     case .missingAppGroupConfiguration:
@@ -41,6 +41,8 @@ enum IngestionError: LocalizedError {
       return "database"
     case .unsupportedNotification:
       return "unsupportedNotification"
+    case .parserRulesUnavailable:
+      return "parserRulesUnavailable"
     case .invalidRecord:
       return "invalidRecord"
     }

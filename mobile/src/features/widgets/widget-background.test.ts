@@ -60,12 +60,12 @@ describe('background widget snapshots', () => {
     const corrected = snapshot(configuration, [first, { ...second, amountMinor: 2_000 }], reference);
     const deleted = snapshot(configuration, [first], reference);
 
-    expect(initial.expenseLabel).toBe('100 zł');
-    expect(captured.expenseLabel).toBe('180 zł');
+    expect(initial.expenseLabel).toBe('100,00 zł');
+    expect(captured.expenseLabel).toBe('180,00 zł');
     expect(captured.limits[0].tone).toBe('caution');
     expect(captured.limits[0].remainingAmountLabel).toBe('20 zł');
     expect(captured.shops[0].amountLabel).toBe('180 zł');
-    expect(corrected.expenseLabel).toBe('120 zł');
+    expect(corrected.expenseLabel).toBe('120,00 zł');
     expect(corrected.limits[0].tone).toBe('calm');
     expect(deleted).toEqual(initial);
   });
@@ -78,19 +78,18 @@ describe('background widget snapshots', () => {
       { ...record('review'), review: 'amount' },
     ], reference);
 
-    expect(props.expenseLabel).toBe('100 zł');
+    expect(props.expenseLabel).toBe('100,00 zł');
     expect(props.countLabel).toBe('1 płatność');
   });
 
-  test('uses the new month when a transaction arrives after midnight', () => {
+  test('rolls the 30-day window forward while limits restart with the month', () => {
     const nextMonth = new Date(2026, 9, 1, 0, 1).getTime();
     const props = snapshot(configuration, [record('old'), {
       ...record('new', 3_000),
       occurredAt: new Date(nextMonth - 1000).toISOString(),
     }], nextMonth);
 
-    expect(props.monthKey).toBe('2026-10');
-    expect(props.expenseLabel).toBe('30 zł');
+    expect(props.expenseLabel).toBe('130,00 zł');
     expect(props.limits[0].spentLabel).toBe('30 zł');
   });
 
@@ -128,11 +127,11 @@ describe('background widget snapshots', () => {
       privacy: { isBlurred: true, revealedUntilMs: until },
     };
     const entries = timeline(revealedConfiguration, [record('new')], reference);
-    expect(entries.map((entry) => entry.props.isBlurred)).toEqual([false, true]);
+    expect(entries.map((entry) => entry.props.isBlurred).slice(0, 3)).toEqual([false, true, true]);
     expect(entries[1].timestamp).toBe(until);
     const expired = timeline(revealedConfiguration, [record('new')], until);
-    expect(expired).toHaveLength(1);
-    expect(expired[0].props.isBlurred).toBe(true);
+    expect(expired).toHaveLength(8);
+    expect(expired.every((entry) => entry.props.isBlurred)).toBe(true);
   });
 
   test('builds every widget text in the language the app passes in', () => {
@@ -140,11 +139,11 @@ describe('background widget snapshots', () => {
     const english = snapshot({ ...configuration, language: 'en' }, [record('one')], reference);
     setCurrentLanguage('pl');
 
-    expect(polish.monthLabel).toBe('Wrzesień');
-    expect(polish.labels.thisMonth).toBe('W tym miesiącu');
-    expect(english.monthLabel).toBe('September');
+    expect(polish.periodLabel).toBe('30 dni');
+    expect(polish.labels.lastThirtyDays).toBe('Ostatnie 30 dni');
+    expect(english.periodLabel).toBe('30 days');
     expect(english.countLabel).toBe('1 payment');
-    expect(english.labels.thisMonth).toBe('This month');
+    expect(english.labels.lastThirtyDays).toBe('Last 30 days');
     expect(english.labels.asOf).toBe('As of Sep 25, 12:00');
     expect(polish.labels.asOf).toBe('Stan na 25.09, 12:00');
     expect(english.limits[0].spentOfTargetLabel).toBe('100\u00A0zł of 200\u00A0zł');

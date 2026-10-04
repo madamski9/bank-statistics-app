@@ -16,6 +16,9 @@ import { profileCopy } from './profile-copy';
 
 interface ProfileScreenProps {
   onOpenAlerts: () => void;
+  onOpenCaptureHealth: () => void;
+  onOpenEvents: () => void;
+  onOpenCategories: () => void;
   onOpenData: () => void;
   onOpenPrivacy: () => void;
   onOpenPremium: () => void;
@@ -26,6 +29,9 @@ interface ProfileScreenProps {
 
 export function ProfileScreen({
   onOpenAlerts,
+  onOpenCaptureHealth,
+  onOpenEvents,
+  onOpenCategories,
   onOpenData,
   onOpenPrivacy,
   onOpenPremium,
@@ -164,6 +170,78 @@ export function ProfileScreen({
               </View>
               <Text maxFontSizeMultiplier={1.4} style={styles.actionLabel}>
                 {copy.alerts}
+              </Text>
+              <SymbolView
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+                name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+                size={17}
+                tintColor={overviewColors.textDisabled}
+              />
+            </Pressable>
+            <Pressable
+              accessibilityHint={copy.eventsHint}
+              accessibilityRole="button"
+              onPress={onOpenEvents}
+              style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
+            >
+              <View accessibilityElementsHidden importantForAccessibility="no" style={styles.rowIcon}>
+                <SymbolView
+                  name={{ ios: 'flag.fill', android: 'flag', web: 'flag' }}
+                  size={18}
+                  tintColor={overviewColors.textSecondary}
+                />
+              </View>
+              <Text maxFontSizeMultiplier={1.4} style={styles.actionLabel}>
+                {copy.events}
+              </Text>
+              <SymbolView
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+                name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+                size={17}
+                tintColor={overviewColors.textDisabled}
+              />
+            </Pressable>
+            <Pressable
+              accessibilityHint={copy.categoriesHint}
+              accessibilityRole="button"
+              onPress={onOpenCategories}
+              style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
+            >
+              <View accessibilityElementsHidden importantForAccessibility="no" style={styles.rowIcon}>
+                <SymbolView
+                  name={{ ios: 'tag', android: 'sell', web: 'sell' }}
+                  size={18}
+                  tintColor={overviewColors.textSecondary}
+                />
+              </View>
+              <Text maxFontSizeMultiplier={1.4} style={styles.actionLabel}>
+                {copy.categories}
+              </Text>
+              <SymbolView
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+                name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+                size={17}
+                tintColor={overviewColors.textDisabled}
+              />
+            </Pressable>
+            <Pressable
+              accessibilityHint={copy.captureHealthHint}
+              accessibilityRole="button"
+              onPress={onOpenCaptureHealth}
+              style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
+            >
+              <View accessibilityElementsHidden importantForAccessibility="no" style={styles.rowIcon}>
+                <SymbolView
+                  name={{ ios: 'waveform.path.ecg', android: 'monitor_heart', web: 'monitor_heart' }}
+                  size={18}
+                  tintColor={overviewColors.textSecondary}
+                />
+              </View>
+              <Text maxFontSizeMultiplier={1.4} style={styles.actionLabel}>
+                {copy.captureHealth}
               </Text>
               <SymbolView
                 accessibilityElementsHidden

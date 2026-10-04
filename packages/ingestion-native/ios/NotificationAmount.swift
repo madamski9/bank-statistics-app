@@ -1,8 +1,6 @@
 import Foundation
 
 enum NotificationAmount {
-  static let groupedPattern = #"(?:[0-9]{1,3}(?:\s[0-9]{3})+|[0-9]+)(?:[,.][0-9]{1,2})?"#
-
   static func minorUnits(_ value: String) -> Int? {
     let parts = value
       .replacingOccurrences(of: #"\s"#, with: "", options: .regularExpression)

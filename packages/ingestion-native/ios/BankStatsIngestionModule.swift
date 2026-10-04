@@ -54,6 +54,18 @@ public final class BankStatsIngestionModule: Module {
       try EncryptedOutbox.shared.records().map(\.dictionary)
     }
 
+    AsyncFunction("readDocument") { (key: String) -> String? in
+      try EncryptedOutbox.shared.readDocument(key: key)
+    }
+
+    AsyncFunction("writeDocument") { (key: String, value: String) in
+      try EncryptedOutbox.shared.writeDocument(key: key, value: value)
+    }
+
+    AsyncFunction("deleteDocument") { (key: String) in
+      try EncryptedOutbox.shared.deleteDocument(key: key)
+    }
+
     AsyncFunction("storageDiagnostics") { () -> [String: String] in
       try EncryptedOutbox.shared.diagnostics()
     }

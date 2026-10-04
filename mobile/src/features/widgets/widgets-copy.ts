@@ -13,12 +13,13 @@ export const widgetsCopy = defineCopy({
     overLimit: (amount: string) => `${amount} ponad limit`,
     perDay: (amount: string) => `${amount} dziennie`,
     spentOfTarget: (spent: string, target: string) => `${spent} z ${target}`,
+    periodShort: '30 dni',
     updated: (day: number, month: number, time: string) =>
       `${day}.${String(month + 1).padStart(2, '0')}, ${time}`,
     labels: {
       spending: 'Wydatki',
       income: 'Wpływy',
-      thisMonth: 'W tym miesiącu',
+      lastThirtyDays: 'Ostatnie 30 dni',
       dailyAverage: 'Średnio dziennie',
       asOf: (updated: string) => `Stan na ${updated}`,
       closestLimit: 'Najbliżej limitu',
@@ -41,8 +42,6 @@ export const widgetsCopy = defineCopy({
       lockedDetail: 'Odblokuj BankStats Premium w aplikacji.',
       welcomeTitle: 'Witaj w BankStats',
       welcomeDetail: 'Otwórz aplikację, żeby włączyć widżet.',
-      newMonthTitle: 'Nowy miesiąc',
-      newMonthDetail: 'Otwórz aplikację lub poczekaj na pierwszą transakcję.',
     },
     preview: {
       title: 'Widżet',
@@ -61,12 +60,13 @@ export const widgetsCopy = defineCopy({
     overLimit: (amount: string) => `${amount} over the limit`,
     perDay: (amount: string) => `${amount} a day`,
     spentOfTarget: (spent: string, target: string) => `${spent} of ${target}`,
+    periodShort: '30 days',
     updated: (day: number, month: number, time: string) =>
       `${calendarCopy.en.shortMonths[month]} ${day}, ${time}`,
     labels: {
       spending: 'Spending',
       income: 'Income',
-      thisMonth: 'This month',
+      lastThirtyDays: 'Last 30 days',
       dailyAverage: 'Daily average',
       asOf: (updated: string) => `As of ${updated}`,
       closestLimit: 'Closest to a limit',
@@ -89,8 +89,6 @@ export const widgetsCopy = defineCopy({
       lockedDetail: 'Unlock BankStats Premium in the app.',
       welcomeTitle: 'Welcome to BankStats',
       welcomeDetail: 'Open the app to turn on the widget.',
-      newMonthTitle: 'A new month',
-      newMonthDetail: 'Open the app or wait for the first transaction.',
     },
     preview: {
       title: 'Widget',

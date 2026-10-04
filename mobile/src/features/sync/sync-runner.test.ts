@@ -1,11 +1,15 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { describe, expect, test } from 'bun:test';
 
+import type { CustomCategory } from '@/features/classification/categories';
+import type { SpendingEvent } from '@/features/events/spending-event';
 import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
 
 import type { RemoteAccount } from './account-codec';
+import type { RemoteCategory } from './category-codec';
+import type { RemoteEvent } from './event-codec';
 import type { Versioned } from './sync-plan';
-import { claimDevice, runSync, type SyncPorts } from './sync-runner';
+import { claimDevice, forgetSyncedState, runSync, type SyncPorts } from './sync-runner';
 import type { RemoteTransaction } from './transaction-codec';
 
 function manual(id: string, overrides: Partial<IngestionRecord> = {}): IngestionRecord {
@@ -57,6 +61,8 @@ function createCloud() {
   let online = true;
   const transactions = createTable<RemoteTransaction>(() => online);
   const accounts = createTable<RemoteAccount>(() => online);
+  const categories = createTable<RemoteCategory>(() => online);
+  const events = createTable<RemoteEvent>(() => online);
 
   return {
     stored: transactions.stored,
@@ -69,6 +75,8 @@ function createCloud() {
     },
     transactions: { list: transactions.list, push: transactions.push },
     accounts: { list: accounts.list, push: accounts.push },
+    categories: { list: categories.list, push: categories.push },
+    events: { list: events.list, push: events.push },
   };
 }
 
@@ -79,6 +87,8 @@ function createDevice(
 ) {
   const outbox = new Map(records.map((record) => [record.id, record]));
   const accounts = new Map<string, FinancialAccount>();
+  const categories = new Map<string, CustomCategory>();
+  const events = new Map<string, SpendingEvent>();
   const ledger: { value: string | null } = { value: null };
   let clock = 1_800_000_000_000;
 
@@ -108,6 +118,30 @@ function createDevice(
       },
       cloud: cloud.accounts,
     },
+    categories: {
+      local: {
+        list: async () => [...categories.values()],
+        save: async (category) => {
+          categories.set(category.id, category);
+        },
+        remove: async (id) => {
+          categories.delete(id);
+        },
+      },
+      cloud: cloud.categories,
+    },
+    events: {
+      local: {
+        list: async () => [...events.values()],
+        save: async (event) => {
+          events.set(event.id, event);
+        },
+        remove: async (id) => {
+          events.delete(id);
+        },
+      },
+      cloud: cloud.events,
+    },
     ledger: {
       read: async () => ledger.value,
       write: async (value) => {
@@ -121,10 +155,37 @@ function createDevice(
     },
   };
 
-  return { outbox, accounts, ledger, ports };
+  return { outbox, accounts, categories, events, ledger, ports };
 }
 
 describe('runSync', () => {
+  test('brings a custom category and an event to another device', async () => {
+    const cloud = createCloud();
+    const phone = createDevice(cloud);
+    const tablet = createDevice(cloud);
+    const trip = { id: 'event-trip', name: 'Chorwacja', startedAt: '2026-07-01T08:00:00.000Z' };
+    phone.categories.set('category-hobby', { id: 'category-hobby', name: 'Hobby' });
+    phone.events.set(trip.id, trip);
+
+    await runSync(phone.ports);
+    await runSync(tablet.ports);
+
+    expect([...tablet.categories.values()]).toEqual([{ id: 'category-hobby', name: 'Hobby' }]);
+    expect(tablet.events.get(trip.id)).toEqual(trip);
+  });
+
+  test('uploads everything again after the cloud copy was forgotten', async () => {
+    const cloud = createCloud();
+    const phone = createDevice(cloud, [manual('manual-lunch')]);
+
+    await runSync(phone.ports);
+    cloud.stored.clear();
+    await forgetSyncedState(phone.ports.ledger, 'user_alice');
+    await runSync(phone.ports);
+
+    expect(cloud.stored.has('manual-lunch')).toBe(true);
+  });
+
   test('brings a manual transaction from one device to another', async () => {
     const cloud = createCloud();
     const phone = createDevice(cloud, [manual('manual-lunch')]);

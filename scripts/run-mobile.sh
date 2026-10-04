@@ -106,6 +106,13 @@ case "$platform" in
     # has finished, so every Expo*/EX* module map is reported missing and the
     # build fails with "no such module 'Expo'" in AppDelegate.swift — 100%
     # reproducible, not flaky. Forcing pods to build from source sidesteps it.
+    printf "${YELLOW}▸${RESET} Refreshing the widget calculator and parser rules\n"
+    (cd "$MOBILE_DIR" && node -e "
+      require('./src/features/widgets/build-calculator.cjs').buildWidgetCalculator(
+        '../packages/ingestion-native/ios/Resources/SpendingWidgetCalculator.js'
+      );
+      require('../packages/ingestion-native/plugin/withBankStatsIngestion.js').copyParserRules();
+    ")
     EXPO_USE_PRECOMPILED_MODULES=0 bunx expo run:ios "${ios_arguments[@]}"
     ;;
   android)

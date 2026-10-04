@@ -28,6 +28,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { impactLight } from '@/haptics';
 import { project, rubberband } from '@/motion';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
+import { transactionKindSymbols } from '@/features/transactions/transaction-kind-symbols';
 
 import { BubbleSkin } from './bubble-skin';
 import type { BubbleSelection } from './bubble-selection';
@@ -42,7 +43,7 @@ import { useCopy } from '@/features/localization/language';
 
 import { AreaChart, type AreaSeries } from './area-chart';
 import { RangeSwitcher } from './range-switcher';
-import type { SpendingSource, SpendingSourceKind, SpendingSummary } from './spending-summary';
+import type { SpendingSource, SpendingSummary } from './spending-summary';
 import { spendingOverviewCopy } from './spending-overview-copy';
 import type { SpendingTrend } from './spending-trend';
 import { TintedScrollView } from './tinted-scroll-view';
@@ -61,17 +62,6 @@ interface BubbleDetailProps {
 
 const detailAmountFontSize = 44;
 const horizontalPadding = 20;
-
-const sourceSymbols = {
-  cardPayment: { ios: 'creditcard.fill', android: 'credit_card', web: 'credit_card' },
-  outgoingTransfer: { ios: 'arrow.up.forward', android: 'arrow_outward', web: 'arrow_outward' },
-  incomingTransfer: {
-    ios: 'arrow.down.backward',
-    android: 'arrow_downward',
-    web: 'arrow_downward',
-  },
-  other: { ios: 'square.grid.2x2.fill', android: 'grid_view', web: 'grid_view' },
-} as const satisfies Record<SpendingSourceKind, { ios: string; android: string; web: string }>;
 
 function trendSeries(key: BubbleKey, trend: SpendingTrend, titles: Record<BubbleKey, string>): AreaSeries[] {
   const expense = { key: 'expense', label: titles.expense, color: bubbleTints.expense.film, values: trend.expense };
@@ -111,7 +101,6 @@ export function BubbleDetail({
   const { key, origin } = selection;
   const tint = bubbleTints[key];
 
-  /** Expand past the farthest corner so the film leaves the viewport entirely. */
   const coverScale = (2 * Math.hypot(width / 2, height / 2) * 1.1) / Math.max(origin.size, 1);
   const centerOffsetX = width / 2 - origin.x;
   const centerOffsetY = height / 2 - origin.y;
@@ -122,11 +111,6 @@ export function BubbleDetail({
     );
   }, [progress]);
 
-  /**
-   * The breakdown is the expensive half of this screen - a list, its icons and the switcher.
-   * Mounting it in the same frame as the tap is what made the transition hitch, so it waits
-   * until the expansion is visibly under way and then fades in where it always did.
-   */
   useAnimatedReaction(
     () => progress.get() > 0.25,
     (started, previous) => {
@@ -161,7 +145,6 @@ export function BubbleDetail({
     );
   }, [closing, dismissal, drag, onClosed, progress]);
 
-  /** Attached to the header only, so the breakdown list keeps its own scroll gesture. */
   const pan = useMemo(
     () =>
       Gesture.Pan()
@@ -238,10 +221,6 @@ export function BubbleDetail({
     ),
   }));
 
-  /**
-   * Rim and highlights belong to a bubble, not to a full-screen surface: scaled up they turn
-   * into a glare that eats the header text, so they fade out as the film swallows the screen.
-   */
   const skinStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       progress.get(),
@@ -267,7 +246,6 @@ export function BubbleDetail({
     key === 'net'
       ? formatSignedAmount(summary.netMinor, summary.currency)
       : formatAmount(amountMinor, summary.currency);
-  /** For expenses, spending more than last period is the unwelcome direction. */
   const changeIsWelcome = change === null ? true : key === 'expense' ? change < 0 : change > 0;
   const sources: SpendingSource[] = key === 'income' ? summary.incomeSources : summary.sources;
 
@@ -288,7 +266,6 @@ export function BubbleDetail({
             width: origin.size,
             height: origin.size,
             borderRadius: origin.size / 2,
-            /** Once expanded this faint disc is what tints the whole detail. */
             backgroundColor: `rgba(${tint.rgb}, 0.05)`,
           },
           filmStyle,
@@ -425,7 +402,7 @@ export function BubbleDetail({
               >
                 <View style={styles.sourceIcon}>
                   <SymbolView
-                    name={sourceSymbols[source.kind]}
+                    name={transactionKindSymbols[source.kind]}
                     size={17}
                     tintColor={overviewColors.textSecondary}
                   />

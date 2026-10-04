@@ -16,7 +16,10 @@ Pod::Spec.new do |s|
   s.static_framework = true
   s.source_files = 'ios/**/*.{h,m,swift}'
   s.frameworks = 'AppIntents', 'JavaScriptCore', 'WidgetKit'
-  s.resource_bundles = { 'BankStatsWidgets' => ['ios/Resources/*.js'] }
+  s.resource_bundles = {
+    'BankStatsWidgets' => ['ios/Resources/*.js'],
+    'BankStatsParserRules' => ['ios/Resources/*.json']
+  }
   s.dependency 'ExpoModulesCore'
   s.dependency 'SQLCipher', '~> 4.10.0'
   s.pod_target_xcconfig = {

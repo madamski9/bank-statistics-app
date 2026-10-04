@@ -9,11 +9,24 @@ export type IngestionRecordStatus = 'pending' | 'posted' | 'reversed';
 
 export type IngestionReviewReason = 'amount' | 'currency' | 'direction' | 'merchant';
 
+export const ingestionTransactionTypes = [
+  'cardPayment',
+  'blikPayment',
+  'outgoingTransfer',
+  'incomingTransfer',
+  'atmWithdrawal',
+  'refund',
+  'fee',
+  'interest',
+] as const;
+
+export type IngestionTransactionType = (typeof ingestionTransactionTypes)[number];
+
 export interface IngestionRecord {
   id: string;
   bank: IngestionRecordSource;
   direction: 'expense' | 'income';
-  transactionType?: 'cardPayment' | 'outgoingTransfer' | 'incomingTransfer';
+  transactionType?: IngestionTransactionType;
   amountMinor: number;
   currency: string;
   merchant?: string;
@@ -26,19 +39,18 @@ export interface IngestionRecord {
   status: IngestionRecordStatus;
   origin?: IngestionRecordOrigin;
   review?: IngestionReviewReason;
+  eventId?: string;
+  reportingAmountMinor?: number;
+  exchangeRate?: string;
+  exchangeRateDate?: string;
+  exchangeRateTable?: string;
 }
 
 export interface StorageDiagnostics {
   cipherVersion: string;
   databasePath: string;
-  /** ISO 8601 timestamp of the last time a background App Intent ran, in any outcome. */
   lastAttemptAt?: string;
-  /**
-   * 'ignored' means a notification was recognized but deliberately not saved - e.g. Millennium's
-   * own card-payment push, deferred to the matching Apple Pay Wallet transaction.
-   */
   lastAttemptOutcome?: 'success' | 'ignored' | 'failure';
-  /** A coarse, non-sensitive failure/ignore code (e.g. "cardPaymentAwaitingApplePay"). Never raw text. */
   lastAttemptFailureReason?: string;
   lastFailureAt?: string;
   lastFailureReason?: string;
@@ -53,6 +65,9 @@ interface BankStatsIngestionNativeModule {
   saveRecord?(record: IngestionRecord): Promise<IngestionRecord>;
   deleteRecord?(id: string): Promise<number>;
   listRecords(): Promise<IngestionRecord[]>;
+  readDocument?(key: string): Promise<string | null>;
+  writeDocument?(key: string, value: string): Promise<void>;
+  deleteDocument?(key: string): Promise<void>;
   storageDiagnostics(): Promise<StorageDiagnostics>;
 }
 
@@ -130,6 +145,29 @@ export function deleteIngestionRecord(id: string): Promise<number> {
 
 export function listIngestionRecords(): Promise<IngestionRecord[]> {
   return requireIosModule().listRecords();
+}
+
+export function supportsEncryptedDocuments(): boolean {
+  return (
+    Platform.OS === 'ios' &&
+    typeof nativeModule?.readDocument === 'function' &&
+    typeof nativeModule.writeDocument === 'function' &&
+    typeof nativeModule.deleteDocument === 'function'
+  );
+}
+
+export async function readEncryptedDocument(key: string): Promise<string | null> {
+  const value = await requireIosModule().readDocument?.(key);
+
+  return value ?? null;
+}
+
+export async function writeEncryptedDocument(key: string, value: string): Promise<void> {
+  await requireIosModule().writeDocument?.(key, value);
+}
+
+export async function deleteEncryptedDocument(key: string): Promise<void> {
+  await requireIosModule().deleteDocument?.(key);
 }
 
 export function getIngestionStorageDiagnostics(): Promise<StorageDiagnostics> {

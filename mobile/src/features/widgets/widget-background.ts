@@ -1,5 +1,6 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 
+import { setCustomCategories, type CustomCategory } from '@/features/classification/categories';
 import { setCurrentLanguage, type Language } from '@/features/localization/language';
 
 import {
@@ -16,6 +17,7 @@ export interface WidgetBackgroundConfiguration {
   isPremium?: boolean;
   alertRules: SnapshotSources['alertRules'];
   categorizationRules: SnapshotSources['categorizationRules'];
+  customCategories?: CustomCategory[];
   openUrl: string;
   revealUrl?: string;
   privacy?: WidgetPrivacy;
@@ -26,12 +28,15 @@ export function snapshot(
   configuration: WidgetBackgroundConfiguration,
   records: IngestionRecord[],
   referenceMs: number,
+  updatedAtMs: number = referenceMs,
 ) {
   const reference = new Date(referenceMs);
 
   if (configuration.language !== undefined) {
     setCurrentLanguage(configuration.language);
   }
+
+  setCustomCategories(configuration.customCategories ?? []);
 
   if (!configuration.enabled) {
     return signedOutWidgetProps(reference, configuration.openUrl);
@@ -45,6 +50,7 @@ export function snapshot(
     ...configuration,
     records: records.filter((record) => record.merchant !== 'SKLEP TEST' || record.origin === 'manual'),
     reference,
+    updatedAt: new Date(updatedAtMs),
   });
 }
 
@@ -54,7 +60,7 @@ export function timeline(
   referenceMs: number,
 ) {
   return widgetEntries(
-    snapshot(configuration, records, referenceMs),
+    (moment) => snapshot(configuration, records, moment.getTime(), referenceMs),
     configuration.privacy ?? { isBlurred: false, revealedUntilMs: 0 },
     new Date(referenceMs),
   ).map((entry) => ({ timestamp: entry.date.getTime(), props: entry.props }));

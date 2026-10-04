@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { loadAccounts, upsertAccount } from './account-storage';
 import { newFinancialAccount, withGeneralAccounts, type FinancialAccount } from './financial-account';
-import { fileAccountStorage } from './file-account-storage';
+import { encryptedAccountStorage } from './encrypted-account-storage';
 
 export interface FinancialAccounts {
   accounts: FinancialAccount[];
@@ -14,13 +14,13 @@ export function useFinancialAccounts(): FinancialAccounts {
   const [stored, setStored] = useState<FinancialAccount[]>([]);
 
   const reload = useCallback(async () => {
-    setStored(await loadAccounts(fileAccountStorage));
+    setStored(await loadAccounts(encryptedAccountStorage));
   }, []);
 
   useEffect(() => {
     let isActive = true;
 
-    void loadAccounts(fileAccountStorage).then((accounts) => {
+    void loadAccounts(encryptedAccountStorage).then((accounts) => {
       if (isActive) {
         setStored(accounts);
       }
@@ -33,8 +33,8 @@ export function useFinancialAccounts(): FinancialAccounts {
 
   const create = useCallback(async (name: string) => {
     const account = newFinancialAccount(name, new Date(), Math.random);
-    await upsertAccount(fileAccountStorage, account);
-    setStored(await loadAccounts(fileAccountStorage));
+    await upsertAccount(encryptedAccountStorage, account);
+    setStored(await loadAccounts(encryptedAccountStorage));
 
     return account;
   }, []);

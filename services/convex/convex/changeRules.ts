@@ -1,10 +1,15 @@
 export const maximumChangesPerPush = 500;
 export const maximumTextLength = 200;
 export const maximumAccountNameLength = 60;
+export const maximumCategoryNameLength = 40;
+export const maximumEventNameLength = 60;
 
 const captureBanks = new Set(['millennium', 'pko']);
 const financialAccountBanks = new Set(['manual', 'millennium', 'pko']);
 const currencyPattern = /^[A-Z]{3}$/;
+const customCategoryIdPattern = /^category-[a-z0-9-]{1,60}$/;
+const decimalRatePattern = /^\d{1,6}(?:\.\d{1,8})?$/;
+const calendarDatePattern = /^\d{4}-\d{2}-\d{2}$/;
 const isoTimestampPattern =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
 
@@ -23,6 +28,11 @@ interface TransactionChangeShape extends RevisionedChange {
   sourceApp?: string;
   accountId?: string;
   accountName?: string;
+  eventId?: string;
+  reportingAmountMinor?: number;
+  exchangeRate?: string;
+  exchangeRateDate?: string;
+  exchangeRateTable?: string;
   occurredAt: string;
   capturedAt: string;
 }
@@ -30,6 +40,16 @@ interface TransactionChangeShape extends RevisionedChange {
 interface FinancialAccountChangeShape extends RevisionedChange {
   bank: string;
   name: string;
+}
+
+interface CategoryChangeShape extends RevisionedChange {
+  name: string;
+}
+
+interface EventChangeShape extends RevisionedChange {
+  name: string;
+  startedAt: string;
+  endedAt?: string;
 }
 
 function isIsoTimestamp(value: string): boolean {
@@ -71,6 +91,21 @@ export function transactionChangeProblem(change: TransactionChangeShape): string
     return 'Occurrence and capture times are ISO 8601 timestamps.';
   }
 
+  if (
+    change.reportingAmountMinor !== undefined &&
+    (!Number.isSafeInteger(change.reportingAmountMinor) || change.reportingAmountMinor <= 0)
+  ) {
+    return 'A reporting amount is a positive whole number of minor units.';
+  }
+
+  if (change.exchangeRate !== undefined && !decimalRatePattern.test(change.exchangeRate)) {
+    return 'An exchange rate is a decimal number.';
+  }
+
+  if (change.exchangeRateDate !== undefined && !calendarDatePattern.test(change.exchangeRateDate)) {
+    return 'An exchange rate date is a calendar date.';
+  }
+
   const texts = [
     change.bank,
     change.merchant,
@@ -78,6 +113,8 @@ export function transactionChangeProblem(change: TransactionChangeShape): string
     change.sourceApp,
     change.accountId,
     change.accountName,
+    change.eventId,
+    change.exchangeRateTable,
   ];
 
   return texts.map(textProblem).find((problem) => problem !== null) ?? revisionProblem(change);
@@ -92,6 +129,38 @@ export function financialAccountChangeProblem(change: FinancialAccountChangeShap
 
   if (!financialAccountBanks.has(change.bank)) {
     return 'A Financial Account belongs to an enabled bank.';
+  }
+
+  return revisionProblem(change);
+}
+
+export function categoryChangeProblem(change: CategoryChangeShape): string | null {
+  const name = change.name.trim();
+
+  if (name === '' || name.length > maximumCategoryNameLength) {
+    return `A category name has between 1 and ${maximumCategoryNameLength} characters.`;
+  }
+
+  if (!customCategoryIdPattern.test(change.clientId)) {
+    return 'A custom category has a category- identifier.';
+  }
+
+  return revisionProblem(change);
+}
+
+export function eventChangeProblem(change: EventChangeShape): string | null {
+  const name = change.name.trim();
+
+  if (name === '' || name.length > maximumEventNameLength) {
+    return `An event name has between 1 and ${maximumEventNameLength} characters.`;
+  }
+
+  if (!isIsoTimestamp(change.startedAt) || (change.endedAt !== undefined && !isIsoTimestamp(change.endedAt))) {
+    return 'An event starts and ends at ISO 8601 timestamps.';
+  }
+
+  if (change.endedAt !== undefined && Date.parse(change.endedAt) < Date.parse(change.startedAt)) {
+    return 'An event cannot end before it starts.';
   }
 
   return revisionProblem(change);

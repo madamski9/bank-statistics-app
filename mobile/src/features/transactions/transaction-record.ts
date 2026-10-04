@@ -2,6 +2,7 @@ import type { IngestionRecord, IngestionReviewReason } from '@bankstats/ingestio
 
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
 import { classifyTransaction } from '@/features/classification/classify-transaction';
+import { inReportingCurrency, needsConversion } from '@/features/currency-conversion/exchange-rate';
 import type { SpendingSourceKind } from '@/features/spending-overview/spending-summary';
 import { currentCopy } from '@/features/localization/language';
 
@@ -26,6 +27,22 @@ export function blocksStatistics(record: IngestionRecord): boolean {
 
 export function affectsStatistics(record: IngestionRecord): boolean {
   return !blocksStatistics(record) && record.status !== 'reversed';
+}
+
+export function statisticalRecords(records: IngestionRecord[]): IngestionRecord[] {
+  return records.flatMap((record) => {
+    if (!affectsStatistics(record)) {
+      return [];
+    }
+
+    const converted = inReportingCurrency(record);
+
+    return converted === null ? [] : [converted];
+  });
+}
+
+export function awaitingConversionCount(records: IngestionRecord[]): number {
+  return records.filter((record) => affectsStatistics(record) && needsConversion(record)).length;
 }
 
 export function isManualTransaction(record: IngestionRecord): boolean {
