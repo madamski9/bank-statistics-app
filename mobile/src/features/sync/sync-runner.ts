@@ -1,3 +1,4 @@
+import { maximumChangesPerPush } from '@bankstats/convex/convex/changeRules';
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 
 import type { CustomCategory } from '@/features/classification/categories';
@@ -161,15 +162,17 @@ async function syncEntity<Item, Change extends { clientId: string }>(
   ledger[section] = plan.pulledLedger;
   await writeLedger(storage, ledger);
 
-  if (plan.push.length > 0) {
-    await ports.cloud.push(plan.push);
+  const pushable = plan.push.filter(codec.isPushable);
+
+  for (let start = 0; start < pushable.length; start += maximumChangesPerPush) {
+    await ports.cloud.push(pushable.slice(start, start + maximumChangesPerPush));
   }
 
   ledger[section] = plan.ledger;
   await writeLedger(storage, ledger);
 
   return {
-    pushed: plan.push.length,
+    pushed: pushable.length,
     pulled: plan.saveLocally.length + plan.removeLocally.length,
   };
 }

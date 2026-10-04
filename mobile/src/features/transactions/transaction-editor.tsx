@@ -1,3 +1,4 @@
+import { maximumTextLength } from '@bankstats/convex/convex/changeRules';
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { useCallback, useState } from 'react';
 import {
@@ -284,6 +285,7 @@ export function TransactionEditor({
         <View style={styles.card}>
           <EditorField
             label={copy.name}
+            maxLength={maximumTextLength}
             onChangeText={(name) => update({ name })}
             placeholder={copy.namePlaceholder}
             value={draft.name}
@@ -498,6 +500,7 @@ interface EditorFieldProps {
   value: string;
   placeholder: string;
   keyboardType?: 'default' | 'numbers-and-punctuation';
+  maxLength?: number;
   onChangeText: (value: string) => void;
 }
 
@@ -506,6 +509,7 @@ function EditorField({
   value,
   placeholder,
   keyboardType = 'default',
+  maxLength,
   onChangeText,
 }: EditorFieldProps) {
   return (
@@ -517,6 +521,7 @@ function EditorField({
         accessibilityLabel={label}
         autoCorrect={false}
         keyboardType={keyboardType}
+        maxLength={maxLength}
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={overviewColors.textDisabled}

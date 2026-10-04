@@ -1,12 +1,10 @@
 import { ConvexError, v, type Infer } from 'convex/values';
 
 import { mutation, query } from './_generated/server';
+import { eventChangeProblem } from './changeRules';
 import { eventFields } from './schema';
 import {
-  assertBoundedText,
   assertPushSize,
-  assertValidRevision,
-  isIsoTimestamp,
   requireDevice,
   storeChanges,
   withoutServerFields,
@@ -20,25 +18,12 @@ const eventChange = v.object({
 
 type EventChange = Infer<typeof eventChange>;
 
-const maximumEventNameLength = 60;
-
 function assertValidChange(change: EventChange) {
-  const name = change.name.trim();
+  const problem = eventChangeProblem(change);
 
-  if (name === '' || name.length > maximumEventNameLength) {
-    throw new ConvexError(`An event name has between 1 and ${maximumEventNameLength} characters.`);
+  if (problem !== null) {
+    throw new ConvexError(problem);
   }
-
-  if (!isIsoTimestamp(change.startedAt) || (change.endedAt !== undefined && !isIsoTimestamp(change.endedAt))) {
-    throw new ConvexError('An event starts and ends at ISO 8601 timestamps.');
-  }
-
-  if (change.endedAt !== undefined && Date.parse(change.endedAt) < Date.parse(change.startedAt)) {
-    throw new ConvexError('An event cannot end before it starts.');
-  }
-
-  assertBoundedText(change.clientId);
-  assertValidRevision(change);
 }
 
 export const push = mutation({

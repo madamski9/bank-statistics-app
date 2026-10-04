@@ -41,7 +41,7 @@ public final class BankStatsIngestionModule: Module {
     }
 
     AsyncFunction("saveRecord") { (input: TransactionInput) -> [String: Any] in
-      let record = input.normalized()
+      let record = try input.normalized()
       try EncryptedOutbox.shared.save(record)
       return record.dictionary
     }

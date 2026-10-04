@@ -8,6 +8,7 @@ export interface SyncCodec<Item, Change extends { clientId: string }> {
   idOf: (item: Item) => string;
   toChange: (item: Item) => Change;
   fromChange: (change: Change) => Item;
+  isPushable: (change: Change & Versioned) => boolean;
 }
 
 export interface LedgerEntry {

@@ -1,4 +1,5 @@
 import type { api } from '@bankstats/convex/convex/_generated/api';
+import { eventChangeProblem } from '@bankstats/convex/convex/changeRules';
 import type { FunctionArgs, FunctionReturnType } from 'convex/server';
 
 import type { SpendingEvent } from '@/features/events/spending-event';
@@ -28,4 +29,5 @@ export const eventCodec: SyncCodec<SpendingEvent, EventChange> = {
       startedAt: change.startedAt,
       endedAt: change.endedAt,
     }),
+  isPushable: (change) => eventChangeProblem(change) === null,
 };

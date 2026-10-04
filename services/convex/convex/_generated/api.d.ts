@@ -10,6 +10,7 @@
 
 import type * as account from "../account.js";
 import type * as categories from "../categories.js";
+import type * as changeRules from "../changeRules.js";
 import type * as crons from "../crons.js";
 import type * as devices from "../devices.js";
 import type * as events from "../events.js";
@@ -29,6 +30,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   account: typeof account;
   categories: typeof categories;
+  changeRules: typeof changeRules;
   crons: typeof crons;
   devices: typeof devices;
   events: typeof events;

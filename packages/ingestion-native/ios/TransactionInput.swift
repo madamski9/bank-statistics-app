@@ -23,7 +23,13 @@ struct TransactionInput: Record {
   @Field var exchangeRateDate: String?
   @Field var exchangeRateTable: String?
 
-  func normalized() -> NormalizedRecord {
+  func normalized() throws -> NormalizedRecord {
+    guard amountMinor > 0,
+      direction == "expense" || direction == "income",
+      currency.range(of: "^[A-Z]{3}$", options: .regularExpression) != nil else {
+      throw IngestionError.invalidRecord
+    }
+
     let timestamp = ISO8601DateFormatter().string(from: Date())
 
     return NormalizedRecord(

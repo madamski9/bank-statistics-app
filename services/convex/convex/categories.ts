@@ -1,10 +1,10 @@
 import { ConvexError, v, type Infer } from 'convex/values';
 
 import { mutation, query } from './_generated/server';
+import { categoryChangeProblem, maximumCategoryNameLength } from './changeRules';
 import { categoryFields } from './schema';
 import {
   assertPushSize,
-  assertValidRevision,
   requireDevice,
   storeChanges,
   withoutServerFields,
@@ -18,21 +18,14 @@ const categoryChange = v.object({
 
 type CategoryChange = Infer<typeof categoryChange>;
 
-export const maximumCategoryNameLength = 40;
-const customCategoryIdPattern = /^category-[a-z0-9-]{1,60}$/;
+export { maximumCategoryNameLength };
 
 function assertValidChange(change: CategoryChange) {
-  const name = change.name.trim();
+  const problem = categoryChangeProblem(change);
 
-  if (name === '' || name.length > maximumCategoryNameLength) {
-    throw new ConvexError(`A category name has between 1 and ${maximumCategoryNameLength} characters.`);
+  if (problem !== null) {
+    throw new ConvexError(problem);
   }
-
-  if (!customCategoryIdPattern.test(change.clientId)) {
-    throw new ConvexError('A custom category has a category- identifier.');
-  }
-
-  assertValidRevision(change);
 }
 
 export const push = mutation({

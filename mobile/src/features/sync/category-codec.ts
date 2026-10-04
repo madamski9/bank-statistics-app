@@ -1,4 +1,5 @@
 import type { api } from '@bankstats/convex/convex/_generated/api';
+import { categoryChangeProblem } from '@bankstats/convex/convex/changeRules';
 import type { FunctionArgs, FunctionReturnType } from 'convex/server';
 
 import type { CustomCategory } from '@/features/classification/categories';
@@ -16,4 +17,5 @@ export const categoryCodec: SyncCodec<CustomCategory, CategoryChange> = {
   idOf: (category) => category.id,
   toChange: (category) => ({ clientId: category.id, name: category.name }),
   fromChange: (change) => ({ id: change.clientId, name: change.name }),
+  isPushable: (change) => categoryChangeProblem(change) === null,
 };

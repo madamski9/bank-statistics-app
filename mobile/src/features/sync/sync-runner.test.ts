@@ -254,6 +254,41 @@ describe('runSync', () => {
     expect(second).toEqual({ pushed: 0, pulled: 0, isForeignDevice: false });
   });
 
+  test('sends a long history in batches the cloud accepts', async () => {
+    const cloud = createCloud();
+    const batchSizes: number[] = [];
+    const push = cloud.transactions.push;
+    cloud.transactions.push = async (changes) => {
+      batchSizes.push(changes.length);
+      await push(changes);
+    };
+    const history = Array.from({ length: 1_201 }, (_, index) => manual(`manual-${index}`));
+    const phone = createDevice(cloud, history);
+
+    const result = await runSync(phone.ports);
+
+    expect(batchSizes).toEqual([500, 500, 201]);
+    expect(result.pushed).toBe(1_201);
+    expect(cloud.stored.size).toBe(1_201);
+  });
+
+  test('keeps a change the cloud would refuse on this device without blocking the others', async () => {
+    const cloud = createCloud();
+    const phone = createDevice(cloud, [
+      manual('manual-lunch'),
+      manual('manual-long', { merchant: 'x'.repeat(201) }),
+      manual('manual-free', { amountMinor: 0 }),
+    ]);
+
+    const result = await runSync(phone.ports);
+    const second = await runSync(phone.ports);
+
+    expect([...cloud.stored.keys()]).toEqual(['manual-lunch']);
+    expect(result.pushed).toBe(1);
+    expect(second.pushed).toBe(0);
+    expect(phone.outbox.has('manual-long')).toBe(true);
+  });
+
   test('keeps an offline entry durable and pushes it once connectivity returns', async () => {
     const cloud = createCloud();
     const phone = createDevice(cloud, [manual('manual-lunch')]);
