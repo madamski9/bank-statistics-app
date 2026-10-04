@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { reportingCurrency } from '@/features/currency-conversion/exchange-rate';
 import { calendarCopy } from '@/features/localization/calendar-copy';
 import { useCopy, useLanguage } from '@/features/localization/language';
+import { AmountText } from '@/features/privacy/amount-text';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { SheetLayout, SheetRow, SheetSection } from '@/features/app-shell/sheet-layout';
 import { formatChange } from '@/features/spending-overview/formatting';
@@ -55,22 +56,22 @@ export function ForecastScreen({ forecast, awaitingConversion, onClose }: Foreca
   return (
     <SheetLayout closeLabel={copy.done} onClose={onClose} title={copy.title(titleMonth)}>
       <View style={styles.hero}>
-        <Text maxFontSizeMultiplier={1.4} style={styles.caption}>
+        <AmountText maxFontSizeMultiplier={1.4} style={styles.caption}>
           {copy.projected}
-        </Text>
-        <Text adjustsFontSizeToFit maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.amount}>
+        </AmountText>
+        <AmountText adjustsFontSizeToFit maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.amount}>
           ~{formatAmount(forecast.projectedMinor, reportingCurrency)}
-        </Text>
+        </AmountText>
         <View style={styles.track}>
           <View style={[styles.trackFill, { width: `${Math.max(spentShare * 100, 2)}%` }]} />
         </View>
         {change !== null ? (
-          <Text
+          <AmountText
             maxFontSizeMultiplier={1.4}
             style={[styles.change, { color: change > 0 ? overviewColors.negative : overviewColors.positive }]}
           >
             {copy.versus(formatChange(change), change > 0, previousMonthGenitive)}
-          </Text>
+          </AmountText>
         ) : null}
       </View>
 
