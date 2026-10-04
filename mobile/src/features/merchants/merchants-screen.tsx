@@ -24,9 +24,40 @@ interface MerchantsScreenProps {
   onChangePeriod: (period: SpendingPeriod) => void;
   lockedPeriods: ReadonlySet<SpendingPeriod>;
   onCreateLimit: () => void;
+  onCreateCategory: () => void;
   onSelectGroup: (group: SpendingGroup) => void;
   error: string | null;
   isLoading: boolean;
+}
+
+interface HeaderActionProps {
+  label: string;
+  accessibilityLabel: string;
+  accessibilityHint: string;
+  onPress: () => void;
+}
+
+function HeaderAction({ label, accessibilityLabel, accessibilityHint, onPress }: HeaderActionProps) {
+  return (
+    <Pressable
+      accessibilityHint={accessibilityHint}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
+      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+      onPress={onPress}
+      style={({ pressed }) => [styles.limitAction, pressed ? styles.limitActionPressed : null]}
+    >
+      <SymbolView
+        name={{ ios: 'plus', android: 'add', web: 'add' }}
+        size={12}
+        tintColor={overviewColors.textPrimary}
+        weight="semibold"
+      />
+      <AmountText maxFontSizeMultiplier={1.3} style={styles.limitActionLabel}>
+        {label}
+      </AmountText>
+    </Pressable>
+  );
 }
 
 /** Where the money actually goes: shops, people and categories, biggest spend first. */
@@ -38,6 +69,7 @@ function MerchantsScreenComponent({
   onChangePeriod,
   lockedPeriods,
   onCreateLimit,
+  onCreateCategory,
   onSelectGroup,
   error,
   isLoading,
@@ -64,24 +96,20 @@ function MerchantsScreenComponent({
           <AmountText maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.context}>
             {groupCount(groups.length, dimension)} · {option.label}
           </AmountText>
-          <Pressable
-            accessibilityHint={copy.createLimitHint}
-            accessibilityLabel={copy.createLimitLabel}
-            accessibilityRole="button"
-            hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
-            onPress={onCreateLimit}
-            style={({ pressed }) => [styles.limitAction, pressed ? styles.limitActionPressed : null]}
-          >
-            <SymbolView
-              name={{ ios: 'plus', android: 'add', web: 'add' }}
-              size={12}
-              tintColor={overviewColors.textPrimary}
-              weight="semibold"
+          <View style={styles.headerActions}>
+            <HeaderAction
+              accessibilityHint={copy.createCategoryHint}
+              accessibilityLabel={copy.createCategoryLabel}
+              label={copy.category}
+              onPress={onCreateCategory}
             />
-            <AmountText maxFontSizeMultiplier={1.3} style={styles.limitActionLabel}>
-              {copy.limit}
-            </AmountText>
-          </Pressable>
+            <HeaderAction
+              accessibilityHint={copy.createLimitHint}
+              accessibilityLabel={copy.createLimitLabel}
+              label={copy.limit}
+              onPress={onCreateLimit}
+            />
+          </View>
         </View>
         <RangeSwitcher lockedPeriods={lockedPeriods} onChange={onChangePeriod} period={period} />
         <DimensionSwitcher dimension={dimension} onChange={onChangeDimension} />
@@ -164,6 +192,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontSize: 13,
     color: overviewColors.textSecondary,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
   },
   limitAction: {
     flexDirection: 'row',

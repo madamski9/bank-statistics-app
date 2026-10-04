@@ -82,14 +82,14 @@ describe('background widget snapshots', () => {
     expect(props.countLabel).toBe('1 płatność');
   });
 
-  test('rolls the 30-day window forward while limits restart with the month', () => {
+  test('starts widget spending and limits together at the new month', () => {
     const nextMonth = new Date(2026, 9, 1, 0, 1).getTime();
     const props = snapshot(configuration, [record('old'), {
       ...record('new', 3_000),
-      occurredAt: new Date(nextMonth - 1000).toISOString(),
+      occurredAt: new Date(nextMonth - 30_000).toISOString(),
     }], nextMonth);
 
-    expect(props.expenseLabel).toBe('130,00 zł');
+    expect(props.expenseLabel).toBe('30,00 zł');
     expect(props.limits[0].spentLabel).toBe('30 zł');
   });
 
@@ -139,11 +139,11 @@ describe('background widget snapshots', () => {
     const english = snapshot({ ...configuration, language: 'en' }, [record('one')], reference);
     setCurrentLanguage('pl');
 
-    expect(polish.periodLabel).toBe('30 dni');
-    expect(polish.labels.lastThirtyDays).toBe('Ostatnie 30 dni');
-    expect(english.periodLabel).toBe('30 days');
+    expect(polish.periodLabel).toBe('wrzesień');
+    expect(polish.labels.periodTitle).toBe('Wrzesień');
+    expect(english.periodLabel).toBe('September');
     expect(english.countLabel).toBe('1 payment');
-    expect(english.labels.lastThirtyDays).toBe('Last 30 days');
+    expect(english.labels.periodTitle).toBe('September');
     expect(english.labels.asOf).toBe('As of Sep 25, 12:00');
     expect(polish.labels.asOf).toBe('Stan na 25.09, 12:00');
     expect(english.limits[0].spentOfTargetLabel).toBe('100\u00A0zł of 200\u00A0zł');

@@ -10,6 +10,7 @@ const currencyPattern = /^[A-Z]{3}$/;
 const customCategoryIdPattern = /^category-[a-z0-9-]{1,60}$/;
 const decimalRatePattern = /^\d{1,6}(?:\.\d{1,8})?$/;
 const calendarDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+const eventColorPattern = /^[a-z]{1,20}$/;
 const isoTimestampPattern =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
 
@@ -50,6 +51,7 @@ interface EventChangeShape extends RevisionedChange {
   name: string;
   startedAt: string;
   endedAt?: string;
+  color?: string;
 }
 
 function isIsoTimestamp(value: string): boolean {
@@ -161,6 +163,10 @@ export function eventChangeProblem(change: EventChangeShape): string | null {
 
   if (change.endedAt !== undefined && Date.parse(change.endedAt) < Date.parse(change.startedAt)) {
     return 'An event cannot end before it starts.';
+  }
+
+  if (change.color !== undefined && !eventColorPattern.test(change.color)) {
+    return 'An event colour is a short lowercase name.';
   }
 
   return revisionProblem(change);

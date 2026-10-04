@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { nextEventColor } from './event-colors';
 import { eventStore } from './event-storage';
 import { endedEvent, newSpendingEvent, type SpendingEvent } from './spending-event';
 
@@ -47,11 +48,13 @@ export function useEvents(): SpendingEvents {
     async (name: string) => {
       const now = new Date();
 
-      for (const running of (await eventStore.load()).filter((event) => event.endedAt === undefined)) {
+      const stored = await eventStore.load();
+
+      for (const running of stored.filter((event) => event.endedAt === undefined)) {
         await eventStore.upsert(endedEvent(running, now));
       }
 
-      const event = newSpendingEvent(name, now, Math.random);
+      const event = newSpendingEvent(name, now, Math.random, nextEventColor(stored));
       await save(event);
 
       return event;

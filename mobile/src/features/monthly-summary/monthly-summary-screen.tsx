@@ -1,8 +1,20 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInLeft, FadeInRight, ReduceMotion } from 'react-native-reanimated';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  FadeIn,
+  FadeInLeft,
+  FadeInRight,
+  Easing,
+  ReduceMotion,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
 import type { SpendingGroup } from '@/features/classification/spending-groups';
@@ -39,6 +51,11 @@ import {
 import { monthlySummaryCopy } from './monthly-summary-copy';
 import { reportSeriesColors } from './report-colors';
 import type { MonthlySummaryReminder } from './use-monthly-summary-reminder';
+
+const swipeDistance = 72;
+const swipeVelocity = 600;
+const edgeResistance = 0.2;
+const exitEasing = Easing.bezier(0.23, 1, 0.32, 1);
 
 interface MonthlySummaryScreenProps {
   records: IngestionRecord[];
@@ -206,6 +223,45 @@ export function MonthlySummaryScreen({
     }
   };
 
+  const canShowOlder = index < months.length - 1;
+  const canShowNewer = index > 0;
+  const { width: screenWidth } = useWindowDimensions();
+  const drag = useSharedValue(0);
+
+  useLayoutEffect(() => {
+    drag.set(0);
+  }, [drag, selectedKey]);
+
+  const swipe = Gesture.Pan()
+    .activeOffsetX([-16, 16])
+    .failOffsetY([-12, 12])
+    .onUpdate((event) => {
+      const isBlocked = event.translationX > 0 ? !canShowOlder : !canShowNewer;
+
+      drag.set(isBlocked ? event.translationX * edgeResistance : event.translationX);
+    })
+    .onEnd((event) => {
+      const direction = event.translationX > 0 ? 1 : -1;
+      const isAllowed = direction > 0 ? canShowOlder : canShowNewer;
+      const isFlung = Math.abs(event.velocityX) > swipeVelocity && Math.sign(event.velocityX) === direction;
+
+      if (isAllowed && (Math.abs(event.translationX) > swipeDistance || isFlung)) {
+        drag.set(
+          withTiming(direction * screenWidth, { duration: 130, easing: exitEasing }, (finished) => {
+            if (finished) {
+              scheduleOnRN(move, direction);
+            }
+          }),
+        );
+        return;
+      }
+
+      drag.set(withSpring(0, { duration: 400, dampingRatio: 0.8, velocity: event.velocityX }));
+    });
+  const dragStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: drag.get() }],
+  }));
+
   if (selectedGroup !== null) {
     return (
       <MonthlyGroupScreen
@@ -268,218 +324,222 @@ export function MonthlySummaryScreen({
         </ScalePressable>
       </View>
 
-      <Animated.View
-        entering={travel === null ? FadeIn.duration(240).reduceMotion(ReduceMotion.System) : monthEntering(travel)}
-        key={selectedKey}
-        style={styles.monthContent}
-      >
-        <View style={styles.card}>
-          <View style={styles.heroRow}>
-            <View style={styles.hero}>
-              <View style={styles.averageCaption}>
-                <View style={styles.averageSwatch} />
-                <Text maxFontSizeMultiplier={1.4} style={[styles.caption, styles.averageCaptionText]}>
-                  {copy.dailyAverage}
-                </Text>
-              </View>
-              <AmountText adjustsFontSizeToFit maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.amount}>
-                {formatAmount(summary.dailyExpenseMinor, reportingCurrency)}
-              </AmountText>
-            </View>
-            {change !== null ? (
-              <AmountText
-                maxFontSizeMultiplier={1.4}
-                numberOfLines={2}
-                style={[styles.change, { color: change > 0 ? overviewColors.negative : overviewColors.positive }]}
-              >
-                {copy.versusPrevious(formatChange(change), change > 0)}
-              </AmountText>
-            ) : (
-              <Text maxFontSizeMultiplier={1.4} style={styles.change}>
-                {copy.noPrevious}
-              </Text>
-            )}
-          </View>
-          <DailySpendBars
-            accessibilityLabel={copy.chartLabel(
-              formatAmount(summary.dailyExpenseMinor, reportingCurrency),
-              busiestLabel,
-              chartCategories,
-            )}
-            averageLabel={copy.average}
-            averageMinor={summary.dailyExpenseMinor}
-            dailyCategories={summary.dailyCategories}
-            dailyExpensesMinor={summary.dailyExpensesMinor}
-            elapsedDays={summary.elapsedDays}
-            otherLabel={copy.other}
-          />
-          <AmountText maxFontSizeMultiplier={1.4} style={styles.cardTotal}>
-            {copy.total(
-              formatAmount(summary.expenseMinor, reportingCurrency),
-              formatTransactionCount(summary.expenseCount),
-            )}
-          </AmountText>
-        </View>
-
-        {isEmpty ? (
-          <Text maxFontSizeMultiplier={1.5} style={styles.caption}>
-            {copy.empty}
-          </Text>
-        ) : null}
-
-        {groups.length > 0 ? (
-          <View style={styles.section}>
-            <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
-              {copy.spendingBy.toLocaleUpperCase()}
-            </Text>
-            <View accessibilityRole="tablist" style={styles.dimensionSwitcher}>
-              {(['merchant', 'category'] as const).map((dimension) => {
-                const selected = activeDimension === dimension;
-                const disabled = (dimension === 'merchant' ? summary.merchants : summary.categories).length === 0;
-
-                return (
-                  <ScalePressable
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected, disabled }}
-                    containerStyle={styles.dimensionTabContainer}
-                    disabled={disabled}
-                    key={dimension}
-                    onPress={() => {
-                      selectionChanged();
-                      setBreakdownDimension(dimension);
-                      setShowAllGroups(false);
-                    }}
-                    style={[styles.dimensionTab, selected ? styles.dimensionSelected : null]}
-                  >
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.dimensionLabel, selected ? styles.dimensionLabelSelected : null]}>
-                      {dimension === 'merchant' ? copy.merchants : copy.categories}
+      <GestureDetector gesture={swipe}>
+        <Animated.View style={dragStyle}>
+          <Animated.View
+            entering={travel === null ? FadeIn.duration(240).reduceMotion(ReduceMotion.System) : monthEntering(travel)}
+            key={selectedKey}
+            style={styles.monthContent}
+          >
+            <View style={styles.card}>
+              <View style={styles.heroRow}>
+                <View style={styles.hero}>
+                  <View style={styles.averageCaption}>
+                    <View style={styles.averageSwatch} />
+                    <Text maxFontSizeMultiplier={1.4} style={[styles.caption, styles.averageCaptionText]}>
+                      {copy.dailyAverage}
                     </Text>
-                  </ScalePressable>
-                );
-              })}
-            </View>
-            <Animated.View
-              entering={FadeIn.duration(220).reduceMotion(ReduceMotion.System)}
-              key={activeDimension}
-              style={styles.shareList}
-            >
-              {visibleGroups.map((group, groupIndex) => (
-                <ShareRow
-                  accessibilityHint={copy.openGroupDetail}
-                  detail={copy.groupDetail(
-                    copy.payments(group.count),
-                    formatShare(summary.expenseMinor === 0 ? 0 : group.totalMinor / summary.expenseMinor),
-                  )}
-                  fraction={leadingMinor === 0 ? 0 : group.totalMinor / leadingMinor}
-                  group={group}
-                  index={groupIndex}
-                  key={group.key}
-                  onPress={() => {
-                    selectionChanged();
-                    setSelectedGroup({ dimension: activeDimension, key: group.key, name: group.name });
-                  }}
-                  tint={activeDimension === 'category'
-                    ? reportSeriesColors[Math.min(groupIndex, reportSeriesColors.length - 1)]
-                    : bubbleTints.expense.film}
-                  value={formatAmount(group.totalMinor, reportingCurrency)}
-                />
-              ))}
-              {groups.length > 5 ? (
-                <ScalePressable
-                  accessibilityRole="button"
-                  onPress={() => {
-                    selectionChanged();
-                    setShowAllGroups((current) => !current);
-                  }}
-                  pressedScale={0.97}
-                  style={styles.showAllButton}
-                >
-                  <Text maxFontSizeMultiplier={1.4} style={styles.showAllLabel}>
-                    {showAllGroups ? copy.showLess : copy.showAll(groups.length)}
+                  </View>
+                  <AmountText adjustsFontSizeToFit maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.amount}>
+                    {formatAmount(summary.dailyExpenseMinor, reportingCurrency)}
+                  </AmountText>
+                </View>
+                {change !== null ? (
+                  <AmountText
+                    maxFontSizeMultiplier={1.4}
+                    numberOfLines={2}
+                    style={[styles.change, { color: change > 0 ? overviewColors.negative : overviewColors.positive }]}
+                  >
+                    {copy.versusPrevious(formatChange(change), change > 0)}
+                  </AmountText>
+                ) : (
+                  <Text maxFontSizeMultiplier={1.4} style={styles.change}>
+                    {copy.noPrevious}
                   </Text>
-                </ScalePressable>
-              ) : null}
-            </Animated.View>
-          </View>
-        ) : null}
+                )}
+              </View>
+              <DailySpendBars
+                accessibilityLabel={copy.chartLabel(
+                  formatAmount(summary.dailyExpenseMinor, reportingCurrency),
+                  busiestLabel,
+                  chartCategories,
+                )}
+                averageLabel={copy.average}
+                averageMinor={summary.dailyExpenseMinor}
+                dailyCategories={summary.dailyCategories}
+                dailyExpensesMinor={summary.dailyExpensesMinor}
+                elapsedDays={summary.elapsedDays}
+                otherLabel={copy.other}
+              />
+              <AmountText maxFontSizeMultiplier={1.4} style={styles.cardTotal}>
+                {copy.total(
+                  formatAmount(summary.expenseMinor, reportingCurrency),
+                  formatTransactionCount(summary.expenseCount),
+                )}
+              </AmountText>
+            </View>
 
-        <View style={styles.section}>
-          <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
-            {copy.monthComparison.toLocaleUpperCase()}
-          </Text>
-          <Text maxFontSizeMultiplier={1.4} style={styles.caption}>
-            {copy.monthComparisonDetail}
-          </Text>
-          <MonthComparisonChart months={comparedMonths} />
-        </View>
+            {isEmpty ? (
+              <Text maxFontSizeMultiplier={1.5} style={styles.caption}>
+                {copy.empty}
+              </Text>
+            ) : null}
 
-        {!isEmpty ? (
-          <>
+            {groups.length > 0 ? (
+              <View style={styles.section}>
+                <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
+                  {copy.spendingBy.toLocaleUpperCase()}
+                </Text>
+                <View accessibilityRole="tablist" style={styles.dimensionSwitcher}>
+                  {(['merchant', 'category'] as const).map((dimension) => {
+                    const selected = activeDimension === dimension;
+                    const disabled = (dimension === 'merchant' ? summary.merchants : summary.categories).length === 0;
+
+                    return (
+                      <ScalePressable
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected, disabled }}
+                        containerStyle={styles.dimensionTabContainer}
+                        disabled={disabled}
+                        key={dimension}
+                        onPress={() => {
+                          selectionChanged();
+                          setBreakdownDimension(dimension);
+                          setShowAllGroups(false);
+                        }}
+                        style={[styles.dimensionTab, selected ? styles.dimensionSelected : null]}
+                      >
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.dimensionLabel, selected ? styles.dimensionLabelSelected : null]}>
+                          {dimension === 'merchant' ? copy.merchants : copy.categories}
+                        </Text>
+                      </ScalePressable>
+                    );
+                  })}
+                </View>
+                <Animated.View
+                  entering={FadeIn.duration(220).reduceMotion(ReduceMotion.System)}
+                  key={activeDimension}
+                  style={styles.shareList}
+                >
+                  {visibleGroups.map((group, groupIndex) => (
+                    <ShareRow
+                      accessibilityHint={copy.openGroupDetail}
+                      detail={copy.groupDetail(
+                        copy.payments(group.count),
+                        formatShare(summary.expenseMinor === 0 ? 0 : group.totalMinor / summary.expenseMinor),
+                      )}
+                      fraction={leadingMinor === 0 ? 0 : group.totalMinor / leadingMinor}
+                      group={group}
+                      index={groupIndex}
+                      key={group.key}
+                      onPress={() => {
+                        selectionChanged();
+                        setSelectedGroup({ dimension: activeDimension, key: group.key, name: group.name });
+                      }}
+                      tint={activeDimension === 'category'
+                        ? reportSeriesColors[Math.min(groupIndex, reportSeriesColors.length - 1)]
+                        : bubbleTints.expense.film}
+                      value={formatAmount(group.totalMinor, reportingCurrency)}
+                    />
+                  ))}
+                  {groups.length > 5 ? (
+                    <ScalePressable
+                      accessibilityRole="button"
+                      onPress={() => {
+                        selectionChanged();
+                        setShowAllGroups((current) => !current);
+                      }}
+                      pressedScale={0.97}
+                      style={styles.showAllButton}
+                    >
+                      <Text maxFontSizeMultiplier={1.4} style={styles.showAllLabel}>
+                        {showAllGroups ? copy.showLess : copy.showAll(groups.length)}
+                      </Text>
+                    </ScalePressable>
+                  ) : null}
+                </Animated.View>
+              </View>
+            ) : null}
+
             <View style={styles.section}>
               <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
-                {copy.highlights.toLocaleUpperCase()}
+                {copy.monthComparison.toLocaleUpperCase()}
               </Text>
-              <View style={styles.highlights}>
-                {summary.busiestDay !== null && busiestLabel !== null ? (
-                  <Highlight
-                    detail={busiestLabel}
-                    label={copy.busiestDay}
-                    value={formatCompactAmount(summary.busiestDay.totalMinor, reportingCurrency)}
-                  />
-                ) : null}
-                {summary.largestExpense !== null ? (
-                  <Highlight
-                    detail={transactionTitle(summary.largestExpense, rules)}
-                    label={copy.largest}
-                    value={formatCompactAmount(summary.largestExpense.amountMinor, reportingCurrency)}
-                  />
-                ) : null}
-                <Highlight
-                  label={copy.noSpendDays}
-                  value={copy.noSpendValue(summary.noSpendDays, summary.elapsedDays)}
-                />
-                <Highlight label={copy.perDayCount} value={perDayCount} />
-              </View>
+              <Text maxFontSizeMultiplier={1.4} style={styles.caption}>
+                {copy.monthComparisonDetail}
+              </Text>
+              <MonthComparisonChart months={comparedMonths} />
             </View>
 
-            <SheetSection label={copy.flow}>
-              <SheetRow
-                isFirst
-                label={copy.received}
-                value={`+${formatAmount(summary.incomeMinor, reportingCurrency)}`}
-                valueTone="positive"
-              />
-              <SheetRow
-                label={copy.net}
-                value={formatSignedAmount(summary.netMinor, reportingCurrency)}
-                valueTone={summary.netMinor < 0 ? 'negative' : 'positive'}
-              />
-              {summary.recurringMinor > 0 ? (
-                <SheetRow
-                  label={copy.recurring}
-                  value={copy.recurringValue(
-                    formatAmount(summary.recurringMinor, reportingCurrency),
-                    formatShare(summary.expenseMinor === 0 ? 0 : summary.recurringMinor / summary.expenseMinor),
-                  )}
-                />
-              ) : null}
-            </SheetSection>
+            {!isEmpty ? (
+              <>
+                <View style={styles.section}>
+                  <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
+                    {copy.highlights.toLocaleUpperCase()}
+                  </Text>
+                  <View style={styles.highlights}>
+                    {summary.busiestDay !== null && busiestLabel !== null ? (
+                      <Highlight
+                        detail={busiestLabel}
+                        label={copy.busiestDay}
+                        value={formatCompactAmount(summary.busiestDay.totalMinor, reportingCurrency)}
+                      />
+                    ) : null}
+                    {summary.largestExpense !== null ? (
+                      <Highlight
+                        detail={transactionTitle(summary.largestExpense, rules)}
+                        label={copy.largest}
+                        value={formatCompactAmount(summary.largestExpense.amountMinor, reportingCurrency)}
+                      />
+                    ) : null}
+                    <Highlight
+                      label={copy.noSpendDays}
+                      value={copy.noSpendValue(summary.noSpendDays, summary.elapsedDays)}
+                    />
+                    <Highlight label={copy.perDayCount} value={perDayCount} />
+                  </View>
+                </View>
 
-            {summary.events.length > 0 ? (
-              <SheetSection label={copy.events}>
-                {summary.events.map((entry, rowIndex) => (
+                <SheetSection label={copy.flow}>
                   <SheetRow
-                    isFirst={rowIndex === 0}
-                    key={entry.event.id}
-                    label={entry.event.name}
-                    value={formatAmount(entry.expenseMinor, reportingCurrency)}
+                    isFirst
+                    label={copy.received}
+                    value={`+${formatAmount(summary.incomeMinor, reportingCurrency)}`}
+                    valueTone="positive"
                   />
-                ))}
-              </SheetSection>
+                  <SheetRow
+                    label={copy.net}
+                    value={formatSignedAmount(summary.netMinor, reportingCurrency)}
+                    valueTone={summary.netMinor < 0 ? 'negative' : 'positive'}
+                  />
+                  {summary.recurringMinor > 0 ? (
+                    <SheetRow
+                      label={copy.recurring}
+                      value={copy.recurringValue(
+                        formatAmount(summary.recurringMinor, reportingCurrency),
+                        formatShare(summary.expenseMinor === 0 ? 0 : summary.recurringMinor / summary.expenseMinor),
+                      )}
+                    />
+                  ) : null}
+                </SheetSection>
+
+                {summary.events.length > 0 ? (
+                  <SheetSection label={copy.events}>
+                    {summary.events.map((entry, rowIndex) => (
+                      <SheetRow
+                        isFirst={rowIndex === 0}
+                        key={entry.event.id}
+                        label={entry.event.name}
+                        value={formatAmount(entry.expenseMinor, reportingCurrency)}
+                      />
+                    ))}
+                  </SheetSection>
+                ) : null}
+              </>
             ) : null}
-          </>
-        ) : null}
-      </Animated.View>
+          </Animated.View>
+        </Animated.View>
+      </GestureDetector>
 
       <SheetSection footnote={reminder.isDenied ? copy.reminderDenied : copy.reminderDetail}>
         <SheetSwitchRow
@@ -496,7 +556,7 @@ export function MonthlySummaryScreen({
 function monthEntering(travel: 'older' | 'newer') {
   const transition = travel === 'older' ? FadeInLeft : FadeInRight;
 
-  return transition.springify().duration(420).dampingRatio(0.9).reduceMotion(ReduceMotion.System);
+  return transition.springify().duration(250).dampingRatio(0.9).reduceMotion(ReduceMotion.System);
 }
 
 const styles = StyleSheet.create({

@@ -60,26 +60,26 @@ function build(records: IngestionRecord[], alertRules: AlertRule[] = []) {
 }
 
 describe('buildSpendingWidgetProps', () => {
-  test('counts the same last 30 days as the overview', () => {
+  test('counts the current calendar month', () => {
     const endOfLastMonth = record({ occurredAt: new Date(2026, 7, 31, 12, 0).toISOString() });
     const tooOld = record({ occurredAt: new Date(2026, 7, 20, 12, 0).toISOString() });
     const props = build([record(), record({ amountMinor: 5_000 }), endOfLastMonth, tooOld]);
 
     expect(props.status).toBe('ready');
-    expect(props.periodLabel).toBe('30 dni');
-    expect(props.expenseLabel).toBe('250,00 zł');
-    expect(props.countLabel).toBe('3 płatności');
+    expect(props.periodLabel).toBe('wrzesień');
+    expect(props.expenseLabel).toBe('150,00 zł');
+    expect(props.countLabel).toBe('2 płatności');
   });
 
-  test('shows the same spending and daily average as the overview on 1M', () => {
+  test('shows the same spending and daily average as the current-month overview', () => {
     const records = [
       record({ amountMinor: 12_345 }),
       record({ amountMinor: 6_789, occurredAt: new Date(2026, 8, 2, 9, 0).toISOString() }),
       record({ amountMinor: 50_000, direction: 'income' }),
     ];
-    const window = periodWindow('month', reference);
+    const window = periodWindow('currentMonth', reference);
     const summary = summarizeSpending(records, window, []);
-    const rhythm = expenseRhythm(records, summary.currency, window, 'month');
+    const rhythm = expenseRhythm(records, summary.currency, window, 'currentMonth');
     const props = build(records);
 
     expect(props.expenseLabel).toBe(formatAmount(summary.expenseMinor, summary.currency));
@@ -118,7 +118,7 @@ describe('buildSpendingWidgetProps', () => {
 
     expect(props.expenseLabel).toBe('150,00 zł');
     expect(props.shops[0].amountLabel).toBe('150 zł');
-    expect(props.dailyAmountLabel).toBe('5 zł');
+    expect(props.dailyAmountLabel).toBe('6 zł');
   });
 });
 
@@ -206,8 +206,8 @@ describe('widgetEntries', () => {
     expect(entries[1].date.getTime()).toBe(until);
   });
 
-  test('precomputes the next days so the widget stays right without new transactions', () => {
-    const oldest = record({ occurredAt: new Date(2026, 7, 26, 12, 0).toISOString() });
+  test('precomputes the next days through the monthly reset without new transactions', () => {
+    const oldest = record({ occurredAt: new Date(2026, 8, 1, 12, 0).toISOString() });
     const entries = widgetEntries(
       (moment) =>
         buildSpendingWidgetProps({
@@ -224,8 +224,10 @@ describe('widgetEntries', () => {
 
     expect(entries[1].date).toEqual(new Date(2026, 8, 25));
     expect(entries[0].props.expenseLabel).toBe('200,00\u00A0zł');
-    expect(entries[3].props.expenseLabel).toBe('100,00\u00A0zł');
-    expect(entries[3].props.updatedAtMs).toBe(reference.getTime());
+    expect(entries[6].props.expenseLabel).toBe('200,00\u00A0zł');
+    expect(entries[7].date).toEqual(new Date(2026, 9, 1));
+    expect(entries[7].props.expenseLabel).toBe('0,00\u00A0zł');
+    expect(entries[7].props.updatedAtMs).toBe(reference.getTime());
   });
 
   test('never blurs the signed-out message', () => {

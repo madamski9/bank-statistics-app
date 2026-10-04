@@ -15,6 +15,9 @@ export const merchantsCopy = defineCopy({
     createLimitHint: 'Otwiera formularz wyboru sklepu i kwoty limitu',
     createLimitLabel: 'Ustaw limit sklepu',
     limit: 'Limit',
+    createCategoryHint: 'Otwiera tworzenie własnej kategorii i przypisywanie do niej sklepów',
+    createCategoryLabel: 'Dodaj kategorię',
+    category: 'Kategoria',
     groupHint: 'Otwiera historię i wykres wydatków',
     shareOfSpending: (share: string) => `${share} wydatków`,
     dimensions: {
@@ -50,6 +53,9 @@ export const merchantsCopy = defineCopy({
     createLimitHint: 'Opens the form to pick a shop and a limit amount',
     createLimitLabel: 'Set a shop limit',
     limit: 'Limit',
+    createCategoryHint: 'Opens creating a custom category and assigning shops to it',
+    createCategoryLabel: 'Add a category',
+    category: 'Category',
     groupHint: 'Opens the spending history and chart',
     shareOfSpending: (share: string) => `${share} of spending`,
     dimensions: {

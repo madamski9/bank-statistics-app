@@ -28,6 +28,7 @@ interface CustomCategoriesScreenProps {
   onAssignMerchant: (merchantKey: string, merchantName: string, category: string) => Promise<boolean>;
   onForgetMerchant: (merchantKey: string) => Promise<void>;
   onClose: () => void;
+  opensCreatePrompt?: boolean;
 }
 
 type Prompt = { kind: 'create' } | { kind: 'rename'; category: CustomCategory };
@@ -45,9 +46,17 @@ export function CustomCategoriesScreen({
   onAssignMerchant,
   onForgetMerchant,
   onClose,
+  opensCreatePrompt = false,
 }: CustomCategoriesScreenProps) {
   const copy = useCopy(customCategoriesCopy);
-  const [prompt, setPrompt] = useState<Prompt | null>(null);
+  const [chosenPrompt, setChosenPrompt] = useState<Prompt | null>(null);
+  const [isCreateRequestHandled, setIsCreateRequestHandled] = useState(false);
+  const prompt: Prompt | null =
+    chosenPrompt ?? (opensCreatePrompt && canCreate && !isCreateRequestHandled ? { kind: 'create' } : null);
+  const setPrompt = (next: Prompt | null) => {
+    setIsCreateRequestHandled(true);
+    setChosenPrompt(next);
+  };
   const [openedId, setOpenedId] = useState<string | null>(null);
   const ordered = [...categories].sort((left, right) => left.name.localeCompare(right.name, 'pl'));
   const builtIn = categoryOptions().filter((option) => !isCustomCategoryId(option.id));
@@ -102,7 +111,8 @@ export function CustomCategoriesScreen({
         if (prompt?.kind === 'rename') {
           await onRename(prompt.category.id, name);
         } else {
-          await onCreate(name);
+          const created = await onCreate(name);
+          setOpenedId(created.id);
         }
 
         setPrompt(null);

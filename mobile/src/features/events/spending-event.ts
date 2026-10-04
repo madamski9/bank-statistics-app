@@ -7,6 +7,7 @@ export interface SpendingEvent {
   name: string;
   startedAt: string;
   endedAt?: string;
+  color?: string;
 }
 
 export const noEventId = 'none';
@@ -34,11 +35,17 @@ export function isSpendingEvent(value: unknown): value is SpendingEvent {
     typeof candidate.id === 'string' &&
     typeof candidate.name === 'string' &&
     typeof candidate.startedAt === 'string' &&
-    (candidate.endedAt === undefined || typeof candidate.endedAt === 'string')
+    (candidate.endedAt === undefined || typeof candidate.endedAt === 'string') &&
+    (candidate.color === undefined || typeof candidate.color === 'string')
   );
 }
 
-export function newSpendingEvent(name: string, now: Date, random: () => number): SpendingEvent {
+export function newSpendingEvent(
+  name: string,
+  now: Date,
+  random: () => number,
+  color?: string,
+): SpendingEvent {
   const suffix = Math.floor(random() * 0xffffff)
     .toString(36)
     .padStart(5, '0');
@@ -47,6 +54,7 @@ export function newSpendingEvent(name: string, now: Date, random: () => number):
     id: `event-${now.getTime().toString(36)}-${suffix}`,
     name: name.trim(),
     startedAt: now.toISOString(),
+    ...(color === undefined ? {} : { color }),
   };
 }
 

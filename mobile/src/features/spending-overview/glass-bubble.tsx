@@ -20,7 +20,7 @@ import { impactLight } from '@/haptics';
 
 import { BubbleSkin } from './bubble-skin';
 import { createBubbleTap } from './bubble-tap';
-import { bubbleTints, overviewColors, overviewMotion, type BubbleKey } from './overview-theme';
+import { overviewColors, overviewMotion, type BubbleKey, type BubbleTint } from './overview-theme';
 import { spendingOverviewCopy } from './spending-overview-copy';
 
 const EASE_IN_OUT = Easing.inOut(Easing.sin);
@@ -34,7 +34,8 @@ export interface BubbleOrigin {
 }
 
 interface GlassBubbleProps {
-  tint: BubbleKey;
+  bubbleKey: BubbleKey;
+  tint: BubbleTint;
   size: number;
   label: string;
   value: string;
@@ -49,6 +50,7 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 function GlassBubbleComponent({
+  bubbleKey,
   tint,
   size,
   label,
@@ -136,7 +138,7 @@ function GlassBubbleComponent({
     const currentSquash = squash.get();
 
     impactLight();
-    onSelect(tint, {
+    onSelect(bubbleKey, {
       x: center.x + driftX.get(),
       y: center.y + driftY.get(),
       size,
@@ -144,7 +146,7 @@ function GlassBubbleComponent({
       scaleY: currentScale * (1 - currentSquash * 0.065),
     });
     release();
-  }, [driftX, driftY, onSelect, release, restingCenter, scale, size, squash, tint]);
+  }, [bubbleKey, driftX, driftY, onSelect, release, restingCenter, scale, size, squash]);
 
   const tap = useMemo(() => {
     const bubbleTap = createBubbleTap(handlePress, release);
@@ -211,11 +213,11 @@ function GlassBubbleComponent({
               styles.glow,
               {
                 borderRadius: size / 2,
-                backgroundColor: `rgba(${bubbleTints[tint].rgb}, 0.035)`,
+                backgroundColor: `rgba(${tint.rgb}, 0.035)`,
               },
               Platform.OS === 'ios'
                 ? {
-                    shadowColor: bubbleTints[tint].film,
+                    shadowColor: tint.film,
                     shadowOpacity: 0.4,
                     shadowRadius: size * 0.18,
                     shadowOffset: { width: 0, height: 0 },

@@ -17,8 +17,8 @@ import { profileCopy } from './profile-copy';
 interface ProfileScreenProps {
   onOpenAlerts: () => void;
   onOpenCaptureHealth: () => void;
-  onOpenEvents: () => void;
   onOpenCategories: () => void;
+  onOpenEventHistory: () => void;
   onOpenData: () => void;
   onOpenPrivacy: () => void;
   onOpenPremium: () => void;
@@ -30,8 +30,8 @@ interface ProfileScreenProps {
 export function ProfileScreen({
   onOpenAlerts,
   onOpenCaptureHealth,
-  onOpenEvents,
   onOpenCategories,
+  onOpenEventHistory,
   onOpenData,
   onOpenPrivacy,
   onOpenPremium,
@@ -180,20 +180,20 @@ export function ProfileScreen({
               />
             </Pressable>
             <Pressable
-              accessibilityHint={copy.eventsHint}
+              accessibilityHint={copy.eventHistoryHint}
               accessibilityRole="button"
-              onPress={onOpenEvents}
+              onPress={onOpenEventHistory}
               style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
             >
               <View accessibilityElementsHidden importantForAccessibility="no" style={styles.rowIcon}>
                 <SymbolView
-                  name={{ ios: 'flag.fill', android: 'flag', web: 'flag' }}
+                  name={{ ios: 'clock.arrow.circlepath', android: 'history', web: 'history' }}
                   size={18}
                   tintColor={overviewColors.textSecondary}
                 />
               </View>
               <Text maxFontSizeMultiplier={1.4} style={styles.actionLabel}>
-                {copy.events}
+                {copy.eventHistory}
               </Text>
               <SymbolView
                 accessibilityElementsHidden

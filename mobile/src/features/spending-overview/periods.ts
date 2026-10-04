@@ -1,6 +1,7 @@
+import { calendarCopy } from '@/features/localization/calendar-copy';
 import { currentCopy, defineCopy } from '@/features/localization/language';
 
-export type SpendingPeriod = 'week' | 'month' | 'quarter' | 'year' | 'all';
+export type SpendingPeriod = 'currentMonth' | 'week' | 'month' | 'quarter' | 'year' | 'all';
 
 export interface PeriodWindow {
   /** Inclusive lower bound in epoch milliseconds, or null for "everything captured so far". */
@@ -21,7 +22,7 @@ export interface PeriodOption {
 
 const dayMs = 86_400_000;
 
-const spanInDays: Record<Exclude<SpendingPeriod, 'all'>, number> = {
+const spanInDays: Record<Exclude<SpendingPeriod, 'all' | 'currentMonth'>, number> = {
   week: 7,
   month: 30,
   quarter: 90,
@@ -30,6 +31,7 @@ const spanInDays: Record<Exclude<SpendingPeriod, 'all'>, number> = {
 
 const periodCopy = defineCopy<PeriodOption[]>({
   pl: [
+    { value: 'currentMonth', short: '', label: 'ten miesiąc', previousLabel: 'poprzedni miesiąc do tego dnia' },
     { value: 'week', short: '1T', label: 'ostatnie 7 dni', previousLabel: 'poprzednie 7 dni' },
     { value: 'month', short: '1M', label: 'ostatnie 30 dni', previousLabel: 'poprzednie 30 dni' },
     { value: 'quarter', short: '3M', label: 'ostatnie 90 dni', previousLabel: 'poprzednie 90 dni' },
@@ -37,6 +39,7 @@ const periodCopy = defineCopy<PeriodOption[]>({
     { value: 'all', short: 'Max', label: 'od początku', previousLabel: 'brak porównania' },
   ],
   en: [
+    { value: 'currentMonth', short: '', label: 'this month', previousLabel: 'last month to date' },
     { value: 'week', short: '1W', label: 'last 7 days', previousLabel: 'previous 7 days' },
     { value: 'month', short: '1M', label: 'last 30 days', previousLabel: 'previous 30 days' },
     { value: 'quarter', short: '3M', label: 'last 90 days', previousLabel: 'previous 90 days' },
@@ -45,14 +48,24 @@ const periodCopy = defineCopy<PeriodOption[]>({
   ],
 });
 
-export function periodOptions(): PeriodOption[] {
-  return currentCopy(periodCopy);
+function currentMonthShort(reference: Date): string {
+  return (currentCopy(calendarCopy).monthNames[reference.getMonth()] ?? '').slice(0, 3);
+}
+
+export function periodOptions(reference: Date = new Date()): PeriodOption[] {
+  return currentCopy(periodCopy).map((option) =>
+    option.value === 'currentMonth' ? { ...option, short: currentMonthShort(reference) } : option,
+  );
+}
+
+function monthStartMs(reference: Date, offset = 0): number {
+  return new Date(reference.getFullYear(), reference.getMonth() + offset, 1).getTime();
 }
 
 export function periodOption(period: SpendingPeriod): PeriodOption {
   const options = periodOptions();
 
-  return options.find((option) => option.value === period) ?? options[1];
+  return options.find((option) => option.value === period) ?? options[0];
 }
 
 export function periodLabel(period: SpendingPeriod): string {
@@ -66,6 +79,10 @@ export function periodWindow(period: SpendingPeriod, reference: Date = new Date(
     return { startMs: null, endMs };
   }
 
+  if (period === 'currentMonth') {
+    return { startMs: monthStartMs(reference), endMs };
+  }
+
   return { startMs: endMs - spanInDays[period] * dayMs, endMs };
 }
 
@@ -76,6 +93,25 @@ export function previousPeriodWindow(
 ): PeriodWindow | null {
   if (period === 'all') {
     return null;
+  }
+
+  if (period === 'currentMonth') {
+    const startMs = monthStartMs(reference, -1);
+    const thisMonthStartMs = monthStartMs(reference);
+    const lastPreviousDay = new Date(reference.getFullYear(), reference.getMonth(), 0).getDate();
+    const endMs = reference.getDate() > lastPreviousDay
+      ? thisMonthStartMs
+      : new Date(
+          reference.getFullYear(),
+          reference.getMonth() - 1,
+          reference.getDate(),
+          reference.getHours(),
+          reference.getMinutes(),
+          reference.getSeconds(),
+          reference.getMilliseconds(),
+        ).getTime();
+
+    return { startMs, endMs };
   }
 
   const current = periodWindow(period, reference);

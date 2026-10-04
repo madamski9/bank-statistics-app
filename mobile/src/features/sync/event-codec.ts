@@ -21,6 +21,7 @@ export const eventCodec: SyncCodec<SpendingEvent, EventChange> = {
       name: event.name,
       startedAt: event.startedAt,
       endedAt: event.endedAt,
+      color: event.color,
     }),
   fromChange: (change) =>
     withoutUndefined({
@@ -28,6 +29,7 @@ export const eventCodec: SyncCodec<SpendingEvent, EventChange> = {
       name: change.name,
       startedAt: change.startedAt,
       endedAt: change.endedAt,
+      color: change.color,
     }),
   isPushable: (change) => eventChangeProblem(change) === null,
 };
