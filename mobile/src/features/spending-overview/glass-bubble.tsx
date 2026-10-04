@@ -15,6 +15,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useCopy } from '@/features/localization/language';
+import { AmountText } from '@/features/privacy/amount-text';
 import { impactLight } from '@/haptics';
 
 import { BubbleSkin } from './bubble-skin';
@@ -238,14 +239,14 @@ function GlassBubbleComponent({
             ]}
           />
           <View style={[styles.content, { paddingHorizontal: size * 0.14 }]}>
-            <Text
+            <AmountText
               maxFontSizeMultiplier={1.2}
               numberOfLines={1}
               style={[styles.label, { fontSize: labelFontSize }]}
             >
               {label}
-            </Text>
-            <Text
+            </AmountText>
+            <AmountText
               adjustsFontSizeToFit
               maxFontSizeMultiplier={1.2}
               minimumFontScale={0.7}
@@ -253,7 +254,7 @@ function GlassBubbleComponent({
               style={[styles.value, { fontSize: valueFontSize }]}
             >
               {value}
-            </Text>
+            </AmountText>
             {caption !== undefined ? (
               <Text
                 maxFontSizeMultiplier={1.2}

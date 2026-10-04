@@ -5,6 +5,7 @@ import { reportingCurrency } from '@/features/currency-conversion/exchange-rate'
 import type { MonthForecast } from '@/features/forecast/month-forecast';
 import { calendarCopy } from '@/features/localization/calendar-copy';
 import { useCopy } from '@/features/localization/language';
+import { AmountText } from '@/features/privacy/amount-text';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { impactLight } from '@/haptics';
@@ -56,14 +57,14 @@ function ShortcutTile({ symbol, title, value, tint, locked, accessibilityLabel, 
       <Text maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.tileTitle}>
         {title}
       </Text>
-      <Text
+      <AmountText
         adjustsFontSizeToFit
         maxFontSizeMultiplier={1.3}
         numberOfLines={1}
         style={[styles.tileValue, tint === undefined ? null : { color: tint }]}
       >
         {value}
-      </Text>
+      </AmountText>
     </Pressable>
   );
 }

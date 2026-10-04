@@ -10,6 +10,7 @@ import { reportingCurrency } from '@/features/currency-conversion/exchange-rate'
 import type { SpendingEvent } from '@/features/events/spending-event';
 import { calendarCopy } from '@/features/localization/calendar-copy';
 import { useCopy, useLanguage } from '@/features/localization/language';
+import { AmountText } from '@/features/privacy/amount-text';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { ScalePressable } from '@/features/app-shell/scale-pressable';
 import { SheetLayout, SheetRow, SheetSection, SheetSwitchRow } from '@/features/app-shell/sheet-layout';
@@ -80,9 +81,9 @@ function ShareRow({ group, index, fraction, value, detail, tint, accessibilityHi
           <Text maxFontSizeMultiplier={1.4} numberOfLines={1} style={styles.shareName}>
             {group.name}
           </Text>
-          <Text maxFontSizeMultiplier={1.4} style={styles.shareValue}>
+          <AmountText maxFontSizeMultiplier={1.4} style={styles.shareValue}>
             {value}
-          </Text>
+          </AmountText>
         </View>
         <View style={styles.shareTrack}>
           <GrowingFill
@@ -120,12 +121,12 @@ function Highlight({ label, value, detail }: HighlightProps) {
       accessible
       style={styles.highlight}
     >
-      <Text maxFontSizeMultiplier={1.4} numberOfLines={1} style={styles.highlightLabel}>
+      <AmountText maxFontSizeMultiplier={1.4} numberOfLines={1} style={styles.highlightLabel}>
         {label}
-      </Text>
-      <Text adjustsFontSizeToFit maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.highlightValue}>
+      </AmountText>
+      <AmountText adjustsFontSizeToFit maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.highlightValue}>
         {value}
-      </Text>
+      </AmountText>
       {detail !== undefined ? (
         <Text maxFontSizeMultiplier={1.4} numberOfLines={1} style={styles.highlightDetail}>
           {detail}
@@ -281,18 +282,18 @@ export function MonthlySummaryScreen({
                   {copy.dailyAverage}
                 </Text>
               </View>
-              <Text adjustsFontSizeToFit maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.amount}>
+              <AmountText adjustsFontSizeToFit maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.amount}>
                 {formatAmount(summary.dailyExpenseMinor, reportingCurrency)}
-              </Text>
+              </AmountText>
             </View>
             {change !== null ? (
-              <Text
+              <AmountText
                 maxFontSizeMultiplier={1.4}
                 numberOfLines={2}
                 style={[styles.change, { color: change > 0 ? overviewColors.negative : overviewColors.positive }]}
               >
                 {copy.versusPrevious(formatChange(change), change > 0)}
-              </Text>
+              </AmountText>
             ) : (
               <Text maxFontSizeMultiplier={1.4} style={styles.change}>
                 {copy.noPrevious}
@@ -312,12 +313,12 @@ export function MonthlySummaryScreen({
             elapsedDays={summary.elapsedDays}
             otherLabel={copy.other}
           />
-          <Text maxFontSizeMultiplier={1.4} style={styles.cardTotal}>
+          <AmountText maxFontSizeMultiplier={1.4} style={styles.cardTotal}>
             {copy.total(
               formatAmount(summary.expenseMinor, reportingCurrency),
               formatTransactionCount(summary.expenseCount),
             )}
-          </Text>
+          </AmountText>
         </View>
 
         {isEmpty ? (

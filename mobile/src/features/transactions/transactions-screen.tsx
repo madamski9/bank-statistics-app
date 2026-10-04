@@ -17,6 +17,8 @@ import type { CategorizationRule } from '@/features/classification/categorizatio
 import type { CustomCategory } from '@/features/classification/categories';
 import type { SpendingEvent } from '@/features/events/spending-event';
 import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
+import { AmountText } from '@/features/privacy/amount-text';
+import { PrivacyShield } from '@/features/privacy/privacy-shield';
 import { impactLight } from '@/haptics';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import {
@@ -52,6 +54,7 @@ interface TransactionsScreenProps {
   events: SpendingEvent[];
   customCategories: CustomCategory[];
   canCreateCategory: boolean;
+  canRememberRule: boolean;
   onCreateCategory: (name: string) => Promise<CustomCategory>;
   onRequirePremium: () => void;
 }
@@ -119,6 +122,7 @@ function TransactionsScreenComponent({
   events,
   customCategories,
   canCreateCategory,
+  canRememberRule,
   onCreateCategory,
   onRequirePremium,
 }: TransactionsScreenProps) {
@@ -248,9 +252,9 @@ function TransactionsScreenComponent({
               </View>
               <View style={styles.body}>
                 <View style={styles.labelRow}>
-                  <Text maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.label}>
+                  <AmountText maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.label}>
                     {label}
-                  </Text>
+                  </AmountText>
                   {badge !== null ? (
                     <View
                       style={[
@@ -258,7 +262,7 @@ function TransactionsScreenComponent({
                         badge.tone === 'caution' ? styles.badgeCaution : styles.badgeNeutral,
                       ]}
                     >
-                      <Text
+                      <AmountText
                         maxFontSizeMultiplier={1.3}
                         style={[
                           styles.badgeLabel,
@@ -268,15 +272,15 @@ function TransactionsScreenComponent({
                         ]}
                       >
                         {badge.label}
-                      </Text>
+                      </AmountText>
                     </View>
                   ) : null}
                 </View>
-                <Text maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.meta}>
+                <AmountText maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.meta}>
                   {formatTime(occurredAt)} · {context}
-                </Text>
+                </AmountText>
               </View>
-              <Text
+              <AmountText
                 maxFontSizeMultiplier={1.6}
                 style={[
                   styles.amount,
@@ -285,7 +289,7 @@ function TransactionsScreenComponent({
                 ]}
               >
                 {amount}
-              </Text>
+              </AmountText>
             </Pressable>
           );
         }}
@@ -294,10 +298,10 @@ function TransactionsScreenComponent({
             <Text maxFontSizeMultiplier={1.6} style={styles.sectionTitle}>
               {section.title}
             </Text>
-            <Text maxFontSizeMultiplier={1.6} style={styles.sectionTotal}>
+            <AmountText maxFontSizeMultiplier={1.6} style={styles.sectionTotal}>
               {section.totalMinor < 0 ? '−' : '+'}
               {formatAmount(section.totalMinor, section.currency)}
-            </Text>
+            </AmountText>
           </View>
         )}
         sections={sections}
@@ -349,6 +353,7 @@ function TransactionsScreenComponent({
           <TransactionEditor
             accounts={accounts}
             canCreateCategory={canCreateCategory}
+            canRememberRule={canRememberRule}
             customCategories={customCategories}
             events={events}
             isWriting={isWriting}
@@ -370,6 +375,7 @@ function TransactionsScreenComponent({
             writeError={writeError}
           />
         )}
+        <PrivacyShield />
       </Modal>
     </View>
   );

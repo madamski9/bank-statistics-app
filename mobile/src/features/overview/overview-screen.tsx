@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AmountText } from '@/features/privacy/amount-text';
 import { BubbleField, type BubbleDescriptor } from '@/features/spending-overview/bubble-field';
 import { useCopy } from '@/features/localization/language';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
@@ -94,11 +95,11 @@ function OverviewScreenComponent({
     <View style={styles.page}>
       <View style={styles.header}>
         <View style={styles.contextRow}>
-          <Text maxFontSizeMultiplier={1.6} style={styles.contextLabel}>
+          <AmountText maxFontSizeMultiplier={1.6} style={styles.contextLabel}>
             {copy.context(option.label)}
-          </Text>
+          </AmountText>
           {expenseChange !== null ? (
-            <Text
+            <AmountText
               maxFontSizeMultiplier={1.6}
               style={[
                 styles.contextChange,
@@ -107,7 +108,7 @@ function OverviewScreenComponent({
             >
               {expenseChange >= 0 ? '▲' : '▼'} {formatChange(expenseChange)} {copy.versus}{' '}
               {option.previousLabel}
-            </Text>
+            </AmountText>
           ) : null}
         </View>
 

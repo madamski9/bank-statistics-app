@@ -13,6 +13,7 @@ import {
   SheetSection,
 } from '@/features/app-shell/sheet-layout';
 import { useCopy } from '@/features/localization/language';
+import { AmountText } from '@/features/privacy/amount-text';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { formatShare } from '@/features/spending-overview/formatting';
 import { overviewColors } from '@/features/spending-overview/overview-theme';
@@ -149,12 +150,12 @@ export function EventsScreen({
       ) : (
         <>
           <View style={styles.hero}>
-            <Text maxFontSizeMultiplier={1.4} style={styles.period}>
+            <AmountText maxFontSizeMultiplier={1.4} style={styles.period}>
               {eventPeriodLabel(selected, now, copy)}
-            </Text>
-            <Text adjustsFontSizeToFit maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.amount}>
+            </AmountText>
+            <AmountText adjustsFontSizeToFit maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.amount}>
               {formatAmount(summary.expenseMinor, reportingCurrency)}
-            </Text>
+            </AmountText>
             <Text maxFontSizeMultiplier={1.4} style={styles.meta}>
               {copy.days(summary.days)} · {copy.transactionsCount(summary.count)}
             </Text>

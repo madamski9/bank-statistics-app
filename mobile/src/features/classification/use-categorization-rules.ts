@@ -18,6 +18,7 @@ export function clearCategorizationRules(): Promise<void> {
 export interface CategorizationRules {
   rules: CategorizationRule[];
   remember: (merchantLabel: string, category: string) => Promise<void>;
+  assignMerchant: (merchantKey: string, merchantName: string, category: string) => Promise<void>;
   forget: (merchantKey: string) => Promise<void>;
 }
 
@@ -53,6 +54,13 @@ export function useCategorizationRules(storage: RuleStorage = secureStorage): Ca
     [persist, rules],
   );
 
+  const assignMerchant = useCallback(
+    async (merchantKey: string, merchantName: string, category: string) => {
+      await persist(upsertRule(rules, { merchantKey, merchantName, category, scope: 'private' }));
+    },
+    [persist, rules],
+  );
+
   const forget = useCallback(
     async (merchantKey: string) => {
       await persist(rules.filter((rule) => rule.merchantKey !== merchantKey));
@@ -60,5 +68,5 @@ export function useCategorizationRules(storage: RuleStorage = secureStorage): Ca
     [persist, rules],
   );
 
-  return { rules, remember, forget };
+  return { rules, remember, assignMerchant, forget };
 }

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AmountText } from '@/features/privacy/amount-text';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 
 interface SheetLayoutProps {
@@ -59,9 +60,9 @@ export function SheetSection({ label, footnote, children }: SheetSectionProps) {
   return (
     <View style={styles.section}>
       {label !== undefined ? (
-        <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
+        <AmountText maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
           {label.toLocaleUpperCase()}
-        </Text>
+        </AmountText>
       ) : null}
       <View style={styles.card}>{children}</View>
       {footnote !== undefined && footnote !== null ? (
@@ -95,9 +96,9 @@ export function SheetRow({
   const content = (
     <>
       <View style={styles.rowCopy}>
-        <Text maxFontSizeMultiplier={1.4} numberOfLines={2} style={styles.rowLabel}>
+        <AmountText maxFontSizeMultiplier={1.4} numberOfLines={2} style={styles.rowLabel}>
           {label}
-        </Text>
+        </AmountText>
         {detail !== undefined ? (
           <Text maxFontSizeMultiplier={1.4} numberOfLines={2} style={styles.rowDetail}>
             {detail}
@@ -105,9 +106,9 @@ export function SheetRow({
         ) : null}
       </View>
       {value !== undefined ? (
-        <Text maxFontSizeMultiplier={1.4} numberOfLines={1} style={[styles.rowValue, toneStyles[valueTone]]}>
+        <AmountText maxFontSizeMultiplier={1.4} numberOfLines={1} style={[styles.rowValue, toneStyles[valueTone]]}>
           {value}
-        </Text>
+        </AmountText>
       ) : null}
       {onPress !== undefined ? (
         <SymbolView
@@ -161,9 +162,9 @@ export function SheetSwitchRow({
   return (
     <View style={[styles.row, isFirst ? null : styles.rowDivider]}>
       <View style={styles.rowCopy}>
-        <Text maxFontSizeMultiplier={1.4} style={styles.rowLabel}>
+        <AmountText maxFontSizeMultiplier={1.4} style={styles.rowLabel}>
           {label}
-        </Text>
+        </AmountText>
         {detail !== undefined ? (
           <Text maxFontSizeMultiplier={1.4} style={styles.rowDetail}>
             {detail}
@@ -202,9 +203,9 @@ export function SheetButton({ label, tone = 'secondary', disabled = false, onPre
         pressed ? styles.pressed : null,
       ]}
     >
-      <Text maxFontSizeMultiplier={1.4} style={[styles.buttonLabel, buttonLabelStyles[tone]]}>
+      <AmountText maxFontSizeMultiplier={1.4} style={[styles.buttonLabel, buttonLabelStyles[tone]]}>
         {label}
-      </Text>
+      </AmountText>
     </Pressable>
   );
 }

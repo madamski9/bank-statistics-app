@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AmountText } from '@/features/privacy/amount-text';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { formatShare } from '@/features/spending-overview/formatting';
 import { useCopy } from '@/features/localization/language';
@@ -66,12 +67,12 @@ export function AlertsScreen({ entries, onClose, onCreate, onEdit }: AlertsScree
               style={({ pressed }) => [styles.card, pressed ? styles.pressed : null]}
             >
               <View style={styles.cardHeading}>
-                <Text maxFontSizeMultiplier={1.5} numberOfLines={1} style={styles.cardTitle}>
+                <AmountText maxFontSizeMultiplier={1.5} numberOfLines={1} style={styles.cardTitle}>
                   {scopeLabel(rule.scope)}
-                </Text>
-                <Text maxFontSizeMultiplier={1.5} style={styles.cardAmount}>
+                </AmountText>
+                <AmountText maxFontSizeMultiplier={1.5} style={styles.cardAmount}>
                   {formatAmount(progress.amountMinor, progress.currency)}
-                </Text>
+                </AmountText>
               </View>
               {rule.metric === 'expense' ? (
                 <LimitProgressBar share={progress.share} />
@@ -89,11 +90,11 @@ export function AlertsScreen({ entries, onClose, onCreate, onEdit }: AlertsScree
                   />
                 </View>
               )}
-              <Text maxFontSizeMultiplier={1.5} style={styles.cardMeta}>
+              <AmountText maxFontSizeMultiplier={1.5} style={styles.cardMeta}>
                 {copy.metrics[rule.metric]} · {formatAmount(rule.targetMinor, progress.currency)}{' '}
                 {copy.frequency[rule.period.kind]} · {formatShare(Math.min(progress.share, 1))}
                 {rule.isActive ? '' : copy.disabled}
-              </Text>
+              </AmountText>
             </Pressable>
           ))
         )}

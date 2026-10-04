@@ -1,13 +1,6 @@
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
@@ -25,6 +18,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { AmountText } from '@/features/privacy/amount-text';
 import { impactLight } from '@/haptics';
 import { project, rubberband } from '@/motion';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
@@ -305,7 +299,7 @@ export function BubbleDetail({
             </View>
 
             <View style={styles.amountBlock}>
-              <Text
+              <AmountText
                 adjustsFontSizeToFit
                 maxFontSizeMultiplier={1.4}
                 minimumFontScale={0.6}
@@ -313,15 +307,15 @@ export function BubbleDetail({
                 style={styles.amount}
               >
                 {amount}
-              </Text>
+              </AmountText>
             </View>
 
             <View style={styles.metaRow}>
-              <Text maxFontSizeMultiplier={1.6} style={styles.meta}>
+              <AmountText maxFontSizeMultiplier={1.6} style={styles.meta}>
                 {option.label}
-              </Text>
+              </AmountText>
               {change !== null ? (
-                <Text
+                <AmountText
                   maxFontSizeMultiplier={1.6}
                   style={[
                     styles.meta,
@@ -330,7 +324,7 @@ export function BubbleDetail({
                   ]}
                 >
                   {change >= 0 ? '▲' : '▼'} {formatChange(change)} {copy.versus} {option.previousLabel}
-                </Text>
+                </AmountText>
               ) : null}
             </View>
 
@@ -377,11 +371,11 @@ export function BubbleDetail({
               />
             </View>
           ) : sources.length === 0 ? (
-            <Text maxFontSizeMultiplier={1.6} style={styles.explainer}>
+            <AmountText maxFontSizeMultiplier={1.6} style={styles.explainer}>
               {Platform.OS === 'ios'
                 ? copy.noDataInPeriod(option.label)
                 : copy.captureIosOnly}
-            </Text>
+            </AmountText>
           ) : (
             sources.map((source) => (
               <Pressable
@@ -409,12 +403,12 @@ export function BubbleDetail({
                 </View>
                 <View style={styles.sourceBody}>
                   <View style={styles.sourceHeading}>
-                    <Text maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.sourceLabel}>
+                    <AmountText maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.sourceLabel}>
                       {source.label}
-                    </Text>
-                    <Text maxFontSizeMultiplier={1.6} style={styles.sourceAmount}>
+                    </AmountText>
+                    <AmountText maxFontSizeMultiplier={1.6} style={styles.sourceAmount}>
                       {formatAmount(source.amountMinor, summary.currency)}
-                    </Text>
+                    </AmountText>
                   </View>
                   <View style={styles.barTrack}>
                     <View
@@ -427,9 +421,9 @@ export function BubbleDetail({
                       ]}
                     />
                   </View>
-                  <Text maxFontSizeMultiplier={1.6} style={styles.sourceMeta}>
+                  <AmountText maxFontSizeMultiplier={1.6} style={styles.sourceMeta}>
                     {formatShare(source.share)} · {formatTransactionCount(source.count)}
-                  </Text>
+                  </AmountText>
                 </View>
                 {key === 'expense' && source.group !== null ? (
                   <View style={styles.sourceChevron}>
@@ -461,12 +455,12 @@ export function BubbleDetail({
 function NetRow({ label, amount, color }: { label: string; amount: string; color: string }) {
   return (
     <View accessible accessibilityLabel={`${label}: ${amount}`} style={styles.netRow}>
-      <Text maxFontSizeMultiplier={1.6} style={styles.netLabel}>
+      <AmountText maxFontSizeMultiplier={1.6} style={styles.netLabel}>
         {label}
-      </Text>
-      <Text maxFontSizeMultiplier={1.6} style={[styles.netAmount, { color }]}>
+      </AmountText>
+      <AmountText maxFontSizeMultiplier={1.6} style={[styles.netAmount, { color }]}>
         {amount}
-      </Text>
+      </AmountText>
     </View>
   );
 }

@@ -4,8 +4,9 @@ import { AccountStandingGate } from '@/features/account-data/account-standing-ga
 import { SignInScreen } from '@/features/auth/sign-in-screen';
 import { LocalizedHomeScreen } from '@/features/home/localized-home-screen';
 import { OnboardingGate } from '@/features/onboarding/onboarding-gate';
-import { AppLockGate } from '@/features/privacy/app-lock-gate';
+import { AppLockGate, AppLockScreen } from '@/features/privacy/app-lock-gate';
 import { PrivacyProvider } from '@/features/privacy/privacy-provider';
+import { PrivacyBoundary } from '@/features/privacy/privacy-shield';
 import { OwnedDeviceGate } from '@/features/sync/owned-device-gate';
 import { SignedOutSpendingWidget } from '@/features/widgets/use-spending-widget';
 
@@ -15,12 +16,14 @@ export default function Index() {
       <Show when="signed-in">
         <OwnedDeviceGate>
           <AccountStandingGate>
-            <PrivacyProvider>
-              <OnboardingGate>
-                <AppLockGate>
-                  <LocalizedHomeScreen />
-                </AppLockGate>
-              </OnboardingGate>
+            <PrivacyProvider lockScreen={<AppLockScreen />}>
+              <PrivacyBoundary>
+                <OnboardingGate>
+                  <AppLockGate>
+                    <LocalizedHomeScreen />
+                  </AppLockGate>
+                </OnboardingGate>
+              </PrivacyBoundary>
             </PrivacyProvider>
           </AccountStandingGate>
         </OwnedDeviceGate>

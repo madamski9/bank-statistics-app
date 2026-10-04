@@ -31,8 +31,9 @@ export const privacyCopy = defineCopy({
     changePin: 'Zmień kod PIN',
     setPin: 'Ustaw kod PIN',
     privacySection: 'PRYWATNOŚĆ',
-    privacyModeDescription: 'Kwoty w aplikacji zamienią się w kropki. Przydaje się, gdy ktoś patrzy Ci przez ramię.',
+    privacyModeDescription: 'Kwoty w aplikacji zostaną rozmyte. Przydaje się, gdy ktoś patrzy Ci przez ramię.',
     privacyMode: 'Tryb prywatny',
+    hiddenAmount: 'Kwota ukryta',
     blurWidgetPinDescription: 'Widżet będzie rozmyty. Dotknij go i wpisz PIN, żeby go odsłonić na 5 minut.',
     blurWidgetBiometricDescription: (biometric: string) =>
       `Widżet będzie rozmyty. Dotknij go i użyj ${biometric}, żeby go odsłonić na 5 minut.`,
@@ -74,8 +75,9 @@ export const privacyCopy = defineCopy({
     changePin: 'Change PIN',
     setPin: 'Set a PIN',
     privacySection: 'PRIVACY',
-    privacyModeDescription: 'Amounts in the app turn into dots. Handy when someone is looking over your shoulder.',
+    privacyModeDescription: 'Amounts in the app are blurred. Handy when someone is looking over your shoulder.',
     privacyMode: 'Privacy mode',
+    hiddenAmount: 'Amount hidden',
     blurWidgetPinDescription: 'The widget will be blurred. Tap it and enter your PIN to reveal it for 5 minutes.',
     blurWidgetBiometricDescription: (biometric: string) =>
       `The widget will be blurred. Tap it and use ${biometric} to reveal it for 5 minutes.`,

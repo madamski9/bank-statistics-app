@@ -4,6 +4,7 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { SpendingDimension, SpendingGroup } from '@/features/classification/spending-groups';
+import { AmountText } from '@/features/privacy/amount-text';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { formatShare } from '@/features/spending-overview/formatting';
 import { bubbleTints, overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
@@ -60,9 +61,9 @@ function MerchantsScreenComponent({
     <View style={styles.page}>
       <View style={styles.header}>
         <View style={styles.contextRow}>
-          <Text maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.context}>
+          <AmountText maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.context}>
             {groupCount(groups.length, dimension)} · {option.label}
-          </Text>
+          </AmountText>
           <Pressable
             accessibilityHint={copy.createLimitHint}
             accessibilityLabel={copy.createLimitLabel}
@@ -77,9 +78,9 @@ function MerchantsScreenComponent({
               tintColor={overviewColors.textPrimary}
               weight="semibold"
             />
-            <Text maxFontSizeMultiplier={1.3} style={styles.limitActionLabel}>
+            <AmountText maxFontSizeMultiplier={1.3} style={styles.limitActionLabel}>
               {copy.limit}
-            </Text>
+            </AmountText>
           </Pressable>
         </View>
         <RangeSwitcher lockedPeriods={lockedPeriods} onChange={onChangePeriod} period={period} />
@@ -115,9 +116,9 @@ function MerchantsScreenComponent({
                   <Text maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.name}>
                     {group.name}
                   </Text>
-                  <Text maxFontSizeMultiplier={1.6} style={styles.amount}>
+                  <AmountText maxFontSizeMultiplier={1.6} style={styles.amount}>
                     {formatAmount(group.totalMinor, group.currency)}
-                  </Text>
+                  </AmountText>
                 </View>
                 <View style={styles.track}>
                   <View
@@ -130,10 +131,10 @@ function MerchantsScreenComponent({
                     ]}
                   />
                 </View>
-                <Text maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.meta}>
+                <AmountText maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.meta}>
                   {transactionCount(group.count, dimension)} · {copy.shareOfSpending(formatShare(group.share))}
                   {group.subtitle !== undefined ? ` · ${group.subtitle}` : ''}
-                </Text>
+                </AmountText>
               </View>
             </Pressable>
           ))

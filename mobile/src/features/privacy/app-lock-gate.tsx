@@ -11,12 +11,18 @@ interface AppLockGateProps {
 }
 
 export function AppLockGate({ children }: AppLockGateProps) {
-  const { biometric, cancelWidgetReveal, isLoaded, lockReason, unlock } = usePrivacy();
-  const copy = useCopy(privacyCopy);
+  const { isLoaded } = usePrivacy();
 
   if (!isLoaded) {
     return null;
   }
+
+  return children;
+}
+
+export function AppLockScreen() {
+  const { biometric, cancelWidgetReveal, lockReason, unlock } = usePrivacy();
+  const copy = useCopy(privacyCopy);
 
   if (lockReason === 'widget') {
     return (
@@ -31,17 +37,13 @@ export function AppLockGate({ children }: AppLockGateProps) {
     );
   }
 
-  if (lockReason === 'app') {
-    return (
-      <LockScreen
-        key="app"
-        onUnlocked={unlock}
-        promptMessage={copy.unlockPrompt}
-        subtitle={biometric === 'none' ? copy.enterPin : copy.useBiometricOrPin(biometricLabels[biometric])}
-        title={copy.lockedTitle}
-      />
-    );
-  }
-
-  return children;
+  return (
+    <LockScreen
+      key="app"
+      onUnlocked={unlock}
+      promptMessage={copy.unlockPrompt}
+      subtitle={biometric === 'none' ? copy.enterPin : copy.useBiometricOrPin(biometricLabels[biometric])}
+      title={copy.lockedTitle}
+    />
+  );
 }

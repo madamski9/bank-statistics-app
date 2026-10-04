@@ -1,22 +1,32 @@
-import { useState } from 'react';
+import type { IngestionRecord } from '@bankstats/ingestion-native';
+import { useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text } from 'react-native';
 
 import { NamePrompt } from '@/features/app-shell/name-prompt';
 import { SheetButton, SheetLayout, SheetRow, SheetSection } from '@/features/app-shell/sheet-layout';
 import { useCopy } from '@/features/localization/language';
 import { overviewColors } from '@/features/spending-overview/overview-theme';
+import { selectionChanged } from '@/haptics';
 
-import { builtInCategoryLabels, type CustomCategory } from './categories';
+import { categoryOptions, isCustomCategoryId, type CustomCategory } from './categories';
+import type { CategorizationRule } from './categorization-rule';
+import { CategoryDetailScreen, type CategoryDetailTarget } from './category-detail-screen';
 import { customCategoriesCopy } from './custom-categories-copy';
 import { customCategoryNameError } from './custom-category';
+import { merchantHistory } from './merchant-history';
 
 interface CustomCategoriesScreenProps {
   categories: CustomCategory[];
+  records: IngestionRecord[];
+  rules: CategorizationRule[];
   canCreate: boolean;
+  canAssignMerchant: boolean;
   onRequirePremium: () => void;
   onCreate: (name: string) => Promise<CustomCategory>;
   onRename: (id: string, name: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onAssignMerchant: (merchantKey: string, merchantName: string, category: string) => Promise<boolean>;
+  onForgetMerchant: (merchantKey: string) => Promise<void>;
   onClose: () => void;
 }
 
@@ -24,32 +34,110 @@ type Prompt = { kind: 'create' } | { kind: 'rename'; category: CustomCategory };
 
 export function CustomCategoriesScreen({
   categories,
+  records,
+  rules,
   canCreate,
+  canAssignMerchant,
   onRequirePremium,
   onCreate,
   onRename,
   onDelete,
+  onAssignMerchant,
+  onForgetMerchant,
   onClose,
 }: CustomCategoriesScreenProps) {
   const copy = useCopy(customCategoriesCopy);
   const [prompt, setPrompt] = useState<Prompt | null>(null);
+  const [openedId, setOpenedId] = useState<string | null>(null);
   const ordered = [...categories].sort((left, right) => left.name.localeCompare(right.name, 'pl'));
+  const builtIn = categoryOptions().filter((option) => !isCustomCategoryId(option.id));
+  const merchants = useMemo(() => merchantHistory(records, rules), [records, rules]);
+  const shopCounts = useMemo(() => {
+    const counts = new Map<string, number>();
 
-  const openActions = (category: CustomCategory) => {
-    Alert.alert(copy.actionsTitle(category.name), undefined, [
-      { text: copy.rename, onPress: () => setPrompt({ kind: 'rename', category }) },
+    for (const rule of rules) {
+      counts.set(rule.category, (counts.get(rule.category) ?? 0) + 1);
+    }
+
+    return counts;
+  }, [rules]);
+  const openedCustom = ordered.find((category) => category.id === openedId);
+  const openedBuiltIn = builtIn.find((option) => option.id === openedId);
+  const opened: CategoryDetailTarget | null = openedCustom !== undefined
+    ? { id: openedCustom.id, label: openedCustom.name, isCustom: true }
+    : openedBuiltIn !== undefined
+      ? { id: openedBuiltIn.id, label: openedBuiltIn.label, isCustom: false }
+      : null;
+
+  const open = (id: string) => {
+    selectionChanged();
+    setOpenedId(id);
+  };
+
+  const confirmDelete = (category: CustomCategory) => {
+    Alert.alert(copy.deleteTitle(category.name), copy.deleteBody, [
+      { style: 'cancel', text: copy.cancel },
       {
         style: 'destructive',
         text: copy.delete,
         onPress: () =>
-          Alert.alert(copy.deleteTitle(category.name), copy.deleteBody, [
-            { style: 'cancel', text: copy.cancel },
-            { style: 'destructive', text: copy.delete, onPress: () => void onDelete(category.id) },
-          ]),
+          void onDelete(category.id).then(() => setOpenedId(null)),
       },
-      { style: 'cancel', text: copy.cancel },
     ]);
   };
+
+  const shopCountValue = (id: string) => {
+    const count = shopCounts.get(id) ?? 0;
+
+    return count === 0 ? undefined : String(count);
+  };
+
+  const namePrompt = (
+    <NamePrompt
+      cancelLabel={copy.cancel}
+      confirmLabel={prompt?.kind === 'rename' ? copy.save : copy.create}
+      initialValue={prompt?.kind === 'rename' ? prompt.category.name : ''}
+      onCancel={() => setPrompt(null)}
+      onConfirm={async (name) => {
+        if (prompt?.kind === 'rename') {
+          await onRename(prompt.category.id, name);
+        } else {
+          await onCreate(name);
+        }
+
+        setPrompt(null);
+      }}
+      placeholder={copy.placeholder}
+      title={prompt?.kind === 'rename' ? copy.renameTitle : copy.addTitle}
+      validate={(name) =>
+        customCategoryNameError(name, categories, prompt?.kind === 'rename' ? prompt.category.id : null)
+      }
+      visible={prompt !== null}
+    />
+  );
+
+  if (opened !== null) {
+    return (
+      <>
+        <CategoryDetailScreen
+          canAssign={canAssignMerchant}
+          category={opened}
+          merchants={merchants}
+          onAssign={(merchant) => onAssignMerchant(merchant.key, merchant.name, opened.id)}
+          onBack={() => setOpenedId(null)}
+          onClose={onClose}
+          onDelete={openedCustom === undefined ? undefined : () => confirmDelete(openedCustom)}
+          onRename={
+            openedCustom === undefined ? undefined : () => setPrompt({ kind: 'rename', category: openedCustom })
+          }
+          onRequirePremium={onRequirePremium}
+          onUnassign={onForgetMerchant}
+          rules={rules}
+        />
+        {namePrompt}
+      </>
+    );
+  }
 
   return (
     <SheetLayout closeLabel={copy.close} onClose={onClose} title={copy.title}>
@@ -71,39 +159,29 @@ export function CustomCategoriesScreen({
               isFirst={index === 0}
               key={category.id}
               label={category.name}
-              onPress={() => openActions(category)}
+              onPress={() => open(category.id)}
+              value={shopCountValue(category.id)}
+              valueTone="muted"
             />
           ))}
         </SheetSection>
       )}
 
       <SheetSection label={copy.builtIn}>
-        {builtInCategoryLabels().map((label, index) => (
-          <SheetRow isFirst={index === 0} key={label} label={label} />
+        {builtIn.map((option, index) => (
+          <SheetRow
+            accessibilityHint={copy.editHint}
+            isFirst={index === 0}
+            key={option.id}
+            label={option.label}
+            onPress={() => open(option.id)}
+            value={shopCountValue(option.id)}
+            valueTone="muted"
+          />
         ))}
       </SheetSection>
 
-      <NamePrompt
-        cancelLabel={copy.cancel}
-        confirmLabel={prompt?.kind === 'rename' ? copy.save : copy.create}
-        initialValue={prompt?.kind === 'rename' ? prompt.category.name : ''}
-        onCancel={() => setPrompt(null)}
-        onConfirm={async (name) => {
-          if (prompt?.kind === 'rename') {
-            await onRename(prompt.category.id, name);
-          } else {
-            await onCreate(name);
-          }
-
-          setPrompt(null);
-        }}
-        placeholder={copy.placeholder}
-        title={prompt?.kind === 'rename' ? copy.renameTitle : copy.addTitle}
-        validate={(name) =>
-          customCategoryNameError(name, categories, prompt?.kind === 'rename' ? prompt.category.id : null)
-        }
-        visible={prompt !== null}
-      />
+      {namePrompt}
     </SheetLayout>
   );
 }

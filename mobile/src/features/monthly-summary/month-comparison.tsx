@@ -1,8 +1,9 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { reportingCurrency } from '@/features/currency-conversion/exchange-rate';
 import { calendarCopy } from '@/features/localization/calendar-copy';
 import { useCopy } from '@/features/localization/language';
+import { AmountText } from '@/features/privacy/amount-text';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { bubbleTints, overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 
@@ -27,9 +28,9 @@ export function MonthComparisonChart({ months }: MonthComparisonChartProps) {
 
         return (
           <View accessibilityLabel={`${label}, ${value}`} accessible key={`${entry.month.year}-${entry.month.month}`} style={styles.row}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.month, isSelected ? styles.monthSelected : null]}>
+            <AmountText maxFontSizeMultiplier={1.3} style={[styles.month, isSelected ? styles.monthSelected : null]}>
               {label}
-            </Text>
+            </AmountText>
             <View style={styles.track}>
               {entry.dailyAverageMinor > 0 ? (
                 <GrowingFill
@@ -40,9 +41,9 @@ export function MonthComparisonChart({ months }: MonthComparisonChartProps) {
                 />
               ) : null}
             </View>
-            <Text maxFontSizeMultiplier={1.2} numberOfLines={1} style={[styles.value, isSelected ? styles.valueSelected : null]}>
+            <AmountText maxFontSizeMultiplier={1.2} numberOfLines={1} style={[styles.value, isSelected ? styles.valueSelected : null]}>
               {value}
-            </Text>
+            </AmountText>
           </View>
         );
       })}

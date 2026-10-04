@@ -57,6 +57,7 @@ interface TransactionEditorProps {
   events?: SpendingEvent[];
   customCategories?: CustomCategory[];
   canCreateCategory?: boolean;
+  canRememberRule?: boolean;
   onCreateCategory?: (name: string) => Promise<CustomCategory>;
   onRequirePremium?: () => void;
 }
@@ -78,6 +79,7 @@ export function TransactionEditor({
   events = [],
   customCategories = [],
   canCreateCategory = false,
+  canRememberRule = false,
   onCreateCategory,
   onRequirePremium,
 }: TransactionEditorProps) {
@@ -377,7 +379,12 @@ export function TransactionEditor({
               accessibilityState={{ checked: rememberCategory }}
               onPress={() => {
                 selectionChanged();
-                setRememberCategory((current) => !current);
+
+                if (canRememberRule) {
+                  setRememberCategory((current) => !current);
+                } else {
+                  onRequirePremium?.();
+                }
               }}
               style={({ pressed }) => [styles.remember, pressed ? styles.pressed : null]}
             >

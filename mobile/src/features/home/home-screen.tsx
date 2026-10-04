@@ -77,6 +77,7 @@ import {
   previousPeriodWindow,
   type SpendingPeriod,
 } from '@/features/spending-overview/periods';
+import { PrivacyShield } from '@/features/privacy/privacy-shield';
 import {
   periodChange,
   summarizeSpending,
@@ -197,7 +198,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   const { confirmPermission: confirmMonthlySummaryPermission } = monthlySummaryReminder;
   const [eventsSheetTarget, setEventsSheetTarget] = useState<string | null>(null);
   const [summaryMonthKey, setSummaryMonthKey] = useState<string | null>(null);
-  const { remember, rules } = useCategorizationRules();
+  const { assignMerchant, forget: forgetMerchant, remember, rules } = useCategorizationRules();
   const hasPremiumAccess = premium === undefined || premium.isPremium;
   const periodLocks = useMemo(() => lockedPeriods(hasPremiumAccess), [hasPremiumAccess]);
   const period = periodLocks.has(requestedPeriod) ? fallbackPeriod : requestedPeriod;
@@ -307,6 +308,29 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   );
   const openReport = useCallback(() => openMonthlySummary(null), [openMonthlySummary]);
   const requireCategoryPremium = useCallback(() => openPremium('category'), [openPremium]);
+  const assignCategoryMerchant = useCallback(
+    async (merchantKey: string, merchantName: string, category: string) => {
+      if (premium?.isPremium !== true) {
+        requireCategoryPremium();
+        return false;
+      }
+
+      await assignMerchant(merchantKey, merchantName, category);
+      return true;
+    },
+    [assignMerchant, premium?.isPremium, requireCategoryPremium],
+  );
+  const rememberCategoryRule = useCallback(
+    async (merchantLabel: string, category: string) => {
+      if (premium?.isPremium !== true) {
+        requireCategoryPremium();
+        return;
+      }
+
+      await remember(merchantLabel, category);
+    },
+    [premium?.isPremium, remember, requireCategoryPremium],
+  );
 
   const {
     lockReason,
@@ -669,12 +693,13 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
             isLoading={isLoading}
             onChanged={refresh}
             onCreateAccount={financialAccounts.create}
-            onRememberRule={remember}
+            onRememberRule={rememberCategoryRule}
             records={records}
             rules={rules}
             events={spendingEvents.events}
             customCategories={customCategories.categories}
             canCreateCategory={canCreateCustomCategory(hasPremiumAccess)}
+            canRememberRule={premium?.isPremium === true}
             onCreateCategory={customCategories.create}
             onRequirePremium={requireCategoryPremium}
           />
@@ -811,13 +836,18 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
           <CaptureHealthScreen onClose={() => setActiveSheet(null)} records={records} />
         ) : activeSheet === 'categories' ? (
           <CustomCategoriesScreen
+            canAssignMerchant={premium?.isPremium === true}
             canCreate={canCreateCustomCategory(hasPremiumAccess)}
             categories={customCategories.categories}
+            onAssignMerchant={assignCategoryMerchant}
             onClose={() => setActiveSheet(null)}
             onCreate={customCategories.create}
             onDelete={customCategories.remove}
+            onForgetMerchant={forgetMerchant}
             onRename={customCategories.rename}
             onRequirePremium={requireCategoryPremium}
+            records={countedRecords}
+            rules={rules}
           />
         ) : (
           <AlertsScreen
@@ -827,6 +857,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
             onEdit={(rule) => setAlertEditor({ scope: rule.scope, rule })}
           />
         )}
+        <PrivacyShield />
       </Modal>
 
       <Modal
@@ -838,6 +869,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
         {widgetPreviewProps !== null ? (
           <WidgetPreview onClose={closeWidgetPreview} props={widgetPreviewProps} />
         ) : null}
+        <PrivacyShield />
       </Modal>
     </View>
   );
