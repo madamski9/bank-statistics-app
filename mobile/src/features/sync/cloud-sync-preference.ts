@@ -1,6 +1,8 @@
 import * as SecureStore from 'expo-secure-store';
 import { useSyncExternalStore } from 'react';
 
+import { waitForActiveSync } from './sync-activity';
+
 const storageKey = 'bankstats.sync.cloud-enabled.v1';
 const deviceOnly: SecureStore.SecureStoreOptions = {
   keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
@@ -43,9 +45,17 @@ export function useCloudSyncEnabled(): Preference {
   return useSyncExternalStore(subscribe, () => current);
 }
 
+export function isCloudSyncEnabledNow(): boolean {
+  return current === true;
+}
+
 export async function setCloudSyncEnabled(isEnabled: boolean): Promise<void> {
   await SecureStore.setItemAsync(storageKey, isEnabled ? 'true' : 'false', deviceOnly);
   publish(isEnabled);
+
+  if (!isEnabled) {
+    await waitForActiveSync();
+  }
 }
 
 export async function clearCloudSyncPreference(): Promise<void> {

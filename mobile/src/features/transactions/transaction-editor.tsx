@@ -1,4 +1,3 @@
-import { maximumTextLength } from '@bankstats/convex/convex/changeRules';
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { useCallback, useState } from 'react';
 import {
@@ -26,7 +25,7 @@ import { customCategoriesCopy } from '@/features/classification/custom-categorie
 import { customCategoryNameError } from '@/features/classification/custom-category';
 import { eventsCopy } from '@/features/events/events-copy';
 import { noEventId, sortedEvents, type SpendingEvent } from '@/features/events/spending-event';
-import { NamePrompt } from '@/features/sheets/name-prompt';
+import { NamePrompt } from '@/features/app-shell/name-prompt';
 import { AccountPicker } from '@/features/financial-accounts/account-picker';
 import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
@@ -285,7 +284,6 @@ export function TransactionEditor({
         <View style={styles.card}>
           <EditorField
             label={copy.name}
-            maxLength={maximumTextLength}
             onChangeText={(name) => update({ name })}
             placeholder={copy.namePlaceholder}
             value={draft.name}
@@ -500,7 +498,6 @@ interface EditorFieldProps {
   value: string;
   placeholder: string;
   keyboardType?: 'default' | 'numbers-and-punctuation';
-  maxLength?: number;
   onChangeText: (value: string) => void;
 }
 
@@ -509,7 +506,6 @@ function EditorField({
   value,
   placeholder,
   keyboardType = 'default',
-  maxLength,
   onChangeText,
 }: EditorFieldProps) {
   return (
@@ -521,7 +517,6 @@ function EditorField({
         accessibilityLabel={label}
         autoCorrect={false}
         keyboardType={keyboardType}
-        maxLength={maxLength}
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={overviewColors.textDisabled}

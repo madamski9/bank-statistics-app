@@ -4,9 +4,9 @@ export const capturedBanks = ['millennium', 'pko'] as const;
 
 export type CapturedBank = (typeof capturedBanks)[number];
 
-export type CaptureState = 'working' | 'attention' | 'unconfigured';
+export type CaptureState = 'working' | 'attention' | 'unverified' | 'unconfigured';
 
-export type AttentionReason = 'neverRan' | 'recentFailure' | 'quiet';
+export type AttentionReason = 'neverRan' | 'recentFailure' | 'staleEvidence';
 
 export interface BankCaptureHealth {
   bank: CapturedBank;
@@ -32,7 +32,7 @@ export interface CaptureHealth {
 
 const dayMs = 86_400_000;
 const syntheticMerchant = 'SKLEP TEST';
-export const quietAfterDays = 30;
+const evidenceFreshnessDays = 30;
 const failureMemoryDays = 7;
 
 function timestamp(value: string | null | undefined): number | null {
@@ -79,38 +79,47 @@ export function captureHealth({
     lastFailureAt: diagnostics?.lastFailureAt ?? null,
     lastFailureReason: diagnostics?.lastFailureReason ?? null,
   };
-  const lastFailureMs = timestamp(automation.lastFailureAt);
-  const hasEverRun = automation.lastRunAt !== null;
+  const lastAttemptMs = timestamp(automation.lastRunAt);
+  const selectedBanks = capturedBanks.filter((bank) => enabledBanks.includes(bank));
 
   const banks = capturedBanks.map((bank): BankCaptureHealth => {
     const lastCaptureAt = latestCapture(records, bank);
     const lastCaptureMs = timestamp(lastCaptureAt);
     const isEnabled = enabledBanks.includes(bank);
     const base = { bank, isEnabled, lastCaptureAt };
+    const canAttributeAttempt = selectedBanks.length === 1 && selectedBanks[0] === bank;
+    const hasRecentAttempt =
+      canAttributeAttempt &&
+      lastAttemptMs !== null &&
+      now.getTime() - lastAttemptMs <= evidenceFreshnessDays * dayMs;
 
     if (!isEnabled && lastCaptureMs === null) {
       return { ...base, state: 'unconfigured', reason: null };
     }
 
     if (
-      lastFailureMs !== null &&
-      now.getTime() - lastFailureMs <= failureMemoryDays * dayMs &&
-      (lastCaptureMs === null || lastFailureMs > lastCaptureMs)
+      hasRecentAttempt &&
+      automation.lastOutcome === 'failure' &&
+      lastAttemptMs !== null &&
+      now.getTime() - lastAttemptMs <= failureMemoryDays * dayMs &&
+      (lastCaptureMs === null || lastAttemptMs > lastCaptureMs)
     ) {
       return { ...base, state: 'attention', reason: 'recentFailure' };
     }
 
-    if (lastCaptureMs === null) {
-      return hasEverRun
-        ? { ...base, state: 'working', reason: null }
-        : { ...base, state: 'attention', reason: 'neverRan' };
+    if (
+      (lastCaptureMs !== null && now.getTime() - lastCaptureMs <= evidenceFreshnessDays * dayMs) ||
+      (hasRecentAttempt &&
+        (automation.lastOutcome === 'success' || automation.lastOutcome === 'ignored'))
+    ) {
+      return { ...base, state: 'working', reason: null };
     }
 
-    if (now.getTime() - lastCaptureMs > quietAfterDays * dayMs) {
-      return { ...base, state: 'attention', reason: 'quiet' };
-    }
-
-    return { ...base, state: 'working', reason: null };
+    return {
+      ...base,
+      state: 'unverified',
+      reason: lastCaptureMs === null ? 'neverRan' : 'staleEvidence',
+    };
   });
 
   return { banks, automation, needsAttention: banks.some((bank) => bank.state === 'attention') };

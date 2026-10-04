@@ -4,9 +4,9 @@ const storageKey = 'bankstats.monthly-summary.reminder.v1';
 
 export async function readMonthlySummaryReminder(): Promise<boolean> {
   try {
-    return (await SecureStore.getItemAsync(storageKey)) === 'true';
+    return (await SecureStore.getItemAsync(storageKey)) !== 'false';
   } catch {
-    return false;
+    return true;
   }
 }
 

@@ -118,7 +118,13 @@ function NamePromptCard({
             {isSaving ? (
               <ActivityIndicator color={overviewColors.background} />
             ) : (
-              <Text maxFontSizeMultiplier={1.4} style={styles.confirmLabel}>
+              <Text
+                adjustsFontSizeToFit
+                maxFontSizeMultiplier={1.4}
+                minimumFontScale={0.8}
+                numberOfLines={1}
+                style={styles.confirmLabel}
+              >
                 {confirmLabel}
               </Text>
             )}
@@ -176,6 +182,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 12,
     borderRadius: 14,
     backgroundColor: overviewColors.surfacePressed,
   },
@@ -183,11 +190,13 @@ const styles = StyleSheet.create({
     backgroundColor: overviewColors.textPrimary,
   },
   cancelLabel: {
+    textAlign: 'center',
     fontSize: 15,
     fontWeight: '600',
     color: overviewColors.textPrimary,
   },
   confirmLabel: {
+    textAlign: 'center',
     fontSize: 15,
     fontWeight: '700',
     color: overviewColors.background,

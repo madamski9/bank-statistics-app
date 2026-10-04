@@ -1,75 +1,206 @@
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  ReduceMotion,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 
-import { bubbleTints, overviewColors } from '@/features/spending-overview/overview-theme';
+import { reportingCurrency } from '@/features/currency-conversion/exchange-rate';
+import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
+import { overviewColors } from '@/features/spending-overview/overview-theme';
 
-const plotHeight = 120;
+import type { DailyCategorySeries } from './monthly-summary';
+import { reportSeriesColors } from './report-colors';
+
+const plotHeight = 176;
 const minimumBarHeight = 3;
-const labelledDays = [1, 8, 15, 22, 29];
+const barStaggerMs = 14;
+const barSpring = { duration: 520, dampingRatio: 0.82, reduceMotion: ReduceMotion.System };
 
 interface DailySpendBarsProps {
   dailyExpensesMinor: number[];
+  dailyCategories: DailyCategorySeries[];
   elapsedDays: number;
   averageMinor: number;
   averageLabel: string;
+  otherLabel: string;
   accessibilityLabel: string;
+}
+
+interface StackedBarProps {
+  index: number;
+  height: number;
+  segments: { key: string; fraction: number; color: string }[];
+}
+
+function StackedBar({ index, height, segments }: StackedBarProps) {
+  const growth = useSharedValue(0);
+
+  useEffect(() => {
+    growth.set(withDelay(index * barStaggerMs, withSpring(1, barSpring)));
+  }, [growth, index]);
+
+  const growthStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleY: growth.get() }],
+  }));
+
+  return (
+    <Animated.View style={[styles.stack, { height }, growthStyle]}>
+      {segments.map((segment) => (
+        <View
+          key={segment.key}
+          style={{ height: `${segment.fraction * 100}%`, backgroundColor: segment.color }}
+        />
+      ))}
+    </Animated.View>
+  );
+}
+
+function axisDaysFor(dayCount: number): number[] {
+  return [1, 8, 15, 22, dayCount].filter((day, position, days) =>
+    position === days.length - 1 || dayCount - day >= 4,
+  );
 }
 
 export function DailySpendBars({
   dailyExpensesMinor,
+  dailyCategories,
   elapsedDays,
   averageMinor,
   averageLabel,
+  otherLabel,
   accessibilityLabel,
 }: DailySpendBarsProps) {
+  const { formatCompactAmount } = useAmountFormatting();
+  const mainSeries = dailyCategories.slice(0, 3);
+  const remaining = dailyCategories.slice(3);
+  const series = remaining.length === 0
+    ? mainSeries
+    : [
+        ...mainSeries,
+        {
+          key: 'other',
+          name: otherLabel,
+          totalMinor: remaining.reduce((total, group) => total + group.totalMinor, 0),
+          dailyMinor: dailyExpensesMinor.map((_, day) =>
+            remaining.reduce((total, group) => total + (group.dailyMinor[day] ?? 0), 0),
+          ),
+        },
+      ];
   const peakMinor = Math.max(...dailyExpensesMinor, averageMinor, 1);
   const averageOffset = (averageMinor / peakMinor) * plotHeight;
+  const dayCount = dailyExpensesMinor.length;
+  const axisDays = axisDaysFor(dayCount);
+  const averageReveal = useSharedValue(0);
+
+  useEffect(() => {
+    averageReveal.set(0);
+    averageReveal.set(
+      withDelay(
+        Math.min(dayCount * barStaggerMs, 420) + 120,
+        withTiming(1, { duration: 320, reduceMotion: ReduceMotion.System }),
+      ),
+    );
+  }, [averageReveal, averageMinor, dayCount]);
+
+  const averageStyle = useAnimatedStyle(() => ({
+    opacity: averageReveal.get(),
+    transform: [{ scaleX: averageReveal.get() }],
+  }));
+
+  const averageLabelStyle = useAnimatedStyle(() => ({
+    opacity: averageReveal.get(),
+  }));
+  const valueTicks = [plotHeight, plotHeight / 2].filter(
+    (offset) => averageMinor <= 0 || Math.abs(offset - averageOffset) >= 14,
+  );
 
   return (
     <View accessibilityLabel={accessibilityLabel} accessible style={styles.chart}>
-      <View style={styles.plot}>
-        {[0.5, 1].map((fraction) => (
-          <View key={fraction} style={[styles.gridLine, { bottom: fraction * plotHeight }]} />
-        ))}
-        <View style={styles.bars}>
-          {dailyExpensesMinor.map((totalMinor, index) => {
-            const isFuture = index >= elapsedDays;
+      <View style={styles.plotRow}>
+        <View style={styles.plot}>
+          <View style={[styles.gridLine, { bottom: plotHeight }]} />
+          <View style={[styles.gridLine, { bottom: plotHeight / 2 }]} />
+          <View style={[styles.baseline, { bottom: 0 }]} />
+          <View style={styles.bars}>
+            {dailyExpensesMinor.map((totalMinor, index) => {
+              const isFuture = index >= elapsedDays;
 
-            return (
-              <View key={index} style={styles.column}>
-                <View
-                  style={[
-                    styles.bar,
-                    isFuture
-                      ? styles.futureBar
-                      : totalMinor > 0
-                        ? {
-                            height: Math.max((totalMinor / peakMinor) * plotHeight, minimumBarHeight),
-                            backgroundColor: bubbleTints.expense.film,
-                          }
-                        : styles.emptyBar,
-                  ]}
-                />
-              </View>
-            );
-          })}
-        </View>
-        {averageMinor > 0 ? (
-          <View pointerEvents="none" style={[styles.averageLine, { bottom: averageOffset }]}>
-            <View style={styles.averageDash} />
-            <Text maxFontSizeMultiplier={1.2} style={styles.averageLabel}>
-              {averageLabel}
-            </Text>
+              if (isFuture || totalMinor === 0) {
+                return <View key={index} style={styles.column} />;
+              }
+
+              const height = Math.max((totalMinor / peakMinor) * plotHeight, minimumBarHeight);
+              const segments = series
+                .map((group, seriesIndex) => ({
+                  key: group.key,
+                  fraction: (group.dailyMinor[index] ?? 0) / totalMinor,
+                  color: reportSeriesColors[seriesIndex] ?? overviewColors.textSecondary,
+                }))
+                .filter((segment) => segment.fraction > 0);
+
+              return (
+                <View key={index} style={styles.column}>
+                  <StackedBar height={height} index={index} segments={segments} />
+                </View>
+              );
+            })}
           </View>
-        ) : null}
+          {averageMinor > 0 ? (
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.averageLine, { bottom: averageOffset }, averageStyle]}
+            >
+              <View style={styles.averageDash} />
+            </Animated.View>
+          ) : null}
+        </View>
+        <View style={styles.valueAxis}>
+          {valueTicks.map((offset) => (
+            <Text
+              adjustsFontSizeToFit
+              key={offset}
+              maxFontSizeMultiplier={1.1}
+              numberOfLines={1}
+              style={[styles.valueLabel, { bottom: offset - 7 }]}
+            >
+              {formatCompactAmount(Math.round((offset / plotHeight) * peakMinor), reportingCurrency)}
+            </Text>
+          ))}
+          {averageMinor > 0 ? (
+            <Animated.Text
+              maxFontSizeMultiplier={1.1}
+              numberOfLines={1}
+              style={[styles.valueLabel, styles.averageLabel, { bottom: averageOffset - 7 }, averageLabelStyle]}
+            >
+              {averageLabel}
+            </Animated.Text>
+          ) : null}
+        </View>
       </View>
-      <View style={styles.axis}>
-        {dailyExpensesMinor.map((_, index) => (
-          <View key={index} style={styles.column}>
-            {labelledDays.includes(index + 1) ? (
-              <Text maxFontSizeMultiplier={1.2} numberOfLines={1} style={styles.axisLabel}>
-                {index + 1}
-              </Text>
-            ) : null}
+      <View style={styles.dayAxis}>
+        {axisDays.map((day) => (
+          <Text
+            key={day}
+            maxFontSizeMultiplier={1.2}
+            numberOfLines={1}
+            style={[styles.dayLabel, { left: `${((day - 0.5) / Math.max(dayCount, 1)) * 100}%` }]}
+          >
+            {day}
+          </Text>
+        ))}
+      </View>
+      <View style={styles.legend}>
+        {series.map((group, index) => (
+          <View key={group.key} style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: reportSeriesColors[index] }]} />
+            <Text maxFontSizeMultiplier={1.2} numberOfLines={1} style={styles.legendLabel}>
+              {group.name}
+            </Text>
           </View>
         ))}
       </View>
@@ -77,75 +208,71 @@ export function DailySpendBars({
   );
 }
 
+const valueAxisWidth = 52;
+const dayLabelWidth = 28;
+
 const styles = StyleSheet.create({
-  chart: {
-    gap: 6,
-  },
-  plot: {
-    height: plotHeight,
-    justifyContent: 'flex-end',
-  },
+  chart: { gap: 8 },
+  plotRow: { flexDirection: 'row', gap: 8 },
+  plot: { flex: 1, height: plotHeight, justifyContent: 'flex-end' },
   gridLine: {
     position: 'absolute',
     left: 0,
     right: 0,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: overviewColors.hairline,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: overviewColors.hairline,
   },
-  bars: {
-    height: '100%',
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 2,
+  baseline: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: overviewColors.textDisabled,
   },
-  column: {
-    flex: 1,
-    height: '100%',
-    justifyContent: 'flex-end',
-    overflow: 'visible',
-  },
-  bar: {
+  bars: { height: '100%', flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
+  column: { flex: 1, height: '100%', justifyContent: 'flex-end' },
+  stack: {
     width: '100%',
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-  },
-  emptyBar: {
-    height: minimumBarHeight,
-    backgroundColor: overviewColors.surfacePressed,
-  },
-  futureBar: {
-    height: minimumBarHeight,
-    backgroundColor: overviewColors.surface,
+    flexDirection: 'column-reverse',
+    overflow: 'hidden',
+    borderTopLeftRadius: 3,
+    borderTopRightRadius: 3,
+    transformOrigin: 'bottom',
   },
   averageLine: {
     position: 'absolute',
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    transform: [{ translateY: 7 }],
+    transformOrigin: 'left',
   },
   averageDash: {
-    flex: 1,
     borderTopWidth: 1,
     borderStyle: 'dashed',
     borderColor: overviewColors.positive,
   },
-  averageLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: overviewColors.positive,
-  },
-  axis: {
-    height: 14,
-    flexDirection: 'row',
-    gap: 2,
-  },
-  axisLabel: {
-    width: 24,
-    fontSize: 11,
+  valueAxis: { width: valueAxisWidth, height: plotHeight },
+  valueLabel: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    fontSize: 10,
+    lineHeight: 14,
     color: overviewColors.textSecondary,
     fontVariant: ['tabular-nums'],
   },
+  averageLabel: { fontWeight: '700', color: overviewColors.positive },
+  dayAxis: { marginRight: valueAxisWidth + 8, height: 14 },
+  dayLabel: {
+    position: 'absolute',
+    width: dayLabelWidth,
+    marginLeft: -dayLabelWidth / 2,
+    textAlign: 'center',
+    fontSize: 10,
+    color: overviewColors.textSecondary,
+    fontVariant: ['tabular-nums'],
+  },
+  legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 6, paddingTop: 4 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: '48%' },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendLabel: { flexShrink: 1, fontSize: 12, color: overviewColors.textSecondary },
 });

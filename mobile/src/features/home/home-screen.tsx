@@ -43,7 +43,6 @@ import { useCategorizationRules } from '@/features/classification/use-categoriza
 import { useCustomCategories } from '@/features/classification/use-custom-categories';
 import { CaptureHealthScreen } from '@/features/capture-health/capture-health-screen';
 import { useCurrencyConversion } from '@/features/currency-conversion/use-currency-conversion';
-import { summarizeEvent } from '@/features/events/event-summary';
 import { EventsScreen } from '@/features/events/events-screen';
 import { activeEvent } from '@/features/events/spending-event';
 import { useEvents } from '@/features/events/use-events';
@@ -62,7 +61,6 @@ import { useDismissedSubscriptions } from '@/features/subscriptions/use-dismisse
 import { DataScreen } from '@/features/account-data/data-screen';
 import { accountInitial } from '@/features/profile/account-identity';
 import { OverviewScreen } from '@/features/overview/overview-screen';
-import { expenseRhythm } from '@/features/overview/spending-rhythm';
 import { BubbleDetail } from '@/features/spending-overview/bubble-detail';
 import {
   bubbleSelectionReducer,
@@ -194,11 +192,12 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   });
   useCurrencyConversion(records, refresh);
   const dismissedSubscriptions = useDismissedSubscriptions();
-  const monthlySummaryReminder = useMonthlySummaryReminder();
+  const premium = usePremium();
+  const monthlySummaryReminder = useMonthlySummaryReminder(premium?.isPremium);
+  const { confirmPermission: confirmMonthlySummaryPermission } = monthlySummaryReminder;
   const [eventsSheetTarget, setEventsSheetTarget] = useState<string | null>(null);
   const [summaryMonthKey, setSummaryMonthKey] = useState<string | null>(null);
   const { remember, rules } = useCategorizationRules();
-  const premium = usePremium();
   const hasPremiumAccess = premium === undefined || premium.isPremium;
   const periodLocks = useMemo(() => lockedPeriods(hasPremiumAccess), [hasPremiumAccess]);
   const period = periodLocks.has(requestedPeriod) ? fallbackPeriod : requestedPeriod;
@@ -245,10 +244,6 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
     () => spendingTrend(countedRecords, summary.currency, spendWindow, period),
     [countedRecords, period, spendWindow, summary.currency],
   );
-  const rhythm = useMemo(
-    () => expenseRhythm(countedRecords, summary.currency, spendWindow, period),
-    [countedRecords, period, spendWindow, summary.currency],
-  );
   const previousSummary = useMemo(
     () =>
       previousWindow === null
@@ -284,20 +279,13 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
     [countedRecords, insightsNow, monthlyLimitTarget, recurringPayments],
   );
   const runningEvent = useMemo(() => activeEvent(spendingEvents.events), [spendingEvents.events]);
-  const runningEventSummary = useMemo(
-    () =>
-      runningEvent === null
-        ? null
-        : summarizeEvent(countedRecords, runningEvent, spendingEvents.events, rules, insightsNow),
-    [countedRecords, insightsNow, rules, runningEvent, spendingEvents.events],
-  );
   const recurringMonthlyMinor = useMemo(() => monthlyRecurringCost(recurringPayments), [recurringPayments]);
   const recurringCount = useMemo(
     () => recurringPayments.filter((payment) => payment.isActive).length,
     [recurringPayments],
   );
   const reportMonth = shiftMonth(monthOf(insightsNow), -1).month;
-  const isReportLocked = !canOpenMonthlyReport(hasPremiumAccess);
+  const isReportLocked = premium?.isPremium !== true;
   const openEvents = useCallback(() => {
     setEventsSheetTarget(runningEvent?.id ?? null);
     setActiveSheet('events');
@@ -306,41 +294,56 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   const openForecast = useCallback(() => setActiveSheet('forecast'), []);
   const openMonthlySummary = useCallback(
     (month: string | null = null) => {
-      if (!canOpenMonthlyReport(hasPremiumAccess)) {
+      if (!canOpenMonthlyReport(premium?.isPremium === true)) {
         openPremium('report');
         return;
       }
 
+      void confirmMonthlySummaryPermission();
       setSummaryMonthKey(month);
       setActiveSheet('monthlySummary');
     },
-    [hasPremiumAccess, openPremium],
+    [confirmMonthlySummaryPermission, openPremium, premium?.isPremium],
   );
   const openReport = useCallback(() => openMonthlySummary(null), [openMonthlySummary]);
   const requireCategoryPremium = useCallback(() => openPremium('category'), [openPremium]);
 
-  const openMonthlySummaryRef = useRef(openMonthlySummary);
+  const {
+    lockReason,
+    settings: privacySettings,
+    widgetRevealedUntilMs,
+    isWidgetPreviewOpen,
+    closeWidgetPreview,
+  } = usePrivacy();
+  const isUnlocked = lockReason === null;
 
   useEffect(() => {
-    openMonthlySummaryRef.current = openMonthlySummary;
-  }, [openMonthlySummary]);
+    if (premium === undefined || !isUnlocked) {
+      return;
+    }
 
-  useEffect(() => {
+    let isActive = true;
     const openFromNotification = (response: Notifications.NotificationResponse | null) => {
       const month = summaryMonthFromNotification(response);
 
       if (month !== null) {
-        openMonthlySummaryRef.current(month);
+        Notifications.clearLastNotificationResponse();
+        openMonthlySummary(month);
       }
     };
 
-    openFromNotification(Notifications.getLastNotificationResponse());
+    Promise.resolve().then(() => {
+      if (isActive) {
+        openFromNotification(Notifications.getLastNotificationResponse());
+      }
+    });
     const subscription = Notifications.addNotificationResponseReceivedListener(openFromNotification);
 
-    return () => subscription.remove();
-  }, []);
-  const { settings: privacySettings, widgetRevealedUntilMs, isWidgetPreviewOpen, closeWidgetPreview } =
-    usePrivacy();
+    return () => {
+      isActive = false;
+      subscription.remove();
+    };
+  }, [isUnlocked, openMonthlySummary, premium]);
   const widgetPrivacy = useMemo(
     () => ({ isBlurred: privacySettings.isWidgetBlurred, revealedUntilMs: widgetRevealedUntilMs }),
     [privacySettings.isWidgetBlurred, widgetRevealedUntilMs],
@@ -641,7 +644,6 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
         <View style={{ width }}>
           <OverviewScreen
             error={error}
-            activeEvent={runningEventSummary}
             expenseChange={expenseChange}
             forecast={forecast}
             hasData={records.length > 0}
@@ -649,7 +651,6 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
             isReportLocked={isReportLocked}
             lockedPeriods={periodLocks}
             onChangePeriod={changePeriod}
-            onOpenEvents={openEvents}
             onOpenForecast={openForecast}
             onOpenRecurring={openRecurring}
             onOpenReport={openReport}
@@ -658,7 +659,6 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
             recurringCount={recurringCount}
             recurringMonthlyMinor={recurringMonthlyMinor}
             reportMonth={reportMonth}
-            rhythm={rhythm}
             summary={summary}
           />
         </View>
@@ -695,6 +695,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
         </View>
         <View style={{ width }}>
           <ProfileScreen
+            onOpenEvents={openEvents}
             onOpenAlerts={() => setActiveSheet('alerts')}
             onOpenCaptureHealth={() => setActiveSheet('captureHealth')}
             onOpenCategories={() => setActiveSheet('categories')}
@@ -793,6 +794,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
           <MonthlySummaryScreen
             events={spendingEvents.events}
             initialMonth={summaryMonthKey}
+            key={summaryMonthKey ?? 'latest'}
             onClose={() => setActiveSheet(null)}
             records={countedRecords}
             recurring={recurringPayments}

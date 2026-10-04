@@ -1,33 +1,42 @@
 import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 
-import { calendarCopy } from '@/features/localization/calendar-copy';
 import { currentCopy } from '@/features/localization/language';
 
-import { monthKey, monthOf, shiftMonth } from './monthly-summary';
+import { parseMonthKey } from './monthly-summary';
 import { monthlySummaryCopy } from './monthly-summary-copy';
-import { nextReminderDate } from './reminder-schedule';
+import { monthForReminder } from './reminder-month';
 
 export const monthlySummaryNotificationKind = 'monthlySummary';
 
 const reminderIdentifier = 'bankstats-monthly-summary';
+const reminderChannel = 'monthly-report';
 
-export async function scheduleMonthlySummaryReminder(now: Date): Promise<void> {
+export async function scheduleMonthlySummaryReminder(): Promise<void> {
   const copy = currentCopy(monthlySummaryCopy);
-  const reminderDate = nextReminderDate(now);
-  const summarized = shiftMonth(monthOf(reminderDate), -1);
-  const monthName = currentCopy(calendarCopy).monthNames[summarized.month] ?? '';
+
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync(reminderChannel, {
+      name: copy.notificationChannel,
+      importance: Notifications.AndroidImportance.DEFAULT,
+      sound: null,
+    });
+  }
 
   await Notifications.cancelScheduledNotificationAsync(reminderIdentifier);
   await Notifications.scheduleNotificationAsync({
     identifier: reminderIdentifier,
     content: {
-      title: copy.notificationTitle(monthName),
+      title: copy.notificationTitle,
       body: copy.notificationBody,
-      data: { kind: monthlySummaryNotificationKind, month: monthKey(summarized) },
+      data: { kind: monthlySummaryNotificationKind },
     },
     trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DATE,
-      date: reminderDate,
+      type: Notifications.SchedulableTriggerInputTypes.MONTHLY,
+      day: 1,
+      hour: 9,
+      minute: 0,
+      ...(Platform.OS === 'android' ? { channelId: reminderChannel } : {}),
     },
   });
 }
@@ -41,9 +50,13 @@ export function summaryMonthFromNotification(
 ): string | null {
   const data = response?.notification.request.content.data;
 
-  if (data?.kind !== monthlySummaryNotificationKind || typeof data.month !== 'string') {
+  if (data?.kind !== monthlySummaryNotificationKind || response === null) {
     return null;
   }
 
-  return data.month;
+  if (typeof data.month === 'string' && parseMonthKey(data.month) !== null) {
+    return data.month;
+  }
+
+  return monthForReminder(response.notification.date);
 }

@@ -2,7 +2,7 @@ import type { IngestionRecord } from '@bankstats/ingestion-native';
 import * as Linking from 'expo-linking';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
-import { SheetButton, SheetLayout, SheetRow, SheetSection } from '@/features/sheets/sheet-layout';
+import { SheetButton, SheetLayout, SheetRow, SheetSection } from '@/features/app-shell/sheet-layout';
 import { useCopy } from '@/features/localization/language';
 import { shortcutUrlFor } from '@/features/onboarding/shortcut-links';
 import { overviewColors } from '@/features/spending-overview/overview-theme';
@@ -20,6 +20,7 @@ interface CaptureHealthScreenProps {
 const stateTones = {
   working: 'positive',
   attention: 'caution',
+  unverified: 'muted',
   unconfigured: 'muted',
 } as const satisfies Record<CaptureState, 'positive' | 'caution' | 'muted'>;
 
@@ -68,7 +69,11 @@ export function CaptureHealthScreen({ records, onClose }: CaptureHealthScreenPro
           />
           {bank.state !== 'working' ? (
             <SheetRow
-              label={copy.setUp(copy.banks[bank.bank])}
+              label={
+                bank.state === 'unconfigured'
+                  ? copy.setUp(copy.banks[bank.bank])
+                  : copy.checkSetup(copy.banks[bank.bank])
+              }
               onPress={() => void Linking.openURL(shortcutUrlFor([bank.bank]))}
             />
           ) : null}

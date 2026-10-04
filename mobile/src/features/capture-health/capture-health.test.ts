@@ -42,16 +42,22 @@ describe('capture health', () => {
     expect(health.needsAttention).toBe(false);
   });
 
-  test('asks for attention when the automation for a chosen bank has never run', () => {
+  test('does not claim a chosen bank is broken without evidence', () => {
     const health = captureHealth({ records: [], diagnostics, enabledBanks: ['pko'], now });
 
-    expect(stateOf(health, 'pko')).toEqual(['attention', 'neverRan']);
+    expect(stateOf(health, 'pko')).toEqual(['unverified', 'neverRan']);
   });
 
   test('asks for attention after a recent failure newer than the last capture', () => {
     const health = captureHealth({
       records: [captured('millennium', '2026-09-20T10:00:00Z')],
-      diagnostics: { ...diagnostics, lastFailureAt: '2026-09-28T10:00:00Z', lastFailureReason: 'database' },
+      diagnostics: {
+        ...diagnostics,
+        lastAttemptAt: '2026-09-28T10:00:00Z',
+        lastAttemptOutcome: 'failure',
+        lastFailureAt: '2026-09-28T10:00:00Z',
+        lastFailureReason: 'database',
+      },
       enabledBanks: ['millennium'],
       now,
     });
@@ -70,7 +76,7 @@ describe('capture health', () => {
     expect(stateOf(health, 'millennium')).toEqual(['working', null]);
   });
 
-  test('points out a bank that has been quiet for a month', () => {
+  test('does not treat a month without transactions as a failure', () => {
     const health = captureHealth({
       records: [captured('pko', '2026-08-01T10:00:00Z')],
       diagnostics,
@@ -78,6 +84,40 @@ describe('capture health', () => {
       now,
     });
 
-    expect(stateOf(health, 'pko')).toEqual(['attention', 'quiet']);
+    expect(stateOf(health, 'pko')).toEqual(['unverified', 'staleEvidence']);
+  });
+
+  test('a successful run confirms the only enabled bank without a purchase', () => {
+    const health = captureHealth({
+      records: [],
+      diagnostics: { ...diagnostics, lastAttemptAt: '2026-09-29T10:00:00Z', lastAttemptOutcome: 'ignored' },
+      enabledBanks: ['pko'],
+      now,
+    });
+
+    expect(stateOf(health, 'pko')).toEqual(['working', null]);
+  });
+
+  test('a run of unknown bank does not verify both enabled banks', () => {
+    const health = captureHealth({
+      records: [captured('millennium', '2026-09-29T10:00:00Z')],
+      diagnostics: { ...diagnostics, lastAttemptAt: '2026-09-29T10:00:00Z', lastAttemptOutcome: 'success' },
+      enabledBanks: ['millennium', 'pko'],
+      now,
+    });
+
+    expect(stateOf(health, 'millennium')).toEqual(['working', null]);
+    expect(stateOf(health, 'pko')).toEqual(['unverified', 'neverRan']);
+  });
+
+  test('a recent successful run keeps a quiet bank verified', () => {
+    const health = captureHealth({
+      records: [captured('pko', '2026-08-01T10:00:00Z')],
+      diagnostics: { ...diagnostics, lastAttemptAt: '2026-09-29T10:00:00Z', lastAttemptOutcome: 'success' },
+      enabledBanks: ['pko'],
+      now,
+    });
+
+    expect(stateOf(health, 'pko')).toEqual(['working', null]);
   });
 });

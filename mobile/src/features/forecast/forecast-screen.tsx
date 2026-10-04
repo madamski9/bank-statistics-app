@@ -4,7 +4,7 @@ import { reportingCurrency } from '@/features/currency-conversion/exchange-rate'
 import { calendarCopy } from '@/features/localization/calendar-copy';
 import { useCopy, useLanguage } from '@/features/localization/language';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
-import { SheetLayout, SheetRow, SheetSection } from '@/features/sheets/sheet-layout';
+import { SheetLayout, SheetRow, SheetSection } from '@/features/app-shell/sheet-layout';
 import { formatChange } from '@/features/spending-overview/formatting';
 import { bubbleTints, overviewColors } from '@/features/spending-overview/overview-theme';
 import { formatDayHeading } from '@/features/transactions/format-date';
@@ -49,7 +49,7 @@ export function ForecastScreen({ forecast, awaitingConversion, onClose }: Foreca
   const notes = [
     forecast.isEarly ? copy.early : null,
     awaitingConversion > 0 ? copy.pendingConversion(awaitingConversion) : null,
-    copy.explanation,
+    copy.explanation(forecast.historicalMonthsUsed),
   ].filter((note): note is string => note !== null);
 
   return (
@@ -78,8 +78,8 @@ export function ForecastScreen({ forecast, awaitingConversion, onClose }: Foreca
         <SheetRow isFirst label={copy.spent} value={formatAmount(forecast.spentMinor, reportingCurrency)} />
         <SheetRow label={copy.left} value={copy.daysLeft(Math.floor(forecast.remainingDays))} />
         <SheetRow
-          label={copy.pace}
-          value={copy.perDay(formatCompactAmount(forecast.dailyPaceMinor, reportingCurrency))}
+          label={copy.expectedMore}
+          value={formatAmount(forecast.projectedVariableMinor, reportingCurrency)}
         />
         {forecast.upcomingRecurringCount > 0 ? (
           <SheetRow

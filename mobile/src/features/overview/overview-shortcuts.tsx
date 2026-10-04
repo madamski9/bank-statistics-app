@@ -1,8 +1,7 @@
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { reportingCurrency } from '@/features/currency-conversion/exchange-rate';
-import type { EventSummary } from '@/features/events/event-summary';
 import type { MonthForecast } from '@/features/forecast/month-forecast';
 import { calendarCopy } from '@/features/localization/calendar-copy';
 import { useCopy } from '@/features/localization/language';
@@ -14,7 +13,6 @@ import { overviewCopy } from './overview-copy';
 
 export interface OverviewShortcutsProps {
   forecast: MonthForecast;
-  activeEvent: EventSummary | null;
   recurringMonthlyMinor: number;
   recurringCount: number;
   reportMonth: number;
@@ -22,7 +20,6 @@ export interface OverviewShortcutsProps {
   onOpenForecast: () => void;
   onOpenReport: () => void;
   onOpenRecurring: () => void;
-  onOpenEvents: () => void;
 }
 
 interface ShortcutTileProps {
@@ -30,12 +27,12 @@ interface ShortcutTileProps {
   title: string;
   value: string;
   tint?: string;
-  badge?: string;
+  locked?: boolean;
   accessibilityLabel: string;
   onPress: () => void;
 }
 
-function ShortcutTile({ symbol, title, value, tint, badge, accessibilityLabel, onPress }: ShortcutTileProps) {
+function ShortcutTile({ symbol, title, value, tint, locked, accessibilityLabel, onPress }: ShortcutTileProps) {
   return (
     <Pressable
       accessibilityLabel={accessibilityLabel}
@@ -48,39 +45,31 @@ function ShortcutTile({ symbol, title, value, tint, badge, accessibilityLabel, o
     >
       <View style={styles.tileHeading}>
         <SymbolView name={symbol} size={15} tintColor={tint ?? overviewColors.textSecondary} />
-        <Text maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.tileTitle}>
-          {title}
-        </Text>
-      </View>
-      <View style={styles.tileValueRow}>
-        <Text
-          adjustsFontSizeToFit
-          maxFontSizeMultiplier={1.3}
-          numberOfLines={1}
-          style={[styles.tileValue, tint === undefined ? null : { color: tint }]}
-        >
-          {value}
-        </Text>
-        {badge !== undefined ? (
-          <View style={styles.badge}>
-            <SymbolView
-              name={{ ios: 'lock.fill', android: 'lock', web: 'lock' }}
-              size={10}
-              tintColor={overviewColors.caution}
-            />
-            <Text maxFontSizeMultiplier={1.2} style={styles.badgeLabel}>
-              {badge}
-            </Text>
-          </View>
+        {locked ? (
+          <SymbolView
+            name={{ ios: 'lock.fill', android: 'lock', web: 'lock' }}
+            size={12}
+            tintColor={overviewColors.caution}
+          />
         ) : null}
       </View>
+      <Text maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.tileTitle}>
+        {title}
+      </Text>
+      <Text
+        adjustsFontSizeToFit
+        maxFontSizeMultiplier={1.3}
+        numberOfLines={1}
+        style={[styles.tileValue, tint === undefined ? null : { color: tint }]}
+      >
+        {value}
+      </Text>
     </Pressable>
   );
 }
 
 export function OverviewShortcuts({
   forecast,
-  activeEvent,
   recurringMonthlyMinor,
   recurringCount,
   reportMonth,
@@ -88,28 +77,19 @@ export function OverviewShortcuts({
   onOpenForecast,
   onOpenReport,
   onOpenRecurring,
-  onOpenEvents,
 }: OverviewShortcutsProps) {
   const copy = useCopy(overviewCopy);
   const calendar = useCopy(calendarCopy);
   const { formatCompactAmount } = useAmountFormatting();
   const forecastValue = copy.forecastValue(formatCompactAmount(forecast.projectedMinor, reportingCurrency));
   const reportValue = calendar.monthNames[reportMonth] ?? '';
+  const recurringAmount = formatCompactAmount(recurringMonthlyMinor, reportingCurrency);
   const recurringValue =
     recurringCount === 0
       ? copy.recurringNone
-      : copy.recurringValue(formatCompactAmount(recurringMonthlyMinor, reportingCurrency));
-  const eventTitle = activeEvent === null ? copy.event : activeEvent.event.name;
-  const eventValue =
-    activeEvent === null ? copy.eventStart : formatCompactAmount(activeEvent.expenseMinor, reportingCurrency);
-
+      : copy.recurringValue(recurringAmount);
   return (
-    <ScrollView
-      accessibilityLabel={copy.shortcuts}
-      contentContainerStyle={styles.row}
-      horizontal
-      showsHorizontalScrollIndicator={false}
-    >
+    <View style={styles.row}>
       <ShortcutTile
         accessibilityLabel={copy.shortcutLabel(copy.forecast, forecastValue)}
         onPress={onOpenForecast}
@@ -122,10 +102,10 @@ export function OverviewShortcuts({
         accessibilityLabel={
           isReportLocked ? copy.lockedLabel(copy.report) : copy.shortcutLabel(copy.report, reportValue)
         }
-        badge={isReportLocked ? copy.premium : undefined}
+        locked={isReportLocked}
         onPress={onOpenReport}
         symbol={{ ios: 'chart.bar.fill', android: 'bar_chart', web: 'bar_chart' }}
-        title={copy.report}
+        title={copy.reportShort}
         value={reportValue}
       />
       <ShortcutTile
@@ -133,30 +113,24 @@ export function OverviewShortcuts({
         onPress={onOpenRecurring}
         symbol={{ ios: 'arrow.triangle.2.circlepath', android: 'autorenew', web: 'autorenew' }}
         title={copy.recurring}
-        value={recurringValue}
+        value={recurringCount === 0 ? recurringValue : recurringAmount}
       />
-      <ShortcutTile
-        accessibilityLabel={copy.shortcutLabel(eventTitle, eventValue)}
-        onPress={onOpenEvents}
-        symbol={{ ios: 'flag.fill', android: 'flag', web: 'flag' }}
-        tint={activeEvent === null ? undefined : overviewColors.positive}
-        title={eventTitle}
-        value={eventValue}
-      />
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
+    flexDirection: 'row',
     gap: overviewSpacing.tight,
-    paddingHorizontal: overviewSpacing.gutter,
   },
   tile: {
-    width: 148,
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    flex: 1,
+    minWidth: 0,
+    minHeight: 88,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     borderRadius: 18,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: overviewColors.hairline,
@@ -168,39 +142,19 @@ const styles = StyleSheet.create({
   tileHeading: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
+    height: 18,
   },
   tileTitle: {
-    flex: 1,
     fontSize: 12,
     fontWeight: '600',
     color: overviewColors.textSecondary,
   },
-  tileValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
   tileValue: {
-    flexShrink: 1,
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.3,
     color: overviewColors.textPrimary,
     fontVariant: ['tabular-nums'],
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 196, 107, 0.14)',
-  },
-  badgeLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: overviewColors.caution,
   },
 });

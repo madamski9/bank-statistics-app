@@ -22,10 +22,11 @@ import {
 import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
 import { encryptedAccountStorage } from '@/features/financial-accounts/encrypted-account-storage';
 
-import { useCloudSyncEnabled } from './cloud-sync-preference';
+import { isCloudSyncEnabledNow, useCloudSyncEnabled } from './cloud-sync-preference';
 import { encryptedLedgerStorage } from './encrypted-ledger-storage';
 import { loadInstallationId } from './installation-id';
 import { claimDevice, runSync, type SyncPorts } from './sync-runner';
+import { trackSyncRun } from './sync-activity';
 import type { SyncStatus } from './sync-status';
 
 const retryDelayMs = 30_000;
@@ -86,6 +87,11 @@ export function useCloudSync({
         }
 
         const id = await loadInstallationId();
+
+        if (!isActive || !isCloudSyncEnabledNow()) {
+          return;
+        }
+
         await convex.mutation(api.devices.register, { installationId: id, platform: 'ios' });
 
         if (isActive) {
@@ -104,7 +110,7 @@ export function useCloudSync({
   }, [convex, isAuthenticated, isSupported, registrationAttempt, userId]);
 
   const synchronize = useCallback(async () => {
-    if (!isReady || userId == null) {
+    if (!isReady || userId == null || !isCloudSyncEnabledNow()) {
       return;
     }
 
@@ -170,12 +176,12 @@ export function useCloudSync({
     try {
       do {
         isRerunNeeded.current = false;
-        const { pulled } = await runSync(ports);
+        const { pulled } = await trackSyncRun(runSync(ports));
 
         if (pulled > 0) {
           await onPulled();
         }
-      } while (isRerunNeeded.current);
+      } while (isRerunNeeded.current && isCloudSyncEnabledNow());
 
       setStatus({ state: 'synced', lastSyncedAt: Date.now() });
     } catch {

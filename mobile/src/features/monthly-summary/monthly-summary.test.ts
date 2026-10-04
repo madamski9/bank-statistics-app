@@ -1,7 +1,7 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { describe, expect, test } from 'bun:test';
 
-import { monthKey, parseMonthKey, summarizeMonth, summaryMonths } from './monthly-summary';
+import { compareMonths, monthKey, parseMonthKey, recordsForSummaryGroup, summarizeMonth, summaryMonths } from './monthly-summary';
 
 function entry(id: string, occurredAt: Date, amountMinor: number, direction: 'expense' | 'income' = 'expense'): IngestionRecord {
   return {
@@ -66,6 +66,7 @@ describe('monthly summary', () => {
     expect(summary.dailyExpensesMinor).toHaveLength(30);
     expect(summary.dailyExpensesMinor[1]).toBe(21_000);
     expect(summary.dailyExpensesMinor[19]).toBe(0);
+    expect(summary.dailyCategories[0]?.dailyMinor[1]).toBe(21_000);
     expect(summary.busiestDay).toEqual({ day: 14, totalMinor: 30_000 });
     expect(summary.noSpendDays).toBe(12);
     expect(summary.transactionsPerDay).toBeCloseTo(4 / 15);
@@ -75,10 +76,39 @@ describe('monthly summary', () => {
     expect(summary.merchants.map((group) => group.name)).toEqual(['Lidl', 'Żabka']);
   });
 
-  test('lists every month with activity, newest first, starting with the current one', () => {
+  test('keeps empty months in chronological order so a report opens its labelled month', () => {
     const records = [entry('Lidl', new Date(2026, 5, 3), 100), entry('Lidl', new Date(2026, 7, 3), 100)];
 
-    expect(summaryMonths(records, now).map(monthKey)).toEqual(['2026-09', '2026-08', '2026-06']);
+    expect(summaryMonths(records, now).map(monthKey)).toEqual(['2026-09', '2026-08', '2026-07', '2026-06']);
+    expect(summaryMonths([], now).map(monthKey)).toEqual(['2026-09', '2026-08']);
+    expect(summaryMonths([], now, { year: 2026, month: 5 }).map(monthKey)).toEqual([
+      '2026-09', '2026-08', '2026-07', '2026-06',
+    ]);
+  });
+
+  test('compares daily averages across calendar months including months with no spending', () => {
+    const records = [entry('Lidl', new Date(2026, 5, 3), 3_000), entry('Lidl', new Date(2026, 7, 3), 6_200)];
+    const comparison = compareMonths(records, { year: 2026, month: 8 }, now, 4);
+
+    expect(comparison.map((entry) => monthKey(entry.month))).toEqual(['2026-06', '2026-07', '2026-08', '2026-09']);
+    expect(comparison.map((entry) => entry.dailyAverageMinor)).toEqual([100, 0, 200, 0]);
+  });
+
+  test('limits a group detail to its store or category across comparison months', () => {
+    const records = [
+      entry('Lidl', new Date(2026, 8, 2), 2_000),
+      entry('Żabka', new Date(2026, 8, 3), 3_000),
+      entry('Lidl', new Date(2026, 7, 4), 4_000),
+      { ...entry('Lidl', new Date(2026, 7, 5), 5_000), category: 'shopping' },
+      entry('Lidl', new Date(2026, 2, 2), 6_000),
+    ];
+    const month = { year: 2026, month: 8 };
+    const lidl = recordsForSummaryGroup(records, month, [], 'merchant', 'lidl');
+    const groceries = recordsForSummaryGroup(records, month, [], 'category', 'groceries');
+
+    expect(lidl.map((record) => record.amountMinor)).toEqual([2_000, 5_000, 4_000]);
+    expect(groceries.map((record) => record.amountMinor)).toEqual([3_000, 2_000, 4_000]);
+    expect(compareMonths(lidl, month, now, 2).map((entry) => entry.dailyAverageMinor)).toEqual([290, 133]);
   });
 
   test('reads back only real month keys', () => {

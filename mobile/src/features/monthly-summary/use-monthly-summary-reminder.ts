@@ -1,3 +1,4 @@
+import * as Notifications from 'expo-notifications';
 import { useCallback, useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 
@@ -16,25 +17,46 @@ export interface MonthlySummaryReminder {
   isEnabled: boolean;
   isDenied: boolean;
   setEnabled: (isEnabled: boolean) => Promise<void>;
+  confirmPermission: () => Promise<void>;
 }
 
-export function useMonthlySummaryReminder(): MonthlySummaryReminder {
-  const [isEnabled, setIsEnabled] = useState(false);
+type PermissionState = 'granted' | 'undetermined' | 'denied';
+
+async function notificationPermission(): Promise<PermissionState> {
+  const current = await Notifications.getPermissionsAsync();
+
+  if (current.granted || current.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL) {
+    return 'granted';
+  }
+
+  return current.canAskAgain ? 'undetermined' : 'denied';
+}
+
+export function useMonthlySummaryReminder(isPremium: boolean | undefined): MonthlySummaryReminder {
+  const [isStored, setIsStored] = useState(true);
+  const [permission, setPermission] = useState<PermissionState>('undetermined');
   const [isDenied, setIsDenied] = useState(false);
 
   useEffect(() => {
+    if (isPremium === undefined) {
+      return;
+    }
+
     let isActive = true;
 
     const reschedule = () => {
-      void readMonthlySummaryReminder().then((stored) => {
+      void Promise.all([readMonthlySummaryReminder(), notificationPermission()]).then(([stored, state]) => {
         if (!isActive) {
           return;
         }
 
-        setIsEnabled(stored);
+        setIsStored(stored);
+        setPermission(state);
 
-        if (stored) {
-          void scheduleMonthlySummaryReminder(new Date()).catch(() => undefined);
+        if (stored && isPremium && state === 'granted') {
+          void scheduleMonthlySummaryReminder().catch(() => undefined);
+        } else if (stored && !isPremium) {
+          void cancelMonthlySummaryReminder().catch(() => undefined);
         }
       });
     };
@@ -50,25 +72,48 @@ export function useMonthlySummaryReminder(): MonthlySummaryReminder {
       isActive = false;
       subscription.remove();
     };
-  }, []);
+  }, [isPremium]);
 
   const setEnabled = useCallback(async (next: boolean) => {
+    if (isPremium !== true) {
+      return;
+    }
+
     if (next) {
       const isGranted = await requestAlertPermission();
       setIsDenied(!isGranted);
+      setPermission(isGranted ? 'granted' : 'denied');
 
       if (!isGranted) {
         return;
       }
 
-      await scheduleMonthlySummaryReminder(new Date());
+      await scheduleMonthlySummaryReminder();
     } else {
       await cancelMonthlySummaryReminder();
     }
 
     await writeMonthlySummaryReminder(next);
-    setIsEnabled(next);
-  }, []);
+    setIsStored(next);
+  }, [isPremium]);
 
-  return { isEnabled, isDenied, setEnabled };
+  const confirmPermission = useCallback(async () => {
+    if (isPremium !== true || !isStored || permission !== 'undetermined') {
+      return;
+    }
+
+    const isGranted = await requestAlertPermission();
+    setPermission(isGranted ? 'granted' : 'denied');
+
+    if (isGranted) {
+      await scheduleMonthlySummaryReminder().catch(() => undefined);
+    }
+  }, [isPremium, isStored, permission]);
+
+  return {
+    isEnabled: isStored && permission !== 'denied',
+    isDenied,
+    setEnabled,
+    confirmPermission,
+  };
 }

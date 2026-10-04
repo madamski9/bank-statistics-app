@@ -18,14 +18,11 @@ import type { SpendingSummary } from '@/features/spending-overview/spending-summ
 
 import { overviewCopy } from './overview-copy';
 import { OverviewShortcuts, type OverviewShortcutsProps } from './overview-shortcuts';
-import { SpendingRhythmCard } from './spending-rhythm-card';
-import { rhythmPeak, type ExpenseRhythm } from './spending-rhythm';
 
 const unavailableValue = '-';
 
 interface OverviewScreenProps extends OverviewShortcutsProps {
   summary: SpendingSummary;
-  rhythm: ExpenseRhythm;
   expenseChange: number | null;
   period: SpendingPeriod;
   onChangePeriod: (period: SpendingPeriod) => void;
@@ -38,7 +35,6 @@ interface OverviewScreenProps extends OverviewShortcutsProps {
 
 function OverviewScreenComponent({
   summary,
-  rhythm,
   expenseChange,
   period,
   onChangePeriod,
@@ -94,22 +90,6 @@ function OverviewScreenComponent({
     },
   ];
 
-  const bucketSize = rhythm.size;
-  const peak = rhythmPeak(rhythm.buckets);
-  const stats = [
-    { key: 'count', label: copy.transactions, value: String(summary.expenseCount + summary.incomeCount) },
-    {
-      key: 'peak',
-      label: copy.peak[bucketSize],
-      value: peak === null ? unavailableValue : amount(peak.totalMinor, true),
-    },
-    {
-      key: 'largest',
-      label: copy.topSource,
-      value: summary.largestExpense?.label ?? unavailableValue,
-    },
-  ];
-
   return (
     <View style={styles.page}>
       <View style={styles.header}>
@@ -152,12 +132,6 @@ function OverviewScreenComponent({
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <OverviewShortcuts {...shortcuts} />
-        <SpendingRhythmCard
-          bucketSize={bucketSize}
-          buckets={rhythm.buckets}
-          formatAverage={(minor) => amount(minor, true)}
-          stats={stats}
-        />
       </View>
     </View>
   );
@@ -193,7 +167,7 @@ const styles = StyleSheet.create({
     color: overviewColors.textSecondary,
   },
   footer: {
-    gap: overviewSpacing.section,
+    paddingHorizontal: overviewSpacing.gutter,
   },
   error: {
     paddingHorizontal: overviewSpacing.gutter,
