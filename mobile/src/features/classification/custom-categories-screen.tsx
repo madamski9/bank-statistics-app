@@ -20,11 +20,12 @@ interface CustomCategoriesScreenProps {
   records: IngestionRecord[];
   rules: CategorizationRule[];
   canCreate: boolean;
+  canAssignMerchant: boolean;
   onRequirePremium: () => void;
   onCreate: (name: string) => Promise<CustomCategory>;
   onRename: (id: string, name: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
-  onAssignMerchant: (merchantKey: string, merchantName: string, category: string) => Promise<void>;
+  onAssignMerchant: (merchantKey: string, merchantName: string, category: string) => Promise<boolean>;
   onForgetMerchant: (merchantKey: string) => Promise<void>;
   onClose: () => void;
 }
@@ -36,6 +37,7 @@ export function CustomCategoriesScreen({
   records,
   rules,
   canCreate,
+  canAssignMerchant,
   onRequirePremium,
   onCreate,
   onRename,
@@ -118,6 +120,7 @@ export function CustomCategoriesScreen({
     return (
       <>
         <CategoryDetailScreen
+          canAssign={canAssignMerchant}
           category={opened}
           merchants={merchants}
           onAssign={(merchant) => onAssignMerchant(merchant.key, merchant.name, opened.id)}
@@ -127,6 +130,7 @@ export function CustomCategoriesScreen({
           onRename={
             openedCustom === undefined ? undefined : () => setPrompt({ kind: 'rename', category: openedCustom })
           }
+          onRequirePremium={onRequirePremium}
           onUnassign={onForgetMerchant}
           rules={rules}
         />

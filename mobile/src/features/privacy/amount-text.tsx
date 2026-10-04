@@ -19,9 +19,11 @@ import {
 } from 'react-native';
 import Svg, { Defs, FeGaussianBlur, Filter, Text as SvgText } from 'react-native-svg';
 
+import { useCopy } from '@/features/localization/language';
 import { overviewColors } from '@/features/spending-overview/overview-theme';
 
 import { revealMaskedAmount, containsMaskedAmount } from './amount-masking';
+import { privacyCopy } from './privacy-copy';
 
 const NestedInText = createContext(false);
 const blurStrength = 0.42;
@@ -94,7 +96,8 @@ function splitLayout(style: TextProps['style']): { outer: ViewStyle; inner: Text
   return { outer: outer as ViewStyle, inner: inner as TextStyle };
 }
 
-export function AmountText({ children, style, onTextLayout, ...rest }: TextProps) {
+export function AmountText({ children, style, onTextLayout, accessibilityLabel, ...rest }: TextProps) {
+  const copy = useCopy(privacyCopy);
   const isNested = useContext(NestedInText);
   const filterId = `amount-blur-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
   const [lines, setLines] = useState<TextLayoutLine[]>([]);
@@ -102,7 +105,7 @@ export function AmountText({ children, style, onTextLayout, ...rest }: TextProps
 
   if (isNested || !hasMaskedAmount(children)) {
     return (
-      <Text onTextLayout={onTextLayout} style={style} {...rest}>
+      <Text accessibilityLabel={accessibilityLabel} onTextLayout={onTextLayout} style={style} {...rest}>
         {children}
       </Text>
     );
@@ -118,6 +121,9 @@ export function AmountText({ children, style, onTextLayout, ...rest }: TextProps
 
   return (
     <View
+      accessible
+      accessibilityLabel={copy.hiddenAmount}
+      accessibilityRole="text"
       onLayout={(event) => {
         const { width, height } = event.nativeEvent.layout;
 
@@ -127,52 +133,55 @@ export function AmountText({ children, style, onTextLayout, ...rest }: TextProps
       }}
       style={outer}
     >
-      <NestedInText.Provider value>
-        <Text
-          onTextLayout={(event) => {
-            setLines(event.nativeEvent.lines);
-            onTextLayout?.(event);
-          }}
-          style={[inner, styles.invisible]}
-          {...rest}
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <NestedInText.Provider value>
+          <Text
+            onTextLayout={(event) => {
+              setLines(event.nativeEvent.lines);
+              onTextLayout?.(event);
+            }}
+            style={[inner, styles.invisible]}
+            {...rest}
+            accessible={false}
+          >
+            {revealAmounts(children)}
+          </Text>
+        </NestedInText.Provider>
+        <Svg
+          height={canvasHeight}
+          pointerEvents="none"
+          style={[styles.halo, { top: -haloPadding, left: -haloPadding }]}
+          width={canvasWidth}
         >
-          {revealAmounts(children)}
-        </Text>
-      </NestedInText.Provider>
-      <Svg
-        height={canvasHeight}
-        pointerEvents="none"
-        style={[styles.halo, { top: -haloPadding, left: -haloPadding }]}
-        width={canvasWidth}
-      >
-        <Defs>
-          <Filter
-            filterUnits="userSpaceOnUse"
-            height={canvasHeight}
-            id={filterId}
-            width={canvasWidth}
-            x={0}
-            y={0}
-          >
-            <FeGaussianBlur stdDeviation={blurRadius} />
-          </Filter>
-        </Defs>
-        {lines.map((line, index) => (
-          <SvgText
-            fill={color}
-            filter={`url(#${filterId})`}
-            fontSize={Math.min(fontSize, line.height)}
-            fontWeight={inner.fontWeight}
-            key={index}
-            lengthAdjust="spacingAndGlyphs"
-            textLength={line.width}
-            x={line.x + haloPadding}
-            y={line.y + line.ascender + haloPadding}
-          >
-            {line.text}
-          </SvgText>
-        ))}
-      </Svg>
+          <Defs>
+            <Filter
+              filterUnits="userSpaceOnUse"
+              height={canvasHeight}
+              id={filterId}
+              width={canvasWidth}
+              x={0}
+              y={0}
+            >
+              <FeGaussianBlur stdDeviation={blurRadius} />
+            </Filter>
+          </Defs>
+          {lines.map((line, index) => (
+            <SvgText
+              fill={color}
+              filter={`url(#${filterId})`}
+              fontSize={Math.min(fontSize, line.height)}
+              fontWeight={inner.fontWeight}
+              key={index}
+              lengthAdjust="spacingAndGlyphs"
+              textLength={line.width}
+              x={line.x + haloPadding}
+              y={line.y + line.ascender + haloPadding}
+            >
+              {line.text}
+            </SvgText>
+          ))}
+        </Svg>
+      </View>
     </View>
   );
 }

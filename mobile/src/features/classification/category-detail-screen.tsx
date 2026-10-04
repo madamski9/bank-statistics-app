@@ -22,10 +22,12 @@ export interface CategoryDetailTarget {
 }
 
 interface CategoryDetailScreenProps {
+  canAssign: boolean;
   category: CategoryDetailTarget;
   merchants: HistoryMerchant[];
   rules: CategorizationRule[];
-  onAssign: (merchant: HistoryMerchant) => Promise<void>;
+  onAssign: (merchant: HistoryMerchant) => Promise<boolean>;
+  onRequirePremium: () => void;
   onUnassign: (merchantKey: string) => Promise<void>;
   onRename?: () => void;
   onDelete?: () => void;
@@ -61,10 +63,12 @@ function BackButton({ label, onPress }: BackButtonProps) {
 }
 
 export function CategoryDetailScreen({
+  canAssign,
   category,
   merchants,
   rules,
   onAssign,
+  onRequirePremium,
   onUnassign,
   onRename,
   onDelete,
@@ -138,9 +142,11 @@ export function CategoryDetailScreen({
                   label={merchant.name}
                   onPress={() => {
                     impactLight();
-                    void onAssign(merchant).then(() => {
-                      setQuery('');
-                      setIsPicking(false);
+                    void onAssign(merchant).then((saved) => {
+                      if (saved) {
+                        setQuery('');
+                        setIsPicking(false);
+                      }
                     });
                   }}
                 />
@@ -167,7 +173,11 @@ export function CategoryDetailScreen({
           {copy.shopsIntro}
         </Text>
 
-        <SheetButton label={copy.addShop} onPress={() => setIsPicking(true)} tone="primary" />
+        <SheetButton
+          label={copy.addShop}
+          onPress={() => (canAssign ? setIsPicking(true) : onRequirePremium())}
+          tone="primary"
+        />
 
         {assigned.length === 0 ? (
           <Text maxFontSizeMultiplier={1.5} style={styles.note}>

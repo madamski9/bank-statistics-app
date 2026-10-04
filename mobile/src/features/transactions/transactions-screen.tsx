@@ -54,6 +54,7 @@ interface TransactionsScreenProps {
   events: SpendingEvent[];
   customCategories: CustomCategory[];
   canCreateCategory: boolean;
+  canRememberRule: boolean;
   onCreateCategory: (name: string) => Promise<CustomCategory>;
   onRequirePremium: () => void;
 }
@@ -121,6 +122,7 @@ function TransactionsScreenComponent({
   events,
   customCategories,
   canCreateCategory,
+  canRememberRule,
   onCreateCategory,
   onRequirePremium,
 }: TransactionsScreenProps) {
@@ -351,6 +353,7 @@ function TransactionsScreenComponent({
           <TransactionEditor
             accounts={accounts}
             canCreateCategory={canCreateCategory}
+            canRememberRule={canRememberRule}
             customCategories={customCategories}
             events={events}
             isWriting={isWriting}

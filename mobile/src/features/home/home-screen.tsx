@@ -308,6 +308,29 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   );
   const openReport = useCallback(() => openMonthlySummary(null), [openMonthlySummary]);
   const requireCategoryPremium = useCallback(() => openPremium('category'), [openPremium]);
+  const assignCategoryMerchant = useCallback(
+    async (merchantKey: string, merchantName: string, category: string) => {
+      if (premium?.isPremium !== true) {
+        requireCategoryPremium();
+        return false;
+      }
+
+      await assignMerchant(merchantKey, merchantName, category);
+      return true;
+    },
+    [assignMerchant, premium?.isPremium, requireCategoryPremium],
+  );
+  const rememberCategoryRule = useCallback(
+    async (merchantLabel: string, category: string) => {
+      if (premium?.isPremium !== true) {
+        requireCategoryPremium();
+        return;
+      }
+
+      await remember(merchantLabel, category);
+    },
+    [premium?.isPremium, remember, requireCategoryPremium],
+  );
 
   const {
     lockReason,
@@ -670,12 +693,13 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
             isLoading={isLoading}
             onChanged={refresh}
             onCreateAccount={financialAccounts.create}
-            onRememberRule={remember}
+            onRememberRule={rememberCategoryRule}
             records={records}
             rules={rules}
             events={spendingEvents.events}
             customCategories={customCategories.categories}
             canCreateCategory={canCreateCustomCategory(hasPremiumAccess)}
+            canRememberRule={premium?.isPremium === true}
             onCreateCategory={customCategories.create}
             onRequirePremium={requireCategoryPremium}
           />
@@ -812,9 +836,10 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
           <CaptureHealthScreen onClose={() => setActiveSheet(null)} records={records} />
         ) : activeSheet === 'categories' ? (
           <CustomCategoriesScreen
+            canAssignMerchant={premium?.isPremium === true}
             canCreate={canCreateCustomCategory(hasPremiumAccess)}
             categories={customCategories.categories}
-            onAssignMerchant={assignMerchant}
+            onAssignMerchant={assignCategoryMerchant}
             onClose={() => setActiveSheet(null)}
             onCreate={customCategories.create}
             onDelete={customCategories.remove}
