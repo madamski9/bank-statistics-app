@@ -1,10 +1,10 @@
 import { ConvexError, v, type Infer } from 'convex/values';
 
 import { mutation, query } from './_generated/server';
+import { financialAccountChangeProblem } from './changeRules';
 import { financialAccountFields } from './schema';
 import {
   assertPushSize,
-  assertValidRevision,
   requireDevice,
   rowFromChange,
   withoutServerFields,
@@ -18,21 +18,12 @@ const financialAccountChange = v.object({
 
 type FinancialAccountChange = Infer<typeof financialAccountChange>;
 
-const maximumNameLength = 60;
-const financialAccountBanks = new Set(['manual', 'millennium', 'pko']);
-
 function assertValidChange(change: FinancialAccountChange) {
-  const name = change.name.trim();
+  const problem = financialAccountChangeProblem(change);
 
-  if (name === '' || name.length > maximumNameLength) {
-    throw new ConvexError(`An account name has between 1 and ${maximumNameLength} characters.`);
+  if (problem !== null) {
+    throw new ConvexError(problem);
   }
-
-  if (!financialAccountBanks.has(change.bank)) {
-    throw new ConvexError('A Financial Account belongs to an enabled bank.');
-  }
-
-  assertValidRevision(change);
 }
 
 export const push = mutation({

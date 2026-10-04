@@ -1,4 +1,5 @@
 import type { api } from '@bankstats/convex/convex/_generated/api';
+import { financialAccountChangeProblem } from '@bankstats/convex/convex/changeRules';
 import type { FunctionArgs, FunctionReturnType } from 'convex/server';
 
 import {
@@ -29,4 +30,5 @@ export const accountCodec: SyncCodec<FinancialAccount, AccountChange> = {
     name: change.name,
     isGeneral: change.isGeneral,
   }),
+  isPushable: (change) => financialAccountChangeProblem(change) === null,
 };
