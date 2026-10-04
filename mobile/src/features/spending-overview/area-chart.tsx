@@ -1,10 +1,11 @@
 import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { useCopy } from '@/features/localization/language';
+import { AmountText } from '@/features/privacy/amount-text';
 
 import { chartPoints, nearestIndex, smoothAreaPath, smoothLinePath } from './area-chart-geometry';
 import { overviewColors } from './overview-theme';
@@ -96,27 +97,27 @@ export function AreaChart({ points, series, formatValue, height = 168 }: AreaCha
             {series.map((entry) => (
               <View key={entry.key} style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: entry.color }]} />
-                <Text maxFontSizeMultiplier={1.4} style={styles.legendLabel}>
+                <AmountText maxFontSizeMultiplier={1.4} style={styles.legendLabel}>
                   {entry.label}
-                </Text>
+                </AmountText>
               </View>
             ))}
           </View>
         ) : (
           <>
-            <Text maxFontSizeMultiplier={1.4} style={styles.readoutDate}>
+            <AmountText maxFontSizeMultiplier={1.4} style={styles.readoutDate}>
               {activeIndex === null ? copy.chartPeak : ''}
               {points[readoutIndex].spokenLabel}
-            </Text>
+            </AmountText>
             <View style={styles.readoutValues}>
               {series.map((entry) => (
                 <View key={entry.key} style={styles.legendItem}>
                   {series.length > 1 ? (
                     <View style={[styles.legendDot, { backgroundColor: entry.color }]} />
                   ) : null}
-                  <Text maxFontSizeMultiplier={1.4} style={styles.readoutValue}>
+                  <AmountText maxFontSizeMultiplier={1.4} style={styles.readoutValue}>
                     {formatValue(entry.values[readoutIndex])}
-                  </Text>
+                  </AmountText>
                 </View>
               ))}
             </View>
@@ -222,9 +223,9 @@ export function AreaChart({ points, series, formatValue, height = 168 }: AreaCha
                       },
               ]}
             >
-              <Text maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.axisLabel}>
+              <AmountText maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.axisLabel}>
                 {points[index].label}
-              </Text>
+              </AmountText>
             </View>
           );
         })}

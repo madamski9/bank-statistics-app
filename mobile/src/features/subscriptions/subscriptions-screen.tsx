@@ -4,6 +4,7 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { reportingCurrency } from '@/features/currency-conversion/exchange-rate';
 import { SheetButton, SheetLayout, SheetRow, SheetSection } from '@/features/app-shell/sheet-layout';
 import { useCopy } from '@/features/localization/language';
+import { AmountText } from '@/features/privacy/amount-text';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { overviewColors } from '@/features/spending-overview/overview-theme';
 import { formatDayHeading } from '@/features/transactions/format-date';
@@ -73,15 +74,15 @@ export function SubscriptionsScreen({
   return (
     <SheetLayout closeLabel={copy.close} onClose={onClose} title={copy.title}>
       <View style={styles.hero}>
-        <Text maxFontSizeMultiplier={1.4} style={styles.caption}>
+        <AmountText maxFontSizeMultiplier={1.4} style={styles.caption}>
           {copy.monthlyTotal}
-        </Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.amount}>
+        </AmountText>
+        <AmountText maxFontSizeMultiplier={1.3} style={styles.amount}>
           {formatAmount(monthlyMinor, reportingCurrency)}
-        </Text>
-        <Text maxFontSizeMultiplier={1.4} style={styles.caption}>
+        </AmountText>
+        <AmountText maxFontSizeMultiplier={1.4} style={styles.caption}>
           {copy.activeCount(active.length)} · {copy.yearly(formatAmount(monthlyMinor * 12, reportingCurrency))}
-        </Text>
+        </AmountText>
       </View>
 
       {payments.length === 0 ? (

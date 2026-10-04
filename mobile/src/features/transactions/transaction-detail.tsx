@@ -7,6 +7,7 @@ import type { CategorizationRule } from '@/features/classification/categorizatio
 import { classifyTransaction } from '@/features/classification/classify-transaction';
 import { reportingCurrency } from '@/features/currency-conversion/exchange-rate';
 import { eventIdForRecord, type SpendingEvent } from '@/features/events/spending-event';
+import { AmountText } from '@/features/privacy/amount-text';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { useCopy } from '@/features/localization/language';
@@ -133,7 +134,7 @@ export function TransactionDetail({
           <Text maxFontSizeMultiplier={1.4} numberOfLines={2} style={styles.title}>
             {title}
           </Text>
-          <Text
+          <AmountText
             adjustsFontSizeToFit
             maxFontSizeMultiplier={1.3}
             minimumFontScale={0.6}
@@ -145,7 +146,7 @@ export function TransactionDetail({
             ]}
           >
             {amount}
-          </Text>
+          </AmountText>
           {badge !== null ? (
             <View
               style={[
@@ -153,7 +154,7 @@ export function TransactionDetail({
                 badge.tone === 'caution' ? styles.badgeCaution : styles.badgeNeutral,
               ]}
             >
-              <Text
+              <AmountText
                 maxFontSizeMultiplier={1.3}
                 style={[
                   styles.badgeLabel,
@@ -161,7 +162,7 @@ export function TransactionDetail({
                 ]}
               >
                 {badge.label}
-              </Text>
+              </AmountText>
             </View>
           ) : null}
         </View>
@@ -177,12 +178,12 @@ export function TransactionDetail({
             <View key={detail.label}>
               {index > 0 ? <View style={styles.separator} /> : null}
               <View accessible style={styles.field}>
-                <Text maxFontSizeMultiplier={1.4} style={styles.fieldLabel}>
+                <AmountText maxFontSizeMultiplier={1.4} style={styles.fieldLabel}>
                   {detail.label}
-                </Text>
-                <Text maxFontSizeMultiplier={1.4} numberOfLines={2} style={styles.fieldValue}>
+                </AmountText>
+                <AmountText maxFontSizeMultiplier={1.4} numberOfLines={2} style={styles.fieldValue}>
                   {detail.value}
-                </Text>
+                </AmountText>
               </View>
             </View>
           ))}

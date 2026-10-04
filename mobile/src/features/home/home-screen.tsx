@@ -197,7 +197,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   const { confirmPermission: confirmMonthlySummaryPermission } = monthlySummaryReminder;
   const [eventsSheetTarget, setEventsSheetTarget] = useState<string | null>(null);
   const [summaryMonthKey, setSummaryMonthKey] = useState<string | null>(null);
-  const { remember, rules } = useCategorizationRules();
+  const { assignMerchant, forget: forgetMerchant, remember, rules } = useCategorizationRules();
   const hasPremiumAccess = premium === undefined || premium.isPremium;
   const periodLocks = useMemo(() => lockedPeriods(hasPremiumAccess), [hasPremiumAccess]);
   const period = periodLocks.has(requestedPeriod) ? fallbackPeriod : requestedPeriod;
@@ -813,11 +813,15 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
           <CustomCategoriesScreen
             canCreate={canCreateCustomCategory(hasPremiumAccess)}
             categories={customCategories.categories}
+            onAssignMerchant={assignMerchant}
             onClose={() => setActiveSheet(null)}
             onCreate={customCategories.create}
             onDelete={customCategories.remove}
+            onForgetMerchant={forgetMerchant}
             onRename={customCategories.rename}
             onRequirePremium={requireCategoryPremium}
+            records={countedRecords}
+            rules={rules}
           />
         ) : (
           <AlertsScreen

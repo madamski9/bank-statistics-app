@@ -1,8 +1,9 @@
 import * as Haptics from 'expo-haptics';
 import { memo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
+import { AmountText } from '@/features/privacy/amount-text';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { bubbleTints, overviewColors } from '@/features/spending-overview/overview-theme';
 import { useCopy } from '@/features/localization/language';
@@ -98,13 +99,13 @@ function DailySpendChartComponent({
   return (
     <View style={styles.chart}>
       <View style={styles.caption}>
-        <Text maxFontSizeMultiplier={1.5} style={styles.captionLabel}>
+        <AmountText maxFontSizeMultiplier={1.5} style={styles.captionLabel}>
           {highlighted.key === peak.key && selectedKey === null ? copy.highest : copy.selected} ·{' '}
           {highlighted.spokenLabel}
-        </Text>
-        <Text maxFontSizeMultiplier={1.5} style={styles.captionValue}>
+        </AmountText>
+        <AmountText maxFontSizeMultiplier={1.5} style={styles.captionValue}>
           {formatAmount(highlighted.totalMinor, currency)}
-        </Text>
+        </AmountText>
       </View>
 
       <GestureDetector gesture={plotGesture}>
@@ -168,9 +169,9 @@ function DailySpendChartComponent({
                       },
               ]}
             >
-              <Text maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.axisLabel}>
+              <AmountText maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.axisLabel}>
                 {bucket.label}
-              </Text>
+              </AmountText>
             </View>
           );
         })}

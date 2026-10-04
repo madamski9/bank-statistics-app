@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -24,6 +17,7 @@ import type { CategorizationRule } from '@/features/classification/categorizatio
 import type { SpendingGroup } from '@/features/classification/spending-groups';
 import type { GroupLimit } from '@/features/alerts/group-limit';
 import { LimitProgressBar } from '@/features/alerts/limit-progress-bar';
+import { AmountText } from '@/features/privacy/amount-text';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { formatShare } from '@/features/spending-overview/formatting';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
@@ -178,7 +172,7 @@ export function MerchantDetail({
               </Pressable>
             </View>
 
-            <Text
+            <AmountText
               adjustsFontSizeToFit
               maxFontSizeMultiplier={1.4}
               minimumFontScale={0.6}
@@ -186,12 +180,12 @@ export function MerchantDetail({
               style={styles.total}
             >
               {formatAmount(group.totalMinor, group.currency)}
-            </Text>
-            <Text maxFontSizeMultiplier={1.5} style={styles.meta}>
+            </AmountText>
+            <AmountText maxFontSizeMultiplier={1.5} style={styles.meta}>
               {option.label} · {transactionCount(group.count, group.dimension)} · {copy.average}{' '}
               {formatAmount(group.averageMinor, group.currency)} ·{' '}
               {copy.shareOfSpending(formatShare(group.share))}
-            </Text>
+            </AmountText>
           </Animated.View>
         </GestureDetector>
 
@@ -208,21 +202,21 @@ export function MerchantDetail({
               style={({ pressed }) => [styles.limit, pressed ? styles.pressed : null]}
             >
               <View style={styles.limitHeading}>
-                <Text maxFontSizeMultiplier={1.5} style={styles.limitLabel}>
+                <AmountText maxFontSizeMultiplier={1.5} style={styles.limitLabel}>
                   {copy.limitTitle(limit.periodLabel)}
-                </Text>
+                </AmountText>
                 <View style={styles.limitValue}>
-                  <Text maxFontSizeMultiplier={1.5} style={styles.limitAmount}>
-                    <Text
+                  <AmountText maxFontSizeMultiplier={1.5} style={styles.limitAmount}>
+                    <AmountText
                       style={[
                         styles.limitSpent,
                         limit.share >= 1 ? styles.limitSpentExceeded : null,
                       ]}
                     >
                       {formatAmount(limit.amountMinor, limit.currency)}
-                    </Text>{' '}
+                    </AmountText>{' '}
                     {copy.of} {formatAmount(limit.targetMinor, limit.currency)}
-                  </Text>
+                  </AmountText>
                   <SymbolView
                     name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
                     size={12}
@@ -248,9 +242,9 @@ export function MerchantDetail({
                 tintColor={overviewColors.textPrimary}
                 weight="semibold"
               />
-              <Text maxFontSizeMultiplier={1.3} style={styles.limitActionLabel}>
+              <AmountText maxFontSizeMultiplier={1.3} style={styles.limitActionLabel}>
                 {copy.setLimit}
-              </Text>
+              </AmountText>
             </Pressable>
           ) : null}
 
@@ -284,17 +278,17 @@ export function MerchantDetail({
                         {party}
                       </Text>
                     ) : null}
-                    <Text
+                    <AmountText
                       maxFontSizeMultiplier={1.5}
                       style={party === null ? styles.historyDate : styles.historyTime}
                     >
                       {formatDayHeading(occurredAt, new Date())}
-                      <Text style={styles.historyTime}> · {formatTime(occurredAt)}</Text>
-                    </Text>
+                      <AmountText style={styles.historyTime}> · {formatTime(occurredAt)}</AmountText>
+                    </AmountText>
                   </View>
-                  <Text maxFontSizeMultiplier={1.5} style={styles.historyAmount}>
+                  <AmountText maxFontSizeMultiplier={1.5} style={styles.historyAmount}>
                     − {formatAmount(record.amountMinor, record.currency)}
-                  </Text>
+                  </AmountText>
                 </View>
               );
             })}
