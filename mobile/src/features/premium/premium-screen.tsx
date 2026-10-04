@@ -17,6 +17,7 @@ const benefitSymbols: SFSymbol[] = [
   'square.grid.2x2',
   'bell.badge',
   'tag',
+  'flag',
   'heart',
 ];
 

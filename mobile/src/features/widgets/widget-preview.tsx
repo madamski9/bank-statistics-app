@@ -51,7 +51,7 @@ export function WidgetPreview({ props, onClose }: WidgetPreviewProps) {
       >
         <View style={styles.card}>
           <Text maxFontSizeMultiplier={1.4} style={styles.caption}>
-            {props.labels.lastThirtyDays.toUpperCase()}
+            {props.labels.periodTitle.toUpperCase()}
           </Text>
           <Text maxFontSizeMultiplier={1.4} style={styles.caption}>
             {props.labels.spending}

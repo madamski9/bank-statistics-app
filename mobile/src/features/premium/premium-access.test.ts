@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 
-import { canCreateLimit, canOpenMonthlyReport, isPeriodAvailable, lockedPeriods } from './premium-access';
+import {
+  canCreateLimit,
+  canOpenMonthlyReport,
+  canStartEvent,
+  isPeriodAvailable,
+  lockedPeriods,
+} from './premium-access';
 
 describe('premium access', () => {
   test('leaves the week, month and three months free and locks the year and all time', () => {
@@ -26,5 +32,10 @@ describe('premium access', () => {
   test('keeps the monthly report for premium', () => {
     expect(canOpenMonthlyReport(false)).toBe(false);
     expect(canOpenMonthlyReport(true)).toBe(true);
+  });
+
+  test('keeps starting events for premium', () => {
+    expect(canStartEvent(false)).toBe(false);
+    expect(canStartEvent(true)).toBe(true);
   });
 });

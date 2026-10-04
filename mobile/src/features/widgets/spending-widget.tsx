@@ -194,7 +194,7 @@ function spendingWidgetLayout(
       <Spacer minLength={0} />
       <HStack alignment="center" spacing={16}>
         <VStack alignment="leading" spacing={4} modifiers={[frame({ maxWidth: 10_000, alignment: 'leading' })]}>
-          {caption(labels.lastThirtyDays)}
+          {caption(labels.periodTitle)}
           {amount(props.expenseLabel, wide ? 36 : 30, palette.spending)}
           {caption(props.countLabel)}
         </VStack>

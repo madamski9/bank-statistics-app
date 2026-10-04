@@ -62,6 +62,7 @@ export const eventFields = {
   name: v.string(),
   startedAt: v.string(),
   endedAt: v.optional(v.string()),
+  color: v.optional(v.string()),
 };
 
 export const syncedRowFields = {

@@ -15,7 +15,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
 import type { CustomCategory } from '@/features/classification/categories';
-import type { SpendingEvent } from '@/features/events/spending-event';
+import { eventTint } from '@/features/events/event-colors';
+import { eventsCopy } from '@/features/events/events-copy';
+import { eventIdForRecord, type SpendingEvent } from '@/features/events/spending-event';
 import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
 import { AmountText } from '@/features/privacy/amount-text';
 import { PrivacyShield } from '@/features/privacy/privacy-shield';
@@ -28,7 +30,8 @@ import {
 import { useCopy } from '@/features/localization/language';
 
 import { transactionsCopy } from './transactions-copy';
-import { dayKey, formatDayHeading, formatTime } from './format-date';
+import { formatTime } from './format-date';
+import { buildSections } from './history-sections';
 import { confirmedRecord } from './manual-transaction';
 import { TransactionDetail } from './transaction-detail';
 import { TransactionEditor } from './transaction-editor';
@@ -59,56 +62,9 @@ interface TransactionsScreenProps {
   onRequirePremium: () => void;
 }
 
-interface DaySection {
-  key: string;
-  title: string;
-  totalMinor: number;
-  currency: string;
-  data: IngestionRecord[];
-}
-
 type EditorTarget =
   | { mode: 'detail'; record: IngestionRecord }
   | { mode: 'edit'; record: IngestionRecord | null };
-
-function buildSections(records: IngestionRecord[], reference: Date): DaySection[] {
-  const sections = new Map<string, DaySection>();
-  const ordered = [...records].sort(
-    (left, right) => new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime(),
-  );
-
-  for (const record of ordered) {
-    const occurredAt = new Date(record.occurredAt);
-
-    if (Number.isNaN(occurredAt.getTime())) {
-      continue;
-    }
-
-    const key = dayKey(occurredAt);
-    const existing = sections.get(key);
-    const countedMinor = !affectsStatistics(record)
-      ? 0
-      : record.direction === 'income'
-        ? record.amountMinor
-        : -record.amountMinor;
-
-    if (existing === undefined) {
-      sections.set(key, {
-        key,
-        title: formatDayHeading(occurredAt, reference),
-        totalMinor: countedMinor,
-        currency: record.currency,
-        data: [record],
-      });
-      continue;
-    }
-
-    existing.data.push(record);
-    existing.totalMinor += countedMinor;
-  }
-
-  return [...sections.values()];
-}
 
 function TransactionsScreenComponent({
   records,
@@ -129,7 +85,9 @@ function TransactionsScreenComponent({
   const { formatAmount } = useAmountFormatting();
   const insets = useSafeAreaInsets();
   const copy = useCopy(transactionsCopy);
-  const sections = useMemo(() => buildSections(records, new Date()), [records]);
+  const eventCopy = useCopy(eventsCopy);
+  const eventsById = useMemo(() => new Map(events.map((event) => [event.id, event])), [events]);
+  const sections = useMemo(() => buildSections(records, new Date(), events), [events, records]);
   const [editor, setEditor] = useState<EditorTarget | null>(null);
   const { clearError, error: writeError, isWriting, remove, save } = useTransactionWrites(onChanged);
 
@@ -217,8 +175,29 @@ function TransactionsScreenComponent({
         }
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 96 }]}
         indicatorStyle="white"
-        keyExtractor={(record) => record.id}
-        renderItem={({ item }) => {
+        keyExtractor={(row) => row.key}
+        renderItem={({ item: row }) => {
+          if (row.kind === 'marker') {
+            const markerTint = eventTint(row.event);
+            const markerLabel =
+              row.boundary === 'start' ? eventCopy.markerStart(row.event.name) : eventCopy.markerEnd(row.event.name);
+
+            return (
+              <View accessible accessibilityLabel={markerLabel} style={styles.marker}>
+                <View style={[styles.markerLine, { backgroundColor: markerTint.film }]} />
+                <Text
+                  maxFontSizeMultiplier={1.4}
+                  numberOfLines={1}
+                  style={[styles.markerLabel, { color: markerTint.film }]}
+                >
+                  {markerLabel}
+                </Text>
+                <View style={[styles.markerLine, { backgroundColor: markerTint.film }]} />
+              </View>
+            );
+          }
+
+          const item = row.record;
           const occurredAt = new Date(item.occurredAt);
           const isIncome = item.direction === 'income';
           const isCounted = affectsStatistics(item);
@@ -226,6 +205,9 @@ function TransactionsScreenComponent({
           const label = transactionTitle(item, rules);
           const context = transactionContext(item);
           const amount = `${isIncome ? '+' : '−'}${formatAmount(item.amountMinor, item.currency)}`;
+          const eventId = eventsById.size === 0 ? null : eventIdForRecord(item, events);
+          const event = eventId === null ? undefined : eventsById.get(eventId);
+          const tint = event === undefined ? null : eventTint(event);
 
           return (
             <Pressable
@@ -236,6 +218,7 @@ function TransactionsScreenComponent({
                 context,
                 formatTime(occurredAt),
                 badge?.label,
+                event === undefined ? undefined : eventCopy.inEvent(event.name),
               ]
                 .filter((part) => part !== undefined)
                 .join(', ')}
@@ -243,11 +226,18 @@ function TransactionsScreenComponent({
               onPress={() => setEditor({ mode: 'detail', record: item })}
               style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
             >
-              <View style={styles.icon}>
+              <View
+                style={[
+                  styles.icon,
+                  tint === null
+                    ? null
+                    : { borderColor: tint.film, backgroundColor: `rgba(${tint.rgb}, 0.16)` },
+                ]}
+              >
                 <SymbolView
                   name={transactionKindSymbols[transactionKind(item)]}
                   size={17}
-                  tintColor={overviewColors.textSecondary}
+                  tintColor={tint?.film ?? overviewColors.textSecondary}
                 />
               </View>
               <View style={styles.body}>
@@ -298,10 +288,12 @@ function TransactionsScreenComponent({
             <Text maxFontSizeMultiplier={1.6} style={styles.sectionTitle}>
               {section.title}
             </Text>
-            <AmountText maxFontSizeMultiplier={1.6} style={styles.sectionTotal}>
-              {section.totalMinor < 0 ? '−' : '+'}
-              {formatAmount(section.totalMinor, section.currency)}
-            </AmountText>
+            {section.currency === null ? null : (
+              <AmountText maxFontSizeMultiplier={1.6} style={styles.sectionTotal}>
+                {section.totalMinor < 0 ? '−' : '+'}
+                {formatAmount(section.totalMinor, section.currency)}
+              </AmountText>
+            )}
           </View>
         )}
         sections={sections}
@@ -411,6 +403,24 @@ const styles = StyleSheet.create({
   sectionTotal: {
     fontSize: 13,
     color: overviewColors.textSecondary,
+  },
+  marker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+  },
+  markerLine: {
+    flex: 1,
+    height: 2,
+    borderRadius: 1,
+    opacity: 0.8,
+  },
+  markerLabel: {
+    flexShrink: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   row: {
     flexDirection: 'row',

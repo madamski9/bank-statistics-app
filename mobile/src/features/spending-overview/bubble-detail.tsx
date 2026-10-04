@@ -266,7 +266,7 @@ export function BubbleDetail({
         ]}
       >
         <Animated.View style={[styles.film, styles.skin, skinStyle]}>
-          <BubbleSkin size={origin.size} tint={key} />
+          <BubbleSkin size={origin.size} tint={tint} />
         </Animated.View>
       </Animated.View>
 

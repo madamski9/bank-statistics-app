@@ -19,8 +19,9 @@ import { formatShare } from '@/features/spending-overview/formatting';
 import { overviewColors } from '@/features/spending-overview/overview-theme';
 import { formatDayHeading } from '@/features/transactions/format-date';
 import { transactionTitle } from '@/features/transactions/transaction-record';
-import { impactLight } from '@/haptics';
 
+import { EventColorPicker } from './event-color-picker';
+import { eventColorKey } from './event-colors';
 import { summarizeEvent } from './event-summary';
 import { eventsCopy } from './events-copy';
 import {
@@ -35,7 +36,7 @@ interface EventsScreenProps {
   records: IngestionRecord[];
   rules: CategorizationRule[];
   initialEventId?: string | null;
-  onStart: (name: string) => Promise<SpendingEvent>;
+  showsHistory: boolean;
   onSave: (event: SpendingEvent) => Promise<void>;
   onEnd: (event: SpendingEvent) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -57,7 +58,7 @@ export function EventsScreen({
   records,
   rules,
   initialEventId = null,
-  onStart,
+  showsHistory,
   onSave,
   onEnd,
   onDelete,
@@ -66,9 +67,12 @@ export function EventsScreen({
   const copy = useCopy(eventsCopy);
   const { formatAmount } = useAmountFormatting();
   const [selectedId, setSelectedId] = useState<string | null>(initialEventId);
-  const [prompt, setPrompt] = useState<'start' | 'rename' | null>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
   const now = useMemo(() => new Date(), []);
-  const ordered = useMemo(() => sortedEvents(events), [events]);
+  const ordered = useMemo(
+    () => sortedEvents(showsHistory ? events.filter((event) => event.endedAt !== undefined) : events),
+    [events, showsHistory],
+  );
   const selected = events.find((event) => event.id === selectedId) ?? null;
   const summaries = useMemo(
     () => new Map(ordered.map((event) => [event.id, summarizeEvent(records, event, events, rules, now)])),
@@ -83,14 +87,14 @@ export function EventsScreen({
         style: 'destructive',
         text: copy.deleteConfirm,
         onPress: () => {
-          void onDelete(event.id).then(() => setSelectedId(null));
+          void onDelete(event.id).then(() => (showsHistory ? setSelectedId(null) : onClose()));
         },
       },
     ]);
   };
 
   const backButton =
-    selected === null ? undefined : (
+    selected === null || !showsHistory ? undefined : (
       <Pressable
         accessibilityLabel={copy.back}
         accessibilityRole="button"
@@ -111,18 +115,10 @@ export function EventsScreen({
       closeLabel={copy.close}
       leading={backButton}
       onClose={onClose}
-      title={selected?.name ?? copy.title}
+      title={selected?.name ?? copy.historyTitle}
     >
       {selected === null || summary === null ? (
         <>
-          <SheetButton
-            label={copy.start}
-            onPress={() => {
-              impactLight();
-              setPrompt('start');
-            }}
-            tone="primary"
-          />
           {ordered.length === 0 ? (
             <Text maxFontSizeMultiplier={1.5} style={styles.empty}>
               {copy.empty}
@@ -160,6 +156,13 @@ export function EventsScreen({
               {copy.days(summary.days)} · {copy.transactionsCount(summary.count)}
             </Text>
           </View>
+
+          {isActive(selected) ? (
+            <EventColorPicker
+              onSelect={(color) => void onSave({ ...selected, color })}
+              selected={eventColorKey(selected)}
+            />
+          ) : null}
 
           <SheetSection>
             <SheetRow isFirst label={copy.perDay} value={formatAmount(summary.dailyExpenseMinor, reportingCurrency)} />
@@ -224,7 +227,7 @@ export function EventsScreen({
             {isActive(selected) ? (
               <SheetButton label={copy.end} onPress={() => void onEnd(selected)} tone="primary" />
             ) : null}
-            <SheetButton label={copy.rename} onPress={() => setPrompt('rename')} />
+            <SheetButton label={copy.rename} onPress={() => setIsRenaming(true)} />
             <SheetButton label={copy.delete} onPress={() => confirmDelete(selected)} tone="danger" />
           </View>
         </>
@@ -232,24 +235,20 @@ export function EventsScreen({
 
       <NamePrompt
         cancelLabel={copy.cancel}
-        confirmLabel={prompt === 'start' ? copy.start : copy.save}
-        initialValue={prompt === 'rename' ? (selected?.name ?? '') : ''}
-        message={prompt === 'start' ? copy.startMessage : undefined}
-        onCancel={() => setPrompt(null)}
+        confirmLabel={copy.save}
+        initialValue={selected?.name ?? ''}
+        onCancel={() => setIsRenaming(false)}
         onConfirm={async (name) => {
-          if (prompt === 'start') {
-            const started = await onStart(name);
-            setSelectedId(started.id);
-          } else if (selected !== null) {
+          if (selected !== null) {
             await onSave({ ...selected, name });
           }
 
-          setPrompt(null);
+          setIsRenaming(false);
         }}
         placeholder={copy.namePlaceholder}
-        title={prompt === 'start' ? copy.startTitle : copy.renameTitle}
+        title={copy.renameTitle}
         validate={eventNameError}
-        visible={prompt !== null}
+        visible={isRenaming}
       />
     </SheetLayout>
   );

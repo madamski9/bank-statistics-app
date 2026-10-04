@@ -43,6 +43,7 @@ import { useCategorizationRules } from '@/features/classification/use-categoriza
 import { useCustomCategories } from '@/features/classification/use-custom-categories';
 import { CaptureHealthScreen } from '@/features/capture-health/capture-health-screen';
 import { useCurrencyConversion } from '@/features/currency-conversion/use-currency-conversion';
+import { summarizeEvent } from '@/features/events/event-summary';
 import { EventsScreen } from '@/features/events/events-screen';
 import { activeEvent } from '@/features/events/spending-event';
 import { useEvents } from '@/features/events/use-events';
@@ -92,6 +93,7 @@ import {
   canCreateCustomCategory,
   canCreateLimit,
   canOpenMonthlyReport,
+  canStartEvent,
   fallbackPeriod,
   lockedPeriods,
   type PremiumReason,
@@ -155,7 +157,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   const pagerRef = useRef<ScrollView>(null);
   const copy = useCopy(homeCopy);
   const [page, setPage] = useState<PageKey>(initialPage);
-  const [requestedPeriod, setRequestedPeriod] = useState<SpendingPeriod>('month');
+  const [requestedPeriod, setRequestedPeriod] = useState<SpendingPeriod>(fallbackPeriod);
   const [{ selection, revision }, dispatchSelection] = useReducer(
     bubbleSelectionReducer,
     initialBubbleSelection,
@@ -204,6 +206,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   const period = periodLocks.has(requestedPeriod) ? fallbackPeriod : requestedPeriod;
   const [premiumReason, setPremiumReason] = useState<PremiumReason | null>(null);
   const [premiumReturnSheet, setPremiumReturnSheet] = useState<SheetKey | null>(null);
+  const [alertEditor, setAlertEditor] = useState<AlertEditor | null>(null);
 
   const openPremium = useCallback(
     (reason: PremiumReason | null) => {
@@ -225,7 +228,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
     },
     [openPremium, periodLocks],
   );
-  const [alertEditor, setAlertEditor] = useState<AlertEditor | null>(null);
+  const runningEvent = useMemo(() => activeEvent(spendingEvents.events), [spendingEvents.events]);
   const countedRecords = useMemo(() => {
     setCustomCategories(customCategories.categories);
 
@@ -279,7 +282,26 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
     () => monthForecast(countedRecords, recurringPayments, insightsNow, monthlyLimitTarget),
     [countedRecords, insightsNow, monthlyLimitTarget, recurringPayments],
   );
-  const runningEvent = useMemo(() => activeEvent(spendingEvents.events), [spendingEvents.events]);
+  const runningEventSummary = useMemo(
+    () =>
+      runningEvent === null
+        ? null
+        : summarizeEvent(countedRecords, runningEvent, spendingEvents.events, rules, new Date()),
+    [countedRecords, rules, runningEvent, spendingEvents.events],
+  );
+  const [isEventFocused, setIsEventFocused] = useState(true);
+  const { start: startSpendingEvent } = spendingEvents;
+  const startEvent = useCallback(
+    async (name: string) => {
+      const started = await startSpendingEvent(name);
+      setIsEventFocused(true);
+
+      return started;
+    },
+    [startSpendingEvent],
+  );
+  const requireEventPremium = useCallback(() => openPremium('event'), [openPremium]);
+  const toggleEventFocus = useCallback(() => setIsEventFocused((current) => !current), []);
   const recurringMonthlyMinor = useMemo(() => monthlyRecurringCost(recurringPayments), [recurringPayments]);
   const recurringCount = useMemo(
     () => recurringPayments.filter((payment) => payment.isActive).length,
@@ -287,10 +309,17 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   );
   const reportMonth = shiftMonth(monthOf(insightsNow), -1).month;
   const isReportLocked = premium?.isPremium !== true;
+  const [showsEventHistory, setShowsEventHistory] = useState(false);
   const openEvents = useCallback(() => {
     setEventsSheetTarget(runningEvent?.id ?? null);
+    setShowsEventHistory(runningEvent === null);
     setActiveSheet('events');
   }, [runningEvent]);
+  const openEventHistory = useCallback(() => {
+    setEventsSheetTarget(null);
+    setShowsEventHistory(true);
+    setActiveSheet('events');
+  }, []);
   const openRecurring = useCallback(() => setActiveSheet('recurring'), []);
   const openForecast = useCallback(() => setActiveSheet('forecast'), []);
   const openMonthlySummary = useCallback(
@@ -308,6 +337,27 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   );
   const openReport = useCallback(() => openMonthlySummary(null), [openMonthlySummary]);
   const requireCategoryPremium = useCallback(() => openPremium('category'), [openPremium]);
+  const [opensCategoryCreate, setOpensCategoryCreate] = useState(false);
+  const [isSheetPresented, setIsSheetPresented] = useState(false);
+  const isSheetVisible = activeSheet !== null || alertEditor !== null;
+
+  if (!isSheetVisible && isSheetPresented) {
+    setIsSheetPresented(false);
+  }
+
+  const openCategories = useCallback(() => {
+    setOpensCategoryCreate(false);
+    setActiveSheet('categories');
+  }, []);
+  const createCategory = useCallback(() => {
+    if (!canCreateCustomCategory(hasPremiumAccess)) {
+      requireCategoryPremium();
+      return;
+    }
+
+    setOpensCategoryCreate(true);
+    setActiveSheet('categories');
+  }, [hasPremiumAccess, requireCategoryPremium]);
   const assignCategoryMerchant = useCallback(
     async (merchantKey: string, merchantName: string, category: string) => {
       if (premium?.isPremium !== true) {
@@ -677,12 +727,19 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
             onChangePeriod={changePeriod}
             onOpenForecast={openForecast}
             onOpenRecurring={openRecurring}
+            onOpenEvents={openEvents}
             onOpenReport={openReport}
             onSelectBubble={handleSelectBubble}
+            onStartEvent={startEvent}
+            onToggleEventFocus={toggleEventFocus}
             period={period}
             recurringCount={recurringCount}
             recurringMonthlyMinor={recurringMonthlyMinor}
             reportMonth={reportMonth}
+            canStartEvent={canStartEvent(hasPremiumAccess)}
+            isEventFocused={isEventFocused}
+            onRequireEventPremium={requireEventPremium}
+            runningEvent={runningEventSummary}
             summary={summary}
           />
         </View>
@@ -713,6 +770,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
             onChangeDimension={setDimension}
             lockedPeriods={periodLocks}
             onChangePeriod={changePeriod}
+            onCreateCategory={createCategory}
             onCreateLimit={() => requestNewLimit({ kind: 'all' })}
             onSelectGroup={setGroup}
             period={period}
@@ -720,10 +778,10 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
         </View>
         <View style={{ width }}>
           <ProfileScreen
-            onOpenEvents={openEvents}
+            onOpenEventHistory={openEventHistory}
             onOpenAlerts={() => setActiveSheet('alerts')}
             onOpenCaptureHealth={() => setActiveSheet('captureHealth')}
-            onOpenCategories={() => setActiveSheet('categories')}
+            onOpenCategories={openCategories}
             onOpenData={() => setActiveSheet('data')}
             onOpenLanguage={() => setActiveSheet('language')}
             onOpenPremium={() => openPremium(null)}
@@ -764,8 +822,9 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
       <Modal
         animationType="slide"
         onRequestClose={() => (alertEditor === null ? setActiveSheet(null) : setAlertEditor(null))}
+        onShow={() => setIsSheetPresented(true)}
         presentationStyle="pageSheet"
-        visible={activeSheet !== null || alertEditor !== null}
+        visible={isSheetVisible}
       >
         {alertEditor !== null ? (
           <AlertRuleSheet
@@ -803,9 +862,9 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
             onDelete={spendingEvents.remove}
             onEnd={spendingEvents.end}
             onSave={spendingEvents.save}
-            onStart={spendingEvents.start}
             records={countedRecords}
             rules={rules}
+            showsHistory={showsEventHistory}
           />
         ) : activeSheet === 'recurring' ? (
           <SubscriptionsScreen
@@ -846,6 +905,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
             onForgetMerchant={forgetMerchant}
             onRename={customCategories.rename}
             onRequirePremium={requireCategoryPremium}
+            opensCreatePrompt={opensCategoryCreate && isSheetPresented}
             records={countedRecords}
             rules={rules}
           />

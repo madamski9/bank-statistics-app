@@ -39,7 +39,7 @@ export function bucketSizeFor(
   earliestMs: number | null = null,
   endMs: number = Date.now(),
 ): BucketSize {
-  if (period === 'week' || period === 'month') {
+  if (period === 'currentMonth' || period === 'week' || period === 'month') {
     return 'day';
   }
 

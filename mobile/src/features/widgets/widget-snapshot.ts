@@ -5,6 +5,7 @@ import type { AlertRule, AlertScope } from '@/features/alerts/alert-rule';
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
 import { categoryLabel } from '@/features/classification/categories';
 import { groupSpending } from '@/features/classification/spending-groups';
+import { calendarCopy } from '@/features/localization/calendar-copy';
 import { currentCopy } from '@/features/localization/language';
 import { expenseRhythm, rhythmAverageMinor } from '@/features/overview/spending-rhythm';
 import { formatAmount, formatCompactAmount } from '@/features/spending-overview/formatting';
@@ -81,21 +82,25 @@ const dayMs = 86_400_000;
 const cautionShare = 0.8;
 const maximumLimits = 4;
 const maximumShops = 4;
-const widgetPeriod: SpendingPeriod = 'month';
+const widgetPeriod: SpendingPeriod = 'currentMonth';
 const refreshDays = 7;
 
 function pad(value: number): string {
   return String(value).padStart(2, '0');
 }
 
-function periodLabel(): string {
-  return currentCopy(widgetsCopy).periodShort;
+function monthName(reference: Date): string {
+  return currentCopy(calendarCopy).monthNames[reference.getMonth()] ?? '';
 }
 
-export function widgetLabels(reference: Date): WidgetLabels {
-  const { asOf, ...labels } = currentCopy(widgetsCopy).labels;
+function periodLabel(reference: Date): string {
+  return currentCopy(widgetsCopy).periodShort(monthName(reference));
+}
 
-  return { ...labels, asOf: asOf(updatedLabel(reference)) };
+export function widgetLabels(updatedAt: Date, reference: Date = updatedAt): WidgetLabels {
+  const { asOf, periodTitle, ...labels } = currentCopy(widgetsCopy).labels;
+
+  return { ...labels, periodTitle: periodTitle(monthName(reference)), asOf: asOf(updatedLabel(updatedAt)) };
 }
 
 function updatedLabel(reference: Date): string {
@@ -205,7 +210,7 @@ export function buildSpendingWidgetProps({
 
   return {
     status: 'ready',
-    periodLabel: periodLabel(),
+    periodLabel: periodLabel(reference),
     updatedAtMs: updatedAt.getTime(),
     updatedLabel: updatedLabel(updatedAt),
     expenseLabel: formatAmount(summary.expenseMinor, summary.currency),
@@ -218,7 +223,7 @@ export function buildSpendingWidgetProps({
     openUrl,
     isBlurred: false,
     revealUrl,
-    labels: widgetLabels(updatedAt),
+    labels: widgetLabels(updatedAt, reference),
   };
 }
 
@@ -237,7 +242,7 @@ function emptyWidgetProps(
 ): SpendingWidgetProps {
   return {
     status,
-    periodLabel: periodLabel(),
+    periodLabel: periodLabel(reference),
     updatedAtMs: reference.getTime(),
     updatedLabel: updatedLabel(reference),
     expenseLabel: '',

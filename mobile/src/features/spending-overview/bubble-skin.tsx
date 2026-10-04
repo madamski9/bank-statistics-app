@@ -1,12 +1,14 @@
 import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { bubbleTints, type BubbleKey } from './overview-theme';
+import type { BubbleTint } from './overview-theme';
 
 interface BubbleSkinProps {
   size: number;
-  tint: BubbleKey;
+  tint: BubbleTint;
 }
+
+const smallestPressedScale = 0.85;
 
 function glassEdge(rgb: string, whiteness: number, alpha: number): string {
   const channels = rgb.split(',').map((channel) => Number(channel.trim()));
@@ -18,7 +20,7 @@ function glassEdge(rgb: string, whiteness: number, alpha: number): string {
 function BubbleSkinComponent({ size: displaySize, tint }: BubbleSkinProps) {
   const renderScale = 1.5;
   const size = displaySize * renderScale;
-  const { rgb, rgbSecondary } = bubbleTints[tint];
+  const { rgb, rgbSecondary } = tint;
   const radius = size / 2;
   const highlight = { width: size * 0.36, height: size * 0.18, borderRadius: size * 0.18 };
   const bounce = { width: size * 0.62, height: size * 0.3, borderRadius: size * 0.31 };
@@ -124,7 +126,7 @@ function BubbleSkinComponent({ size: displaySize, tint }: BubbleSkinProps) {
           {
             borderRadius: radius,
             borderColor: glassEdge(rgb, 0.88, 0.5),
-            borderWidth: StyleSheet.hairlineWidth * renderScale,
+            borderWidth: (StyleSheet.hairlineWidth * renderScale) / smallestPressedScale,
           },
         ]}
       />

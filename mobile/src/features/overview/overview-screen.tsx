@@ -1,7 +1,14 @@
 import { memo } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn, FadeOut, ReduceMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { reportingCurrency } from '@/features/currency-conversion/exchange-rate';
+import { EventBanner } from '@/features/events/event-banner';
+import { eventTint } from '@/features/events/event-colors';
+import type { EventSummary } from '@/features/events/event-summary';
+import { eventsCopy } from '@/features/events/events-copy';
+import type { SpendingEvent } from '@/features/events/spending-event';
 import { AmountText } from '@/features/privacy/amount-text';
 import { BubbleField, type BubbleDescriptor } from '@/features/spending-overview/bubble-field';
 import { useCopy } from '@/features/localization/language';
@@ -21,6 +28,8 @@ import { overviewCopy } from './overview-copy';
 import { OverviewShortcuts, type OverviewShortcutsProps } from './overview-shortcuts';
 
 const unavailableValue = '-';
+const contextEntering = FadeIn.duration(240).delay(80).reduceMotion(ReduceMotion.System);
+const contextExiting = FadeOut.duration(160).reduceMotion(ReduceMotion.System);
 
 interface OverviewScreenProps extends OverviewShortcutsProps {
   summary: SpendingSummary;
@@ -32,6 +41,13 @@ interface OverviewScreenProps extends OverviewShortcutsProps {
   error: string | null;
   isLoading: boolean;
   hasData: boolean;
+  runningEvent: EventSummary | null;
+  isEventFocused: boolean;
+  canStartEvent: boolean;
+  onRequireEventPremium: () => void;
+  onToggleEventFocus: () => void;
+  onStartEvent: (name: string) => Promise<SpendingEvent>;
+  onOpenEvents: () => void;
 }
 
 function OverviewScreenComponent({
@@ -44,12 +60,21 @@ function OverviewScreenComponent({
   error,
   isLoading,
   hasData,
+  runningEvent,
+  isEventFocused,
+  canStartEvent,
+  onRequireEventPremium,
+  onToggleEventFocus,
+  onStartEvent,
+  onOpenEvents,
   ...shortcuts
 }: OverviewScreenProps) {
   const { formatAmount, formatCompactAmount, formatSignedCompactAmount } = useAmountFormatting();
   const insets = useSafeAreaInsets();
   const copy = useCopy(overviewCopy);
+  const eventCopy = useCopy(eventsCopy);
   const option = periodOption(period);
+  const focusedEvent = isEventFocused ? runningEvent : null;
 
   const amount = (minor: number, compact: boolean, signed = false) => {
     if (!hasData && isLoading) {
@@ -65,7 +90,37 @@ function OverviewScreenComponent({
       : formatAmount(minor, summary.currency);
   };
 
-  const bubbles: BubbleDescriptor[] = [
+  const eventBubbles = (event: EventSummary): BubbleDescriptor[] => {
+    const expense = formatAmount(event.expenseMinor, reportingCurrency);
+    const income = formatCompactAmount(event.incomeMinor, reportingCurrency);
+    const net = formatSignedCompactAmount(event.netMinor, reportingCurrency);
+    const count = formatTransactionCount(event.count);
+
+    return [
+      {
+        key: 'expense',
+        label: event.event.name,
+        value: expense,
+        caption: count,
+        tint: eventTint(event.event),
+        accessibilityLabel: eventCopy.eventBubbleLabel(event.event.name, expense, count),
+      },
+      {
+        key: 'income',
+        label: copy.income,
+        value: income,
+        accessibilityLabel: eventCopy.eventIncomeLabel(income),
+      },
+      {
+        key: 'net',
+        label: copy.net,
+        value: net,
+        accessibilityLabel: eventCopy.eventNetLabel(net),
+      },
+    ];
+  };
+
+  const periodBubbles: BubbleDescriptor[] = [
     {
       key: 'expense',
       label: copy.expense,
@@ -91,31 +146,60 @@ function OverviewScreenComponent({
     },
   ];
 
+  const bubbles = focusedEvent === null ? periodBubbles : eventBubbles(focusedEvent);
+
   return (
     <View style={styles.page}>
       <View style={styles.header}>
-        <View style={styles.contextRow}>
-          <AmountText maxFontSizeMultiplier={1.6} style={styles.contextLabel}>
-            {copy.context(option.label)}
-          </AmountText>
-          {expenseChange !== null ? (
-            <AmountText
-              maxFontSizeMultiplier={1.6}
-              style={[
-                styles.contextChange,
-                { color: expenseChange < 0 ? overviewColors.positive : overviewColors.negative },
-              ]}
-            >
-              {expenseChange >= 0 ? '▲' : '▼'} {formatChange(expenseChange)} {copy.versus}{' '}
-              {option.previousLabel}
+        {focusedEvent !== null ? (
+          <Animated.View
+            entering={contextEntering}
+            exiting={contextExiting}
+            key={`event-${focusedEvent.event.id}`}
+            style={styles.contextRow}
+          >
+            <Text maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.contextLabel}>
+              {eventCopy.eventContext(focusedEvent.event.name)}
+            </Text>
+            <Text maxFontSizeMultiplier={1.6} style={styles.contextLabel}>
+              {eventCopy.days(focusedEvent.days)}
+            </Text>
+          </Animated.View>
+        ) : (
+          <Animated.View entering={contextEntering} exiting={contextExiting} key="period" style={styles.contextRow}>
+            <AmountText maxFontSizeMultiplier={1.6} style={styles.contextLabel}>
+              {copy.context(option.label)}
             </AmountText>
-          ) : null}
-        </View>
+            {expenseChange !== null ? (
+              <AmountText
+                maxFontSizeMultiplier={1.6}
+                style={[
+                  styles.contextChange,
+                  { color: expenseChange < 0 ? overviewColors.positive : overviewColors.negative },
+                ]}
+              >
+                {expenseChange >= 0 ? '▲' : '▼'} {formatChange(expenseChange)} {copy.versus}{' '}
+                {option.previousLabel}
+              </AmountText>
+            ) : null}
+          </Animated.View>
+        )}
 
-        <RangeSwitcher lockedPeriods={lockedPeriods} onChange={onChangePeriod} period={period} />
+        <Animated.View
+          accessibilityElementsHidden={focusedEvent !== null}
+          importantForAccessibility={focusedEvent === null ? 'auto' : 'no-hide-descendants'}
+          pointerEvents={focusedEvent === null ? 'auto' : 'none'}
+          style={[styles.rangeSwitcher, focusedEvent === null ? null : styles.rangeSwitcherHidden]}
+        >
+          <RangeSwitcher lockedPeriods={lockedPeriods} onChange={onChangePeriod} period={period} />
+        </Animated.View>
       </View>
 
-      <BubbleField bubbles={bubbles} onSelect={onSelectBubble} />
+      <BubbleField
+        bubbles={bubbles}
+        variant={focusedEvent === null ? 'period' : `event-${focusedEvent.event.id}`}
+        onSelect={focusedEvent === null ? onSelectBubble : onOpenEvents}
+      />
 
       {error !== null ? (
         <Text maxFontSizeMultiplier={1.6} style={styles.error}>
@@ -132,6 +216,15 @@ function OverviewScreenComponent({
       ) : null}
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+        <EventBanner
+          canStartEvent={canStartEvent}
+          isEventFocused={isEventFocused}
+          onRequirePremium={onRequireEventPremium}
+          onOpenEvents={onOpenEvents}
+          onStartEvent={onStartEvent}
+          onToggleEventFocus={onToggleEventFocus}
+          runningEvent={runningEvent}
+        />
         <OverviewShortcuts {...shortcuts} />
       </View>
     </View>
@@ -150,7 +243,16 @@ const styles = StyleSheet.create({
     gap: overviewSpacing.tight,
   },
   contextRow: {
+    minHeight: 34,
     gap: 2,
+  },
+  rangeSwitcher: {
+    transitionProperty: 'opacity',
+    transitionDuration: 220,
+    transitionTimingFunction: 'ease-out',
+  },
+  rangeSwitcherHidden: {
+    opacity: 0,
   },
   contextLabel: {
     fontSize: 13,
@@ -168,6 +270,7 @@ const styles = StyleSheet.create({
     color: overviewColors.textSecondary,
   },
   footer: {
+    gap: overviewSpacing.tight,
     paddingHorizontal: overviewSpacing.gutter,
   },
   error: {
