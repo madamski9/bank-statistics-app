@@ -6,6 +6,7 @@ import { LocalizedHomeScreen } from '@/features/home/localized-home-screen';
 import { OnboardingGate } from '@/features/onboarding/onboarding-gate';
 import { AppLockGate, AppLockScreen } from '@/features/privacy/app-lock-gate';
 import { PrivacyProvider } from '@/features/privacy/privacy-provider';
+import { PrivacyBoundary } from '@/features/privacy/privacy-shield';
 import { OwnedDeviceGate } from '@/features/sync/owned-device-gate';
 import { SignedOutSpendingWidget } from '@/features/widgets/use-spending-widget';
 
@@ -16,11 +17,13 @@ export default function Index() {
         <OwnedDeviceGate>
           <AccountStandingGate>
             <PrivacyProvider lockScreen={<AppLockScreen />}>
-              <OnboardingGate>
-                <AppLockGate>
-                  <LocalizedHomeScreen />
-                </AppLockGate>
-              </OnboardingGate>
+              <PrivacyBoundary>
+                <OnboardingGate>
+                  <AppLockGate>
+                    <LocalizedHomeScreen />
+                  </AppLockGate>
+                </OnboardingGate>
+              </PrivacyBoundary>
             </PrivacyProvider>
           </AccountStandingGate>
         </OwnedDeviceGate>

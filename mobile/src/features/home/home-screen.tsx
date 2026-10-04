@@ -77,6 +77,7 @@ import {
   previousPeriodWindow,
   type SpendingPeriod,
 } from '@/features/spending-overview/periods';
+import { PrivacyShield } from '@/features/privacy/privacy-shield';
 import {
   periodChange,
   summarizeSpending,
@@ -831,6 +832,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
             onEdit={(rule) => setAlertEditor({ scope: rule.scope, rule })}
           />
         )}
+        <PrivacyShield />
       </Modal>
 
       <Modal
@@ -842,6 +844,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
         {widgetPreviewProps !== null ? (
           <WidgetPreview onClose={closeWidgetPreview} props={widgetPreviewProps} />
         ) : null}
+        <PrivacyShield />
       </Modal>
     </View>
   );

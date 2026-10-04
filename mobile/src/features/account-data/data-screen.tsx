@@ -11,6 +11,7 @@ import { formatTransactionCount } from '@/features/spending-overview/formatting'
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { useCopy } from '@/features/localization/language';
 import { CloudSyncSection } from '@/features/sync/cloud-sync-section';
+import { PrivacyShield } from '@/features/privacy/privacy-shield';
 
 import { accountDataCopy } from './account-data-copy';
 import { DeleteAccountScreen } from './delete-account-screen';
@@ -130,6 +131,7 @@ export function DataScreen({ records, accounts, onClose }: DataScreenProps) {
         visible={isDeleting}
       >
         <DeleteAccountScreen onCancel={() => setIsDeleting(false)} />
+        <PrivacyShield />
       </Modal>
     </View>
   );

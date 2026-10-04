@@ -20,7 +20,6 @@ import {
   type BiometricOutcome,
 } from './biometrics';
 import { afterFailedAttempt, noPinAttempts, remainingLockoutMs, type PinAttempts } from './pin';
-import { PrivacyCover } from './privacy-cover';
 import {
   defaultPrivacySettings,
   shouldLockOnReturn,
@@ -38,9 +37,15 @@ import {
 
 export type LockReason = 'app' | 'widget';
 
+export type ShieldMode = 'hidden' | 'cover' | 'lock';
+
 export type PinCheck = { isCorrect: true } | { isCorrect: false; lockedForMs: number };
 
 interface PrivacyContextValue {
+  shieldMode: ShieldMode;
+  lockScreen: ReactNode;
+  topShieldId: string | null;
+  registerShield: (id: string) => () => void;
   isLoaded: boolean;
   settings: PrivacySettings;
   hasPin: boolean;
@@ -73,6 +78,7 @@ export function PrivacyProvider({ children, lockScreen }: PrivacyProviderProps) 
   const [lockReason, setLockReason] = useState<LockReason | null>(null);
   const [appState, setAppState] = useState<AppStateStatus>(AppState.currentState);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [shieldIds, setShieldIds] = useState<string[]>([]);
   const [isWidgetPreviewOpen, setIsWidgetPreviewOpen] = useState(false);
   const [widgetRevealedUntilMs, setWidgetRevealedUntilMs] = useState(0);
   const attempts = useRef<PinAttempts>(noPinAttempts);
@@ -233,8 +239,23 @@ export function PrivacyProvider({ children, lockScreen }: PrivacyProviderProps) 
 
   const closeWidgetPreview = useCallback(() => setIsWidgetPreviewOpen(false), []);
 
+  const registerShield = useCallback((id: string) => {
+    setShieldIds((current) => [...current, id]);
+
+    return () => setShieldIds((current) => current.filter((candidate) => candidate !== id));
+  }, []);
+
+  const isBackgrounded = (appState === 'inactive' || appState === 'background') && !isAuthenticating;
+  const shieldMode: ShieldMode =
+    isLoaded && lockReason !== null ? 'lock' : isBackgrounded ? 'cover' : 'hidden';
+  const topShieldId = shieldIds.at(-1) ?? null;
+
   const value = useMemo<PrivacyContextValue>(
     () => ({
+      shieldMode,
+      lockScreen,
+      topShieldId,
+      registerShield,
       isLoaded,
       settings: effectiveSettings,
       hasPin,
@@ -252,6 +273,10 @@ export function PrivacyProvider({ children, lockScreen }: PrivacyProviderProps) 
       closeWidgetPreview,
     }),
     [
+      shieldMode,
+      lockScreen,
+      topShieldId,
+      registerShield,
       authenticate,
       biometric,
       cancelWidgetReveal,
@@ -273,14 +298,6 @@ export function PrivacyProvider({ children, lockScreen }: PrivacyProviderProps) 
   return (
     <PrivacyContext.Provider value={value}>
       {children}
-      <PrivacyCover
-        isVisible={
-          (isLoaded && lockReason !== null) ||
-          ((appState === 'inactive' || appState === 'background') && !isAuthenticating)
-        }
-      >
-        {isLoaded && lockReason !== null ? lockScreen : null}
-      </PrivacyCover>
     </PrivacyContext.Provider>
   );
 }

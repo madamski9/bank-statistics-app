@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
+import { PrivacyShield } from '@/features/privacy/privacy-shield';
 
 interface NamePromptProps {
   visible: boolean;
@@ -29,7 +30,12 @@ interface NamePromptProps {
 export function NamePrompt({ visible, onCancel, ...rest }: NamePromptProps) {
   return (
     <Modal animationType="fade" onRequestClose={onCancel} transparent visible={visible}>
-      {visible ? <NamePromptCard onCancel={onCancel} {...rest} /> : null}
+      {visible ? (
+        <>
+          <NamePromptCard onCancel={onCancel} {...rest} />
+          <PrivacyShield />
+        </>
+      ) : null}
     </Modal>
   );
 }

@@ -12,6 +12,7 @@ import { PinSetup } from './pin-setup';
 import { usePrivacy } from './privacy-provider';
 import { privacyCopy } from './privacy-copy';
 import { lockTimeouts, type PrivacySettings } from './privacy-settings';
+import { PrivacyShield } from './privacy-shield';
 
 interface PrivacySettingsScreenProps {
   onClose: () => void;
@@ -219,6 +220,7 @@ export function PrivacySettingsScreen({ onClose }: PrivacySettingsScreenProps) {
             />
           </View>
         ) : null}
+        <PrivacyShield />
       </Modal>
     </View>
   );
