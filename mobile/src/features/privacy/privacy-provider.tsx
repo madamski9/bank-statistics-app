@@ -62,9 +62,10 @@ const PrivacyContext = createContext<PrivacyContextValue | null>(null);
 
 interface PrivacyProviderProps {
   children: ReactNode;
+  lockScreen: ReactNode;
 }
 
-export function PrivacyProvider({ children }: PrivacyProviderProps) {
+export function PrivacyProvider({ children, lockScreen }: PrivacyProviderProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [settings, setSettings] = useState<PrivacySettings>(defaultPrivacySettings);
   const [hasPin, setHasPin] = useState(false);
@@ -273,8 +274,13 @@ export function PrivacyProvider({ children }: PrivacyProviderProps) {
     <PrivacyContext.Provider value={value}>
       {children}
       <PrivacyCover
-        isVisible={(appState === 'inactive' || appState === 'background') && !isAuthenticating}
-      />
+        isVisible={
+          (isLoaded && lockReason !== null) ||
+          ((appState === 'inactive' || appState === 'background') && !isAuthenticating)
+        }
+      >
+        {isLoaded && lockReason !== null ? lockScreen : null}
+      </PrivacyCover>
     </PrivacyContext.Provider>
   );
 }

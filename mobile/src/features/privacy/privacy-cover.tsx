@@ -1,12 +1,14 @@
+import type { ReactNode } from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
 
 import { overviewColors } from '@/features/spending-overview/overview-theme';
 
 interface PrivacyCoverProps {
   isVisible: boolean;
+  children?: ReactNode;
 }
 
-export function PrivacyCover({ isVisible }: PrivacyCoverProps) {
+export function PrivacyCover({ isVisible, children }: PrivacyCoverProps) {
   return (
     <Modal
       animationType="none"
@@ -15,7 +17,11 @@ export function PrivacyCover({ isVisible }: PrivacyCoverProps) {
       transparent={false}
       visible={isVisible}
     >
-      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.cover} />
+      <View style={styles.cover}>
+        {children ?? (
+          <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.cover} />
+        )}
+      </View>
     </Modal>
   );
 }
