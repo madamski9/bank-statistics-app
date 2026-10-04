@@ -189,7 +189,7 @@ function OverviewScreenComponent({
           accessibilityElementsHidden={focusedEvent !== null}
           importantForAccessibility={focusedEvent === null ? 'auto' : 'no-hide-descendants'}
           pointerEvents={focusedEvent === null ? 'auto' : 'none'}
-          style={[styles.rangeSwitcher, focusedEvent === null ? null : styles.rangeSwitcherHidden]}
+          style={focusedEvent === null ? undefined : styles.rangeSwitcherHidden}
         >
           <RangeSwitcher lockedPeriods={lockedPeriods} onChange={onChangePeriod} period={period} />
         </Animated.View>
@@ -245,11 +245,6 @@ const styles = StyleSheet.create({
   contextRow: {
     minHeight: 34,
     gap: 2,
-  },
-  rangeSwitcher: {
-    transitionProperty: 'opacity',
-    transitionDuration: 220,
-    transitionTimingFunction: 'ease-out',
   },
   rangeSwitcherHidden: {
     opacity: 0,
