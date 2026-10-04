@@ -1,4 +1,4 @@
-const { withXcodeProject } = require('@expo/config-plugins');
+const { withXcodeProject } = require('expo/config-plugins');
 
 // One of expo-dev-launcher's Run Script build phases writes the machine's LAN
 // IP (ip.txt) directly into the built app bundle, so a physical device knows
