@@ -7,6 +7,7 @@ import type { CategorizationRule } from '@/features/classification/categorizatio
 import { reportingCurrency } from '@/features/currency-conversion/exchange-rate';
 import { calendarCopy } from '@/features/localization/calendar-copy';
 import { useCopy } from '@/features/localization/language';
+import { AmountText } from '@/features/privacy/amount-text';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { SheetLayout } from '@/features/app-shell/sheet-layout';
 import { formatChange, formatShare, formatTransactionCount } from '@/features/spending-overview/formatting';
@@ -90,12 +91,12 @@ export function MonthlyGroupScreen({
         <Text maxFontSizeMultiplier={1.4} style={styles.caption}>
           {group.dimension === 'merchant' ? copy.store : copy.category} · {calendar.monthNames[month.month]} {month.year}
         </Text>
-        <Text maxFontSizeMultiplier={1.4} style={styles.caption}>
+        <AmountText maxFontSizeMultiplier={1.4} style={styles.caption}>
           {copy.groupDetail(
             copy.payments(summary.expenseCount),
             formatShare(monthExpenseMinor === 0 ? 0 : summary.expenseMinor / monthExpenseMinor),
           )}
-        </Text>
+        </AmountText>
       </View>
 
       <View style={styles.card}>
@@ -104,11 +105,11 @@ export function MonthlyGroupScreen({
             <Text maxFontSizeMultiplier={1.4} style={styles.caption}>
               {copy.dailyAverage}
             </Text>
-            <Text adjustsFontSizeToFit maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.amount}>
+            <AmountText adjustsFontSizeToFit maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.amount}>
               {formatAmount(summary.dailyExpenseMinor, reportingCurrency)}
-            </Text>
+            </AmountText>
           </View>
-          <Text
+          <AmountText
             maxFontSizeMultiplier={1.4}
             numberOfLines={2}
             style={[
@@ -121,7 +122,7 @@ export function MonthlyGroupScreen({
             {summary.dailyExpenseChange === null
               ? copy.noPrevious
               : copy.versusPrevious(formatChange(summary.dailyExpenseChange), summary.dailyExpenseChange > 0)}
-          </Text>
+          </AmountText>
         </View>
         <DailySpendBars
           accessibilityLabel={copy.chartLabel(
@@ -136,12 +137,12 @@ export function MonthlyGroupScreen({
           elapsedDays={summary.elapsedDays}
           otherLabel={copy.other}
         />
-        <Text maxFontSizeMultiplier={1.4} style={styles.cardTotal}>
+        <AmountText maxFontSizeMultiplier={1.4} style={styles.cardTotal}>
           {copy.total(
             formatAmount(summary.expenseMinor, reportingCurrency),
             formatTransactionCount(summary.expenseCount),
           )}
-        </Text>
+        </AmountText>
       </View>
 
       <View style={styles.section}>

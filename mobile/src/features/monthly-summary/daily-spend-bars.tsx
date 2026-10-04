@@ -10,6 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { reportingCurrency } from '@/features/currency-conversion/exchange-rate';
+import { AmountText } from '@/features/privacy/amount-text';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { overviewColors } from '@/features/spending-overview/overview-theme';
 
@@ -161,7 +162,7 @@ export function DailySpendBars({
         </View>
         <View style={styles.valueAxis}>
           {valueTicks.map((offset) => (
-            <Text
+            <AmountText
               adjustsFontSizeToFit
               key={offset}
               maxFontSizeMultiplier={1.1}
@@ -169,7 +170,7 @@ export function DailySpendBars({
               style={[styles.valueLabel, { bottom: offset - 7 }]}
             >
               {formatCompactAmount(Math.round((offset / plotHeight) * peakMinor), reportingCurrency)}
-            </Text>
+            </AmountText>
           ))}
           {averageMinor > 0 ? (
             <Animated.Text
