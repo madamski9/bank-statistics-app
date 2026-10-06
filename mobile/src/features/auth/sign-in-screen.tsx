@@ -7,29 +7,27 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AnimatedReveal } from '@/features/app-shell/animated-reveal';
+import { ScalePressable } from '@/features/app-shell/scale-pressable';
 import { useCopy } from '@/features/localization/language';
 
 import { authCopy } from './auth-copy';
+import { AuthIcon } from './auth-icon';
+import { authEntering, authMotion } from './auth-motion';
+import { authColors as colors } from './auth-theme';
 import { EmailCodeSignIn } from './email-code-sign-in';
+import { SignInIllustration } from './sign-in-illustration';
 import { appleSignInIcon, googleSignInIcon } from './social-provider-assets';
 import { useWarmUpBrowser } from './use-warm-up-browser';
-
-const colors = {
-  background: '#000000',
-  surface: '#0D0D0F',
-  border: 'rgba(255, 255, 255, 0.12)',
-  textPrimary: '#FFFFFF',
-  textSecondary: '#8E8E93',
-  accent: '#8F7BFF',
-  danger: '#FF5C7A',
-};
 
 type SocialStrategy = 'oauth_google' | 'oauth_apple';
 type FormStep = 'email' | 'code';
@@ -37,10 +35,14 @@ type FormStep = 'email' | 'code';
 export function SignInScreen() {
   const copy = useCopy(authCopy);
   const insets = useSafeAreaInsets();
+  const { height, fontScale } = useWindowDimensions();
+  const isCompact = height < 740 || fontScale > 1.3;
   const { startSSOFlow } = useSSO();
   const [formStep, setFormStep] = useState<FormStep>('email');
   const [activeStrategy, setActiveStrategy] = useState<SocialStrategy | null>(null);
   const [socialError, setSocialError] = useState<string | null>(null);
+  const [isFormFocused, setIsFormFocused] = useState(false);
+  const [isEmailBusy, setIsEmailBusy] = useState(false);
 
   useWarmUpBrowser();
 
@@ -76,97 +78,115 @@ export function SignInScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <View
-          style={[
-            styles.content,
-            { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 },
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingTop: insets.top + 20,
+              paddingBottom: Math.max(insets.bottom, 16) + 12,
+              paddingLeft: Math.max(insets.left, 20),
+              paddingRight: Math.max(insets.right, 20),
+            },
           ]}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <View style={styles.brandRow}>
-            <View style={styles.brandMark}>
-              <View style={styles.brandCore} />
-            </View>
-            <Text maxFontSizeMultiplier={1.3} style={styles.brandName}>
-              BankStats
-            </Text>
-          </View>
+          <View style={styles.content}>
+            <AnimatedReveal style={styles.brandRow}>
+              <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.brandMark}>
+                <View style={styles.brandCore} />
+              </View>
+              <Text style={styles.brandName}>BankStats</Text>
+            </AnimatedReveal>
 
-          {formStep === 'email' ? (
-            <View accessible={false} style={styles.orbit}>
-              <View style={[styles.bubble, styles.bubblePink]} />
-              <View style={[styles.bubble, styles.bubbleGreen]} />
-              <View style={[styles.bubble, styles.bubbleBlue]} />
-            </View>
-          ) : null}
+            <SignInIllustration
+              isCodeStep={formStep === 'code'}
+              isCompact={isCompact}
+              isFocused={isFormFocused}
+            />
 
-          <View style={styles.heading}>
-            <Text maxFontSizeMultiplier={1.35} style={styles.title}>
+            <AnimatedReveal
+              key={formStep}
+              delay={100}
+              layout={authMotion.layout}
+              style={styles.heading}
+            >
+              <Text accessibilityRole="header" style={[styles.title, isCompact && styles.compactTitle]}>
+                {formStep === 'email' ? (
+                  <>
+                    {copy.titleFirstLine}
+                    {'\n'}
+                    <Text style={styles.titleAccent}>{copy.titleSecondLine}</Text>
+                  </>
+                ) : (
+                  copy.checkMail
+                )}
+              </Text>
+              <Text style={styles.subtitle}>
+                {formStep === 'email' ? copy.subtitle : copy.codeSubtitle}
+              </Text>
+            </AnimatedReveal>
+
+            <AnimatedReveal delay={200} layout={authMotion.layout} style={styles.formCard}>
+              <EmailCodeSignIn
+                isLocked={activeStrategy !== null}
+                onBusyChange={setIsEmailBusy}
+                onFocusChange={setIsFormFocused}
+                onStepChange={setFormStep}
+              />
+
               {formStep === 'email' ? (
-                <>
-                  {copy.titleFirstLine}
-                  {`\n`}
-                  {copy.titleSecondLine}
-                </>
-              ) : (
-                copy.checkMail
-              )}
-            </Text>
-            {formStep === 'email' ? (
-              <Text maxFontSizeMultiplier={1.5} style={styles.subtitle}>
-                {copy.subtitle}
-              </Text>
-            ) : null}
+                <AnimatedReveal style={styles.alternatives}>
+                  <View style={styles.divider}>
+                    <View style={styles.dividerLine} />
+                    <Text style={styles.dividerLabel}>{copy.or}</Text>
+                    <View style={styles.dividerLine} />
+                  </View>
+                  <View style={[styles.socialButtons, fontScale > 1.3 && styles.socialButtonsStacked]}>
+                    <SocialButton
+                      isDisabled={activeStrategy !== null || isEmailBusy}
+                      isLoading={activeStrategy === 'oauth_google'}
+                      label={copy.continueWithGoogle}
+                      onPress={() => signInWith('oauth_google')}
+                      provider="google"
+                    />
+                    <SocialButton
+                      isDisabled={activeStrategy !== null || isEmailBusy}
+                      isLoading={activeStrategy === 'oauth_apple'}
+                      label={copy.continueWithApple}
+                      onPress={() => signInWith('oauth_apple')}
+                      provider="apple"
+                    />
+                  </View>
+                </AnimatedReveal>
+              ) : null}
+
+              {socialError !== null ? (
+                <Animated.Text
+                  accessibilityLiveRegion="polite"
+                  entering={authEntering()}
+                  style={styles.socialError}
+                >
+                  {socialError}
+                </Animated.Text>
+              ) : null}
+            </AnimatedReveal>
+
+            <AnimatedReveal delay={300} layout={authMotion.layout} style={styles.privacy}>
+              <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.privacyIcon}>
+                <AuthIcon name="shield" color={colors.textSecondary} size={16} />
+              </View>
+              <Text style={styles.privacyText}>{copy.privacy}</Text>
+            </AnimatedReveal>
           </View>
-
-          <View style={styles.formCard}>
-            <EmailCodeSignIn onStepChange={setFormStep} />
-
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.dividerLabel}>
-                {copy.or}
-              </Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <View style={styles.socialButtons}>
-              <SocialIconButton
-                isDisabled={activeStrategy !== null}
-                isLoading={activeStrategy === 'oauth_google'}
-                label={copy.continueWithGoogle}
-                onPress={() => signInWith('oauth_google')}
-                provider="google"
-              />
-              <SocialIconButton
-                isDisabled={activeStrategy !== null}
-                isLoading={activeStrategy === 'oauth_apple'}
-                label={copy.continueWithApple}
-                onPress={() => signInWith('oauth_apple')}
-                provider="apple"
-              />
-            </View>
-
-            {socialError !== null ? (
-              <Text
-                accessibilityLiveRegion="polite"
-                maxFontSizeMultiplier={1.5}
-                style={styles.socialError}
-              >
-                {socialError}
-              </Text>
-            ) : null}
-          </View>
-
-          <Text maxFontSizeMultiplier={1.4} style={styles.privacy}>
-            {copy.privacy}
-          </Text>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );
 }
 
-interface SocialIconButtonProps {
+interface SocialButtonProps {
   label: string;
   provider: 'google' | 'apple';
   isDisabled: boolean;
@@ -174,45 +194,44 @@ interface SocialIconButtonProps {
   onPress: () => void;
 }
 
-function SocialIconButton({
-  label,
-  provider,
-  isDisabled,
-  isLoading,
-  onPress,
-}: SocialIconButtonProps) {
-  const indicatorColor = provider === 'apple' ? '#000000' : colors.textPrimary;
+function SocialButton({ label, provider, isDisabled, isLoading, onPress }: SocialButtonProps) {
+  const foreground = provider === 'apple' ? colors.background : colors.textPrimary;
 
   return (
-    <Pressable
+    <ScalePressable
       accessibilityLabel={label}
       accessibilityRole="button"
+      accessibilityState={{ disabled: isDisabled, busy: isLoading }}
+      containerStyle={[styles.socialButtonContainer, isDisabled && styles.socialButtonDisabled]}
       disabled={isDisabled}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.socialIconButton,
+      pressedScale={0.97}
+      style={[
+        styles.socialButton,
         provider === 'apple' ? styles.appleButton : styles.googleButton,
-        isDisabled ? styles.socialButtonDisabled : null,
-        pressed ? styles.socialButtonPressed : null,
       ]}
     >
       {isLoading ? (
-        <ActivityIndicator color={indicatorColor} size="small" />
-      ) : provider === 'google' ? (
-        <View accessible={false} style={styles.googleIconMask}>
-          <Image contentFit="contain" source={googleSignInIcon} style={styles.googleAsset} />
-        </View>
-      ) : Platform.OS === 'ios' ? (
-        <SymbolView name="apple.logo" size={25} tintColor="#000000" />
+        <ActivityIndicator color={foreground} size="small" />
       ) : (
-        <Image
-          accessible={false}
-          contentFit="contain"
-          source={appleSignInIcon}
-          style={styles.icon}
-        />
+        <>
+          <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.providerIcon}>
+            {provider === 'google' ? (
+              <View style={styles.googleIconMask}>
+                <Image contentFit="contain" source={googleSignInIcon} style={styles.googleAsset} />
+              </View>
+            ) : Platform.OS === 'ios' ? (
+              <SymbolView name="apple.logo" size={22} tintColor={foreground} />
+            ) : (
+              <Image contentFit="contain" source={appleSignInIcon} style={styles.appleAsset} />
+            )}
+          </View>
+          <Text style={[styles.socialButtonLabel, { color: foreground }]}>
+            {provider === 'google' ? 'Google' : 'Apple'}
+          </Text>
+        </>
       )}
-    </Pressable>
+    </ScalePressable>
   );
 }
 
@@ -224,26 +243,31 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
-  content: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 20,
+  },
+  content: {
+    width: '100%',
+    maxWidth: 440,
+    alignSelf: 'center',
   },
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 10,
-    marginBottom: 20,
+    marginBottom: 8,
   },
   brandMark: {
-    width: 26,
-    height: 26,
+    width: 28,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 13,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(143, 123, 255, 0.55)',
-    backgroundColor: 'rgba(143, 123, 255, 0.18)',
+    borderColor: colors.accentBorder,
+    backgroundColor: colors.accentMuted,
   },
   brandCore: {
     width: 8,
@@ -252,70 +276,49 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
   },
   brandName: {
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: -0.3,
+    fontSize: 17,
+    fontWeight: '600',
+    letterSpacing: -0.4,
     color: colors.textPrimary,
-  },
-  orbit: {
-    height: 82,
-  },
-  bubble: {
-    position: 'absolute',
-    borderWidth: 1,
-  },
-  bubblePink: {
-    left: 4,
-    top: 12,
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    borderColor: 'rgba(255, 92, 138, 0.62)',
-    backgroundColor: 'rgba(255, 92, 138, 0.16)',
-  },
-  bubbleGreen: {
-    left: 58,
-    top: 0,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderColor: 'rgba(61, 232, 160, 0.65)',
-    backgroundColor: 'rgba(61, 232, 160, 0.13)',
-  },
-  bubbleBlue: {
-    left: 98,
-    top: 43,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderColor: 'rgba(95, 200, 255, 0.62)',
-    backgroundColor: 'rgba(95, 200, 255, 0.14)',
   },
   heading: {
-    gap: 8,
-    marginTop: 12,
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 8,
+    marginBottom: 24,
   },
   title: {
-    fontSize: 30,
-    lineHeight: 33,
+    fontSize: 32,
+    lineHeight: 38,
     fontWeight: '700',
     letterSpacing: -1.2,
+    textAlign: 'center',
     color: colors.textPrimary,
   },
+  compactTitle: {
+    fontSize: 28,
+    lineHeight: 34,
+  },
+  titleAccent: {
+    color: colors.accentText,
+  },
   subtitle: {
-    maxWidth: 340,
-    fontSize: 14,
-    lineHeight: 20,
+    maxWidth: 320,
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'center',
     color: colors.textSecondary,
   },
   formCard: {
-    gap: 14,
-    marginTop: 18,
-    borderRadius: 20,
-    borderWidth: StyleSheet.hairlineWidth,
+    gap: 20,
+    borderRadius: 24,
+    borderWidth: 1,
     borderColor: colors.border,
-    padding: 14,
+    padding: 20,
     backgroundColor: colors.surface,
+  },
+  alternatives: {
+    gap: 16,
   },
   divider: {
     flexDirection: 'row',
@@ -328,61 +331,90 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
   },
   dividerLabel: {
+    flexShrink: 1,
     fontSize: 12,
     color: colors.textSecondary,
   },
   socialButtons: {
     flexDirection: 'row',
-    justifyContent: 'center',
     gap: 12,
   },
-  socialIconButton: {
-    width: 54,
-    height: 54,
+  socialButtonsStacked: {
+    flexDirection: 'column',
+  },
+  socialButtonContainer: {
+    flex: 1,
+  },
+  socialButton: {
+    flex: 1,
+    minHeight: 52,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
-    overflow: 'hidden',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
   },
   googleButton: {
-    backgroundColor: '#131314',
+    backgroundColor: colors.google,
+    borderColor: colors.controlBorder,
   },
   appleButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.apple,
+    borderColor: colors.apple,
   },
-  icon: {
-    width: 54,
-    height: 54,
+  socialButtonLabel: {
+    flexShrink: 1,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  providerIcon: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  appleAsset: {
+    width: 46,
+    height: 46,
   },
   googleIconMask: {
-    width: 30,
-    height: 30,
+    width: 24,
+    height: 24,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   googleAsset: {
-    position: 'absolute',
-    width: 54,
-    height: 54,
-  },
-  socialButtonPressed: {
-    opacity: 0.72,
+    width: 44,
+    height: 44,
   },
   socialButtonDisabled: {
     opacity: 0.5,
   },
   socialError: {
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 19,
     color: colors.danger,
   },
   privacy: {
-    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 20,
     paddingHorizontal: 12,
-    textAlign: 'center',
+  },
+  privacyIcon: {
+    marginTop: 2,
+  },
+  privacyText: {
+    flexShrink: 1,
     fontSize: 12,
-    lineHeight: 17,
+    lineHeight: 18,
     color: colors.textSecondary,
   },
 });

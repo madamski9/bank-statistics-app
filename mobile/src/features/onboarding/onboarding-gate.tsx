@@ -22,7 +22,7 @@ function completedKey(userId: string): string {
 export function OnboardingGate({ children }: OnboardingGateProps) {
   const { userId } = useAuth();
   const [state, setState] = useState<OnboardingState | null>(null);
-  const isReplaying = useOnboardingReplay();
+  const replay = useOnboardingReplay();
 
   useEffect(() => {
     if (userId == null) {
@@ -69,5 +69,15 @@ export function OnboardingGate({ children }: OnboardingGateProps) {
     return null;
   }
 
-  return state.completed && !isReplaying ? children : <OnboardingScreen onComplete={finish} />;
+  if (state.completed && replay === 'none') {
+    return children;
+  }
+
+  return (
+    <OnboardingScreen
+      flow={replay === 'shortcuts' ? 'shortcuts' : 'full'}
+      onCancel={finishOnboardingReplay}
+      onComplete={finish}
+    />
+  );
 }
