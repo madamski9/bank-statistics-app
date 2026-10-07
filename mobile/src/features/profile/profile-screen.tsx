@@ -5,7 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { languageNames, useCopy, useLanguage } from '@/features/localization/language';
-import { replayOnboarding } from '@/features/onboarding/onboarding-replay';
+import { replayOnboarding, replayShortcutsSetup } from '@/features/onboarding/onboarding-replay';
 import { PremiumCard } from '@/features/premium/premium-card';
 import type { PremiumStatus } from '@/features/premium/use-premium';
 import { accountInitial } from '@/features/profile/account-identity';
@@ -242,6 +242,30 @@ export function ProfileScreen({
               </View>
               <Text maxFontSizeMultiplier={1.4} style={styles.actionLabel}>
                 {copy.captureHealth}
+              </Text>
+              <SymbolView
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+                name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+                size={17}
+                tintColor={overviewColors.textDisabled}
+              />
+            </Pressable>
+            <Pressable
+              accessibilityHint={copy.shortcutsSetupHint}
+              accessibilityRole="button"
+              onPress={replayShortcutsSetup}
+              style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
+            >
+              <View accessibilityElementsHidden importantForAccessibility="no" style={styles.rowIcon}>
+                <SymbolView
+                  name={{ ios: 'square.2.layers.3d', android: 'bolt', web: 'bolt' }}
+                  size={18}
+                  tintColor={overviewColors.textSecondary}
+                />
+              </View>
+              <Text maxFontSizeMultiplier={1.4} style={styles.actionLabel}>
+                {copy.shortcutsSetup}
               </Text>
               <SymbolView
                 accessibilityElementsHidden

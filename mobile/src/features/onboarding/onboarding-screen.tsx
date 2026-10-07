@@ -3,27 +3,24 @@ import { Image } from 'expo-image';
 import * as SecureStore from 'expo-secure-store';
 import { StatusBar } from 'expo-status-bar';
 import { SymbolView } from 'expo-symbols';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import {
+  ActivityIndicator,
   AppState,
   Linking,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import Animated, {
   Easing,
-  FadeInLeft,
-  FadeInRight,
-  FadeOut,
-  cancelAnimation,
+  interpolateColor,
+  ReduceMotion,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
-  withRepeat,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -32,16 +29,32 @@ import {
   overviewColors,
   overviewSpacing,
 } from '@/features/spending-overview/overview-theme';
-import { LimitProgressBar } from '@/features/alerts/limit-progress-bar';
+import { AnimatedReveal } from '@/features/app-shell/animated-reveal';
+import { ScalePressable } from '@/features/app-shell/scale-pressable';
 import { useCopy } from '@/features/localization/language';
 import { biometricLabels } from '@/features/privacy/biometrics';
 import { PinSetup } from '@/features/privacy/pin-setup';
 import { usePrivacy } from '@/features/privacy/privacy-provider';
 
 import { onboardingCopy } from './onboarding-copy';
+import {
+  CompletionIllustration,
+  LimitsIllustration,
+  OnboardingIcon,
+  SecurityIllustration,
+  ShortcutsIllustration,
+  WelcomeIllustration,
+} from './onboarding-illustrations';
+import {
+  onboardingColors,
+  onboardingMotion,
+} from './onboarding-motion';
+import { readSelectedBanks } from './selected-banks';
 import { shortcutUrlFor } from './shortcut-links';
 
 interface OnboardingScreenProps {
+  flow: 'full' | 'shortcuts';
+  onCancel: () => void;
   onComplete: (selectedBanks: string[]) => Promise<void>;
 }
 
@@ -72,18 +85,22 @@ const banks = [
   },
 ] as const;
 
-const pinStep = 5;
-const stepCount = 6;
+const banksStep = 4;
+const automationStep = 5;
+const pinStep = 6;
+const stepCount = 7;
+const shortcutsAppUrl = 'shortcuts://';
 function pendingReturnKey(userId: string): string {
   return `bankstats.onboarding.shortcuts-return.v1.${userId}`;
 }
 
-export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
+export function OnboardingScreen({ flow, onCancel, onComplete }: OnboardingScreenProps) {
   const copy = useCopy(onboardingCopy);
   const { userId } = useAuth();
   const { biometric, changePin, updateSettings } = usePrivacy();
   const insets = useSafeAreaInsets();
-  const [step, setStep] = useState(0);
+  const isShortcutsFlow = flow === 'shortcuts';
+  const [step, setStep] = useState(isShortcutsFlow ? banksStep : 0);
   const [transitionDirection, setTransitionDirection] = useState<
     'forward' | 'backward'
   >('forward');
@@ -91,18 +108,39 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
   const [error, setError] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'premium'>('free');
   const [isFinishing, setIsFinishing] = useState(false);
-  const reduceMotion = useReducedMotion();
   const progress = useSharedValue(0);
   const launchedShortcuts = useRef(false);
   const leftApp = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
+  const flowStart = isShortcutsFlow ? banksStep : 0;
+  const flowLength = isShortcutsFlow ? automationStep - banksStep + 1 : stepCount;
+  const flowPosition = Math.min(step - flowStart + 1, flowLength);
 
   useEffect(() => {
-    progress.value = withTiming(Math.min((step + 1) / stepCount, 1), {
-      duration: reduceMotion ? 0 : 600,
+    progress.value = withTiming(flowPosition / flowLength, {
+      duration: 420,
+      reduceMotion: ReduceMotion.System,
       easing: Easing.out(Easing.cubic),
     });
-  }, [progress, reduceMotion, step]);
+  }, [flowLength, flowPosition, progress]);
+
+  useEffect(() => {
+    if (!isShortcutsFlow || userId == null) {
+      return;
+    }
+
+    let isActive = true;
+
+    void readSelectedBanks(userId).then((savedBanks) => {
+      if (isActive && savedBanks.length > 0) {
+        setSelectedBanks(savedBanks);
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, [isShortcutsFlow, userId]);
 
   const progressStyle = useAnimatedStyle(() => ({
     width: `${progress.value * 100}%` as `${number}%`,
@@ -118,7 +156,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
     void SecureStore.getItemAsync(pendingReturnKey(userId))
       .then((value) => {
         if (isActive && value === 'true') {
-          setStep(pinStep);
+          setStep(automationStep);
           void SecureStore.deleteItemAsync(pendingReturnKey(userId));
         }
       })
@@ -140,7 +178,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
       } else if (state === 'active' && leftApp.current) {
         launchedShortcuts.current = false;
         leftApp.current = false;
-        setStep(pinStep);
+        setStep(automationStep);
         if (userId != null) {
           void SecureStore.deleteItemAsync(pendingReturnKey(userId));
         }
@@ -215,6 +253,8 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
     [changePin, changeStep, updateSettings],
   );
 
+  const isPrimaryDisabled = isFinishing || (step === banksStep && selectedBanks.length === 0);
+
   const primaryLabel =
     step === 2
       ? selectedPlan === 'free'
@@ -222,15 +262,17 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
         : copy.goToPayment
       : step === 3
         ? copy.goToSetup
-        : step === 4
+        : step === banksStep
           ? copy.addShortcut
-          : step === stepCount
-            ? copy.goToApp
-            : copy.next;
+          : step === automationStep
+            ? copy.automationEnabled
+            : step === stepCount
+              ? copy.goToApp
+              : copy.next;
   const primaryAction =
-    step === 4
+    step === banksStep
       ? openShortcuts
-      : step === stepCount
+      : step === stepCount || (isShortcutsFlow && step === automationStep)
         ? finish
         : step === 2 && selectedPlan === 'premium'
           ? () =>
@@ -240,16 +282,15 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
   return (
     <View style={styles.screen}>
       <StatusBar style="light" />
-      <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.topBar, { paddingTop: insets.top + 12, paddingLeft: Math.max(insets.left, 20), paddingRight: Math.max(insets.right, 20) }]}>
         {step > 0 && step < stepCount ? (
-          <Pressable
+          <ScalePressable
             accessibilityLabel={copy.back}
             accessibilityRole="button"
-            onPress={() => changeStep(step - 1)}
-            style={({ pressed }) => [
-              styles.topAction,
-              pressed ? styles.pressed : null,
-            ]}
+            onPress={() =>
+              isShortcutsFlow && step === banksStep ? onCancel() : changeStep(step - 1)
+            }
+            style={styles.topAction}
           >
             <SymbolView
               name={{
@@ -260,44 +301,51 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
               size={18}
               tintColor={overviewColors.textPrimary}
             />
-          </Pressable>
+          </ScalePressable>
         ) : (
           <View style={styles.topAction} />
         )}
         <Text maxFontSizeMultiplier={1.3} style={styles.stepCount}>
-          {step < stepCount ? `${step + 1} / ${stepCount}` : copy.done}
+          {step < stepCount ? `${flowPosition} / ${flowLength}` : copy.done}
         </Text>
         {step < 3 ? (
-          <Pressable
+          <ScalePressable
             accessibilityRole="button"
             onPress={() => changeStep(3)}
-            style={({ pressed }) => [
-              styles.skipAction,
-              pressed ? styles.pressed : null,
-            ]}
+            style={styles.skipAction}
           >
             <Text style={styles.skipLabel}>{copy.skipIntro}</Text>
-          </Pressable>
+          </ScalePressable>
         ) : (
           <View style={styles.skipAction} />
         )}
       </View>
 
+      <View style={styles.progressContainer}>
+        <View
+          accessibilityLabel={copy.progress(flowPosition, flowLength)}
+          accessibilityRole="progressbar"
+          accessibilityValue={{
+            min: 0,
+            max: flowLength,
+            now: flowPosition,
+          }}
+          style={styles.progressTrack}
+        >
+          <Animated.View style={[styles.progressFill, progressStyle]} />
+        </View>
+      </View>
+
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingLeft: Math.max(insets.left, 20), paddingRight: Math.max(insets.right, 20) }]}
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
         style={styles.scroll}
       >
-        <Animated.View
-          entering={
-            reduceMotion
-              ? undefined
-              : transitionDirection === 'forward'
-                ? FadeInRight.duration(420).easing(Easing.out(Easing.cubic))
-                : FadeInLeft.duration(420).easing(Easing.out(Easing.cubic))
-          }
-          exiting={reduceMotion ? undefined : FadeOut.duration(180)}
+        <AnimatedReveal
+          direction={transitionDirection === 'forward' ? 'right' : 'left'}
+          distance={18}
+          duration={320}
           key={step}
           style={styles.page}
         >
@@ -313,7 +361,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
             />
           ) : null}
           {step === 3 ? <ShortcutsIntro /> : null}
-          {step === 4 ? (
+          {step === banksStep ? (
             <BanksSetup
               onToggle={(bankId) =>
                 setSelectedBanks((current) =>
@@ -325,6 +373,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
               selectedBanks={selectedBanks}
             />
           ) : null}
+          {step === automationStep ? <AutomationSetup /> : null}
           {step === pinStep ? (
             <PinIntro
               biometricName={biometric === 'none' ? null : biometricLabels[biometric]}
@@ -332,79 +381,93 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
             />
           ) : null}
           {step === stepCount ? <CompletionIntro /> : null}
-        </Animated.View>
+        </AnimatedReveal>
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <View
-          accessibilityLabel={copy.progress(Math.min(step + 1, stepCount), stepCount)}
-          accessibilityRole="progressbar"
-          accessibilityValue={{
-            min: 0,
-            max: stepCount,
-            now: Math.min(step + 1, stepCount),
-          }}
-          style={styles.progressTrack}
-        >
-          <Animated.View style={[styles.progressFill, progressStyle]} />
-        </View>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) + 12, paddingLeft: Math.max(insets.left, 20), paddingRight: Math.max(insets.right, 20) }]}>
         {error !== null ? (
           <Text accessibilityLiveRegion="polite" style={styles.error}>
             {error}
           </Text>
         ) : null}
         {step !== pinStep ? (
-          <Pressable
+          <ScalePressable
             accessibilityRole="button"
-            disabled={isFinishing || (step === 4 && selectedBanks.length === 0)}
+            accessibilityState={{ disabled: isPrimaryDisabled, busy: isFinishing }}
+            containerStyle={isPrimaryDisabled && styles.disabled}
+            disabled={isPrimaryDisabled}
             onPress={() => void primaryAction()}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              isFinishing || (step === 4 && selectedBanks.length === 0)
-                ? styles.disabled
-                : null,
-              pressed ? styles.pressed : null,
-            ]}
+            style={styles.primaryButton}
           >
-            <Text maxFontSizeMultiplier={1.3} style={styles.primaryLabel}>
+            <Text style={styles.primaryLabel}>
               {isFinishing ? copy.saving : primaryLabel}
             </Text>
-            <SymbolView
-              name={{
-                ios: 'arrow.right',
-                android: 'arrow_forward',
-                web: 'arrow_forward',
-              }}
-              size={18}
-              tintColor={overviewColors.background}
-            />
-          </Pressable>
+            {isFinishing ? (
+              <ActivityIndicator color={overviewColors.background} size="small" />
+            ) : (
+              <SymbolView
+                name={{ ios: 'arrow.right', android: 'arrow_forward', web: 'arrow_forward' }}
+                size={18}
+                tintColor={overviewColors.background}
+              />
+            )}
+          </ScalePressable>
         ) : (
-          <Pressable
+          <ScalePressable
             accessibilityRole="button"
             onPress={() => changeStep(stepCount)}
-            style={({ pressed }) => [
-              styles.secondaryButton,
-              pressed ? styles.pressed : null,
-            ]}
+            style={styles.secondaryButton}
           >
             <Text style={styles.secondaryLabel}>{copy.notNow}</Text>
-          </Pressable>
+          </ScalePressable>
         )}
-        {step === 4 ? (
-          <Pressable
+        {step === banksStep ? (
+          <ScalePressable
             accessibilityRole="button"
-            onPress={() => changeStep(pinStep)}
-            style={({ pressed }) => [
-              styles.secondaryButton,
-              pressed ? styles.pressed : null,
-            ]}
+            onPress={() => (isShortcutsFlow ? onCancel() : changeStep(pinStep))}
+            style={styles.secondaryButton}
           >
             <Text style={styles.secondaryLabel}>{copy.setUpLater}</Text>
-          </Pressable>
+          </ScalePressable>
+        ) : null}
+        {step === automationStep ? (
+          <ScalePressable
+            accessibilityRole="button"
+            onPress={() => void Linking.openURL(shortcutsAppUrl).catch(() => undefined)}
+            style={styles.secondaryButton}
+          >
+            <Text style={styles.secondaryLabel}>{copy.openShortcuts}</Text>
+          </ScalePressable>
         ) : null}
       </View>
     </View>
+  );
+}
+
+function SelectionCard({
+  selected,
+  delay = 0,
+  style,
+  children,
+  ...props
+}: ComponentProps<typeof ScalePressable> & { selected: boolean; delay?: number }) {
+  const selection = useSharedValue(selected ? 1 : 0);
+
+  useEffect(() => {
+    selection.set(withTiming(selected ? 1 : 0, onboardingMotion.selection));
+  }, [selected, selection]);
+
+  const selectionStyle = useAnimatedStyle(() => ({
+    borderColor: interpolateColor(selection.get(), [0, 1], [overviewColors.hairline, onboardingColors.accent]),
+    backgroundColor: interpolateColor(selection.get(), [0, 1], [overviewColors.surface, onboardingColors.accentMuted]),
+  }));
+
+  return (
+    <AnimatedReveal delay={delay}>
+      <ScalePressable {...props} pressedScale={0.985}>
+        <Animated.View style={[style, selectionStyle]}>{children}</Animated.View>
+      </ScalePressable>
+    </AnimatedReveal>
   );
 }
 
@@ -418,32 +481,34 @@ function SectionHeading({
   description: string;
 }) {
   return (
-    <View style={styles.heading}>
+    <AnimatedReveal delay={60} style={styles.heading}>
       <Text maxFontSizeMultiplier={1.4} style={styles.eyebrow}>
         {eyebrow}
       </Text>
-      <Text maxFontSizeMultiplier={1.35} style={styles.title}>
+      <Text accessibilityRole="header" style={styles.title}>
         {title}
       </Text>
-      <Text maxFontSizeMultiplier={1.5} style={styles.description}>
+      <Text style={styles.description}>
         {description}
       </Text>
-    </View>
+    </AnimatedReveal>
   );
 }
 
 function FeatureRow({
+  delay = 140,
   symbol,
   title,
   description,
 }: {
+  delay?: number;
   symbol:
     'chart.bar.fill' | 'lock.shield.fill' | 'bell.badge.fill' | 'calendar';
   title: string;
   description: string;
 }) {
   return (
-    <View style={styles.featureRow}>
+    <AnimatedReveal delay={delay} style={styles.featureRow}>
       <View style={styles.featureIcon}>
         <SymbolView
           name={{ ios: symbol, android: 'check_circle', web: 'check_circle' }}
@@ -459,80 +524,16 @@ function FeatureRow({
           {description}
         </Text>
       </View>
-    </View>
+    </AnimatedReveal>
   );
 }
 
 function WelcomeIntro() {
   const copy = useCopy(onboardingCopy).welcome;
-  const pinkOffset = useSharedValue(-1);
-  const greenOffset = useSharedValue(1);
-  const blueOffset = useSharedValue(-1);
-  const reduceMotion = useReducedMotion();
-
-  useEffect(() => {
-    if (reduceMotion) {
-      pinkOffset.value = 0;
-      greenOffset.value = 0;
-      blueOffset.value = 0;
-      return;
-    }
-
-    pinkOffset.value = withRepeat(
-      withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
-      -1,
-      true,
-    );
-    greenOffset.value = withRepeat(
-      withTiming(-1, { duration: 4800, easing: Easing.inOut(Easing.sin) }),
-      -1,
-      true,
-    );
-    blueOffset.value = withRepeat(
-      withTiming(1, { duration: 5400, easing: Easing.inOut(Easing.sin) }),
-      -1,
-      true,
-    );
-
-    return () => {
-      cancelAnimation(pinkOffset);
-      cancelAnimation(greenOffset);
-      cancelAnimation(blueOffset);
-    };
-  }, [blueOffset, greenOffset, pinkOffset, reduceMotion]);
-
-  const pinkStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: pinkOffset.value * 7 },
-      { translateY: pinkOffset.value * -5 },
-    ],
-  }));
-  const greenStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: greenOffset.value * -6 },
-      { translateY: greenOffset.value * 8 },
-    ],
-  }));
-  const blueStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: blueOffset.value * 6 },
-      { translateY: blueOffset.value * 5 },
-    ],
-  }));
 
   return (
     <View style={styles.stepContent}>
-      <View accessible={false} style={styles.orbit}>
-        <Animated.View
-          style={[styles.orbitCircle, styles.orbitPink, pinkStyle]}
-        />
-        <Animated.View
-          style={[styles.orbitCircle, styles.orbitGreen, greenStyle]}
-        />
-        <Animated.View
-          style={[styles.orbitCircle, styles.orbitBlue, blueStyle]}
-        />
-      </View>
+      <WelcomeIllustration />
       <SectionHeading
         eyebrow={copy.eyebrow}
         title={copy.title}
@@ -545,6 +546,7 @@ function WelcomeIntro() {
           description={copy.spendingDescription}
         />
         <FeatureRow
+          delay={220}
           symbol="lock.shield.fill"
           title={copy.controlTitle}
           description={copy.controlDescription}
@@ -558,15 +560,7 @@ function LimitsIntro() {
   const copy = useCopy(onboardingCopy).limits;
   return (
     <View style={styles.stepContent}>
-      <View style={styles.limitVisual}>
-        <Text style={styles.visualCaption}>{copy.caption}</Text>
-        <View style={styles.visualHeading}>
-          <Text style={styles.visualMerchant}>{copy.merchant}</Text>
-          <Text style={styles.visualAmount}>{copy.amount}</Text>
-        </View>
-        <LimitProgressBar share={320 / 400} />
-        <Text style={styles.visualMeta}>{copy.example}</Text>
-      </View>
+      <LimitsIllustration />
       <SectionHeading
         eyebrow={copy.eyebrow}
         title={copy.title}
@@ -579,6 +573,7 @@ function LimitsIntro() {
           description={copy.earlyDescription}
         />
         <FeatureRow
+          delay={220}
           symbol="calendar"
           title={copy.periodTitle}
           description={copy.periodDescription}
@@ -604,16 +599,14 @@ function PremiumIntro({
         title={copy.title}
         description={copy.description}
       />
-      <Pressable
+      <SelectionCard
+        selected={selectedPlan === 'free'}
+        delay={120}
         accessibilityLabel={copy.freeLabel}
         accessibilityRole="radio"
         accessibilityState={{ checked: selectedPlan === 'free' }}
         onPress={() => onSelect('free')}
-        style={({ pressed }) => [
-          styles.planCard,
-          selectedPlan === 'free' ? styles.selectedPlanCard : null,
-          pressed ? styles.pressed : null,
-        ]}
+        style={styles.planCard}
       >
         <View style={styles.planHeading}>
           <Text style={styles.planName}>{copy.freeName}</Text>
@@ -636,17 +629,17 @@ function PremiumIntro({
           </View>
         </View>
         <Text style={styles.planDetail}>{copy.freeDetail}</Text>
-      </Pressable>
-      <Pressable
+      </SelectionCard>
+      <SelectionCard
+        selected={selectedPlan === 'premium'}
+        delay={180}
         accessibilityLabel={copy.premiumLabel}
         accessibilityRole="radio"
         accessibilityState={{ checked: selectedPlan === 'premium' }}
         onPress={() => onSelect('premium')}
-        style={({ pressed }) => [
+        style={[
           styles.planCard,
           styles.premiumCard,
-          selectedPlan === 'premium' ? styles.selectedPlanCard : null,
-          pressed ? styles.pressed : null,
         ]}
       >
         <View style={styles.planHeading}>
@@ -676,10 +669,13 @@ function PremiumIntro({
           <Text style={styles.newYearlyPrice}>{copy.yearlyPrice}</Text>
         </View>
         <View style={styles.premiumDivider} />
-        <Text style={styles.premiumBenefit}>{copy.unlimitedLimits}</Text>
-        <Text style={styles.premiumBenefit}>{copy.moreStatistics}</Text>
-        <Text style={styles.premiumBenefit}>{copy.sharedAccount}</Text>
-      </Pressable>
+        {[copy.unlimitedLimits, copy.moreStatistics, copy.sharedAccount].map((benefit) => (
+          <View key={benefit} style={styles.benefitRow}>
+            <OnboardingIcon name="check" size={16} />
+            <Text style={styles.premiumBenefit}>{benefit}</Text>
+          </View>
+        ))}
+      </SelectionCard>
       <Text style={styles.smallNote}>{copy.note}</Text>
     </View>
   );
@@ -687,50 +683,16 @@ function PremiumIntro({
 
 function ShortcutsIntro() {
   const copy = useCopy(onboardingCopy).shortcuts;
-  const floatOffset = useSharedValue(0);
-  const reduceMotion = useReducedMotion();
-
-  useEffect(() => {
-    if (reduceMotion) {
-      floatOffset.value = 0;
-      return;
-    }
-
-    floatOffset.value = withRepeat(
-      withTiming(-6, { duration: 2600, easing: Easing.inOut(Easing.sin) }),
-      -1,
-      true,
-    );
-
-    return () => cancelAnimation(floatOffset);
-  }, [floatOffset, reduceMotion]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: floatOffset.value }],
-  }));
 
   return (
     <View style={styles.stepContent}>
-      <View
-        accessible={false}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        style={styles.shortcutVisual}
-      >
-        <Animated.View style={animatedStyle}>
-          <Image
-            contentFit="contain"
-            source={require('./assets/shortcuts.png')}
-            style={styles.shortcutImage}
-          />
-        </Animated.View>
-      </View>
+      <ShortcutsIllustration />
       <SectionHeading
         eyebrow={copy.eyebrow}
         title={copy.title}
         description={copy.description}
       />
-      <View style={styles.warningCard}>
+      <AnimatedReveal delay={180} style={styles.warningCard}>
         <SymbolView
           name={{
             ios: 'bell.slash.fill',
@@ -743,7 +705,7 @@ function ShortcutsIntro() {
         <Text maxFontSizeMultiplier={1.5} style={styles.warningText}>
           {copy.warning}
         </Text>
-      </View>
+      </AnimatedReveal>
       <Text style={styles.smallNote}>{copy.manualNote}</Text>
     </View>
   );
@@ -765,11 +727,13 @@ function BanksSetup({
         description={copy.description}
       />
       <View style={styles.bankList}>
-        {banks.map((bank) => {
+        {banks.map((bank, index) => {
           const selected = selectedBanks.includes(bank.id);
 
           return (
-            <Pressable
+            <SelectionCard
+              selected={selected}
+              delay={100 + index * 50}
               accessibilityLabel={`${bank.name}${bank.available ? '' : copy.soonSuffix}`}
               accessibilityRole="checkbox"
               accessibilityState={{
@@ -779,9 +743,9 @@ function BanksSetup({
               disabled={!bank.available}
               key={bank.id}
               onPress={() => onToggle(bank.id)}
-              style={({ pressed }) => [
+              style={[
                 styles.bankCard,
-                pressed ? styles.pressed : null,
+                !bank.available && styles.unavailableBank,
               ]}
             >
               <View
@@ -810,17 +774,57 @@ function BanksSetup({
               {!bank.available ? (
                 <Text style={styles.bankSoon}>{copy.soon}</Text>
               ) : null}
-            </Pressable>
+            </SelectionCard>
           );
         })}
       </View>
-      <View style={styles.stepsCard}>
+      <AnimatedReveal delay={300} style={styles.stepsCard}>
         <Text style={styles.stepsTitle}>{copy.stepsTitle}</Text>
         <Text style={styles.stepsLine}>{copy.stepOne}</Text>
         <Text style={styles.stepsLine}>{copy.stepTwo}</Text>
-        <Text style={styles.stepsLine}>{copy.stepThree}</Text>
-      </View>
+      </AnimatedReveal>
       <Text style={styles.smallNote}>{copy.note}</Text>
+    </View>
+  );
+}
+
+function InstructionCard({ number, title, children }: { number: number; title: string; children: ReactNode }) {
+  return (
+    <AnimatedReveal delay={number * 100} style={styles.stepsCard}>
+      <View style={styles.instructionHeading}>
+        <View style={styles.instructionNumber}><Text style={styles.instructionNumberText}>{number}</Text></View>
+        <Text style={[styles.stepsTitle, styles.instructionTitle]}>{title.replace(/^\d+\.\s*/, '')}</Text>
+      </View>
+      {children}
+    </AnimatedReveal>
+  );
+}
+
+function AutomationSetup() {
+  const copy = useCopy(onboardingCopy).automation;
+  return (
+    <View style={styles.stepContent}>
+      <SectionHeading
+        eyebrow={copy.eyebrow}
+        title={copy.title}
+        description={copy.description}
+      />
+      <InstructionCard number={1} title={copy.stepOne}>
+        <Image
+          accessible={false}
+          contentFit="contain"
+          source={require('./assets/shortcuts-step-automation-tab.png')}
+          style={[styles.stepScreenshot, styles.automationTabScreenshot]}
+        />
+      </InstructionCard>
+      <InstructionCard number={2} title={copy.stepTwo}>
+        <Image
+          accessible={false}
+          contentFit="contain"
+          source={require('./assets/shortcuts-step-enable-toggle.png')}
+          style={[styles.stepScreenshot, styles.enableToggleScreenshot]}
+        />
+      </InstructionCard>
     </View>
   );
 }
@@ -833,8 +837,10 @@ function PinIntro({
   onComplete: (pin: string) => Promise<void>;
 }) {
   const copy = useCopy(onboardingCopy).pin;
+  const { height, fontScale } = useWindowDimensions();
   return (
     <View style={styles.stepContent}>
+      {height >= 900 && fontScale <= 1.2 ? <SecurityIllustration /> : null}
       <SectionHeading
         description={
           biometricName === null ? copy.pinOnly : copy.withBiometric(biometricName)
@@ -851,16 +857,7 @@ function CompletionIntro() {
   const copy = useCopy(onboardingCopy).completion;
   return (
     <View style={[styles.stepContent, styles.completionContent]}>
-      <View
-        accessible={false}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        style={styles.completionMark}
-      >
-        <View style={[styles.completionBar, styles.completionBarShort]} />
-        <View style={[styles.completionBar, styles.completionBarMedium]} />
-        <View style={[styles.completionBar, styles.completionBarTall]} />
-      </View>
+      <CompletionIllustration />
       <View style={styles.completionHeading}>
         <Text
           maxFontSizeMultiplier={1.35}
@@ -875,14 +872,14 @@ function CompletionIntro() {
           {copy.description}
         </Text>
       </View>
-      <View style={styles.completionNote}>
+      <AnimatedReveal delay={280} style={styles.completionNote}>
         <Text maxFontSizeMultiplier={1.4} style={styles.completionNoteTitle}>
           {copy.noteTitle}
         </Text>
         <Text maxFontSizeMultiplier={1.5} style={styles.completionNoteText}>
           {copy.noteText}
         </Text>
-      </View>
+      </AnimatedReveal>
     </View>
   );
 }
@@ -891,15 +888,18 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: overviewColors.background },
   topBar: {
     minHeight: 60,
+    width: '100%',
+    maxWidth: 580,
+    alignSelf: 'center',
     paddingHorizontal: overviewSpacing.gutter,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  topAction: { width: 64, minHeight: 44, justifyContent: 'center' },
+  topAction: { width: 64, minHeight: 48, justifyContent: 'center' },
   skipAction: {
     minWidth: 64,
-    minHeight: 44,
+    minHeight: 48,
     alignItems: 'flex-end',
     justifyContent: 'center',
   },
@@ -909,20 +909,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   stepCount: {
-    color: overviewColors.textSecondary,
+    color: onboardingColors.accentText,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: onboardingColors.accentMuted,
     fontSize: 13,
     fontWeight: '600',
   },
+  progressContainer: { width: '100%', maxWidth: 580, alignSelf: 'center', paddingHorizontal: 20, paddingTop: 8 },
   progressTrack: {
     height: 4,
-    marginBottom: 12,
     backgroundColor: overviewColors.surfacePressed,
     borderRadius: 4,
     overflow: 'hidden',
   },
   progressFill: {
     height: 4,
-    backgroundColor: overviewColors.positive,
+    backgroundColor: onboardingColors.accent,
     borderRadius: 4,
   },
   scroll: { flex: 1 },
@@ -930,24 +935,24 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: overviewSpacing.gutter,
-    paddingTop: 24,
-    paddingBottom: 24,
+    paddingTop: 28,
+    paddingBottom: 28,
   },
   page: { width: '100%' },
   stepContent: { gap: 24, width: '100%', maxWidth: 540, alignSelf: 'center' },
   heading: { gap: 12 },
   eyebrow: {
-    color: overviewColors.positive,
-    fontSize: 12,
+    color: onboardingColors.accentText,
+    fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1.4,
   },
   title: {
     color: overviewColors.textPrimary,
-    fontSize: 35,
+    fontSize: 32,
     fontWeight: '700',
-    letterSpacing: -1.3,
-    lineHeight: 40,
+    letterSpacing: -1,
+    lineHeight: 38,
   },
   description: {
     color: overviewColors.textSecondary,
@@ -955,6 +960,9 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   footer: {
+    width: '100%',
+    maxWidth: 580,
+    alignSelf: 'center',
     gap: 8,
     paddingHorizontal: overviewSpacing.gutter,
     paddingTop: 12,
@@ -962,51 +970,43 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     minHeight: 56,
+    paddingVertical: 16,
     paddingHorizontal: 20,
+    gap: 12,
     borderRadius: 18,
-    backgroundColor: overviewColors.positive,
+    backgroundColor: onboardingColors.accent,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   primaryLabel: {
+    flexShrink: 1,
     color: overviewColors.background,
     fontSize: 16,
     fontWeight: '700',
   },
   secondaryButton: {
-    minHeight: 44,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
   secondaryLabel: {
+    textAlign: 'center',
     color: overviewColors.textSecondary,
     fontSize: 15,
     fontWeight: '600',
   },
   disabled: { opacity: 0.4 },
-  pressed: { opacity: 0.7 },
   error: { color: overviewColors.negative, fontSize: 14, lineHeight: 20 },
-  orbit: { width: 200, height: 180, alignSelf: 'center', marginVertical: 12 },
-  orbitCircle: {
-    position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    opacity: 0.85,
-  },
-  orbitPink: { left: 25, top: 5, backgroundColor: '#FF5C8A' },
-  orbitGreen: { left: 75, top: 47, backgroundColor: '#3DE8A0', opacity: 0.7 },
-  orbitBlue: { left: 15, top: 65, backgroundColor: '#8F7BFF', opacity: 0.75 },
-  featureList: { gap: 18 },
-  featureRow: { flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
+  featureList: { gap: 12 },
+  featureRow: { flexDirection: 'row', gap: 14, alignItems: 'flex-start', padding: 16, borderRadius: 20, backgroundColor: overviewColors.surface, borderWidth: 1, borderColor: overviewColors.hairline },
   featureIcon: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
-    backgroundColor: overviewColors.surfacePressed,
+    backgroundColor: onboardingColors.positiveMuted,
   },
   featureCopy: { flex: 1, gap: 4 },
   featureTitle: {
@@ -1019,36 +1019,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-  limitVisual: {
-    gap: 15,
-    padding: 22,
-    borderRadius: 26,
-    backgroundColor: overviewColors.surfacePressed,
-    marginVertical: 16,
-  },
-  visualCaption: {
-    color: overviewColors.textSecondary,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-  },
-  visualHeading: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  visualMerchant: {
-    color: overviewColors.textPrimary,
-    fontSize: 19,
-    fontWeight: '600',
-  },
-  visualAmount: {
-    color: overviewColors.textPrimary,
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  visualMeta: { color: overviewColors.textSecondary, fontSize: 13 },
   smallNote: {
     color: overviewColors.textSecondary,
     fontSize: 13,
@@ -1057,8 +1027,8 @@ const styles = StyleSheet.create({
   planCard: {
     gap: 9,
     minHeight: 88,
-    padding: 18,
-    borderRadius: 20,
+    padding: 20,
+    borderRadius: 22,
     backgroundColor: overviewColors.surface,
     borderWidth: 1,
     borderColor: overviewColors.hairline,
@@ -1066,10 +1036,8 @@ const styles = StyleSheet.create({
   premiumCard: {
     backgroundColor: overviewColors.surfacePressed,
   },
-  selectedPlanCard: {
-    borderColor: overviewColors.positive,
-  },
   planHeading: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1090,8 +1058,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   planCheckSelected: {
-    borderColor: overviewColors.positive,
-    backgroundColor: overviewColors.positive,
+    borderColor: onboardingColors.accent,
+    backgroundColor: onboardingColors.accent,
   },
   planName: {
     color: overviewColors.textPrimary,
@@ -1109,7 +1077,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   premiumName: {
-    color: overviewColors.positive,
+    color: onboardingColors.accentText,
     fontSize: 18,
     fontWeight: '700',
   },
@@ -1135,7 +1103,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   comingSoon: {
-    color: overviewColors.positive,
+    color: onboardingColors.accentText,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: onboardingColors.accentMuted,
+    overflow: 'hidden',
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1,
@@ -1145,25 +1118,21 @@ const styles = StyleSheet.create({
     marginVertical: 5,
     backgroundColor: overviewColors.hairline,
   },
+  benefitRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   premiumBenefit: {
+    flex: 1,
     color: overviewColors.textPrimary,
     fontSize: 14,
     lineHeight: 20,
   },
-  shortcutVisual: {
-    width: '100%',
-    height: 210,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 8,
-  },
-  shortcutImage: { width: 184, height: 184 },
   warningCard: {
     flexDirection: 'row',
     gap: 12,
     padding: 16,
     borderRadius: 18,
-    backgroundColor: overviewColors.surfacePressed,
+    backgroundColor: onboardingColors.cautionMuted,
+    borderWidth: 1,
+    borderColor: overviewColors.hairline,
   },
   warningText: {
     flex: 1,
@@ -1171,10 +1140,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
   },
-  bankList: { gap: 8 },
+  bankList: { gap: 12 },
+  unavailableBank: { opacity: 0.55 },
   bankCard: {
-    minHeight: 68,
+    minHeight: 76,
     paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderWidth: 1,
+    borderColor: overviewColors.hairline,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
@@ -1191,12 +1164,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkboxSelected: {
-    backgroundColor: overviewColors.positive,
-    borderColor: overviewColors.positive,
+    backgroundColor: onboardingColors.accent,
+    borderColor: onboardingColors.accent,
   },
   bankLogo: {
-    width: 30,
-    height: 30,
+    width: 36,
+    height: 36,
     borderRadius: 8,
     backgroundColor: overviewColors.textPrimary,
   },
@@ -1212,11 +1185,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   stepsCard: {
-    gap: 9,
+    gap: 16,
     padding: 18,
-    borderRadius: 18,
-    backgroundColor: overviewColors.surfacePressed,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: overviewColors.hairline,
+    backgroundColor: overviewColors.surface,
   },
+  instructionHeading: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  instructionNumber: { width: 32, height: 32, borderRadius: 12, backgroundColor: onboardingColors.accentMuted, alignItems: 'center', justifyContent: 'center' },
+  instructionNumberText: { color: onboardingColors.accentText, fontSize: 14, fontWeight: '700' },
+  instructionTitle: { flex: 1 },
   stepsTitle: {
     color: overviewColors.textPrimary,
     fontSize: 15,
@@ -1227,26 +1206,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  stepScreenshot: {
+    width: '100%',
+    marginTop: 4,
+    marginBottom: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: overviewColors.hairline,
+    backgroundColor: overviewColors.background,
+  },
+  automationTabScreenshot: { aspectRatio: 786 / 650 },
+  enableToggleScreenshot: { aspectRatio: 786 / 913 },
   completionContent: {
     alignItems: 'center',
     gap: 32,
     paddingVertical: 24,
   },
-  completionMark: {
-    height: 96,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 10,
-    marginBottom: 8,
-  },
-  completionBar: {
-    width: 24,
-    borderRadius: 12,
-    backgroundColor: overviewColors.positive,
-  },
-  completionBarShort: { height: 40, opacity: 0.4 },
-  completionBarMedium: { height: 64, opacity: 0.7 },
-  completionBarTall: { height: 88 },
   completionHeading: { alignItems: 'center', gap: 16 },
   completionTitle: { textAlign: 'center' },
   completionDescription: { textAlign: 'center', maxWidth: 320 },

@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from 'react';
 
-let isReplayingOnboarding = false;
+export type OnboardingReplay = 'none' | 'full' | 'shortcuts';
+
+let onboardingReplay: OnboardingReplay = 'none';
 const listeners = new Set<() => void>();
 
 function subscribe(listener: () => void) {
@@ -11,19 +13,23 @@ function subscribe(listener: () => void) {
   };
 }
 
-function setReplayingOnboarding(isReplaying: boolean): void {
-  isReplayingOnboarding = isReplaying;
+function setOnboardingReplay(replay: OnboardingReplay): void {
+  onboardingReplay = replay;
   listeners.forEach((listener) => listener());
 }
 
 export function replayOnboarding(): void {
-  setReplayingOnboarding(true);
+  setOnboardingReplay('full');
+}
+
+export function replayShortcutsSetup(): void {
+  setOnboardingReplay('shortcuts');
 }
 
 export function finishOnboardingReplay(): void {
-  setReplayingOnboarding(false);
+  setOnboardingReplay('none');
 }
 
-export function useOnboardingReplay(): boolean {
-  return useSyncExternalStore(subscribe, () => isReplayingOnboarding);
+export function useOnboardingReplay(): OnboardingReplay {
+  return useSyncExternalStore(subscribe, () => onboardingReplay);
 }
