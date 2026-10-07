@@ -125,7 +125,7 @@ export const store = internalMutation({
 export const snapshots = action({
   args: { requests: v.array(rateRequest) },
   handler: async (ctx, { requests }): Promise<ExchangeRateSnapshot[]> => {
-    await requireOwnerId(ctx.auth);
+    const ownerId = await requireOwnerId(ctx.auth);
 
     if (requests.length > maximumRequests) {
       throw new ConvexError(`Ask for at most ${maximumRequests} rates at once.`);
@@ -150,10 +150,13 @@ export const snapshots = action({
     });
     const foundKeys = new Set(found.map((snapshot) => `${snapshot.currency}:${snapshot.requestedDate}`));
 
-    for (const request of unique) {
-      if (foundKeys.has(`${request.currency}:${request.date}`)) {
-        continue;
-      }
+    const missing = unique.filter((request) => !foundKeys.has(`${request.currency}:${request.date}`));
+    const granted =
+      missing.length === 0
+        ? 0
+        : await ctx.runMutation(internal.owners.spendRateLookups, { ownerId, requested: missing.length });
+
+    for (const request of missing.slice(0, granted)) {
 
       let rate: NbpRate | null = null;
       let table: NbpTable = 'A';

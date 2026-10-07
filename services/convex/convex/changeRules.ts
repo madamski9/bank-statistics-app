@@ -64,7 +64,7 @@ export function textProblem(value: string | undefined): string | null {
     : null;
 }
 
-function revisionProblem(change: RevisionedChange): string | null {
+export function revisionProblem(change: RevisionedChange): string | null {
   if (!Number.isSafeInteger(change.revision) || change.revision < 0) {
     return 'A revision is a non-negative whole number.';
   }

@@ -11,8 +11,20 @@ const modules = Object.fromEntries(
     .map((path) => [`./${path}`, () => import(`./${path}`)]),
 );
 
-const alice = { subject: 'user_alice', issuer: 'https://clerk.test' };
-const bob = { subject: 'user_bob', issuer: 'https://clerk.test' };
+const alice = { subject: 'user_alice', issuer: 'https://clerk.test', sid: 'sess_alice_phone' };
+const bob = { subject: 'user_bob', issuer: 'https://clerk.test', sid: 'sess_bob_phone' };
+
+const emptyCursors = { transactions: 0, financialAccounts: 0, categories: 0, events: 0 };
+
+async function pulled<Table extends keyof typeof emptyCursors>(
+  caller: Pick<ReturnType<typeof convexTest>, 'query'>,
+  installationId: string,
+  table: Table,
+) {
+  const page = await caller.query(api.sync.pull, { installationId, cursors: emptyCursors });
+
+  return page.changes[table];
+}
 
 function savings(overrides: Record<string, unknown> = {}) {
   return {
@@ -39,51 +51,51 @@ describe('financialAccounts', () => {
     const backend = convexTest(schema, modules);
 
     await expect(
-      backend.mutation(api.financialAccounts.push, { installationId: 'phone', changes: [savings()] }),
+      backend.mutation(api.sync.push, { installationId: 'phone', changes: { financialAccounts: [savings()] } }),
     ).rejects.toThrow();
-    await expect(backend.query(api.financialAccounts.list, { installationId: 'phone' })).rejects.toThrow();
+    await expect(pulled(backend, 'phone', 'financialAccounts')).rejects.toThrow();
   });
 
   test('reads an account back on another device of the same user, once per client id', async () => {
     const { backend, user } = await signedIn(alice, 'phone');
-    await user.mutation(api.financialAccounts.push, { installationId: 'phone', changes: [savings()] });
-    await user.mutation(api.financialAccounts.push, { installationId: 'phone', changes: [savings()] });
+    await user.mutation(api.sync.push, { installationId: 'phone', changes: { financialAccounts: [savings()] } });
+    await user.mutation(api.sync.push, { installationId: 'phone', changes: { financialAccounts: [savings()] } });
 
-    const tablet = backend.withIdentity(alice);
+    const tablet = backend.withIdentity({ ...alice, sid: 'sess_alice_tablet' });
     await tablet.mutation(api.devices.register, { installationId: 'tablet', platform: 'ios' });
 
-    expect(await tablet.query(api.financialAccounts.list, { installationId: 'tablet' })).toEqual([savings()]);
+    expect(await pulled(tablet, 'tablet', 'financialAccounts')).toEqual([savings()]);
   });
 
   test('keeps a renamed general account under its fixed id', async () => {
     const { user } = await signedIn(alice, 'phone');
     const general = savings({ clientId: 'general-millennium', name: 'Millennium', isGeneral: true });
-    await user.mutation(api.financialAccounts.push, { installationId: 'phone', changes: [general] });
-    await user.mutation(api.financialAccounts.push, {
+    await user.mutation(api.sync.push, { installationId: 'phone', changes: { financialAccounts: [general] } });
+    await user.mutation(api.sync.push, {
       installationId: 'phone',
-      changes: [{ ...general, name: 'Konto osobiste', revision: 2 }],
+      changes: { financialAccounts: [{ ...general, name: 'Konto osobiste', revision: 2 }] },
     });
 
-    const [stored] = await user.query(api.financialAccounts.list, { installationId: 'phone' });
+    const [stored] = await pulled(user, 'phone', 'financialAccounts');
 
     expect(stored).toMatchObject({ clientId: 'general-millennium', name: 'Konto osobiste' });
   });
 
   test('never shows or changes the accounts of another user', async () => {
     const { backend, user } = await signedIn(alice, 'phone');
-    await user.mutation(api.financialAccounts.push, { installationId: 'phone', changes: [savings()] });
+    await user.mutation(api.sync.push, { installationId: 'phone', changes: { financialAccounts: [savings()] } });
 
     const other = backend.withIdentity(bob);
     await other.mutation(api.devices.register, { installationId: 'phone', platform: 'ios' });
 
-    expect(await other.query(api.financialAccounts.list, { installationId: 'phone' })).toEqual([]);
+    expect(await pulled(other, 'phone', 'financialAccounts')).toEqual([]);
 
-    await other.mutation(api.financialAccounts.push, {
+    await other.mutation(api.sync.push, {
       installationId: 'phone',
-      changes: [savings({ name: 'Przejęte', revision: 9 })],
+      changes: { financialAccounts: [savings({ name: 'Przejęte', revision: 9 })] },
     });
 
-    expect((await user.query(api.financialAccounts.list, { installationId: 'phone' }))[0]).toMatchObject({
+    expect((await pulled(user, 'phone', 'financialAccounts'))[0]).toMatchObject({
       name: 'Oszczędnościowe',
     });
   });
@@ -93,9 +105,9 @@ describe('financialAccounts', () => {
 
     for (const name of ['  ', 'x'.repeat(61)]) {
       await expect(
-        user.mutation(api.financialAccounts.push, {
+        user.mutation(api.sync.push, {
           installationId: 'phone',
-          changes: [savings({ name })],
+          changes: { financialAccounts: [savings({ name })] },
         }),
       ).rejects.toThrow();
     }
@@ -105,9 +117,9 @@ describe('financialAccounts', () => {
     const { user } = await signedIn(alice, 'phone');
 
     await expect(
-      user.mutation(api.financialAccounts.push, {
+      user.mutation(api.sync.push, {
         installationId: 'phone',
-        changes: [savings({ bank: 'x'.repeat(10_000) })],
+        changes: { financialAccounts: [savings({ bank: 'x'.repeat(10_000) })] },
       }),
     ).rejects.toThrow('enabled bank');
   });

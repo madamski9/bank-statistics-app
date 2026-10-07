@@ -1,16 +1,13 @@
-import type { api } from '@bankstats/convex/convex/_generated/api';
 import { categoryChangeProblem } from '@bankstats/convex/convex/changeRules';
-import type { FunctionArgs, FunctionReturnType } from 'convex/server';
+import type { CategoryContent } from '@bankstats/convex/convex/sync';
 
 import type { CustomCategory } from '@/features/classification/categories';
 
-import type { SyncCodec } from './sync-plan';
+import type { SyncCodec, SyncedChange } from './sync-plan';
 
-export type PushedCategory = FunctionArgs<typeof api.categories.push>['changes'][number];
+export type CategoryChange = CategoryContent;
 
-export type CategoryChange = Omit<PushedCategory, 'revision' | 'deleted'>;
-
-export type RemoteCategory = FunctionReturnType<typeof api.categories.list>[number];
+export type RemoteCategory = SyncedChange<CategoryChange>;
 
 export const categoryCodec: SyncCodec<CustomCategory, CategoryChange> = {
   includes: () => true,

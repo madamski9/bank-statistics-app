@@ -1,11 +1,10 @@
-import type { api } from '@bankstats/convex/convex/_generated/api';
 import { transactionChangeProblem } from '@bankstats/convex/convex/changeRules';
+import type { TransactionContent } from '@bankstats/convex/convex/sync';
 import type { IngestionRecord } from '@bankstats/ingestion-native';
-import type { FunctionArgs, FunctionReturnType } from 'convex/server';
 
 import { generalManualAccountId } from '@/features/financial-accounts/financial-account';
 
-import { withoutUndefined, type SyncCodec } from './sync-plan';
+import { withoutUndefined, type SyncCodec, type SyncedChange } from './sync-plan';
 
 const captureSourceApps = {
   millennium: 'pl.millenniumbank.bankmillennium',
@@ -16,11 +15,9 @@ function isCaptureBank(bank: string): bank is keyof typeof captureSourceApps {
   return bank === 'millennium' || bank === 'pko';
 }
 
-export type PushedTransaction = FunctionArgs<typeof api.transactions.push>['changes'][number];
+export type TransactionChange = TransactionContent;
 
-export type TransactionChange = Omit<PushedTransaction, 'revision' | 'deleted'>;
-
-export type RemoteTransaction = FunctionReturnType<typeof api.transactions.list>[number];
+export type RemoteTransaction = SyncedChange<TransactionChange>;
 
 export function changeFromRecord(record: IngestionRecord): TransactionChange {
   return withoutUndefined({

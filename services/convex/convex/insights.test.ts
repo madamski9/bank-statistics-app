@@ -12,8 +12,20 @@ const modules = Object.fromEntries(
     .map((path) => [`./${path}`, () => import(`./${path}`)]),
 );
 
-const alice = { subject: 'user_alice', issuer: 'https://clerk.test' };
-const bob = { subject: 'user_bob', issuer: 'https://clerk.test' };
+const alice = { subject: 'user_alice', issuer: 'https://clerk.test', sid: 'sess_alice_phone' };
+const bob = { subject: 'user_bob', issuer: 'https://clerk.test', sid: 'sess_bob_phone' };
+
+const emptyCursors = { transactions: 0, financialAccounts: 0, categories: 0, events: 0 };
+
+async function pulled<Table extends keyof typeof emptyCursors>(
+  caller: Pick<ReturnType<typeof convexTest>, 'query'>,
+  installationId: string,
+  table: Table,
+) {
+  const page = await caller.query(api.sync.pull, { installationId, cursors: emptyCursors });
+
+  return page.changes[table];
+}
 const originalFetch = globalThis.fetch;
 
 afterEach(() => {
@@ -59,25 +71,25 @@ function nbpFetch(rates: { no: string; effectiveDate: string; mid: number }[], c
 describe('categories', () => {
   test('reads a custom category back on another device of the same user only', async () => {
     const { backend, user } = await signedIn(alice, 'phone');
-    await user.mutation(api.categories.push, { installationId: 'phone', changes: [hobby()] });
+    await user.mutation(api.sync.push, { installationId: 'phone', changes: { categories: [hobby()] } });
 
-    const tablet = backend.withIdentity(alice);
+    const tablet = backend.withIdentity({ ...alice, sid: 'sess_alice_tablet' });
     await tablet.mutation(api.devices.register, { installationId: 'tablet', platform: 'ios' });
     const other = backend.withIdentity(bob);
     await other.mutation(api.devices.register, { installationId: 'phone', platform: 'ios' });
 
-    expect(await tablet.query(api.categories.list, { installationId: 'tablet' })).toEqual([hobby()]);
-    expect(await other.query(api.categories.list, { installationId: 'phone' })).toEqual([]);
+    expect(await pulled(tablet, 'tablet', 'categories')).toEqual([hobby()]);
+    expect(await pulled(other, 'phone', 'categories')).toEqual([]);
   });
 
   test('refuses a nameless category or one posing as a built-in category', async () => {
     const { user } = await signedIn(alice, 'phone');
 
     await expect(
-      user.mutation(api.categories.push, { installationId: 'phone', changes: [hobby({ name: '  ' })] }),
+      user.mutation(api.sync.push, { installationId: 'phone', changes: { categories: [hobby({ name: '  ' })] } }),
     ).rejects.toThrow();
     await expect(
-      user.mutation(api.categories.push, { installationId: 'phone', changes: [hobby({ clientId: 'groceries' })] }),
+      user.mutation(api.sync.push, { installationId: 'phone', changes: { categories: [hobby({ clientId: 'groceries' })] } }),
     ).rejects.toThrow();
   });
 });
@@ -86,19 +98,19 @@ describe('events', () => {
   test('keeps an ended event with its window', async () => {
     const { user } = await signedIn(alice, 'phone');
     const ended = trip({ endedAt: '2026-07-14T20:00:00.000Z', revision: 2 });
-    await user.mutation(api.events.push, { installationId: 'phone', changes: [trip()] });
-    await user.mutation(api.events.push, { installationId: 'phone', changes: [ended] });
+    await user.mutation(api.sync.push, { installationId: 'phone', changes: { events: [trip()] } });
+    await user.mutation(api.sync.push, { installationId: 'phone', changes: { events: [ended] } });
 
-    expect(await user.query(api.events.list, { installationId: 'phone' })).toEqual([ended]);
+    expect(await pulled(user, 'phone', 'events')).toEqual([ended]);
   });
 
   test('refuses an event that ends before it starts', async () => {
     const { user } = await signedIn(alice, 'phone');
 
     await expect(
-      user.mutation(api.events.push, {
+      user.mutation(api.sync.push, {
         installationId: 'phone',
-        changes: [trip({ endedAt: '2026-06-01T08:00:00.000Z' })],
+        changes: { events: [trip({ endedAt: '2026-06-01T08:00:00.000Z' })] },
       }),
     ).rejects.toThrow();
   });
@@ -126,13 +138,13 @@ describe('transactions with insights', () => {
       revision: 1,
       deleted: false,
     };
-    await user.mutation(api.transactions.push, { installationId: 'phone', changes: [payment] });
+    await user.mutation(api.sync.push, { installationId: 'phone', changes: { transactions: [payment] } });
 
-    expect(await user.query(api.transactions.list, { installationId: 'phone' })).toEqual([payment]);
+    expect(await pulled(user, 'phone', 'transactions')).toEqual([payment]);
     await expect(
-      user.mutation(api.transactions.push, {
+      user.mutation(api.sync.push, {
         installationId: 'phone',
-        changes: [{ ...payment, exchangeRate: 'lots', revision: 2 }],
+        changes: { transactions: [{ ...payment, exchangeRate: 'lots', revision: 2 }] },
       }),
     ).rejects.toThrow();
   });
@@ -141,12 +153,12 @@ describe('transactions with insights', () => {
 describe('cloud copy', () => {
   test('removes synchronized data but keeps the device and the account', async () => {
     const { user } = await signedIn(alice, 'phone');
-    await user.mutation(api.categories.push, { installationId: 'phone', changes: [hobby()] });
-    await user.mutation(api.events.push, { installationId: 'phone', changes: [trip()] });
+    await user.mutation(api.sync.push, { installationId: 'phone', changes: { categories: [hobby()] } });
+    await user.mutation(api.sync.push, { installationId: 'phone', changes: { events: [trip()] } });
 
     expect(await user.mutation(api.account.deleteCloudCopy, {})).toEqual({ isComplete: true });
-    expect(await user.query(api.categories.list, { installationId: 'phone' })).toEqual([]);
-    expect(await user.query(api.events.list, { installationId: 'phone' })).toEqual([]);
+    expect(await pulled(user, 'phone', 'categories')).toEqual([]);
+    expect(await pulled(user, 'phone', 'events')).toEqual([]);
     expect(await user.query(api.devices.list, { installationId: 'phone' })).toHaveLength(1);
   });
 });

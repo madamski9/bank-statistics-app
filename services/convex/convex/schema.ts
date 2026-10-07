@@ -1,5 +1,5 @@
 import { defineSchema, defineTable } from 'convex/server';
-import { v } from 'convex/values';
+import { v, type PropertyValidators } from 'convex/values';
 
 export const devicePlatform = v.union(v.literal('ios'), v.literal('android'), v.literal('web'));
 
@@ -65,50 +65,56 @@ export const eventFields = {
   color: v.optional(v.string()),
 };
 
-export const syncedRowFields = {
+const syncedRowFields = {
   ownerId: v.string(),
+  clientId: v.string(),
   revision: v.number(),
-  deleted: v.boolean(),
-  deletedAt: v.optional(v.number()),
-  lastDeviceId: v.id('devices'),
+  sequence: v.number(),
 };
 
+function syncedTable<Fields extends PropertyValidators>(fields: Fields) {
+  return defineTable(
+    v.union(
+      v.object({ ...fields, ...syncedRowFields, deleted: v.literal(false) }),
+      v.object({ ...syncedRowFields, deleted: v.literal(true), deletedAt: v.number() }),
+    ),
+  )
+    .index('by_owner_client', ['ownerId', 'clientId'])
+    .index('by_owner_sequence', ['ownerId', 'sequence'])
+    .index('by_deleted_at', ['deletedAt']);
+}
+
 export default defineSchema({
+  owners: defineTable({
+    ownerId: v.string(),
+    sequence: v.number(),
+    pushAllowance: v.number(),
+    pushAllowanceAt: v.number(),
+    rateLookupAllowance: v.number(),
+    rateLookupAllowanceAt: v.number(),
+    deletionRequestedAt: v.optional(v.number()),
+  }).index('by_owner', ['ownerId']),
   devices: defineTable({
     ownerId: v.string(),
     installationId: v.string(),
+    sessionId: v.string(),
     platform: devicePlatform,
     registeredAt: v.number(),
     lastSeenAt: v.number(),
     revokedAt: v.optional(v.number()),
   })
-    .index('by_owner', ['ownerId'])
-    .index('by_owner_installation', ['ownerId', 'installationId']),
+    .index('by_owner_revoked', ['ownerId', 'revokedAt'])
+    .index('by_owner_installation', ['ownerId', 'installationId'])
+    .index('by_session_revoked', ['sessionId', 'revokedAt']),
   profiles: defineTable({
     ownerId: v.string(),
     isPremium: v.boolean(),
     premiumSince: v.optional(v.number()),
   }).index('by_owner', ['ownerId']),
-  accountDeletions: defineTable({
-    ownerId: v.string(),
-    requestedAt: v.number(),
-  }).index('by_owner', ['ownerId']),
-  transactions: defineTable({ ...transactionFields, ...syncedRowFields })
-    .index('by_owner', ['ownerId'])
-    .index('by_owner_client', ['ownerId', 'clientId'])
-    .index('by_deleted_at', ['deletedAt']),
-  financialAccounts: defineTable({ ...financialAccountFields, ...syncedRowFields })
-    .index('by_owner', ['ownerId'])
-    .index('by_owner_client', ['ownerId', 'clientId'])
-    .index('by_deleted_at', ['deletedAt']),
-  categories: defineTable({ ...categoryFields, ...syncedRowFields })
-    .index('by_owner', ['ownerId'])
-    .index('by_owner_client', ['ownerId', 'clientId'])
-    .index('by_deleted_at', ['deletedAt']),
-  events: defineTable({ ...eventFields, ...syncedRowFields })
-    .index('by_owner', ['ownerId'])
-    .index('by_owner_client', ['ownerId', 'clientId'])
-    .index('by_deleted_at', ['deletedAt']),
+  transactions: syncedTable(transactionFields),
+  financialAccounts: syncedTable(financialAccountFields),
+  categories: syncedTable(categoryFields),
+  events: syncedTable(eventFields),
   exchangeRates: defineTable({
     currency: v.string(),
     requestedDate: v.string(),

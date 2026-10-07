@@ -5,12 +5,19 @@ import type { CustomCategory } from '@/features/classification/categories';
 import type { SpendingEvent } from '@/features/events/spending-event';
 import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
 
-import type { RemoteAccount } from './account-codec';
-import type { RemoteCategory } from './category-codec';
-import type { RemoteEvent } from './event-codec';
-import type { Versioned } from './sync-plan';
-import { claimDevice, forgetSyncedState, runSync, type SyncPorts } from './sync-runner';
+import {
+  claimDevice,
+  forgetSyncedState,
+  runSync,
+  type CloudChanges,
+  type CloudPort,
+  type CloudTable,
+  type SyncPorts,
+} from './sync-runner';
 import type { RemoteTransaction } from './transaction-codec';
+
+const pageSize = 500;
+const cloudTables: CloudTable[] = ['transactions', 'financialAccounts', 'categories', 'events'];
 
 function manual(id: string, overrides: Partial<IngestionRecord> = {}): IngestionRecord {
   return {
@@ -29,54 +36,82 @@ function manual(id: string, overrides: Partial<IngestionRecord> = {}): Ingestion
   };
 }
 
-function createTable<Change extends { clientId: string } & Versioned>(isOnline: () => boolean) {
-  const stored = new Map<string, Change>();
-
-  return {
-    stored,
-    list: async () => {
-      if (!isOnline()) {
-        throw new Error('offline');
-      }
-
-      return [...stored.values()];
-    },
-    push: async (changes: Change[]) => {
-      if (!isOnline()) {
-        throw new Error('offline');
-      }
-
-      for (const change of changes) {
-        const existing = stored.get(change.clientId);
-
-        if (existing === undefined || change.revision > existing.revision) {
-          stored.set(change.clientId, change);
-        }
-      }
-    },
-  };
-}
+type StoredChange = CloudChanges[CloudTable][number] & { sequence: number };
 
 function createCloud() {
   let online = true;
-  const transactions = createTable<RemoteTransaction>(() => online);
-  const accounts = createTable<RemoteAccount>(() => online);
-  const categories = createTable<RemoteCategory>(() => online);
-  const events = createTable<RemoteEvent>(() => online);
+  let sequence = 0;
+  const pulls: number[] = [];
+  const tables = Object.fromEntries(
+    cloudTables.map((table) => [table, new Map<string, StoredChange>()]),
+  ) as Record<CloudTable, Map<string, StoredChange>>;
+
+  function assertOnline() {
+    if (!online) {
+      throw new Error('offline');
+    }
+  }
+
+  const port: CloudPort = {
+    pull: async (cursors) => {
+      assertOnline();
+      const pages = cloudTables.map((table) =>
+        [...tables[table].values()]
+          .filter((row) => row.sequence > cursors[table])
+          .sort((left, right) => left.sequence - right.sequence)
+          .slice(0, pageSize),
+      );
+      pulls.push(pages.reduce((sum, rows) => sum + rows.length, 0));
+      const strip = (rows: StoredChange[]) => rows.map(({ sequence: _sequence, ...change }) => change);
+      const [transactions = [], financialAccounts = [], categories = [], events = []] = pages;
+
+      return {
+        head: sequence,
+        isComplete: pages.every((rows) => rows.length < pageSize),
+        cursors: {
+          transactions: transactions.at(-1)?.sequence ?? cursors.transactions,
+          financialAccounts: financialAccounts.at(-1)?.sequence ?? cursors.financialAccounts,
+          categories: categories.at(-1)?.sequence ?? cursors.categories,
+          events: events.at(-1)?.sequence ?? cursors.events,
+        },
+        changes: {
+          transactions: strip(transactions) as CloudChanges['transactions'],
+          financialAccounts: strip(financialAccounts) as CloudChanges['financialAccounts'],
+          categories: strip(categories) as CloudChanges['categories'],
+          events: strip(events) as CloudChanges['events'],
+        },
+      };
+    },
+    push: async (changes) => {
+      assertOnline();
+      const sequenceBefore = sequence;
+
+      for (const table of cloudTables) {
+        for (const change of changes[table] ?? []) {
+          const existing = tables[table].get(change.clientId);
+
+          if (existing === undefined || change.revision > existing.revision) {
+            sequence += 1;
+            tables[table].set(change.clientId, { ...change, sequence });
+          }
+        }
+      }
+
+      return { sequenceBefore, sequence };
+    },
+  };
 
   return {
-    stored: transactions.stored,
-    storedAccounts: accounts.stored,
+    port,
+    pulls,
+    stored: tables.transactions as Map<string, RemoteTransaction & { sequence: number }>,
+    clear: () => cloudTables.forEach((table) => tables[table].clear()),
     goOffline: () => {
       online = false;
     },
     goOnline: () => {
       online = true;
     },
-    transactions: { list: transactions.list, push: transactions.push },
-    accounts: { list: accounts.list, push: accounts.push },
-    categories: { list: categories.list, push: categories.push },
-    events: { list: events.list, push: events.push },
   };
 }
 
@@ -94,53 +129,42 @@ function createDevice(
 
   const ports: SyncPorts = {
     ownerId,
+    cloud: cloud.port,
     transactions: {
-      local: {
-        list: async () => [...outbox.values()],
-        save: async (record) => {
-          outbox.set(record.id, record);
-        },
-        remove: async (id) => {
-          outbox.delete(id);
-        },
+      list: async () => [...outbox.values()],
+      save: async (record) => {
+        outbox.set(record.id, record);
       },
-      cloud: cloud.transactions,
+      remove: async (id) => {
+        outbox.delete(id);
+      },
     },
     accounts: {
-      local: {
-        list: async () => [...accounts.values()],
-        save: async (account) => {
-          accounts.set(account.id, account);
-        },
-        remove: async (id) => {
-          accounts.delete(id);
-        },
+      list: async () => [...accounts.values()],
+      save: async (account) => {
+        accounts.set(account.id, account);
       },
-      cloud: cloud.accounts,
+      remove: async (id) => {
+        accounts.delete(id);
+      },
     },
     categories: {
-      local: {
-        list: async () => [...categories.values()],
-        save: async (category) => {
-          categories.set(category.id, category);
-        },
-        remove: async (id) => {
-          categories.delete(id);
-        },
+      list: async () => [...categories.values()],
+      save: async (category) => {
+        categories.set(category.id, category);
       },
-      cloud: cloud.categories,
+      remove: async (id) => {
+        categories.delete(id);
+      },
     },
     events: {
-      local: {
-        list: async () => [...events.values()],
-        save: async (event) => {
-          events.set(event.id, event);
-        },
-        remove: async (id) => {
-          events.delete(id);
-        },
+      list: async () => [...events.values()],
+      save: async (event) => {
+        events.set(event.id, event);
       },
-      cloud: cloud.events,
+      remove: async (id) => {
+        events.delete(id);
+      },
     },
     ledger: {
       read: async () => ledger.value,
@@ -179,7 +203,7 @@ describe('runSync', () => {
     const phone = createDevice(cloud, [manual('manual-lunch')]);
 
     await runSync(phone.ports);
-    cloud.stored.clear();
+    cloud.clear();
     await forgetSyncedState(phone.ports.ledger, 'user_alice');
     await runSync(phone.ports);
 
@@ -257,10 +281,10 @@ describe('runSync', () => {
   test('sends a long history in batches the cloud accepts', async () => {
     const cloud = createCloud();
     const batchSizes: number[] = [];
-    const push = cloud.transactions.push;
-    cloud.transactions.push = async (changes) => {
-      batchSizes.push(changes.length);
-      await push(changes);
+    const push = cloud.port.push;
+    cloud.port.push = async (changes) => {
+      batchSizes.push(changes.transactions?.length ?? 0);
+      return push(changes);
     };
     const history = Array.from({ length: 1_201 }, (_, index) => manual(`manual-${index}`));
     const phone = createDevice(cloud, history);
@@ -299,21 +323,19 @@ describe('runSync', () => {
     const result = await runSync(phone.ports);
 
     expect(result.pushed).toBe(1);
-    expect(cloud.stored.get('manual-lunch')?.amountMinor).toBe(3450);
+    expect(cloud.stored.get('manual-lunch')).toMatchObject({ amountMinor: 3450 });
   });
 
   test('does not mark a change as sent when the push fails', async () => {
     const cloud = createCloud();
     const phone = createDevice(cloud, [manual('manual-lunch')]);
-    phone.ports.transactions.cloud = {
-      list: cloud.transactions.list,
-      push: async () => {
-        throw new Error('network');
-      },
+    const push = cloud.port.push;
+    cloud.port.push = async () => {
+      throw new Error('network');
     };
 
     await expect(runSync(phone.ports)).rejects.toThrow('network');
-    phone.ports.transactions.cloud = cloud.transactions;
+    cloud.port.push = push;
     const retry = await runSync(phone.ports);
 
     expect(retry.pushed).toBe(1);
@@ -382,11 +404,7 @@ describe('runSync', () => {
     await runSync(phone.ports);
 
     phone.outbox.set('manual-offline', manual('manual-offline'));
-    const bobSession = {
-      ...phone.ports,
-      ownerId: 'user_bob',
-      transactions: { ...phone.ports.transactions, cloud: bobCloud.transactions },
-    };
+    const bobSession = { ...phone.ports, ownerId: 'user_bob', cloud: bobCloud.port };
     const result = await runSync(bobSession);
 
     expect(result).toEqual({ pushed: 0, pulled: 0, isForeignDevice: true });
@@ -422,5 +440,73 @@ describe('runSync', () => {
 
     expect(tablet.accounts.get('account-shared')?.name).toBe('Wspólne');
     expect(tablet.outbox.get('manual-rent')?.accountId).toBe('account-shared');
+  });
+
+  test('does not read its own changes back from the cloud', async () => {
+    const cloud = createCloud();
+    const phone = createDevice(cloud, [manual('manual-lunch')]);
+
+    await runSync(phone.ports);
+    await runSync(phone.ports);
+
+    expect(cloud.pulls).toEqual([0, 0]);
+  });
+
+  test('reads only what another device changed since the last run', async () => {
+    const cloud = createCloud();
+    const history = Array.from({ length: 30 }, (_, index) => manual(`manual-${index}`));
+    const phone = createDevice(cloud, history);
+    const tablet = createDevice(cloud);
+    await runSync(phone.ports);
+    await runSync(tablet.ports);
+
+    phone.outbox.set('manual-new', manual('manual-new'));
+    await runSync(phone.ports);
+    await runSync(tablet.ports);
+
+    expect(cloud.pulls.at(-1)).toBe(1);
+    expect(tablet.outbox.has('manual-new')).toBe(true);
+  });
+
+  test('pages through a history longer than one pull', async () => {
+    const cloud = createCloud();
+    const history = Array.from({ length: 1_201 }, (_, index) => manual(`manual-${index}`));
+    const phone = createDevice(cloud, history);
+    const tablet = createDevice(cloud);
+
+    await runSync(phone.ports);
+    await runSync(tablet.ports);
+
+    expect(tablet.outbox.size).toBe(1_201);
+  });
+
+  test('sends a removal without the removed content', async () => {
+    const cloud = createCloud();
+    const phone = createDevice(cloud, [manual('manual-lunch')]);
+    await runSync(phone.ports);
+
+    phone.outbox.delete('manual-lunch');
+    await runSync(phone.ports);
+
+    expect(cloud.stored.get('manual-lunch')).toEqual({
+      clientId: 'manual-lunch',
+      revision: expect.any(Number),
+      deleted: true,
+      sequence: 2,
+    });
+  });
+
+  test('reconciles a ledger written before cursors without pushing duplicates', async () => {
+    const cloud = createCloud();
+    const phone = createDevice(cloud, [manual('manual-lunch')]);
+    await runSync(phone.ports);
+    const stored = JSON.parse(phone.ledger.value!);
+    delete stored.cursor;
+    phone.ledger.value = JSON.stringify(stored);
+
+    const result = await runSync(phone.ports);
+
+    expect(result).toEqual({ pushed: 0, pulled: 0, isForeignDevice: false });
+    expect(JSON.parse(phone.ledger.value!).cursor).toBe(1);
   });
 });
