@@ -11,6 +11,8 @@ export const onboardingCopy = defineCopy({
     goToPayment: 'Przejdź do płatności',
     goToSetup: 'Przejdź do konfiguracji',
     addShortcut: 'Dodaj skrót',
+    automationEnabled: 'Automatyzacja włączona',
+    openShortcuts: 'Otwórz Skróty',
     goToApp: 'Przejdź do aplikacji',
     next: 'Dalej',
     premiumSoon:
@@ -37,6 +39,7 @@ export const onboardingCopy = defineCopy({
       merchant: 'Wybrany sklep',
       amount: '400 zł',
       example: 'Przykład: wydano 320 zł z 400 zł',
+      alertPreview: 'Zbliżasz się do limitu',
       eyebrow: 'LIMITY I POWIADOMIENIA',
       title: 'Ustal kwotę dla sklepu',
       description:
@@ -86,9 +89,16 @@ export const onboardingCopy = defineCopy({
       soon: 'Wkrótce',
       stepsTitle: 'Jak uruchomić przechwytywanie',
       stepOne: '1. Otwórz udostępniony skrót i dodaj go do aplikacji Skróty.',
-      stepTwo: '2. Utwórz automatyzację dla powiadomień wybranych banków i Portfela Apple.',
-      stepThree: '3. W automatyzacji uruchom dodany skrót i zatwierdź ją.',
+      stepTwo: '2. Wróć do BankStats. Pokażemy, jak włączyć automatyzację.',
       note: 'Przycisk otworzy gotowy skrót dla zaznaczonych banków. Dodanie skrótu i włączenie automatyzacji wymagają Twojego potwierdzenia.',
+    },
+    automation: {
+      eyebrow: 'OSTATNI KROK W SKRÓTACH',
+      title: 'Włącz automatyzację',
+      description:
+        'iOS dodaje automatyzację ze skrótu jako wyłączoną. Dopóki jej nie włączysz, BankStats nie dostanie powiadomień z banku.',
+      stepOne: '1. W aplikacji Skróty otwórz Bibliotekę i stuknij Automatyzacja.',
+      stepTwo: '2. Włącz przełącznik przy automatyzacji BankStats.',
     },
     pin: {
       eyebrow: 'ZABEZPIECZENIE',
@@ -116,6 +126,8 @@ export const onboardingCopy = defineCopy({
     goToPayment: 'Go to payment',
     goToSetup: 'Go to setup',
     addShortcut: 'Add the shortcut',
+    automationEnabled: "I've turned it on",
+    openShortcuts: 'Open Shortcuts',
     goToApp: 'Go to the app',
     next: 'Next',
     premiumSoon: 'Premium payments are coming soon. Choose the free plan to continue.',
@@ -141,6 +153,7 @@ export const onboardingCopy = defineCopy({
       merchant: 'Chosen shop',
       amount: '400 zł',
       example: 'Example: 320 zł spent of 400 zł',
+      alertPreview: 'You’re getting close to your limit',
       eyebrow: 'LIMITS AND ALERTS',
       title: 'Set an amount for a shop',
       description:
@@ -190,9 +203,16 @@ export const onboardingCopy = defineCopy({
       soon: 'Soon',
       stepsTitle: 'How to start capturing',
       stepOne: '1. Open the shared shortcut and add it to the Shortcuts app.',
-      stepTwo: '2. Create an automation for notifications from the chosen banks and Apple Wallet.',
-      stepThree: '3. In the automation, run the added shortcut and confirm it.',
+      stepTwo: "2. Come back to BankStats. We'll show you how to turn on the automation.",
       note: 'The button opens the ready-made shortcut for the selected banks. Adding the shortcut and turning on the automation need your confirmation.',
+    },
+    automation: {
+      eyebrow: 'LAST STEP IN SHORTCUTS',
+      title: 'Turn on the automation',
+      description:
+        "iOS adds the shortcut's automation turned off. Until you turn it on, BankStats won't receive your bank notifications.",
+      stepOne: '1. In the Shortcuts app, open Library and tap Automation.',
+      stepTwo: '2. Turn on the switch next to the BankStats automation.',
     },
     pin: {
       eyebrow: 'SECURITY',

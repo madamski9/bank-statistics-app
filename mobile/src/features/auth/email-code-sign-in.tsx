@@ -1,29 +1,33 @@
 import { useSignIn, useSignUp } from '@clerk/expo';
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { AnimatedReveal } from '@/features/app-shell/animated-reveal';
+import { ScalePressable } from '@/features/app-shell/scale-pressable';
 import { useCopy } from '@/features/localization/language';
 
 import { authCopy } from './auth-copy';
+import { AuthIcon } from './auth-icon';
+import { authMotion } from './auth-motion';
+import { authColors as colors } from './auth-theme';
 
 type Step = 'email' | 'code';
 type Mode = 'sign-in' | 'sign-up';
 
 interface EmailCodeSignInProps {
+  isLocked?: boolean;
+  onBusyChange?: (isBusy: boolean) => void;
+  onFocusChange?: (isFocused: boolean) => void;
   onStepChange?: (step: Step) => void;
 }
 
-const colors = {
-  surface: '#0D0D0F',
-  controlBorder: '#5F5F63',
-  textPrimary: '#FFFFFF',
-  onAccent: '#000000',
-  textSecondary: '#8E8E93',
-  accent: '#8F7BFF',
-  danger: '#FF5C7A',
-};
-
-export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
+export function EmailCodeSignIn({
+  isLocked = false,
+  onBusyChange,
+  onFocusChange,
+  onStepChange,
+}: EmailCodeSignInProps) {
   const copy = useCopy(authCopy);
   const { signIn } = useSignIn();
   const { signUp } = useSignUp();
@@ -34,8 +38,30 @@ export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const focus = useSharedValue(0);
+  const isBusy = isSubmitting || isLocked;
+
+  useEffect(() => {
+    onBusyChange?.(isSubmitting);
+  }, [isSubmitting, onBusyChange]);
+
+  const fieldStyle = useAnimatedStyle(() => ({
+    borderColor: error !== null
+      ? colors.danger
+      : interpolateColor(focus.get(), [0, 1], [colors.controlBorder, colors.accent]),
+    backgroundColor: interpolateColor(focus.get(), [0, 1], [colors.input, colors.inputFocused]),
+  }));
+
+  const changeFocus = (isFocused: boolean) => {
+    focus.set(withTiming(isFocused ? 1 : 0, authMotion.focus));
+    onFocusChange?.(isFocused);
+  };
 
   const requestCode = useCallback(async () => {
+    if (isBusy) {
+      return;
+    }
+
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail.includes('@')) {
@@ -93,9 +119,13 @@ export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [copy, email, onStepChange, signIn, signUp]);
+  }, [copy, email, isBusy, onStepChange, signIn, signUp]);
 
   const verifyCode = useCallback(async () => {
+    if (isBusy) {
+      return;
+    }
+
     if (code.trim().length === 0) {
       setError(copy.enterCode);
       return;
@@ -136,9 +166,13 @@ export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [code, copy, mode, signIn, signUp]);
+  }, [code, copy, isBusy, mode, signIn, signUp]);
 
   const resendCode = useCallback(async () => {
+    if (isBusy) {
+      return;
+    }
+
     setError(null);
     setMessage(null);
     setIsSubmitting(true);
@@ -160,7 +194,7 @@ export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [copy, mode, signIn, signUp]);
+  }, [copy, isBusy, mode, signIn, signUp]);
 
   const changeEmail = useCallback(() => {
     signIn.reset();
@@ -172,117 +206,118 @@ export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
     onStepChange?.('email');
   }, [onStepChange, signIn, signUp]);
 
-  const isDisabled =
-    isSubmitting || (step === 'email' ? email.trim().length === 0 : code.length === 0);
+  const isDisabled = isBusy || (step === 'email' ? email.trim().length === 0 : code.length === 0);
 
   return (
     <View style={styles.form}>
-      {step === 'email' ? (
-        <View style={styles.fieldGroup}>
-          <Text maxFontSizeMultiplier={1.4} style={styles.label}>
-            {copy.emailAddress}
+      <AnimatedReveal key={step} style={styles.fieldGroup}>
+        <View style={styles.fieldHeading}>
+          <Text style={styles.label}>
+            {step === 'email' ? copy.emailAddress : copy.emailCode}
           </Text>
-          <TextInput
-            accessibilityLabel={copy.emailAddress}
-            autoCapitalize="none"
-            autoComplete="email"
-            autoCorrect={false}
-            editable={!isSubmitting}
-            keyboardType="email-address"
-            onChangeText={setEmail}
-            onSubmitEditing={requestCode}
-            placeholder="ty@example.com"
-            placeholderTextColor={colors.textSecondary}
-            returnKeyType="send"
-            style={styles.input}
-            textContentType="emailAddress"
-            value={email}
-          />
-        </View>
-      ) : (
-        <View style={styles.fieldGroup}>
-          <View style={styles.codeHeading}>
-            <View style={styles.codeCopy}>
-              <Text maxFontSizeMultiplier={1.4} style={styles.label}>
-                {copy.emailCode}
-              </Text>
-              <Text maxFontSizeMultiplier={1.5} style={styles.helper}>
-                {copy.sentTo(email)}
-              </Text>
-            </View>
-            <Pressable
+          {step === 'code' ? (
+            <ScalePressable
               accessibilityRole="button"
-              disabled={isSubmitting}
-              hitSlop={8}
+              accessibilityState={{ disabled: isBusy }}
+              containerStyle={isBusy && styles.disabled}
+              disabled={isBusy}
               onPress={changeEmail}
-              style={({ pressed }) => [styles.textButton, pressed ? styles.pressed : null]}
+              style={styles.textButton}
             >
-              <Text maxFontSizeMultiplier={1.4} style={styles.textButtonLabel}>
-                {copy.change}
-              </Text>
-            </Pressable>
-          </View>
-          <TextInput
-            accessibilityLabel={copy.emailCode}
-            autoComplete="one-time-code"
-            editable={!isSubmitting}
-            keyboardType="number-pad"
-            maxLength={8}
-            onChangeText={setCode}
-            onSubmitEditing={verifyCode}
-            placeholder="000000"
-            placeholderTextColor={colors.textSecondary}
-            returnKeyType="done"
-            selectTextOnFocus
-            style={[styles.input, styles.codeInput]}
-            textContentType="oneTimeCode"
-            value={code}
-          />
+              <Text style={styles.textButtonLabel}>{copy.change}</Text>
+            </ScalePressable>
+          ) : null}
         </View>
-      )}
+        {step === 'code' ? (
+          <Text style={styles.helper}>{copy.sentTo(email)}</Text>
+        ) : null}
+        <Animated.View style={[styles.inputContainer, fieldStyle]}>
+          {step === 'email' ? (
+            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <AuthIcon name="mail" color={colors.textSecondary} />
+            </View>
+          ) : null}
+          <TextInput
+            accessibilityLabel={step === 'email' ? copy.emailAddress : copy.emailCode}
+            accessibilityHint={step === 'email' ? copy.passwordless : copy.enterCode}
+            aria-invalid={error !== null}
+            autoCapitalize="none"
+            autoComplete={step === 'email' ? 'email' : 'one-time-code'}
+            autoCorrect={false}
+            autoFocus={step === 'code'}
+            editable={!isBusy}
+            keyboardType={step === 'email' ? 'email-address' : 'number-pad'}
+            maxLength={step === 'code' ? 8 : undefined}
+            onBlur={() => changeFocus(false)}
+            onChangeText={(value) => {
+              setError(null);
+              setMessage(null);
+              if (step === 'email') {
+                setEmail(value);
+              } else {
+                setCode(value);
+              }
+            }}
+            onFocus={() => changeFocus(true)}
+            onSubmitEditing={step === 'email' ? requestCode : verifyCode}
+            placeholder={step === 'email' ? copy.emailPlaceholder : '000000'}
+            placeholderTextColor={colors.textSecondary}
+            returnKeyType={step === 'email' ? 'send' : 'done'}
+            selectionColor={colors.accent}
+            selectTextOnFocus={step === 'code'}
+            style={[styles.input, step === 'code' && styles.codeInput]}
+            textContentType={step === 'email' ? 'emailAddress' : 'oneTimeCode'}
+            value={step === 'email' ? email : code}
+          />
+        </Animated.View>
+        {step === 'email' ? <Text style={styles.helper}>{copy.passwordless}</Text> : null}
+      </AnimatedReveal>
 
       {error !== null ? (
-        <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={1.5} style={styles.error}>
-          {error}
-        </Text>
+        <AnimatedReveal style={styles.errorNotice}>
+          <Text accessibilityLiveRegion="polite" style={styles.error}>{error}</Text>
+        </AnimatedReveal>
       ) : null}
 
       {message !== null ? (
-        <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={1.5} style={styles.message}>
-          {message}
-        </Text>
+        <AnimatedReveal style={styles.successNotice}>
+          <AuthIcon name="check" color={colors.positive} size={18} />
+          <Text accessibilityLiveRegion="polite" style={styles.message}>{message}</Text>
+        </AnimatedReveal>
       ) : null}
 
-      <Pressable
+      <ScalePressable
         accessibilityRole="button"
+        accessibilityState={{ disabled: isDisabled, busy: isSubmitting }}
+        containerStyle={isDisabled && styles.disabled}
         disabled={isDisabled}
         onPress={step === 'email' ? requestCode : verifyCode}
-        style={({ pressed }) => [
-          styles.primaryButton,
-          isDisabled ? styles.disabled : null,
-          pressed ? styles.primaryButtonPressed : null,
-        ]}
+        pressedScale={0.98}
+        style={styles.primaryButton}
       >
-        {isSubmitting ? (
-          <ActivityIndicator color={colors.onAccent} />
-        ) : (
-          <Text maxFontSizeMultiplier={1.4} style={styles.primaryButtonLabel}>
-            {step === 'email' ? copy.sendCode : copy.signIn}
-          </Text>
-        )}
-      </Pressable>
+        <Text style={styles.primaryButtonLabel}>
+          {step === 'email' ? copy.sendCode : copy.signIn}
+        </Text>
+        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          {isSubmitting ? (
+            <ActivityIndicator color={colors.onAccent} size="small" />
+          ) : (
+            <AuthIcon name="arrow" color={colors.onAccent} />
+          )}
+        </View>
+      </ScalePressable>
 
       {step === 'code' ? (
-        <Pressable
+        <ScalePressable
           accessibilityRole="button"
-          disabled={isSubmitting}
+          accessibilityState={{ disabled: isBusy }}
+          containerStyle={isBusy && styles.disabled}
+          disabled={isBusy}
           onPress={resendCode}
-          style={({ pressed }) => [styles.resendButton, pressed ? styles.pressed : null]}
+          style={styles.resendButton}
         >
-          <Text maxFontSizeMultiplier={1.4} style={styles.resendLabel}>
-            {copy.resendCode}
-          </Text>
-        </Pressable>
+          <Text style={styles.resendLabel}>{copy.resendCode}</Text>
+        </ScalePressable>
       ) : null}
 
       <View nativeID="clerk-captcha" />
@@ -292,65 +327,76 @@ export function EmailCodeSignIn({ onStepChange }: EmailCodeSignInProps) {
 
 const styles = StyleSheet.create({
   form: {
-    gap: 12,
+    gap: 16,
   },
   fieldGroup: {
-    gap: 8,
+    gap: 10,
+  },
+  fieldHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
   },
   label: {
+    flexShrink: 1,
     fontSize: 14,
     fontWeight: '600',
     color: colors.textPrimary,
   },
-  input: {
-    minHeight: 50,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.controlBorder,
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
     borderRadius: 14,
     paddingHorizontal: 16,
+  },
+  input: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 54,
+    paddingVertical: 14,
     fontSize: 16,
     color: colors.textPrimary,
-    backgroundColor: colors.surface,
   },
   codeInput: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '600',
-    letterSpacing: 7,
-  },
-  codeHeading: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  codeCopy: {
-    flex: 1,
-    gap: 3,
+    letterSpacing: 8,
+    textAlign: 'center',
+    fontVariant: ['tabular-nums'],
   },
   helper: {
-    fontSize: 13,
+    fontSize: 12,
+    lineHeight: 18,
     color: colors.textSecondary,
   },
   textButton: {
     minHeight: 48,
+    minWidth: 48,
+    alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 8,
   },
   textButtonLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.accent,
+    color: colors.accentText,
   },
   primaryButton: {
-    minHeight: 50,
+    minHeight: 54,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
     borderRadius: 14,
     backgroundColor: colors.accent,
   },
-  primaryButtonPressed: {
-    opacity: 0.82,
-  },
   primaryButtonLabel: {
+    flexShrink: 1,
     fontSize: 16,
     fontWeight: '700',
     color: colors.onAccent,
@@ -359,26 +405,40 @@ const styles = StyleSheet.create({
     minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 12,
   },
   resendLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.textSecondary,
+    color: colors.accentText,
+    textAlign: 'center',
+  },
+  errorNotice: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: colors.dangerMuted,
   },
   error: {
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 19,
     color: colors.danger,
   },
+  successNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: colors.successMuted,
+  },
   message: {
+    flex: 1,
     fontSize: 13,
-    lineHeight: 18,
-    color: colors.textSecondary,
+    lineHeight: 19,
+    color: colors.positive,
   },
   disabled: {
-    opacity: 0.45,
-  },
-  pressed: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
 });
