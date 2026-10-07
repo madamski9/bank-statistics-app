@@ -12,6 +12,7 @@ export const premiumCopy = defineCopy({
     },
     thanks: 'Dziękujemy za wsparcie',
     activeSince: (date: string) => `Aktywne od ${date}`,
+    activeUntil: (date: string) => `Aktywne do ${date}`,
     pitch: 'Więcej analiz, widżetów i limitów',
     detailsHint: 'Pokazuje szczegóły Premium',
     pitchHint: 'Pokazuje, co daje Premium',
@@ -22,6 +23,7 @@ export const premiumCopy = defineCopy({
     close: 'Zamknij',
     thanksLong: 'Dziękujemy, że wspierasz BankStats.',
     activeSinceLong: (date: string) => `Aktywne od ${date}. Dziękujemy, że wspierasz BankStats.`,
+    activeUntilLong: (date: string) => `Aktywne do ${date}. Miłego korzystania z BankStats.`,
     tagline: 'Pełny obraz Twoich wydatków, bez reklam i bez sprzedawania danych.',
     benefits: [
       { title: 'Raport miesięczny', detail: 'Średnia dzienna, wykres dzień po dniu i to, na co idą pieniądze.' },
@@ -38,6 +40,13 @@ export const premiumCopy = defineCopy({
     previewOn: 'Podgląd bez Premium',
     previewOff: 'Wróć do Premium',
     previewDetail: 'Tylko w wersji deweloperskiej. Premium na koncie się nie zmienia.',
+    haveCode: 'Mam kod',
+    codeLabel: 'Kod Premium',
+    codePlaceholder: 'XXXXX-XXXXX',
+    useCode: 'Użyj kodu',
+    codeInvalid: 'Ten kod jest nieprawidłowy albo został już wykorzystany.',
+    codeAlreadyPermanent: 'Masz już Premium na stałe. Zachowaj kod dla kogoś innego.',
+    codeFailed: 'Nie udało się użyć kodu. Spróbuj ponownie.',
   },
   en: {
     reasons: {
@@ -50,6 +59,7 @@ export const premiumCopy = defineCopy({
     },
     thanks: 'Thank you for your support',
     activeSince: (date: string) => `Active since ${date}`,
+    activeUntil: (date: string) => `Active until ${date}`,
     pitch: 'More insights, widgets and limits',
     detailsHint: 'Shows your Premium details',
     pitchHint: 'Shows what Premium includes',
@@ -60,6 +70,7 @@ export const premiumCopy = defineCopy({
     close: 'Close',
     thanksLong: 'Thank you for supporting BankStats.',
     activeSinceLong: (date: string) => `Active since ${date}. Thank you for supporting BankStats.`,
+    activeUntilLong: (date: string) => `Active until ${date}. Enjoy BankStats.`,
     tagline: 'The full picture of your spending, with no ads and no selling of your data.',
     benefits: [
       { title: 'Monthly report', detail: 'Your daily average, a day-by-day chart and where the money goes.' },
@@ -76,5 +87,12 @@ export const premiumCopy = defineCopy({
     previewOn: 'Preview without Premium',
     previewOff: 'Back to Premium',
     previewDetail: 'Development builds only. Your account keeps Premium.',
+    haveCode: 'I have a code',
+    codeLabel: 'Premium code',
+    codePlaceholder: 'XXXXX-XXXXX',
+    useCode: 'Use code',
+    codeInvalid: 'This code is not valid or has already been used.',
+    codeAlreadyPermanent: 'You already have Premium for good. Keep the code for someone else.',
+    codeFailed: 'Could not use the code. Please try again.',
   },
 });

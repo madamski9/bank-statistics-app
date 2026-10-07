@@ -6,9 +6,10 @@ import { usePreviewWithoutPremium } from './premium-preview';
 export interface PremiumStatus {
   isPremium: boolean;
   premiumSince: number | null;
+  premiumUntil: number | null;
 }
 
-const withoutPremium: PremiumStatus = { isPremium: false, premiumSince: null };
+const withoutPremium: PremiumStatus = { isPremium: false, premiumSince: null, premiumUntil: null };
 
 export function usePremium(): PremiumStatus | undefined {
   const { isAuthenticated } = useConvexAuth();

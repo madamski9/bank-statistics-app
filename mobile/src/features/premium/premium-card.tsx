@@ -5,7 +5,7 @@ import { useCopy } from '@/features/localization/language';
 import { overviewColors } from '@/features/spending-overview/overview-theme';
 
 import { premiumCopy } from './premium-copy';
-import { formatPremiumSince } from './premium-date';
+import { formatPremiumDate } from './premium-date';
 import type { PremiumStatus } from './use-premium';
 
 interface PremiumCardProps {
@@ -17,9 +17,11 @@ export function PremiumCard({ status, onPress }: PremiumCardProps) {
   const copy = useCopy(premiumCopy);
   const isPremium = status?.isPremium === true;
   const subtitle = isPremium
-    ? status.premiumSince === null
-      ? copy.thanks
-      : copy.activeSince(formatPremiumSince(status.premiumSince))
+    ? status.premiumUntil !== null
+      ? copy.activeUntil(formatPremiumDate(status.premiumUntil))
+      : status.premiumSince === null
+        ? copy.thanks
+        : copy.activeSince(formatPremiumDate(status.premiumSince))
     : copy.pitch;
 
   return (

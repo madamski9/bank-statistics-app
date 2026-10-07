@@ -21,6 +21,7 @@ describe('profiles', () => {
     expect(await backend.withIdentity(alice).query(api.profiles.current, {})).toEqual({
       isPremium: false,
       premiumSince: null,
+      premiumUntil: null,
     });
   });
 
@@ -47,6 +48,7 @@ describe('profiles', () => {
     expect(await backend.withIdentity(alice).query(api.profiles.current, {})).toEqual({
       isPremium: false,
       premiumSince: null,
+      premiumUntil: null,
     });
   });
 

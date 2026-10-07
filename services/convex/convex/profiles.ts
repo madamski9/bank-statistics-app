@@ -3,7 +3,7 @@ import { v } from 'convex/values';
 import { internalMutation, query, type QueryCtx } from './_generated/server';
 import { requireOwnerId } from './owner';
 
-function findProfile(ctx: QueryCtx, ownerId: string) {
+export function findProfile(ctx: QueryCtx, ownerId: string) {
   return ctx.db
     .query('profiles')
     .withIndex('by_owner', (index) => index.eq('ownerId', ownerId))
@@ -19,6 +19,7 @@ export const current = query({
     return {
       isPremium: profile?.isPremium ?? false,
       premiumSince: profile?.premiumSince ?? null,
+      premiumUntil: profile?.premiumUntil ?? null,
     };
   },
 });
@@ -34,6 +35,6 @@ export const setPremium = internalMutation({
       return;
     }
 
-    await ctx.db.patch(profile._id, { isPremium, premiumSince });
+    await ctx.db.patch(profile._id, { isPremium, premiumSince, premiumUntil: undefined });
   },
 });
