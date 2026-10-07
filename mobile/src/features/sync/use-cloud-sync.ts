@@ -33,7 +33,7 @@ const retryDelayMs = 30_000;
 const triggerDebounceMs = 250;
 
 interface Registration {
-  userId: string;
+  sessionId: string;
   installationId: string;
 }
 
@@ -54,7 +54,7 @@ export function useCloudSync({
 }: CloudSyncOptions): SyncStatus {
   const convex = useConvex();
   const { isAuthenticated } = useConvexAuth();
-  const { userId } = useAuth();
+  const { userId, sessionId } = useAuth();
   const [registration, setRegistration] = useState<Registration | null>(null);
   const [status, setStatus] = useState<SyncStatus>({ state: 'waiting', lastSyncedAt: null });
   const [isConnected, setIsConnected] = useState(
@@ -63,18 +63,15 @@ export function useCloudSync({
   const isCloudEnabled = useCloudSyncEnabled();
   const isSupported = Platform.OS === 'ios' && isCloudEnabled === true;
   const installationId =
-    registration !== null && registration.userId === userId ? registration.installationId : null;
+    registration !== null && registration.sessionId === sessionId ? registration.installationId : null;
   const isReady = isSupported && isAuthenticated && installationId !== null;
-  const remoteTransactions = useQuery(api.transactions.list, isReady ? { installationId } : 'skip');
-  const remoteAccounts = useQuery(api.financialAccounts.list, isReady ? { installationId } : 'skip');
-  const remoteCategories = useQuery(api.categories.list, isReady ? { installationId } : 'skip');
-  const remoteEvents = useQuery(api.events.list, isReady ? { installationId } : 'skip');
+  const cloudHead = useQuery(api.sync.head, isReady ? { installationId } : 'skip');
   const [registrationAttempt, setRegistrationAttempt] = useState(0);
   const isRunning = useRef(false);
   const isRerunNeeded = useRef(false);
 
   useEffect(() => {
-    if (!isSupported || !isAuthenticated || userId == null) {
+    if (!isSupported || !isAuthenticated || userId == null || sessionId == null) {
       return;
     }
 
@@ -95,7 +92,7 @@ export function useCloudSync({
         await convex.mutation(api.devices.register, { installationId: id, platform: 'ios' });
 
         if (isActive) {
-          setRegistration({ userId, installationId: id });
+          setRegistration({ sessionId, installationId: id });
         }
       })
       .catch(() => {
@@ -107,7 +104,7 @@ export function useCloudSync({
     return () => {
       isActive = false;
     };
-  }, [convex, isAuthenticated, isSupported, registrationAttempt, userId]);
+  }, [convex, isAuthenticated, isSupported, registrationAttempt, sessionId, userId]);
 
   const synchronize = useCallback(async () => {
     if (!isReady || userId == null || !isCloudSyncEnabledNow()) {
@@ -124,50 +121,29 @@ export function useCloudSync({
 
     const ports: SyncPorts = {
       ownerId: userId,
+      cloud: {
+        pull: (cursors) => convex.query(api.sync.pull, { installationId, cursors }),
+        push: (changes) => convex.mutation(api.sync.push, { installationId, changes }),
+      },
       transactions: {
-        local: {
-          list: listIngestionRecords,
-          save: saveIngestionRecord,
-          remove: deleteIngestionRecord,
-        },
-        cloud: {
-          list: () => convex.query(api.transactions.list, { installationId }),
-          push: (changes) => convex.mutation(api.transactions.push, { installationId, changes }),
-        },
+        list: listIngestionRecords,
+        save: saveIngestionRecord,
+        remove: deleteIngestionRecord,
       },
       accounts: {
-        local: {
-          list: () => loadAccounts(encryptedAccountStorage),
-          save: (account) => upsertAccount(encryptedAccountStorage, account),
-          remove: (id) => removeAccount(encryptedAccountStorage, id),
-        },
-        cloud: {
-          list: () => convex.query(api.financialAccounts.list, { installationId }),
-          push: (changes) =>
-            convex.mutation(api.financialAccounts.push, { installationId, changes }),
-        },
+        list: () => loadAccounts(encryptedAccountStorage),
+        save: (account) => upsertAccount(encryptedAccountStorage, account),
+        remove: (id) => removeAccount(encryptedAccountStorage, id),
       },
       categories: {
-        local: {
-          list: customCategoryStore.load,
-          save: customCategoryStore.upsert,
-          remove: customCategoryStore.remove,
-        },
-        cloud: {
-          list: () => convex.query(api.categories.list, { installationId }),
-          push: (changes) => convex.mutation(api.categories.push, { installationId, changes }),
-        },
+        list: customCategoryStore.load,
+        save: customCategoryStore.upsert,
+        remove: customCategoryStore.remove,
       },
       events: {
-        local: {
-          list: eventStore.load,
-          save: eventStore.upsert,
-          remove: eventStore.remove,
-        },
-        cloud: {
-          list: () => convex.query(api.events.list, { installationId }),
-          push: (changes) => convex.mutation(api.events.push, { installationId, changes }),
-        },
+        list: eventStore.load,
+        save: eventStore.upsert,
+        remove: eventStore.remove,
       },
       ledger: encryptedLedgerStorage,
       now: Date.now,
@@ -200,11 +176,8 @@ export function useCloudSync({
     accounts,
     categories,
     events,
+    cloudHead,
     records,
-    remoteAccounts,
-    remoteCategories,
-    remoteEvents,
-    remoteTransactions,
     synchronize,
   ]);
 

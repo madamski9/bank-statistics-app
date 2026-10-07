@@ -1,39 +1,51 @@
-import { mutation, type QueryCtx } from './_generated/server';
-import { requireOwnerId } from './owner';
+import { mutation, type MutationCtx } from './_generated/server';
+import { requireTrustedSession } from './devices';
+import { findOwner, saveOwner } from './owners';
+import { syncedTables } from './sync';
 
 const deletionBatchSize = 500;
-const cloudCopyTables = ['transactions', 'financialAccounts', 'categories', 'events'] as const;
-const ownedTables = [...cloudCopyTables, 'devices', 'profiles'] as const;
 
-export async function isAccountDeleted(ctx: QueryCtx, ownerId: string): Promise<boolean> {
-  const deletion = await ctx.db
-    .query('accountDeletions')
-    .withIndex('by_owner', (index) => index.eq('ownerId', ownerId))
-    .first();
+async function deleteSyncedRows(ctx: MutationCtx, ownerId: string): Promise<boolean> {
+  let isComplete = true;
 
-  return deletion !== null;
+  for (const table of syncedTables) {
+    const rows = await ctx.db
+      .query(table)
+      .withIndex('by_owner_sequence', (index) => index.eq('ownerId', ownerId))
+      .take(deletionBatchSize);
+
+    await Promise.all(rows.map((row) => ctx.db.delete(row._id)));
+    isComplete &&= rows.length < deletionBatchSize;
+  }
+
+  return isComplete;
 }
 
 export const deleteData = mutation({
   args: {},
   handler: async (ctx) => {
-    const ownerId = await requireOwnerId(ctx.auth);
+    const { ownerId } = await requireTrustedSession(ctx);
+    const owner = await findOwner(ctx, ownerId);
+    const now = Date.now();
 
-    if (!(await isAccountDeleted(ctx, ownerId))) {
-      await ctx.db.insert('accountDeletions', { ownerId, requestedAt: Date.now() });
+    if (owner?.deletionRequestedAt === undefined) {
+      await saveOwner(ctx, ownerId, owner, { deletionRequestedAt: now }, now);
     }
 
-    let isComplete = true;
-
-    for (const table of ownedTables) {
-      const rows = await ctx.db
-        .query(table)
+    const owned = await Promise.all([
+      ctx.db
+        .query('devices')
+        .withIndex('by_owner_revoked', (index) => index.eq('ownerId', ownerId))
+        .take(deletionBatchSize),
+      ctx.db
+        .query('profiles')
         .withIndex('by_owner', (index) => index.eq('ownerId', ownerId))
-        .take(deletionBatchSize);
+        .take(deletionBatchSize),
+    ]);
+    const rows = owned.flat();
 
-      await Promise.all(rows.map((row) => ctx.db.delete(row._id)));
-      isComplete &&= rows.length < deletionBatchSize;
-    }
+    await Promise.all(rows.map((row) => ctx.db.delete(row._id)));
+    const isComplete = (await deleteSyncedRows(ctx, ownerId)) && owned.every((batch) => batch.length < deletionBatchSize);
 
     return { isComplete };
   },
@@ -42,19 +54,8 @@ export const deleteData = mutation({
 export const deleteCloudCopy = mutation({
   args: {},
   handler: async (ctx) => {
-    const ownerId = await requireOwnerId(ctx.auth);
-    let isComplete = true;
+    const { ownerId } = await requireTrustedSession(ctx);
 
-    for (const table of cloudCopyTables) {
-      const rows = await ctx.db
-        .query(table)
-        .withIndex('by_owner', (index) => index.eq('ownerId', ownerId))
-        .take(deletionBatchSize);
-
-      await Promise.all(rows.map((row) => ctx.db.delete(row._id)));
-      isComplete &&= rows.length < deletionBatchSize;
-    }
-
-    return { isComplete };
+    return { isComplete: await deleteSyncedRows(ctx, ownerId) };
   },
 });

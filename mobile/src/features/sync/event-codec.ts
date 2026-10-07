@@ -1,16 +1,13 @@
-import type { api } from '@bankstats/convex/convex/_generated/api';
 import { eventChangeProblem } from '@bankstats/convex/convex/changeRules';
-import type { FunctionArgs, FunctionReturnType } from 'convex/server';
+import type { EventContent } from '@bankstats/convex/convex/sync';
 
 import type { SpendingEvent } from '@/features/events/spending-event';
 
-import { withoutUndefined, type SyncCodec } from './sync-plan';
+import { withoutUndefined, type SyncCodec, type SyncedChange } from './sync-plan';
 
-export type PushedEvent = FunctionArgs<typeof api.events.push>['changes'][number];
+export type EventChange = EventContent;
 
-export type EventChange = Omit<PushedEvent, 'revision' | 'deleted'>;
-
-export type RemoteEvent = FunctionReturnType<typeof api.events.list>[number];
+export type RemoteEvent = SyncedChange<EventChange>;
 
 export const eventCodec: SyncCodec<SpendingEvent, EventChange> = {
   includes: () => true,

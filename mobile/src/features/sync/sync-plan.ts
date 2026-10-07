@@ -1,14 +1,19 @@
-export interface Versioned {
+export interface Tombstone {
+  clientId: string;
   revision: number;
-  deleted: boolean;
+  deleted: true;
 }
+
+export type Revised<Change> = Change & { revision: number; deleted: false };
+
+export type SyncedChange<Change> = Revised<Change> | Tombstone;
 
 export interface SyncCodec<Item, Change extends { clientId: string }> {
   includes: (item: Item) => boolean;
   idOf: (item: Item) => string;
   toChange: (item: Item) => Change;
   fromChange: (change: Change) => Item;
-  isPushable: (change: Change & Versioned) => boolean;
+  isPushable: (change: Revised<Change>) => boolean;
 }
 
 export interface LedgerEntry {
@@ -21,14 +26,14 @@ export type SyncLedger = Record<string, LedgerEntry>;
 export interface SyncPlan<Item, Change> {
   saveLocally: Item[];
   removeLocally: string[];
-  push: (Change & Versioned)[];
+  push: SyncedChange<Change>[];
   pulledLedger: SyncLedger;
   ledger: SyncLedger;
 }
 
 interface SyncInput<Item, Change> {
   local: Item[];
-  remote: (Change & Versioned)[];
+  remote: SyncedChange<Change>[];
   ledger: SyncLedger;
   now: number;
 }
@@ -74,7 +79,7 @@ export function planSync<Item, Change extends { clientId: string }>(
     const localFingerprint =
       localItem === undefined ? null : fingerprintOf(codec.toChange(localItem));
     const remoteItem =
-      remoteChange === undefined || remoteChange.deleted ? undefined : codec.fromChange(remoteChange);
+      remoteChange === undefined || remoteChange.deleted ? undefined : codec.fromChange(remoteChange as Change);
     const remoteFingerprint =
       remoteItem === undefined ? null : fingerprintOf(codec.toChange(remoteItem));
 
@@ -120,23 +125,26 @@ export function planSync<Item, Change extends { clientId: string }>(
       continue;
     }
 
-    const source = localItem ?? remoteItem;
-
-    if (source === undefined) {
-      delete plan.pulledLedger[clientId];
-      delete plan.ledger[clientId];
-      continue;
-    }
-
     const revision = Math.max(
       now,
       (entry?.revision ?? 0) + 1,
       (remoteChange?.revision ?? 0) + 1,
     );
 
-    plan.push.push({ ...codec.toChange(source), revision, deleted: localItem === undefined });
+    plan.push.push(
+      localItem === undefined
+        ? { clientId, revision, deleted: true }
+        : { ...codec.toChange(localItem), revision, deleted: false },
+    );
     plan.ledger[clientId] = { revision, fingerprint: localFingerprint };
   }
 
   return plan;
+}
+
+export function isPushable<Item, Change extends { clientId: string }>(
+  codec: SyncCodec<Item, Change>,
+  change: SyncedChange<Change>,
+): boolean {
+  return change.deleted || codec.isPushable(change);
 }

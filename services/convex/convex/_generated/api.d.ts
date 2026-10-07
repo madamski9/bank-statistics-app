@@ -9,17 +9,15 @@
  */
 
 import type * as account from "../account.js";
-import type * as categories from "../categories.js";
 import type * as changeRules from "../changeRules.js";
 import type * as crons from "../crons.js";
 import type * as devices from "../devices.js";
-import type * as events from "../events.js";
 import type * as exchangeRates from "../exchangeRates.js";
-import type * as financialAccounts from "../financialAccounts.js";
+import type * as migrations from "../migrations.js";
 import type * as owner from "../owner.js";
+import type * as owners from "../owners.js";
 import type * as profiles from "../profiles.js";
-import type * as syncedRows from "../syncedRows.js";
-import type * as transactions from "../transactions.js";
+import type * as sync from "../sync.js";
 
 import type {
   ApiFromModules,
@@ -29,17 +27,15 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   account: typeof account;
-  categories: typeof categories;
   changeRules: typeof changeRules;
   crons: typeof crons;
   devices: typeof devices;
-  events: typeof events;
   exchangeRates: typeof exchangeRates;
-  financialAccounts: typeof financialAccounts;
+  migrations: typeof migrations;
   owner: typeof owner;
+  owners: typeof owners;
   profiles: typeof profiles;
-  syncedRows: typeof syncedRows;
-  transactions: typeof transactions;
+  sync: typeof sync;
 }>;
 
 /**

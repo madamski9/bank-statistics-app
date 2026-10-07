@@ -5,35 +5,58 @@ import type { CustomCategory } from '@/features/classification/categories';
 import type { SpendingEvent } from '@/features/events/spending-event';
 import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
 
-import { accountCodec, type AccountChange } from './account-codec';
-import { categoryCodec, type CategoryChange } from './category-codec';
-import { eventCodec, type EventChange } from './event-codec';
-import { planSync, type SyncCodec, type SyncLedger, type Versioned } from './sync-plan';
-import { transactionCodec, type TransactionChange } from './transaction-codec';
+import { accountCodec, type RemoteAccount } from './account-codec';
+import { categoryCodec, type RemoteCategory } from './category-codec';
+import { eventCodec, type RemoteEvent } from './event-codec';
+import { isPushable, planSync, type SyncCodec, type SyncedChange, type SyncLedger } from './sync-plan';
+import { transactionCodec, type RemoteTransaction } from './transaction-codec';
 
 export interface LedgerStorage {
   read: () => Promise<string | null>;
   write: (value: string) => Promise<void>;
 }
 
-export interface EntityPorts<Item, Change> {
-  local: {
-    list: () => Promise<Item[]>;
-    save: (item: Item) => Promise<unknown>;
-    remove: (id: string) => Promise<unknown>;
-  };
-  cloud: {
-    list: () => Promise<(Change & Versioned)[]>;
-    push: (changes: (Change & Versioned)[]) => Promise<unknown>;
-  };
+export interface LocalPort<Item> {
+  list: () => Promise<Item[]>;
+  save: (item: Item) => Promise<unknown>;
+  remove: (id: string) => Promise<unknown>;
+}
+
+export interface CloudChanges {
+  transactions: RemoteTransaction[];
+  financialAccounts: RemoteAccount[];
+  categories: RemoteCategory[];
+  events: RemoteEvent[];
+}
+
+export type CloudTable = keyof CloudChanges;
+
+export type Cursors = Record<CloudTable, number>;
+
+export interface PulledPage {
+  head: number;
+  isComplete: boolean;
+  cursors: Cursors;
+  changes: CloudChanges;
+}
+
+export interface PushReceipt {
+  sequenceBefore: number;
+  sequence: number;
+}
+
+export interface CloudPort {
+  pull: (cursors: Cursors) => Promise<PulledPage>;
+  push: (changes: Partial<CloudChanges>) => Promise<PushReceipt>;
 }
 
 export interface SyncPorts {
   ownerId: string;
-  transactions: EntityPorts<IngestionRecord, TransactionChange>;
-  accounts: EntityPorts<FinancialAccount, AccountChange>;
-  categories: EntityPorts<CustomCategory, CategoryChange>;
-  events: EntityPorts<SpendingEvent, EventChange>;
+  cloud: CloudPort;
+  transactions: LocalPort<IngestionRecord>;
+  accounts: LocalPort<FinancialAccount>;
+  categories: LocalPort<CustomCategory>;
+  events: LocalPort<SpendingEvent>;
   ledger: LedgerStorage;
   now: () => number;
 }
@@ -48,10 +71,10 @@ const ledgerSections = ['transactions', 'accounts', 'categories', 'events'] as c
 
 type LedgerSection = (typeof ledgerSections)[number];
 
-type StoredLedger = { ownerId: string } & Record<LedgerSection, SyncLedger>;
+type StoredLedger = { ownerId: string; cursor: number } & Record<LedgerSection, SyncLedger>;
 
 function emptyLedger(ownerId: string): StoredLedger {
-  return { ownerId, transactions: {}, accounts: {}, categories: {}, events: {} };
+  return { ownerId, cursor: 0, transactions: {}, accounts: {}, categories: {}, events: {} };
 }
 
 function isLedgerEntry(value: unknown): boolean {
@@ -95,6 +118,12 @@ function parseLedger(stored: string): StoredLedger | null {
     }
 
     const ledger = emptyLedger(ownerId);
+
+    if (typeof sections.cursor !== 'number') {
+      return ledger;
+    }
+
+    ledger.cursor = sections.cursor;
 
     for (const section of ledgerSections) {
       ledger[section] = parseSection(sections[section]);
@@ -140,41 +169,87 @@ export async function claimDevice(storage: LedgerStorage, ownerId: string): Prom
   return reading.kind === 'owned' && reading.ledger.ownerId === ownerId;
 }
 
-async function syncEntity<Item, Change extends { clientId: string }>(
-  ports: EntityPorts<Item, Change>,
+function emptyChanges(): CloudChanges {
+  return { transactions: [], financialAccounts: [], categories: [], events: [] };
+}
+
+async function pullSince(cloud: CloudPort, cursor: number): Promise<{ head: number; changes: CloudChanges }> {
+  const changes = emptyChanges();
+  let cursors: Cursors = { transactions: cursor, financialAccounts: cursor, categories: cursor, events: cursor };
+
+  for (;;) {
+    const page = await cloud.pull(cursors);
+    changes.transactions.push(...page.changes.transactions);
+    changes.financialAccounts.push(...page.changes.financialAccounts);
+    changes.categories.push(...page.changes.categories);
+    changes.events.push(...page.changes.events);
+    cursors = page.cursors;
+
+    if (page.isComplete) {
+      return { head: page.head, changes };
+    }
+  }
+}
+
+interface Reconciled<Change> {
+  push: SyncedChange<Change>[];
+  pulledLedger: SyncLedger;
+  ledger: SyncLedger;
+  pulled: number;
+}
+
+async function reconcile<Item, Change extends { clientId: string }>(
+  local: LocalPort<Item>,
   codec: SyncCodec<Item, Change>,
-  ledger: StoredLedger,
-  section: LedgerSection,
-  storage: LedgerStorage,
+  remote: SyncedChange<Change>[],
+  ledger: SyncLedger,
   now: number,
-): Promise<{ pushed: number; pulled: number }> {
-  const [local, remote] = await Promise.all([ports.local.list(), ports.cloud.list()]);
-  const plan = planSync({ local, remote, ledger: ledger[section], now }, codec);
+): Promise<Reconciled<Change>> {
+  const plan = planSync({ local: await local.list(), remote, ledger, now }, codec);
 
   for (const item of plan.saveLocally) {
-    await ports.local.save(item);
+    await local.save(item);
   }
 
   for (const id of plan.removeLocally) {
-    await ports.local.remove(id);
+    await local.remove(id);
   }
-
-  ledger[section] = plan.pulledLedger;
-  await writeLedger(storage, ledger);
-
-  const pushable = plan.push.filter(codec.isPushable);
-
-  for (let start = 0; start < pushable.length; start += maximumChangesPerPush) {
-    await ports.cloud.push(pushable.slice(start, start + maximumChangesPerPush));
-  }
-
-  ledger[section] = plan.ledger;
-  await writeLedger(storage, ledger);
 
   return {
-    pushed: pushable.length,
+    push: plan.push.filter((change) => isPushable(codec, change)),
+    pulledLedger: plan.pulledLedger,
+    ledger: plan.ledger,
     pulled: plan.saveLocally.length + plan.removeLocally.length,
   };
+}
+
+type PushEntry =
+  | { table: 'transactions'; change: RemoteTransaction }
+  | { table: 'financialAccounts'; change: RemoteAccount }
+  | { table: 'categories'; change: RemoteCategory }
+  | { table: 'events'; change: RemoteEvent };
+
+function batchOf(entries: PushEntry[]): Partial<CloudChanges> {
+  const batch = emptyChanges();
+
+  for (const entry of entries) {
+    switch (entry.table) {
+      case 'transactions':
+        batch.transactions.push(entry.change);
+        break;
+      case 'financialAccounts':
+        batch.financialAccounts.push(entry.change);
+        break;
+      case 'categories':
+        batch.categories.push(entry.change);
+        break;
+      case 'events':
+        batch.events.push(entry.change);
+        break;
+    }
+  }
+
+  return Object.fromEntries(Object.entries(batch).filter(([, changes]) => changes.length > 0));
 }
 
 export async function runSync(ports: SyncPorts): Promise<SyncResult> {
@@ -189,36 +264,53 @@ export async function runSync(ports: SyncPorts): Promise<SyncResult> {
 
   const ledger = reading.kind === 'owned' ? reading.ledger : emptyLedger(ports.ownerId);
   const now = ports.now();
-  const accounts = await syncEntity(
-    ports.accounts,
-    accountCodec,
-    ledger,
-    'accounts',
-    ports.ledger,
-    now,
-  );
-  const categories = await syncEntity(
-    ports.categories,
-    categoryCodec,
-    ledger,
-    'categories',
-    ports.ledger,
-    now,
-  );
-  const events = await syncEntity(ports.events, eventCodec, ledger, 'events', ports.ledger, now);
-  const transactions = await syncEntity(
+  const remote = await pullSince(ports.cloud, ledger.cursor);
+  const accounts = await reconcile(ports.accounts, accountCodec, remote.changes.financialAccounts, ledger.accounts, now);
+  const categories = await reconcile(ports.categories, categoryCodec, remote.changes.categories, ledger.categories, now);
+  const events = await reconcile(ports.events, eventCodec, remote.changes.events, ledger.events, now);
+  const transactions = await reconcile(
     ports.transactions,
     transactionCodec,
-    ledger,
-    'transactions',
-    ports.ledger,
+    remote.changes.transactions,
+    ledger.transactions,
     now,
   );
-  const results = [accounts, categories, events, transactions];
+
+  ledger.cursor = remote.head;
+  ledger.accounts = accounts.pulledLedger;
+  ledger.categories = categories.pulledLedger;
+  ledger.events = events.pulledLedger;
+  ledger.transactions = transactions.pulledLedger;
+  await writeLedger(ports.ledger, ledger);
+
+  const entries: PushEntry[] = [
+    ...accounts.push.map((change) => ({ table: 'financialAccounts' as const, change })),
+    ...categories.push.map((change) => ({ table: 'categories' as const, change })),
+    ...events.push.map((change) => ({ table: 'events' as const, change })),
+    ...transactions.push.map((change) => ({ table: 'transactions' as const, change })),
+  ];
+  let cursor = remote.head;
+  let isContiguous = true;
+
+  for (let start = 0; start < entries.length; start += maximumChangesPerPush) {
+    const receipt = await ports.cloud.push(batchOf(entries.slice(start, start + maximumChangesPerPush)));
+    isContiguous &&= receipt.sequenceBefore === cursor;
+
+    if (isContiguous) {
+      cursor = receipt.sequence;
+    }
+  }
+
+  ledger.cursor = cursor;
+  ledger.accounts = accounts.ledger;
+  ledger.categories = categories.ledger;
+  ledger.events = events.ledger;
+  ledger.transactions = transactions.ledger;
+  await writeLedger(ports.ledger, ledger);
 
   return {
-    pushed: results.reduce((sum, result) => sum + result.pushed, 0),
-    pulled: results.reduce((sum, result) => sum + result.pulled, 0),
+    pushed: entries.length,
+    pulled: [accounts, categories, events, transactions].reduce((sum, result) => sum + result.pulled, 0),
     isForeignDevice: false,
   };
 }

@@ -11,8 +11,8 @@ const modules = Object.fromEntries(
     .map((path) => [`./${path}`, () => import(`./${path}`)]),
 );
 
-const alice = { subject: 'user_alice', issuer: 'https://clerk.test' };
-const bob = { subject: 'user_bob', issuer: 'https://clerk.test' };
+const alice = { subject: 'user_alice', issuer: 'https://clerk.test', sid: 'sess_alice_phone' };
+const bob = { subject: 'user_bob', issuer: 'https://clerk.test', sid: 'sess_bob_phone' };
 
 function lunch(clientId = 'manual-lunch') {
   return {
@@ -50,8 +50,8 @@ async function withData() {
     [other, 'bob-phone'],
   ] as const) {
     await identity.mutation(api.devices.register, { installationId, platform: 'ios' });
-    await identity.mutation(api.financialAccounts.push, { installationId, changes: [savings] });
-    await identity.mutation(api.transactions.push, { installationId, changes: [lunch()] });
+    await identity.mutation(api.sync.push, { installationId, changes: { financialAccounts: [savings] } });
+    await identity.mutation(api.sync.push, { installationId, changes: { transactions: [lunch()] } });
   }
 
   return { backend, user, other };
@@ -61,15 +61,15 @@ async function countOwned(backend: Awaited<ReturnType<typeof withData>>['backend
   return backend.run(async (ctx) => {
     const transactions = await ctx.db
       .query('transactions')
-      .withIndex('by_owner', (index) => index.eq('ownerId', ownerId))
+      .withIndex('by_owner_sequence', (index) => index.eq('ownerId', ownerId))
       .collect();
     const accounts = await ctx.db
       .query('financialAccounts')
-      .withIndex('by_owner', (index) => index.eq('ownerId', ownerId))
+      .withIndex('by_owner_sequence', (index) => index.eq('ownerId', ownerId))
       .collect();
     const devices = await ctx.db
       .query('devices')
-      .withIndex('by_owner', (index) => index.eq('ownerId', ownerId))
+      .withIndex('by_owner_revoked', (index) => index.eq('ownerId', ownerId))
       .collect();
 
     return transactions.length + accounts.length + devices.length;
@@ -91,8 +91,8 @@ describe('account deletion', () => {
     await user.mutation(api.account.deleteData, {});
     expect(await user.mutation(api.account.deleteData, {})).toEqual({ isComplete: true });
 
-    const markers = await backend.run((ctx) => ctx.db.query('accountDeletions').collect());
-    expect(markers).toHaveLength(1);
+    const owners = await backend.run((ctx) => ctx.db.query('owners').collect());
+    expect(owners.filter((owner) => owner.deletionRequestedAt !== undefined)).toHaveLength(1);
   });
 
   test('stops other devices from uploading their copies back', async () => {
@@ -105,27 +105,19 @@ describe('account deletion', () => {
       user.mutation(api.devices.register, { installationId: 'phone', platform: 'ios' }),
     ).rejects.toThrow('being deleted');
     await expect(
-      user.mutation(api.transactions.push, { installationId: 'phone', changes: [lunch('late')] }),
-    ).rejects.toThrow('being deleted');
+      user.mutation(api.sync.push, { installationId: 'phone', changes: { transactions: [lunch('late')] } }),
+    ).rejects.toThrow('Register');
   });
 
   test('deletes a large history over several retries', async () => {
     const { backend, user } = await withData();
     await backend.run(async (ctx) => {
-      const device = await ctx.db
-        .query('devices')
-        .withIndex('by_owner', (index) => index.eq('ownerId', 'user_alice'))
-        .first();
-
-      if (device === null) {
-        throw new Error('Alice has a registered device.');
-      }
-
       for (let index = 0; index < 1_200; index += 1) {
         await ctx.db.insert('transactions', {
           ...lunch(`bulk-${index}`),
+          deleted: false,
           ownerId: 'user_alice',
-          lastDeviceId: device._id,
+          sequence: 100 + index,
         });
       }
     });

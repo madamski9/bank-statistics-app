@@ -25,7 +25,9 @@ function manual(overrides: Partial<IngestionRecord> = {}): IngestionRecord {
 }
 
 function remote(record: IngestionRecord, revision: number, deleted = false): RemoteTransaction {
-  return { ...changeFromRecord(record), revision, deleted };
+  return deleted
+    ? { clientId: record.id, revision, deleted: true }
+    : { ...changeFromRecord(record), revision, deleted: false };
 }
 
 function fingerprint(record: IngestionRecord): string {
@@ -85,8 +87,14 @@ describe('planSync', () => {
 
     const result = plan({ local: [captured], remote: [], ledger: {}, now });
 
-    expect(result.push[0]).toMatchObject({ bank: 'pko', origin: 'capture' });
-    expect(transactionCodec.fromChange(result.push[0])).toMatchObject({ bank: 'pko' });
+    const [pushed] = result.push;
+
+    if (pushed === undefined || pushed.deleted) {
+      throw new Error('Expected the captured transfer to be pushed.');
+    }
+
+    expect(pushed).toMatchObject({ bank: 'pko', origin: 'capture' });
+    expect(transactionCodec.fromChange(pushed)).toMatchObject({ bank: 'pko' });
   });
 
   test('does not upload synthetic captured transactions', () => {
@@ -132,7 +140,7 @@ describe('planSync', () => {
 
     const result = plan({ local: [], remote: [remote(lunch, 4)], ledger: synced(lunch, 4), now });
 
-    expect(result.push).toEqual([{ ...changeFromRecord(lunch), revision: now, deleted: true }]);
+    expect(result.push).toEqual([{ clientId: lunch.id, revision: now, deleted: true }]);
     expect(result.ledger[lunch.id]).toEqual({ revision: now, fingerprint: null });
   });
 
@@ -254,13 +262,13 @@ describe('planSync', () => {
     expect(result.pulledLedger).toEqual({});
   });
 
-  test('forgets a removal the cloud never received', () => {
+  test('pushes a removal even when the cloud copy was not pulled in this run', () => {
     const lunch = manual();
 
     const result = plan({ local: [], remote: [], ledger: synced(lunch, 4), now });
 
-    expect(result.push).toEqual([]);
-    expect(result.ledger).toEqual({});
+    expect(result.push).toEqual([{ clientId: lunch.id, revision: now, deleted: true }]);
+    expect(result.ledger[lunch.id]).toEqual({ revision: now, fingerprint: null });
   });
 
   test('sends only the fields a transaction actually has', () => {
