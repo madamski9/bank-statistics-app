@@ -1,5 +1,7 @@
 import { api } from '@bankstats/convex/convex/_generated/api';
+import { useAuth } from '@clerk/expo';
 import { useMutation } from 'convex/react';
+import { ConvexError } from 'convex/values';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,18 +20,44 @@ interface DeleteAccountScreenProps {
 type Step = 'explain' | 'verify' | 'deleting' | 'failed';
 
 const maximumDeletionRounds = 200;
+const verificationRetries = 3;
+const verificationRetryDelayMs = 1_500;
+
+function isStaleVerification(error: unknown): boolean {
+  return error instanceof ConvexError && String(error.data).startsWith('Confirm your identity');
+}
 
 export function DeleteAccountScreen({ onCancel }: DeleteAccountScreenProps) {
   const insets = useSafeAreaInsets();
   const copy = useCopy(accountDataCopy);
   const deleteData = useMutation(api.account.deleteData);
+  const { getToken } = useAuth();
   const [step, setStep] = useState<Step>('explain');
+
+  const startDeletion = useCallback(async () => {
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        return await deleteData({});
+      } catch (error) {
+        if (!isStaleVerification(error) || attempt === verificationRetries) {
+          throw error;
+        }
+
+        await getToken({ skipCache: true });
+        await new Promise((resolve) => setTimeout(resolve, verificationRetryDelayMs));
+      }
+    }
+  }, [deleteData, getToken]);
 
   const deleteSynchronizedData = useCallback(async () => {
     setStep('deleting');
 
     try {
-      for (let round = 0; round < maximumDeletionRounds; round += 1) {
+      if ((await startDeletion()).isComplete) {
+        return;
+      }
+
+      for (let round = 1; round < maximumDeletionRounds; round += 1) {
         const { isComplete } = await deleteData({});
 
         if (isComplete) {
@@ -41,7 +69,7 @@ export function DeleteAccountScreen({ onCancel }: DeleteAccountScreenProps) {
     } catch {
       setStep('failed');
     }
-  }, [deleteData]);
+  }, [deleteData, startDeletion]);
 
   return (
     <ScrollView

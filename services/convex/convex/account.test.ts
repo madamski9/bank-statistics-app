@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { convexTest } from 'convex-test';
 
-import { api } from './_generated/api';
+import { api, internal } from './_generated/api';
 import schema from './schema';
 
 const moduleFiles = new Bun.Glob('**/*.{ts,js}').scanSync({ cwd: import.meta.dir });
@@ -11,7 +11,7 @@ const modules = Object.fromEntries(
     .map((path) => [`./${path}`, () => import(`./${path}`)]),
 );
 
-const alice = { subject: 'user_alice', issuer: 'https://clerk.test', sid: 'sess_alice_phone' };
+const alice = { subject: 'user_alice', issuer: 'https://clerk.test', sid: 'sess_alice_phone', fva: [1, -1] };
 const bob = { subject: 'user_bob', issuer: 'https://clerk.test', sid: 'sess_bob_phone' };
 
 function lunch(clientId = 'manual-lunch') {
@@ -138,5 +138,65 @@ describe('account deletion', () => {
     const backend = convexTest(schema, modules);
 
     await expect(backend.mutation(api.account.deleteData, {})).rejects.toThrow('Sign in');
+  });
+
+  test('asks for a fresh identity check before it starts', async () => {
+    const { backend } = await withData();
+
+    for (const fva of [[30, -1], [-1, -1], undefined]) {
+      const stale = backend.withIdentity({ ...alice, fva });
+
+      await expect(stale.mutation(api.account.deleteData, {})).rejects.toThrow('Confirm your identity');
+    }
+
+    expect(await countOwned(backend, 'user_alice')).toBe(3);
+  });
+
+  test('continues a started deletion without another identity check', async () => {
+    const { backend, user } = await withData();
+    await user.mutation(api.account.deleteData, {});
+
+    const later = backend.withIdentity({ ...alice, fva: [90, -1] });
+
+    expect(await later.mutation(api.account.deleteData, {})).toEqual({ isComplete: true });
+  });
+
+  test('finishes a large deletion on the server when the app stops asking', async () => {
+    const { backend, user } = await withData();
+    await backend.run(async (ctx) => {
+      for (let index = 0; index < 1_200; index += 1) {
+        await ctx.db.insert('transactions', {
+          ...lunch(`bulk-${index}`),
+          deleted: false,
+          ownerId: 'user_alice',
+          sequence: 100 + index,
+        });
+      }
+    });
+
+    expect(await user.mutation(api.account.deleteData, {})).toEqual({ isComplete: false });
+
+    for (let round = 0; round < 5; round += 1) {
+      await backend.mutation(internal.account.purgeOwner, { ownerId: 'user_alice', removeClerkUser: true });
+    }
+
+    expect(await countOwned(backend, 'user_alice')).toBe(0);
+    const owner = await backend.run((ctx) =>
+      ctx.db
+        .query('owners')
+        .withIndex('by_owner', (index) => index.eq('ownerId', 'user_alice'))
+        .unique(),
+    );
+    expect(owner?.dataPurgedAt).toBeNumber();
+  });
+
+  test('deletes the data of a user removed in Clerk', async () => {
+    const { backend } = await withData();
+
+    await backend.mutation(internal.account.forgetDeletedUser, { ownerId: 'user_alice' });
+    await backend.mutation(internal.account.purgeOwner, { ownerId: 'user_alice', removeClerkUser: false });
+
+    expect(await countOwned(backend, 'user_alice')).toBe(0);
+    expect(await countOwned(backend, 'user_bob')).toBe(3);
   });
 });

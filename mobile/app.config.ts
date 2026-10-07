@@ -49,6 +49,11 @@ const config: ExpoConfig = {
   },
   updates: {
     url: 'https://u.expo.dev/c5ceea5a-b064-465d-a7a7-8d01043d28c7',
+    codeSigningCertificate: './certs/certificate.pem',
+    codeSigningMetadata: {
+      keyid: 'main',
+      alg: 'rsa-v1_5-sha256',
+    },
   },
   orientation: 'portrait',
   icon: './assets/images/icon.png',

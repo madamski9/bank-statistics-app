@@ -8,25 +8,33 @@ const deviceOnly: SecureStore.SecureStoreOptions = {
   keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
 };
 
-type Preference = boolean | null;
+export type CloudSyncChoice = 'loading' | 'undecided' | 'enabled' | 'disabled';
 
-let current: Preference = null;
+let current: CloudSyncChoice = 'loading';
 let loading: Promise<void> | null = null;
 const listeners = new Set<() => void>();
 
-function publish(next: Preference): void {
+function publish(next: CloudSyncChoice): void {
   current = next;
   listeners.forEach((listener) => listener());
 }
 
+export function choiceFrom(stored: string | null): CloudSyncChoice {
+  if (stored === 'true') {
+    return 'enabled';
+  }
+
+  return stored === 'false' ? 'disabled' : 'undecided';
+}
+
 function ensureLoaded(): void {
-  if (current !== null || loading !== null) {
+  if (current !== 'loading' || loading !== null) {
     return;
   }
 
   loading = SecureStore.getItemAsync(storageKey, deviceOnly)
-    .then((stored) => publish(stored !== 'false'))
-    .catch(() => publish(true))
+    .then((stored) => publish(choiceFrom(stored)))
+    .catch(() => publish('undecided'))
     .finally(() => {
       loading = null;
     });
@@ -41,17 +49,23 @@ function subscribe(listener: () => void) {
   };
 }
 
-export function useCloudSyncEnabled(): Preference {
+export function useCloudSyncChoice(): CloudSyncChoice {
   return useSyncExternalStore(subscribe, () => current);
 }
 
+export function useCloudSyncEnabled(): boolean | null {
+  const choice = useCloudSyncChoice();
+
+  return choice === 'loading' ? null : choice === 'enabled';
+}
+
 export function isCloudSyncEnabledNow(): boolean {
-  return current === true;
+  return current === 'enabled';
 }
 
 export async function setCloudSyncEnabled(isEnabled: boolean): Promise<void> {
   await SecureStore.setItemAsync(storageKey, isEnabled ? 'true' : 'false', deviceOnly);
-  publish(isEnabled);
+  publish(isEnabled ? 'enabled' : 'disabled');
 
   if (!isEnabled) {
     await waitForActiveSync();
@@ -60,5 +74,5 @@ export async function setCloudSyncEnabled(isEnabled: boolean): Promise<void> {
 
 export async function clearCloudSyncPreference(): Promise<void> {
   await SecureStore.deleteItemAsync(storageKey, deviceOnly);
-  publish(true);
+  publish('undecided');
 }

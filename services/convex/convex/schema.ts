@@ -93,6 +93,7 @@ export default defineSchema({
     rateLookupAllowance: v.number(),
     rateLookupAllowanceAt: v.number(),
     deletionRequestedAt: v.optional(v.number()),
+    dataPurgedAt: v.optional(v.number()),
   }).index('by_owner', ['ownerId']),
   devices: defineTable({
     ownerId: v.string(),

@@ -1,15 +1,10 @@
+import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 
 const installationKey = 'bankstats.installation-id';
 
 function newInstallationId(): string {
-  const randomPart = Array.from({ length: 4 }, () =>
-    Math.floor(Math.random() * 0xffffffff)
-      .toString(36)
-      .padStart(7, '0'),
-  ).join('');
-
-  return `installation-${Date.now().toString(36)}-${randomPart}`;
+  return `installation-${Crypto.randomUUID()}`;
 }
 
 export async function loadInstallationId(): Promise<string> {

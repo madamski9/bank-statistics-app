@@ -13,11 +13,13 @@ import type * as changeRules from "../changeRules.js";
 import type * as crons from "../crons.js";
 import type * as devices from "../devices.js";
 import type * as exchangeRates from "../exchangeRates.js";
+import type * as http from "../http.js";
 import type * as migrations from "../migrations.js";
 import type * as owner from "../owner.js";
 import type * as owners from "../owners.js";
 import type * as profiles from "../profiles.js";
 import type * as sync from "../sync.js";
+import type * as webhookSignature from "../webhookSignature.js";
 
 import type {
   ApiFromModules,
@@ -31,11 +33,13 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   devices: typeof devices;
   exchangeRates: typeof exchangeRates;
+  http: typeof http;
   migrations: typeof migrations;
   owner: typeof owner;
   owners: typeof owners;
   profiles: typeof profiles;
   sync: typeof sync;
+  webhookSignature: typeof webhookSignature;
 }>;
 
 /**
