@@ -284,7 +284,7 @@ BankStats earns revenue through an optional Premium subscription. The free produ
 - Biometric application lock is available to all users with immediate, one-minute, or five-minute timeout. A 4-digit PIN, set during onboarding or in settings, unlocks the application when biometrics fail or are unavailable.
 - Financial values are obscured in operating-system task switchers.
 - Screenshots remain allowed, while Privacy Mode hides amounts inside the application.
-- Widgets always show their content by default. Users can blur the widget in settings; tapping a blurred widget asks for Face ID or the PIN and reveals it for five minutes.
+- Widgets are blurred by default, which also keeps amounts off the locked screen. Users can turn the blur off in settings; tapping a blurred widget asks for Face ID or the PIN and reveals it for five minutes.
 - Sentry may collect crashes without session replay.
 - Telemetry never contains amounts, Merchants, Counterparties, Bank Notification text, screenshots, or raw notification payloads.
 - Product analytics uses only first-party aggregate events that cannot reconstruct financial activity.

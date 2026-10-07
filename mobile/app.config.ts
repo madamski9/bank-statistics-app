@@ -4,6 +4,7 @@ interface LaneIdentity {
   bundleIdentifier: string;
   scheme: string;
   displayName: string;
+  signsUpdates: boolean;
 }
 
 const laneIdentities: Record<string, LaneIdentity> = {
@@ -11,16 +12,19 @@ const laneIdentities: Record<string, LaneIdentity> = {
     bundleIdentifier: 'com.bankstats.app.dev',
     scheme: 'bankstats-dev',
     displayName: 'BankStats Dev',
+    signsUpdates: false,
   },
   preview: {
     bundleIdentifier: 'com.bankstats.app.preview',
     scheme: 'bankstats-preview',
     displayName: 'BankStats Preview',
+    signsUpdates: true,
   },
   production: {
     bundleIdentifier: 'com.bankstats.app',
     scheme: 'bankstats',
     displayName: 'BankStats',
+    signsUpdates: true,
   },
 };
 
@@ -40,6 +44,14 @@ function resolveLaneIdentity(): LaneIdentity {
 
 const identity = resolveLaneIdentity();
 
+const signedUpdates = {
+  codeSigningCertificate: './certs/certificate.pem',
+  codeSigningMetadata: {
+    keyid: 'main',
+    alg: 'rsa-v1_5-sha256' as const,
+  },
+};
+
 const config: ExpoConfig = {
   name: 'BankStats',
   slug: 'bank-statistics-app',
@@ -49,6 +61,7 @@ const config: ExpoConfig = {
   },
   updates: {
     url: 'https://u.expo.dev/c5ceea5a-b064-465d-a7a7-8d01043d28c7',
+    ...(identity.signsUpdates ? signedUpdates : {}),
   },
   orientation: 'portrait',
   icon: './assets/images/icon.png',

@@ -1,5 +1,8 @@
 import { api } from '@bankstats/convex/convex/_generated/api';
-import { useMutation } from 'convex/react';
+import { isIdentityCheckRequired } from '@bankstats/convex/convex/owner';
+import { useAuth } from '@clerk/expo';
+import { useAction, useMutation } from 'convex/react';
+import { ConvexError } from 'convex/values';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,29 +22,58 @@ type Step = 'explain' | 'verify' | 'deleting' | 'failed';
 
 const maximumDeletionRounds = 200;
 
+interface DeletionProgress {
+  isComplete: boolean;
+}
+
+function isStaleVerification(error: unknown): boolean {
+  return error instanceof ConvexError && isIdentityCheckRequired(error.data);
+}
+
 export function DeleteAccountScreen({ onCancel }: DeleteAccountScreenProps) {
   const insets = useSafeAreaInsets();
   const copy = useCopy(accountDataCopy);
+  const startDeletion = useAction(api.account.startDeletion);
   const deleteData = useMutation(api.account.deleteData);
+  const { getToken } = useAuth();
   const [step, setStep] = useState<Step>('explain');
 
-  const deleteSynchronizedData = useCallback(async () => {
-    setStep('deleting');
+  const runDeletion = useCallback(
+    async (begin: () => Promise<DeletionProgress>) => {
+      setStep('deleting');
 
-    try {
-      for (let round = 0; round < maximumDeletionRounds; round += 1) {
-        const { isComplete } = await deleteData({});
+      try {
+        let progress = await begin();
 
-        if (isComplete) {
-          return;
+        for (let round = 1; !progress.isComplete && round < maximumDeletionRounds; round += 1) {
+          progress = await deleteData({});
         }
+
+        if (!progress.isComplete) {
+          setStep('failed');
+        }
+      } catch (error) {
+        setStep(isStaleVerification(error) ? 'verify' : 'failed');
+      }
+    },
+    [deleteData],
+  );
+
+  const deleteAfterVerification = useCallback(() => {
+    void runDeletion(async () => {
+      const sessionToken = await getToken({ skipCache: true });
+
+      if (sessionToken === null) {
+        throw new Error('The session token is unavailable.');
       }
 
-      setStep('failed');
-    } catch {
-      setStep('failed');
-    }
-  }, [deleteData]);
+      return startDeletion({ sessionToken });
+    });
+  }, [getToken, runDeletion, startDeletion]);
+
+  const retryDeletion = useCallback(() => {
+    void runDeletion(() => deleteData({}));
+  }, [deleteData, runDeletion]);
 
   return (
     <ScrollView
@@ -109,7 +141,7 @@ export function DeleteAccountScreen({ onCancel }: DeleteAccountScreenProps) {
           <Text maxFontSizeMultiplier={1.5} style={styles.body}>
             {copy.confirmIdentity}
           </Text>
-          <EmailReverification onVerified={() => void deleteSynchronizedData()} />
+          <EmailReverification onVerified={deleteAfterVerification} />
         </View>
       ) : null}
 
@@ -129,7 +161,7 @@ export function DeleteAccountScreen({ onCancel }: DeleteAccountScreenProps) {
           </Text>
           <Pressable
             accessibilityRole="button"
-            onPress={() => void deleteSynchronizedData()}
+            onPress={retryDeletion}
             style={({ pressed }) => [styles.danger, pressed ? styles.pressed : null]}
           >
             <Text maxFontSizeMultiplier={1.4} style={styles.dangerLabel}>

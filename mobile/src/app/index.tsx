@@ -7,6 +7,7 @@ import { OnboardingGate } from '@/features/onboarding/onboarding-gate';
 import { AppLockGate, AppLockScreen } from '@/features/privacy/app-lock-gate';
 import { PrivacyProvider } from '@/features/privacy/privacy-provider';
 import { PrivacyBoundary } from '@/features/privacy/privacy-shield';
+import { CloudSyncChoiceGate } from '@/features/sync/cloud-sync-choice-gate';
 import { OwnedDeviceGate } from '@/features/sync/owned-device-gate';
 import { SignedOutSpendingWidget } from '@/features/widgets/use-spending-widget';
 
@@ -19,9 +20,11 @@ export default function Index() {
             <PrivacyProvider lockScreen={<AppLockScreen />}>
               <PrivacyBoundary>
                 <OnboardingGate>
-                  <AppLockGate>
-                    <LocalizedHomeScreen />
-                  </AppLockGate>
+                  <CloudSyncChoiceGate>
+                    <AppLockGate>
+                      <LocalizedHomeScreen />
+                    </AppLockGate>
+                  </CloudSyncChoiceGate>
                 </OnboardingGate>
               </PrivacyBoundary>
             </PrivacyProvider>

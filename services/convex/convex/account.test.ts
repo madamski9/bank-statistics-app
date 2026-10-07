@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { convexTest } from 'convex-test';
+import { ConvexError } from 'convex/values';
 
-import { api } from './_generated/api';
+import { api, internal } from './_generated/api';
+import { isIdentityCheckRequired } from './owner';
 import schema from './schema';
 
 const moduleFiles = new Bun.Glob('**/*.{ts,js}').scanSync({ cwd: import.meta.dir });
@@ -80,7 +82,7 @@ describe('account deletion', () => {
   test('deletes every synchronized row of the user and nobody else', async () => {
     const { backend, user } = await withData();
 
-    expect(await user.mutation(api.account.deleteData, {})).toEqual({ isComplete: true });
+    expect(await user.mutation(internal.account.beginDeletion, {})).toEqual({ isComplete: true });
     expect(await countOwned(backend, 'user_alice')).toBe(0);
     expect(await countOwned(backend, 'user_bob')).toBe(3);
   });
@@ -88,7 +90,7 @@ describe('account deletion', () => {
   test('can be retried safely after it completed', async () => {
     const { backend, user } = await withData();
 
-    await user.mutation(api.account.deleteData, {});
+    await user.mutation(internal.account.beginDeletion, {});
     expect(await user.mutation(api.account.deleteData, {})).toEqual({ isComplete: true });
 
     const owners = await backend.run((ctx) => ctx.db.query('owners').collect());
@@ -98,7 +100,7 @@ describe('account deletion', () => {
   test('stops other devices from uploading their copies back', async () => {
     const { user } = await withData();
 
-    await user.mutation(api.account.deleteData, {});
+    await user.mutation(internal.account.beginDeletion, {});
 
     expect(await user.query(api.devices.standing, { installationId: 'phone' })).toBe('accountDeleted');
     await expect(
@@ -122,8 +124,8 @@ describe('account deletion', () => {
       }
     });
 
-    let rounds = 0;
-    let result = { isComplete: false };
+    let result = await user.mutation(internal.account.beginDeletion, {});
+    let rounds = 1;
 
     while (!result.isComplete) {
       result = await user.mutation(api.account.deleteData, {});
@@ -138,5 +140,60 @@ describe('account deletion', () => {
     const backend = convexTest(schema, modules);
 
     await expect(backend.mutation(api.account.deleteData, {})).rejects.toThrow('Sign in');
+  });
+
+  test('refuses to continue a deletion that was never started', async () => {
+    const { backend, user } = await withData();
+
+    const refusal = await user.mutation(api.account.deleteData, {}).catch((error: unknown) => error);
+
+    expect(refusal instanceof ConvexError && isIdentityCheckRequired(refusal.data)).toBe(true);
+    expect(await countOwned(backend, 'user_alice')).toBe(3);
+  });
+
+  test('continues a started deletion without another identity check', async () => {
+    const { user } = await withData();
+    await user.mutation(internal.account.beginDeletion, {});
+
+    expect(await user.mutation(api.account.deleteData, {})).toEqual({ isComplete: true });
+  });
+
+  test('finishes a large deletion on the server when the app stops asking', async () => {
+    const { backend, user } = await withData();
+    await backend.run(async (ctx) => {
+      for (let index = 0; index < 1_200; index += 1) {
+        await ctx.db.insert('transactions', {
+          ...lunch(`bulk-${index}`),
+          deleted: false,
+          ownerId: 'user_alice',
+          sequence: 100 + index,
+        });
+      }
+    });
+
+    expect(await user.mutation(internal.account.beginDeletion, {})).toEqual({ isComplete: false });
+
+    for (let round = 0; round < 5; round += 1) {
+      await backend.mutation(internal.account.purgeOwner, { ownerId: 'user_alice', removeClerkUser: true });
+    }
+
+    expect(await countOwned(backend, 'user_alice')).toBe(0);
+    const owner = await backend.run((ctx) =>
+      ctx.db
+        .query('owners')
+        .withIndex('by_owner', (index) => index.eq('ownerId', 'user_alice'))
+        .unique(),
+    );
+    expect(owner?.dataPurgedAt).toBeNumber();
+  });
+
+  test('deletes the data of a user removed in Clerk', async () => {
+    const { backend } = await withData();
+
+    await backend.mutation(internal.account.forgetDeletedUser, { ownerId: 'user_alice' });
+    await backend.mutation(internal.account.purgeOwner, { ownerId: 'user_alice', removeClerkUser: false });
+
+    expect(await countOwned(backend, 'user_alice')).toBe(0);
+    expect(await countOwned(backend, 'user_bob')).toBe(3);
   });
 });

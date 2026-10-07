@@ -54,7 +54,7 @@ describe('profiles', () => {
     const backend = convexTest(schema, modules);
 
     await backend.mutation(internal.profiles.setPremium, { ownerId: alice.subject, isPremium: true });
-    await backend.withIdentity(alice).mutation(api.account.deleteData, {});
+    await backend.withIdentity(alice).mutation(internal.account.beginDeletion, {});
 
     const profiles = await backend.run((ctx) => ctx.db.query('profiles').collect());
 

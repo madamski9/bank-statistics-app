@@ -10,12 +10,12 @@ import {
 const locked: PrivacySettings = { ...defaultPrivacySettings, isLockEnabled: true };
 
 describe('parsePrivacySettings', () => {
-  test('starts unlocked, with amounts and the widget visible', () => {
+  test('starts unlocked, with amounts visible and the widget blurred', () => {
     expect(parsePrivacySettings(null)).toEqual({
       isLockEnabled: false,
       lockTimeout: 'immediate',
       isPrivacyModeEnabled: false,
-      isWidgetBlurred: false,
+      isWidgetBlurred: true,
     });
   });
 

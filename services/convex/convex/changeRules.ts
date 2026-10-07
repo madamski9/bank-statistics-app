@@ -77,6 +77,10 @@ export function transactionChangeProblem(change: TransactionChangeShape): string
     return 'Only enabled banks can synchronize captured transactions.';
   }
 
+  if (change.origin === 'manual' && change.bank !== 'manual') {
+    return 'A manual transaction belongs to the manual bank.';
+  }
+
   if (change.origin === 'manual' && (change.accountId === undefined || change.accountId.trim() === '')) {
     return 'A manual transaction belongs to a Financial Account.';
   }

@@ -69,3 +69,30 @@ export const cloudSyncCopy = defineCopy({
     deleting: 'Deleting the cloud copy…',
   },
 });
+
+export const cloudSyncChoiceCopy = defineCopy({
+  pl: {
+    title: 'Gdzie trzymać Twoje dane?',
+    body: 'Możesz synchronizować transakcje przez chmurę albo trzymać je tylko na tym telefonie. Zmienisz to w każdej chwili w ustawieniach danych.',
+    syncedTitle: 'Synchronizacja przez chmurę',
+    syncedBody:
+      'Kwota, sklep, kategoria i data trafiają na serwer w UE, żeby działała kopia zapasowa i drugie urządzenie. Treść powiadomień banku nigdy nie opuszcza telefonu.',
+    localTitle: 'Tylko na tym telefonie',
+    localBody: 'Nic nie wysyłamy. Jeśli zgubisz telefon albo usuniesz aplikację, dane znikną.',
+    enable: 'Synchronizuj przez chmurę',
+    keepLocal: 'Tylko na tym telefonie',
+    saveFailed: 'Nie udało się zapisać wyboru. Spróbuj ponownie.',
+  },
+  en: {
+    title: 'Where should your data live?',
+    body: 'You can sync transactions through the cloud or keep them on this phone only. You can change this any time in data settings.',
+    syncedTitle: 'Sync through the cloud',
+    syncedBody:
+      'Amount, shop, category and date go to a server in the EU so backups and a second device work. Bank notification text never leaves the phone.',
+    localTitle: 'This phone only',
+    localBody: 'Nothing is sent. If you lose the phone or delete the app, the data is gone.',
+    enable: 'Sync through the cloud',
+    keepLocal: 'This phone only',
+    saveFailed: 'Could not save your choice. Please try again.',
+  },
+});

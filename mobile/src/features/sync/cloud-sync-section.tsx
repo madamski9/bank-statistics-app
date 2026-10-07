@@ -43,9 +43,9 @@ export function CloudSyncSection() {
       ? copy.deleting
       : status === 'failed'
         ? copy.failed
-        : isEnabled === false
-          ? copy.offFootnote
-          : copy.onFootnote;
+        : isEnabled === true
+          ? copy.onFootnote
+          : copy.offFootnote;
 
   return (
     <View style={styles.section}>
@@ -62,7 +62,7 @@ export function CloudSyncSection() {
             disabled={isEnabled === null || status === 'deleting'}
             onValueChange={(next) => (next ? void setCloudSyncEnabled(true) : turnOff())}
             trackColor={{ true: overviewColors.positive, false: overviewColors.surfacePressed }}
-            value={isEnabled !== false}
+            value={isEnabled === true}
           />
         </View>
       </View>

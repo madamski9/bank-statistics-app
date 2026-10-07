@@ -6,6 +6,16 @@ export interface SignedInOwner {
   sessionId: string;
 }
 
+const identityCheckRequired = 'identityCheckRequired';
+
+export function isIdentityCheckRequired(data: unknown): boolean {
+  return typeof data === 'object' && data !== null && 'code' in data && data.code === identityCheckRequired;
+}
+
+export function identityCheckRequiredError(): ConvexError<{ code: string; message: string }> {
+  return new ConvexError({ code: identityCheckRequired, message: 'Confirm your identity again to continue.' });
+}
+
 export async function requireSignedIn(auth: Auth): Promise<SignedInOwner> {
   const identity = await auth.getUserIdentity();
 
