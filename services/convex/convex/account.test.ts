@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { convexTest } from 'convex-test';
+import { ConvexError } from 'convex/values';
 
 import { api, internal } from './_generated/api';
+import { isIdentityCheckRequired } from './owner';
 import schema from './schema';
 
 const moduleFiles = new Bun.Glob('**/*.{ts,js}').scanSync({ cwd: import.meta.dir });
@@ -146,7 +148,9 @@ describe('account deletion', () => {
     for (const fva of [[30, -1], [-1, -1], undefined]) {
       const stale = backend.withIdentity({ ...alice, fva });
 
-      await expect(stale.mutation(api.account.deleteData, {})).rejects.toThrow('Confirm your identity');
+      const refusal = await stale.mutation(api.account.deleteData, {}).catch((error: unknown) => error);
+
+      expect(refusal instanceof ConvexError && isIdentityCheckRequired(refusal.data)).toBe(true);
     }
 
     expect(await countOwned(backend, 'user_alice')).toBe(3);

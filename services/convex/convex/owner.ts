@@ -7,7 +7,12 @@ export interface SignedInOwner {
   firstFactorAgeMinutes: number | null;
 }
 
-export const reverificationWindowMinutes = 10;
+const reverificationWindowMinutes = 10;
+const identityCheckRequired = 'identityCheckRequired';
+
+export function isIdentityCheckRequired(data: unknown): boolean {
+  return typeof data === 'object' && data !== null && 'code' in data && data.code === identityCheckRequired;
+}
 
 function firstFactorAge(claim: unknown): number | null {
   if (!Array.isArray(claim) || typeof claim[0] !== 'number' || claim[0] < 0) {
@@ -19,7 +24,7 @@ function firstFactorAge(claim: unknown): number | null {
 
 export function assertRecentlyVerified(owner: SignedInOwner) {
   if (owner.firstFactorAgeMinutes === null || owner.firstFactorAgeMinutes > reverificationWindowMinutes) {
-    throw new ConvexError('Confirm your identity again to continue.');
+    throw new ConvexError({ code: identityCheckRequired, message: 'Confirm your identity again to continue.' });
   }
 }
 

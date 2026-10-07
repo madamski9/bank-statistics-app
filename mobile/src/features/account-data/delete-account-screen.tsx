@@ -1,11 +1,12 @@
 import { api } from '@bankstats/convex/convex/_generated/api';
-import { useAuth } from '@clerk/expo';
+import { isIdentityCheckRequired } from '@bankstats/convex/convex/owner';
 import { useMutation } from 'convex/react';
 import { ConvexError } from 'convex/values';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { refreshConvexIdentity } from '@/features/auth/convex-auth';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { useCopy } from '@/features/localization/language';
 
@@ -24,17 +25,16 @@ const verificationRetries = 3;
 const verificationRetryDelayMs = 1_500;
 
 function isStaleVerification(error: unknown): boolean {
-  return error instanceof ConvexError && String(error.data).startsWith('Confirm your identity');
+  return error instanceof ConvexError && isIdentityCheckRequired(error.data);
 }
 
 export function DeleteAccountScreen({ onCancel }: DeleteAccountScreenProps) {
   const insets = useSafeAreaInsets();
   const copy = useCopy(accountDataCopy);
   const deleteData = useMutation(api.account.deleteData);
-  const { getToken } = useAuth();
   const [step, setStep] = useState<Step>('explain');
 
-  const startDeletion = useCallback(async () => {
+  const deleteDataOnFreshIdentity = useCallback(async () => {
     for (let attempt = 1; ; attempt += 1) {
       try {
         return await deleteData({});
@@ -43,22 +43,17 @@ export function DeleteAccountScreen({ onCancel }: DeleteAccountScreenProps) {
           throw error;
         }
 
-        await getToken({ skipCache: true });
         await new Promise((resolve) => setTimeout(resolve, verificationRetryDelayMs));
       }
     }
-  }, [deleteData, getToken]);
+  }, [deleteData]);
 
   const deleteSynchronizedData = useCallback(async () => {
     setStep('deleting');
 
     try {
-      if ((await startDeletion()).isComplete) {
-        return;
-      }
-
-      for (let round = 1; round < maximumDeletionRounds; round += 1) {
-        const { isComplete } = await deleteData({});
+      for (let round = 0; round < maximumDeletionRounds; round += 1) {
+        const { isComplete } = await deleteDataOnFreshIdentity();
 
         if (isComplete) {
           return;
@@ -69,7 +64,12 @@ export function DeleteAccountScreen({ onCancel }: DeleteAccountScreenProps) {
     } catch {
       setStep('failed');
     }
-  }, [deleteData, startDeletion]);
+  }, [deleteDataOnFreshIdentity]);
+
+  const deleteAfterVerification = useCallback(() => {
+    refreshConvexIdentity();
+    void deleteSynchronizedData();
+  }, [deleteSynchronizedData]);
 
   return (
     <ScrollView
@@ -137,7 +137,7 @@ export function DeleteAccountScreen({ onCancel }: DeleteAccountScreenProps) {
           <Text maxFontSizeMultiplier={1.5} style={styles.body}>
             {copy.confirmIdentity}
           </Text>
-          <EmailReverification onVerified={() => void deleteSynchronizedData()} />
+          <EmailReverification onVerified={deleteAfterVerification} />
         </View>
       ) : null}
 
