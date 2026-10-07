@@ -1,11 +1,10 @@
-import { ClerkProvider } from '@clerk/expo';
-import { ConvexProviderWithAuth } from 'convex/react';
+import { ClerkProvider, useAuth } from '@clerk/expo';
+import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { Slot } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { appEnvironment } from '@/app-environment';
-import { useConvexAuthFromClerk } from '@/features/auth/convex-auth';
 import { tokenCache } from '@/features/auth/token-cache';
 import { LanguageBootstrap } from '@/features/localization/language-bootstrap';
 import { convexClient } from '@/convex-client';
@@ -17,11 +16,11 @@ export default function RootLayout() {
         tokenCache={tokenCache}
         publishableKey={appEnvironment.clerkPublishableKey}
       >
-        <ConvexProviderWithAuth client={convexClient} useAuth={useConvexAuthFromClerk}>
+        <ConvexProviderWithClerk client={convexClient} useAuth={useAuth}>
           <LanguageBootstrap>
             <Slot />
           </LanguageBootstrap>
-        </ConvexProviderWithAuth>
+        </ConvexProviderWithClerk>
       </ClerkProvider>
     </GestureHandlerRootView>
   );

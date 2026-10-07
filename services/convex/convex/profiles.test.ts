@@ -11,7 +11,7 @@ const modules = Object.fromEntries(
     .map((path) => [`./${path}`, () => import(`./${path}`)]),
 );
 
-const alice = { subject: 'user_alice', issuer: 'https://clerk.test', sid: 'sess_alice_phone', fva: [1, -1] };
+const alice = { subject: 'user_alice', issuer: 'https://clerk.test', sid: 'sess_alice_phone' };
 const bob = { subject: 'user_bob', issuer: 'https://clerk.test', sid: 'sess_bob_phone' };
 
 describe('profiles', () => {
@@ -54,7 +54,7 @@ describe('profiles', () => {
     const backend = convexTest(schema, modules);
 
     await backend.mutation(internal.profiles.setPremium, { ownerId: alice.subject, isPremium: true });
-    await backend.withIdentity(alice).mutation(api.account.deleteData, {});
+    await backend.withIdentity(alice).mutation(internal.account.beginDeletion, {});
 
     const profiles = await backend.run((ctx) => ctx.db.query('profiles').collect());
 

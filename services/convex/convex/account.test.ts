@@ -13,7 +13,7 @@ const modules = Object.fromEntries(
     .map((path) => [`./${path}`, () => import(`./${path}`)]),
 );
 
-const alice = { subject: 'user_alice', issuer: 'https://clerk.test', sid: 'sess_alice_phone', fva: [1, -1] };
+const alice = { subject: 'user_alice', issuer: 'https://clerk.test', sid: 'sess_alice_phone' };
 const bob = { subject: 'user_bob', issuer: 'https://clerk.test', sid: 'sess_bob_phone' };
 
 function lunch(clientId = 'manual-lunch') {
@@ -82,7 +82,7 @@ describe('account deletion', () => {
   test('deletes every synchronized row of the user and nobody else', async () => {
     const { backend, user } = await withData();
 
-    expect(await user.mutation(api.account.deleteData, {})).toEqual({ isComplete: true });
+    expect(await user.mutation(internal.account.beginDeletion, {})).toEqual({ isComplete: true });
     expect(await countOwned(backend, 'user_alice')).toBe(0);
     expect(await countOwned(backend, 'user_bob')).toBe(3);
   });
@@ -90,7 +90,7 @@ describe('account deletion', () => {
   test('can be retried safely after it completed', async () => {
     const { backend, user } = await withData();
 
-    await user.mutation(api.account.deleteData, {});
+    await user.mutation(internal.account.beginDeletion, {});
     expect(await user.mutation(api.account.deleteData, {})).toEqual({ isComplete: true });
 
     const owners = await backend.run((ctx) => ctx.db.query('owners').collect());
@@ -100,7 +100,7 @@ describe('account deletion', () => {
   test('stops other devices from uploading their copies back', async () => {
     const { user } = await withData();
 
-    await user.mutation(api.account.deleteData, {});
+    await user.mutation(internal.account.beginDeletion, {});
 
     expect(await user.query(api.devices.standing, { installationId: 'phone' })).toBe('accountDeleted');
     await expect(
@@ -124,8 +124,8 @@ describe('account deletion', () => {
       }
     });
 
-    let rounds = 0;
-    let result = { isComplete: false };
+    let result = await user.mutation(internal.account.beginDeletion, {});
+    let rounds = 1;
 
     while (!result.isComplete) {
       result = await user.mutation(api.account.deleteData, {});
@@ -142,27 +142,20 @@ describe('account deletion', () => {
     await expect(backend.mutation(api.account.deleteData, {})).rejects.toThrow('Sign in');
   });
 
-  test('asks for a fresh identity check before it starts', async () => {
-    const { backend } = await withData();
+  test('refuses to continue a deletion that was never started', async () => {
+    const { backend, user } = await withData();
 
-    for (const fva of [[30, -1], [-1, -1], undefined]) {
-      const stale = backend.withIdentity({ ...alice, fva });
+    const refusal = await user.mutation(api.account.deleteData, {}).catch((error: unknown) => error);
 
-      const refusal = await stale.mutation(api.account.deleteData, {}).catch((error: unknown) => error);
-
-      expect(refusal instanceof ConvexError && isIdentityCheckRequired(refusal.data)).toBe(true);
-    }
-
+    expect(refusal instanceof ConvexError && isIdentityCheckRequired(refusal.data)).toBe(true);
     expect(await countOwned(backend, 'user_alice')).toBe(3);
   });
 
   test('continues a started deletion without another identity check', async () => {
-    const { backend, user } = await withData();
-    await user.mutation(api.account.deleteData, {});
+    const { user } = await withData();
+    await user.mutation(internal.account.beginDeletion, {});
 
-    const later = backend.withIdentity({ ...alice, fva: [90, -1] });
-
-    expect(await later.mutation(api.account.deleteData, {})).toEqual({ isComplete: true });
+    expect(await user.mutation(api.account.deleteData, {})).toEqual({ isComplete: true });
   });
 
   test('finishes a large deletion on the server when the app stops asking', async () => {
@@ -178,7 +171,7 @@ describe('account deletion', () => {
       }
     });
 
-    expect(await user.mutation(api.account.deleteData, {})).toEqual({ isComplete: false });
+    expect(await user.mutation(internal.account.beginDeletion, {})).toEqual({ isComplete: false });
 
     for (let round = 0; round < 5; round += 1) {
       await backend.mutation(internal.account.purgeOwner, { ownerId: 'user_alice', removeClerkUser: true });

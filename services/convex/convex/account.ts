@@ -1,10 +1,11 @@
 import { v } from 'convex/values';
 
 import { internal } from './_generated/api';
-import { internalAction, internalMutation, mutation, type MutationCtx } from './_generated/server';
+import { action, internalAction, internalMutation, mutation, type MutationCtx } from './_generated/server';
 import { requireTrustedSession } from './devices';
-import { assertRecentlyVerified } from './owner';
+import { identityCheckRequiredError, requireSignedIn } from './owner';
 import { findOwner, saveOwner } from './owners';
+import { fetchSigningKeys, isRecentlyVerifiedSession } from './sessionToken';
 import { syncedTables } from './sync';
 
 const deletionBatchSize = 500;
@@ -87,20 +88,53 @@ async function requestDeletion(ctx: MutationCtx, request: PurgeRequest): Promise
   return true;
 }
 
-export const deleteData = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const signedIn = await requireTrustedSession(ctx);
-    const owner = await findOwner(ctx, signedIn.ownerId);
+interface DeletionProgress {
+  isComplete: boolean;
+}
 
-    if (owner?.deletionRequestedAt === undefined) {
-      assertRecentlyVerified(signedIn);
+export const startDeletion = action({
+  args: { sessionToken: v.string() },
+  handler: async (ctx, { sessionToken }): Promise<DeletionProgress> => {
+    const owner = await requireSignedIn(ctx.auth);
+    const issuer = process.env.CLERK_JWT_ISSUER_DOMAIN;
+
+    if (issuer === undefined || issuer === '') {
+      throw new Error('CLERK_JWT_ISSUER_DOMAIN is not configured.');
     }
 
-    const request = { ownerId: signedIn.ownerId, removeClerkUser: true };
+    const keys = await fetchSigningKeys(issuer);
+    const isVerified = await isRecentlyVerifiedSession({ token: sessionToken, keys, issuer, owner, now: Date.now() });
+
+    if (!isVerified) {
+      throw identityCheckRequiredError();
+    }
+
+    return await ctx.runMutation(internal.account.beginDeletion, {});
+  },
+});
+
+export const beginDeletion = internalMutation({
+  args: {},
+  handler: async (ctx): Promise<DeletionProgress> => {
+    const { ownerId } = await requireTrustedSession(ctx);
+    const request = { ownerId, removeClerkUser: true };
     await requestDeletion(ctx, request);
 
     return { isComplete: await purgeBatch(ctx, request) };
+  },
+});
+
+export const deleteData = mutation({
+  args: {},
+  handler: async (ctx): Promise<DeletionProgress> => {
+    const { ownerId } = await requireTrustedSession(ctx);
+    const owner = await findOwner(ctx, ownerId);
+
+    if (owner?.deletionRequestedAt === undefined) {
+      throw identityCheckRequiredError();
+    }
+
+    return { isComplete: await purgeBatch(ctx, { ownerId, removeClerkUser: true }) };
   },
 });
 

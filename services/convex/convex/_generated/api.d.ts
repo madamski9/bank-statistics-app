@@ -18,6 +18,7 @@ import type * as migrations from "../migrations.js";
 import type * as owner from "../owner.js";
 import type * as owners from "../owners.js";
 import type * as profiles from "../profiles.js";
+import type * as sessionToken from "../sessionToken.js";
 import type * as sync from "../sync.js";
 import type * as webhookSignature from "../webhookSignature.js";
 
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   owner: typeof owner;
   owners: typeof owners;
   profiles: typeof profiles;
+  sessionToken: typeof sessionToken;
   sync: typeof sync;
   webhookSignature: typeof webhookSignature;
 }>;
