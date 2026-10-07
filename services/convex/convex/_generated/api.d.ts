@@ -17,6 +17,8 @@ import type * as http from "../http.js";
 import type * as migrations from "../migrations.js";
 import type * as owner from "../owner.js";
 import type * as owners from "../owners.js";
+import type * as premiumCodeErrors from "../premiumCodeErrors.js";
+import type * as premiumCodes from "../premiumCodes.js";
 import type * as profiles from "../profiles.js";
 import type * as sessionToken from "../sessionToken.js";
 import type * as sync from "../sync.js";
@@ -38,6 +40,8 @@ declare const fullApi: ApiFromModules<{
   migrations: typeof migrations;
   owner: typeof owner;
   owners: typeof owners;
+  premiumCodeErrors: typeof premiumCodeErrors;
+  premiumCodes: typeof premiumCodes;
   profiles: typeof profiles;
   sessionToken: typeof sessionToken;
   sync: typeof sync;

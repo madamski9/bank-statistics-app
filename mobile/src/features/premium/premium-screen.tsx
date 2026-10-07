@@ -6,8 +6,9 @@ import { useCopy } from '@/features/localization/language';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 
 import type { PremiumReason } from './premium-access';
+import { PremiumCodeForm } from './premium-code-form';
 import { premiumCopy } from './premium-copy';
-import { formatPremiumSince } from './premium-date';
+import { formatPremiumDate } from './premium-date';
 import { setPreviewWithoutPremium, usePreviewWithoutPremium } from './premium-preview';
 import type { PremiumStatus } from './use-premium';
 
@@ -84,9 +85,11 @@ export function PremiumScreen({ status, reason, onClose }: PremiumScreenProps) {
           </Text>
           <Text maxFontSizeMultiplier={1.5} style={styles.tagline}>
             {isPremium
-              ? status.premiumSince === null
-                ? copy.thanksLong
-                : copy.activeSinceLong(formatPremiumSince(status.premiumSince))
+              ? status.premiumUntil !== null
+                ? copy.activeUntilLong(formatPremiumDate(status.premiumUntil))
+                : status.premiumSince === null
+                  ? copy.thanksLong
+                  : copy.activeSinceLong(formatPremiumDate(status.premiumSince))
               : copy.tagline}
           </Text>
         </View>
@@ -124,6 +127,8 @@ export function PremiumScreen({ status, reason, onClose }: PremiumScreenProps) {
             </View>
           ))}
         </View>
+
+        {isPremium ? null : <PremiumCodeForm />}
 
         {__DEV__ && (isPremium || isPreviewingWithoutPremium) ? (
           <Pressable
