@@ -270,7 +270,7 @@ BankStats earns revenue through an optional Premium subscription. The free produ
 - Clerk provides custom minimalist Sign in with Apple, Google sign-in, and email-code authentication.
 - RevenueCat manages App Store and Google Play purchases and maps them to the stable Clerk-backed internal identity.
 - Convex mirrors the current entitlement and enforces server-side Premium limits.
-- The planned price is 9.99 PLN monthly or 99.99 PLN yearly. Purchases remain unavailable until RevenueCat integration is complete.
+- The planned price is 14.99 PLN monthly or 149.99 PLN yearly. Purchases remain unavailable until RevenueCat integration is complete.
 - The product offers a 14-day trial only after at least 15 real Transactions have been captured or the user intentionally chooses a Premium feature.
 - There is no lifetime purchase in the initial release.
 - The free product includes capture for enabled Supported Banks, manual changes, review and corrections, spending charts and statistics for up to one month, one active Alert Rule, one basic widget, multi-device sync, and CSV/JSON export. Stored transactions remain available for synchronization and export.
