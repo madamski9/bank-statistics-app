@@ -1,4 +1,4 @@
-import { useSignIn, useSignUp } from '@clerk/expo';
+import { isClerkAPIResponseError, useSignIn, useSignUp } from '@clerk/expo';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -14,6 +14,24 @@ import { authColors as colors } from './auth-theme';
 
 type Step = 'email' | 'code';
 type Mode = 'sign-in' | 'sign-up';
+
+const rejectedCodeErrors = new Set(['form_code_incorrect', 'verification_expired', 'verification_failed']);
+
+function clerkErrorCodes(error: { code: string } | null): string[] {
+  if (error === null) {
+    return [];
+  }
+
+  return isClerkAPIResponseError(error) ? error.errors.map((detail) => detail.code) : [error.code];
+}
+
+function isRejectedCode(error: { code: string } | null): boolean {
+  return clerkErrorCodes(error).some((code) => rejectedCodeErrors.has(code));
+}
+
+function needsSignUpTransfer(error: { code: string } | null): boolean {
+  return clerkErrorCodes(error).includes('sign_up_if_missing_transfer');
+}
 
 interface EmailCodeSignInProps {
   isLocked?: boolean;
@@ -139,8 +157,20 @@ export function EmailCodeSignIn({
       if (mode === 'sign-in') {
         const result = await signIn.emailCode.verifyCode({ code: code.trim() });
 
+        if (signIn.isTransferable || needsSignUpTransfer(result.error)) {
+          const created = await signUp.create({ transfer: true });
+
+          if (created.error || signUp.status !== 'complete') {
+            setError(copy.createFailed);
+            return;
+          }
+
+          await signUp.finalize();
+          return;
+        }
+
         if (result.error) {
-          setError(copy.invalidCode);
+          setError(isRejectedCode(result.error) ? copy.invalidCode : copy.verifyFailed);
           return;
         }
 
@@ -154,7 +184,7 @@ export function EmailCodeSignIn({
       const result = await signUp.verifications.verifyEmailCode({ code: code.trim() });
 
       if (result.error) {
-        setError(copy.invalidCode);
+        setError(isRejectedCode(result.error) ? copy.invalidCode : copy.verifyFailed);
         return;
       }
 
