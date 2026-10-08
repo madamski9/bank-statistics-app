@@ -13,8 +13,11 @@ export interface IgnoreTarget {
   name: string;
 }
 
+export type IgnoreMatch = 'exact' | 'contains';
+
 export interface IgnoreRule extends IgnoreTarget {
   since?: string;
+  match?: IgnoreMatch;
 }
 
 export interface IgnoreCandidate extends IgnoreTarget {
@@ -82,14 +85,22 @@ function nameContains(partyName: string, ruleName: string): boolean {
   return ` ${normalizeIgnoredName(partyName)} `.includes(` ${normalizeIgnoredName(ruleName)} `);
 }
 
-export function matchesTarget(record: IngestionRecord, target: IgnoreTarget): boolean {
+export function matchesTarget(
+  record: IngestionRecord,
+  target: IgnoreTarget,
+  match: IgnoreMatch = 'exact',
+): boolean {
   const party = recordParty(record);
 
-  return (
-    party !== null &&
-    party.kind === target.kind &&
-    (nameContains(party.name, target.name) || nameContains(party.label, target.name))
-  );
+  if (party === null || party.kind !== target.kind) {
+    return false;
+  }
+
+  if (match === 'exact') {
+    return ignoreKeyOf(party) === ignoreKeyOf(target);
+  }
+
+  return nameContains(party.name, target.name) || nameContains(party.label, target.name);
 }
 
 function appliesAt(rule: IgnoreRule, record: IngestionRecord): boolean {
@@ -97,7 +108,7 @@ function appliesAt(rule: IgnoreRule, record: IngestionRecord): boolean {
 }
 
 export function isIgnored(record: IngestionRecord, rules: readonly IgnoreRule[]): boolean {
-  return rules.some((rule) => appliesAt(rule, record) && matchesTarget(record, rule));
+  return rules.some((rule) => appliesAt(rule, record) && matchesTarget(record, rule, rule.match));
 }
 
 export function ruleFor(rules: readonly IgnoreRule[], target: IgnoreTarget): IgnoreRule | null {
@@ -113,8 +124,12 @@ export function withIgnoreRule(rules: readonly IgnoreRule[], rule: IgnoreRule): 
     return [...rules];
   }
 
-  const next: IgnoreRule =
-    rule.since === undefined ? { kind: rule.kind, name } : { kind: rule.kind, name, since: rule.since };
+  const next: IgnoreRule = {
+    kind: rule.kind,
+    name,
+    ...(rule.since === undefined ? {} : { since: rule.since }),
+    ...(rule.match === 'contains' ? { match: rule.match } : {}),
+  };
   const key = ignoreKeyOf(next);
 
   return [...rules.filter((existing) => ignoreKeyOf(existing) !== key), next];
@@ -174,8 +189,12 @@ export function matchesCandidateQuery(candidate: IgnoreCandidate, query: string)
   return needle === '' || normalizeIgnoredName(candidate.name).includes(needle);
 }
 
-export function historyCount(records: readonly IngestionRecord[], target: IgnoreTarget): number {
-  return records.filter((record) => matchesTarget(record, target)).length;
+export function historyCount(
+  records: readonly IngestionRecord[],
+  target: IgnoreTarget,
+  match: IgnoreMatch = 'exact',
+): number {
+  return records.filter((record) => matchesTarget(record, target, match)).length;
 }
 
 export function isIgnoreRule(value: unknown): value is IgnoreRule {
@@ -190,6 +209,7 @@ export function isIgnoreRule(value: unknown): value is IgnoreRule {
     typeof candidate.name === 'string' &&
     normalizeIgnoredName(candidate.name) !== '' &&
     (candidate.since === undefined ||
-      (typeof candidate.since === 'string' && !Number.isNaN(Date.parse(candidate.since))))
+      (typeof candidate.since === 'string' && !Number.isNaN(Date.parse(candidate.since)))) &&
+    (candidate.match === undefined || candidate.match === 'exact' || candidate.match === 'contains')
   );
 }

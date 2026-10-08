@@ -434,6 +434,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
     alertRules: alerts.rules,
     categorizationRules: rules,
     customCategories: customCategories.categories,
+    ignoreRules: ignoredPayments.rules,
     privacy: widgetPrivacy,
   });
   const widgetPreviewProps = useMemo(

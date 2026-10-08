@@ -54,6 +54,14 @@ export function useIgnoredPayments(
   }, [ignoredIds, records]);
 
   useEffect(() => {
+    const present = new Set(ignoredIds);
+
+    attempted.current.forEach((id) => {
+      if (!present.has(id)) {
+        attempted.current.delete(id);
+      }
+    });
+
     const pending = ignoredIds.filter((id) => !attempted.current.has(id));
 
     if (pending.length === 0) {
@@ -62,7 +70,19 @@ export function useIgnoredPayments(
 
     pending.forEach((id) => attempted.current.add(id));
 
-    void Promise.allSettled(pending.map((id) => deleteIngestionRecord(id))).then(() => onRemoved());
+    void Promise.allSettled(pending.map((id) => deleteIngestionRecord(id))).then((results) => {
+      const removedAny = results.some((result) => result.status === 'fulfilled');
+
+      results.forEach((result, position) => {
+        if (result.status === 'rejected') {
+          attempted.current.delete(pending[position]);
+        }
+      });
+
+      if (removedAny) {
+        void onRemoved();
+      }
+    });
   }, [ignoredIds, onRemoved]);
 
   const ignore = useCallback(

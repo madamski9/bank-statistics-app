@@ -149,6 +149,29 @@ describe('background widget snapshots', () => {
     expect(english.limits[0].spentOfTargetLabel).toBe('100\u00A0zł of 200\u00A0zł');
   });
 
+  test('leaves skipped payments out of the widgets even before the app removes them', () => {
+    const outfile = path.join(directory, 'skipping-calculator.js');
+    buildWidgetCalculator(outfile);
+    const context = {} as { BankStatsWidgetCalculator: { snapshot: typeof snapshot } };
+    runInNewContext(readFileSync(outfile, 'utf8'), context);
+    const kept = record('kept', 4_000);
+    const skipped = { ...record('skipped', 9_000), merchant: 'Netflix' };
+    const skipping = {
+      ...configuration,
+      ignoreRules: [{ kind: 'payment' as const, name: 'Netflix' }],
+    };
+    const withoutSkipped = snapshot(configuration, [kept], reference);
+
+    expect(snapshot(skipping, [kept, skipped], reference)).toEqual(withoutSkipped);
+    expect(
+      JSON.parse(JSON.stringify(context.BankStatsWidgetCalculator.snapshot(
+        JSON.parse(JSON.stringify(skipping)),
+        [kept, skipped],
+        reference,
+      ))),
+    ).toEqual(JSON.parse(JSON.stringify(withoutSkipped)));
+  });
+
   test('the standalone native calculator runs without React Native and matches the app', () => {
     const outfile = path.join(directory, 'calculator.js');
     buildWidgetCalculator(outfile);

@@ -226,6 +226,7 @@ export function TransactionDetail({
               selectionChanged();
               setIgnoreChoice({
                 ...ignoreTarget,
+                match: activeIgnoreRule?.match ?? 'exact',
                 rule: activeIgnoreRule,
                 historyCount: historyCount(history, ignoreTarget),
               });

@@ -28,6 +28,7 @@ import {
   ignoreKinds,
   matchesCandidateQuery,
   normalizeIgnoredName,
+  type IgnoreMatch,
   type IgnoreRule,
   type IgnoreTarget,
 } from './ignore-rule';
@@ -119,10 +120,16 @@ export function IgnoredPaymentsScreen({
     setView('rules');
   };
 
-  const openChoice = (target: IgnoreTarget, rule: IgnoreRule | null) => {
+  const openChoice = (target: IgnoreTarget, rule: IgnoreRule | null, match: IgnoreMatch = 'exact') => {
     Keyboard.dismiss();
     selectionChanged();
-    setChoice({ kind: target.kind, name: target.name, rule, historyCount: historyCount(records, target) });
+    setChoice({
+      kind: target.kind,
+      name: target.name,
+      match,
+      rule,
+      historyCount: historyCount(records, target, match),
+    });
   };
 
   const choicePanel = (
@@ -215,7 +222,7 @@ export function IgnoredPaymentsScreen({
                       isFirst={index === 0}
                       key={target.kind}
                       label={copy.typedRow(target.name)}
-                      onPress={() => openChoice(target, null)}
+                      onPress={() => openChoice(target, null, 'contains')}
                     />
                   ))}
                 </SheetSection>
@@ -290,7 +297,7 @@ export function IgnoredPaymentsScreen({
                         }
                         isFirst={index === 0}
                         label={rule.name}
-                        onPress={() => openChoice(rule, rule)}
+                        onPress={() => openChoice(rule, rule, rule.match)}
                       />
                     </Animated.View>
                   ))}

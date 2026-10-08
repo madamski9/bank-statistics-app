@@ -86,10 +86,30 @@ describe('isIgnored', () => {
   });
 
   test('matches a typed shop name inside a longer label', () => {
-    const rules = [{ kind: 'payment' as const, name: 'Żabka' }];
+    const rules = [{ kind: 'payment' as const, name: 'Żabka', match: 'contains' as const }];
 
     expect(isIgnored(record(), rules)).toBe(true);
     expect(isIgnored(record({ merchant: 'ZABKOWO SKLEP' }), rules)).toBe(false);
+  });
+
+  test('skips only the exact person or shop picked from the history', () => {
+    const anna = record({ transactionType: 'outgoingTransfer', merchant: 'Anna Nowak' });
+    const annaKowalska = record({ transactionType: 'outgoingTransfer', merchant: 'Anna Nowak-Kowalska' });
+    const latto = record({ merchant: 'Latto' });
+    const lattoGelato = record({ merchant: 'Latto Gelato' });
+    const picked = [
+      { kind: 'outgoingTransfer' as const, name: 'Anna Nowak' },
+      { kind: 'payment' as const, name: 'Latto' },
+    ];
+
+    expect(isIgnored(anna, picked)).toBe(true);
+    expect(isIgnored(annaKowalska, picked)).toBe(false);
+    expect(isIgnored(latto, picked)).toBe(true);
+    expect(isIgnored(lattoGelato, picked)).toBe(false);
+    expect(historyCount([anna, annaKowalska], { kind: 'outgoingTransfer', name: 'Anna Nowak' })).toBe(1);
+    expect(
+      historyCount([anna, annaKowalska], { kind: 'outgoingTransfer', name: 'Anna Nowak' }, 'contains'),
+    ).toBe(2);
   });
 
   test('keeps the history when skipping starts from a given moment', () => {
@@ -162,6 +182,8 @@ describe('rule list', () => {
     expect(isIgnoreRule({ kind: 'payment', name: 'Netflix' })).toBe(true);
     expect(isIgnoreRule({ kind: 'payment', name: 'Netflix', since: '2026-10-08T12:00:00.000Z' })).toBe(true);
     expect(isIgnoreRule({ kind: 'payment', name: 'Netflix', since: 'soon' })).toBe(false);
+    expect(isIgnoreRule({ kind: 'payment', name: 'Netflix', match: 'contains' })).toBe(true);
+    expect(isIgnoreRule({ kind: 'payment', name: 'Netflix', match: 'prefix' })).toBe(false);
     expect(isIgnoreRule({ kind: 'fee', name: 'Netflix' })).toBe(false);
     expect(isIgnoreRule({ kind: 'payment', name: '' })).toBe(false);
   });

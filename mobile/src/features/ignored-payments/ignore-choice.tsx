@@ -18,7 +18,7 @@ import { formatDayHeading } from '@/features/transactions/format-date';
 import { impactLight, selectionChanged } from '@/haptics';
 
 import { ChoicePanel } from './choice-panel';
-import type { IgnoreKind, IgnoreRule, IgnoreTarget } from './ignore-rule';
+import type { IgnoreKind, IgnoreMatch, IgnoreRule, IgnoreTarget } from './ignore-rule';
 import { ignoredPaymentsCopy } from './ignored-payments-copy';
 
 const disarmAfterMs = 4000;
@@ -36,6 +36,7 @@ const kindSymbols: Record<IgnoreKind, SymbolName> = {
 };
 
 export interface IgnoreChoiceTarget extends IgnoreTarget {
+  match: IgnoreMatch;
   historyCount: number;
   rule: IgnoreRule | null;
 }
@@ -131,10 +132,12 @@ function IgnoreChoiceContent({ target, onIgnore, onStopIgnoring, onDone, onDismi
       return;
     }
 
-    const rule: IgnoreRule =
-      mode === 'everything'
-        ? { kind: target.kind, name: target.name }
-        : { kind: target.kind, name: target.name, since: new Date().toISOString() };
+    const rule: IgnoreRule = {
+      kind: target.kind,
+      name: target.name,
+      match: target.match,
+      ...(mode === 'everything' ? {} : { since: new Date().toISOString() }),
+    };
 
     void run(mode, () => onIgnore(rule));
   };
