@@ -1,6 +1,7 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 
 import { setCustomCategories, type CustomCategory } from '@/features/classification/categories';
+import { isIgnored, type IgnoreRule } from '@/features/ignored-payments/ignore-rule';
 import { setCurrentLanguage, type Language } from '@/features/localization/language';
 
 import {
@@ -18,6 +19,7 @@ export interface WidgetBackgroundConfiguration {
   alertRules: SnapshotSources['alertRules'];
   categorizationRules: SnapshotSources['categorizationRules'];
   customCategories?: CustomCategory[];
+  ignoreRules?: IgnoreRule[];
   openUrl: string;
   revealUrl?: string;
   privacy?: WidgetPrivacy;
@@ -48,7 +50,11 @@ export function snapshot(
 
   return buildSpendingWidgetProps({
     ...configuration,
-    records: records.filter((record) => record.merchant !== 'SKLEP TEST' || record.origin === 'manual'),
+    records: records.filter(
+      (record) =>
+        (record.merchant !== 'SKLEP TEST' || record.origin === 'manual') &&
+        !isIgnored(record, configuration.ignoreRules ?? []),
+    ),
     reference,
     updatedAt: new Date(updatedAtMs),
   });

@@ -14,15 +14,21 @@ interface GrowingFillProps {
   fraction: number;
   color: string;
   delayMs?: number;
+  isActive?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
-export function GrowingFill({ fraction, color, delayMs = 0, style }: GrowingFillProps) {
+export function GrowingFill({ fraction, color, delayMs = 0, isActive = true, style }: GrowingFillProps) {
   const progress = useSharedValue(0);
 
   useEffect(() => {
+    if (!isActive) {
+      progress.set(0);
+      return;
+    }
+
     progress.set(withDelay(delayMs, withSpring(fraction, fillSpring)));
-  }, [delayMs, fraction, progress]);
+  }, [delayMs, fraction, isActive, progress]);
 
   const growthStyle = useAnimatedStyle(() => ({
     transform: [{ scaleX: progress.get() }],

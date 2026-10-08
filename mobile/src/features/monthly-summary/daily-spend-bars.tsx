@@ -30,20 +30,27 @@ interface DailySpendBarsProps {
   averageLabel: string;
   otherLabel: string;
   accessibilityLabel: string;
+  isActive?: boolean;
 }
 
 interface StackedBarProps {
   index: number;
+  isActive: boolean;
   height: number;
   segments: { key: string; fraction: number; color: string }[];
 }
 
-function StackedBar({ index, height, segments }: StackedBarProps) {
+function StackedBar({ index, isActive, height, segments }: StackedBarProps) {
   const growth = useSharedValue(0);
 
   useEffect(() => {
+    if (!isActive) {
+      growth.set(0);
+      return;
+    }
+
     growth.set(withDelay(index * barStaggerMs, withSpring(1, barSpring)));
-  }, [growth, index]);
+  }, [growth, index, isActive]);
 
   const growthStyle = useAnimatedStyle(() => ({
     transform: [{ scaleY: growth.get() }],
@@ -75,6 +82,7 @@ export function DailySpendBars({
   averageLabel,
   otherLabel,
   accessibilityLabel,
+  isActive = true,
 }: DailySpendBarsProps) {
   const { formatCompactAmount } = useAmountFormatting();
   const mainSeries = dailyCategories.slice(0, 3);
@@ -100,13 +108,18 @@ export function DailySpendBars({
 
   useEffect(() => {
     averageReveal.set(0);
+
+    if (!isActive) {
+      return;
+    }
+
     averageReveal.set(
       withDelay(
         Math.min(dayCount * barStaggerMs, 420) + 120,
         withTiming(1, { duration: 320, reduceMotion: ReduceMotion.System }),
       ),
     );
-  }, [averageReveal, averageMinor, dayCount]);
+  }, [averageReveal, averageMinor, dayCount, isActive]);
 
   const averageStyle = useAnimatedStyle(() => ({
     opacity: averageReveal.get(),
@@ -146,7 +159,7 @@ export function DailySpendBars({
 
               return (
                 <View key={index} style={styles.column}>
-                  <StackedBar height={height} index={index} segments={segments} />
+                  <StackedBar height={height} index={index} isActive={isActive} segments={segments} />
                 </View>
               );
             })}

@@ -1,8 +1,9 @@
 import { SymbolView } from 'expo-symbols';
-import { memo } from 'react';
+import { memo, type ComponentProps } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ScalePressable } from '@/features/app-shell/scale-pressable';
 import type { SpendingDimension, SpendingGroup } from '@/features/classification/spending-groups';
 import { AmountText } from '@/features/privacy/amount-text';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
@@ -11,6 +12,7 @@ import { bubbleTints, overviewColors, overviewSpacing } from '@/features/spendin
 import { periodOption, type SpendingPeriod } from '@/features/spending-overview/periods';
 import { RangeSwitcher } from '@/features/spending-overview/range-switcher';
 import { useCopy } from '@/features/localization/language';
+import { selectionChanged } from '@/haptics';
 
 import { merchantsCopy } from './merchants-copy';
 import { DimensionSwitcher } from './dimension-switcher';
@@ -25,38 +27,45 @@ interface MerchantsScreenProps {
   lockedPeriods: ReadonlySet<SpendingPeriod>;
   onCreateLimit: () => void;
   onCreateCategory: () => void;
+  onOpenIgnoredPayments: () => void;
   onSelectGroup: (group: SpendingGroup) => void;
   error: string | null;
   isLoading: boolean;
 }
 
+type SymbolName = ComponentProps<typeof SymbolView>['name'];
+
+const categorySymbol: SymbolName = { ios: 'tag', android: 'sell', web: 'sell' };
+const limitSymbol: SymbolName = {
+  ios: 'gauge.with.dots.needle.33percent',
+  android: 'speed',
+  web: 'speed',
+};
+const skipSymbol: SymbolName = { ios: 'eye.slash', android: 'visibility_off', web: 'visibility_off' };
+
 interface HeaderActionProps {
-  label: string;
+  symbol: SymbolName;
   accessibilityLabel: string;
   accessibilityHint: string;
   onPress: () => void;
 }
 
-function HeaderAction({ label, accessibilityLabel, accessibilityHint, onPress }: HeaderActionProps) {
+function HeaderAction({ symbol, accessibilityLabel, accessibilityHint, onPress }: HeaderActionProps) {
   return (
-    <Pressable
+    <ScalePressable
       accessibilityHint={accessibilityHint}
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
-      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-      onPress={onPress}
-      style={({ pressed }) => [styles.limitAction, pressed ? styles.limitActionPressed : null]}
+      hitSlop={4}
+      onPress={() => {
+        selectionChanged();
+        onPress();
+      }}
+      pressedScale={0.88}
+      style={styles.headerAction}
     >
-      <SymbolView
-        name={{ ios: 'plus', android: 'add', web: 'add' }}
-        size={12}
-        tintColor={overviewColors.textPrimary}
-        weight="semibold"
-      />
-      <AmountText maxFontSizeMultiplier={1.3} style={styles.limitActionLabel}>
-        {label}
-      </AmountText>
-    </Pressable>
+      <SymbolView name={symbol} size={16} tintColor={overviewColors.textPrimary} weight="medium" />
+    </ScalePressable>
   );
 }
 
@@ -70,6 +79,7 @@ function MerchantsScreenComponent({
   lockedPeriods,
   onCreateLimit,
   onCreateCategory,
+  onOpenIgnoredPayments,
   onSelectGroup,
   error,
   isLoading,
@@ -100,14 +110,20 @@ function MerchantsScreenComponent({
             <HeaderAction
               accessibilityHint={copy.createCategoryHint}
               accessibilityLabel={copy.createCategoryLabel}
-              label={copy.category}
               onPress={onCreateCategory}
+              symbol={categorySymbol}
             />
             <HeaderAction
               accessibilityHint={copy.createLimitHint}
               accessibilityLabel={copy.createLimitLabel}
-              label={copy.limit}
               onPress={onCreateLimit}
+              symbol={limitSymbol}
+            />
+            <HeaderAction
+              accessibilityHint={copy.ignoredPaymentsHint}
+              accessibilityLabel={copy.ignoredPaymentsLabel}
+              onPress={onOpenIgnoredPayments}
+              symbol={skipSymbol}
             />
           </View>
         </View>
@@ -180,6 +196,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: overviewSpacing.gutter,
+    paddingBottom: overviewSpacing.block,
     gap: overviewSpacing.tight,
   },
   contextRow: {
@@ -197,24 +214,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  limitAction: {
-    flexDirection: 'row',
+  headerAction: {
+    width: 36,
+    height: 36,
     alignItems: 'center',
-    gap: 4,
-    minHeight: 32,
-    paddingHorizontal: 12,
-    borderRadius: 16,
+    justifyContent: 'center',
+    borderRadius: 18,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: overviewColors.hairline,
     backgroundColor: overviewColors.surfacePressed,
-  },
-  limitActionPressed: {
-    opacity: 0.6,
-  },
-  limitActionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: overviewColors.textPrimary,
   },
   list: {
     gap: 4,

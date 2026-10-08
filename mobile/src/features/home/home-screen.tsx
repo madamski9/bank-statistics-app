@@ -48,6 +48,8 @@ import { EventsScreen } from '@/features/events/events-screen';
 import { activeEvent } from '@/features/events/spending-event';
 import { useEvents } from '@/features/events/use-events';
 import { ForecastScreen } from '@/features/forecast/forecast-screen';
+import { IgnoredPaymentsScreen } from '@/features/ignored-payments/ignored-payments-screen';
+import { useIgnoredPayments } from '@/features/ignored-payments/use-ignored-payments';
 import { monthForecast } from '@/features/forecast/month-forecast';
 import { monthOf, shiftMonth } from '@/features/monthly-summary/monthly-summary';
 import { summaryMonthFromNotification } from '@/features/monthly-summary/monthly-summary-reminder';
@@ -138,7 +140,8 @@ type SheetKey =
   | 'monthlySummary'
   | 'forecast'
   | 'captureHealth'
-  | 'categories';
+  | 'categories'
+  | 'ignoredPayments';
 
 interface AlertEditor {
   scope: AlertScope;
@@ -172,7 +175,9 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   const navLeadingFade = useSharedValue(0);
   const navTrailingFade = useSharedValue(0);
   const profileTabProgress = useSharedValue(0);
-  const { error, isLoading, records, refresh } = useCapturedSpending();
+  const { error, isLoading, records: capturedRecords, refresh } = useCapturedSpending();
+  const ignoredPayments = useIgnoredPayments(capturedRecords, refresh);
+  const records = ignoredPayments.keptRecords;
   const financialAccounts = useFinancialAccounts();
   const { reload: reloadAccounts } = financialAccounts;
   const customCategories = useCustomCategories();
@@ -429,6 +434,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
     alertRules: alerts.rules,
     categorizationRules: rules,
     customCategories: customCategories.categories,
+    ignoreRules: ignoredPayments.rules,
     privacy: widgetPrivacy,
   });
   const widgetPreviewProps = useMemo(
@@ -758,6 +764,9 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
             canCreateCategory={canCreateCustomCategory(hasPremiumAccess)}
             canRememberRule={premium?.isPremium === true}
             onCreateCategory={customCategories.create}
+            ignoreRules={ignoredPayments.rules}
+            onIgnore={ignoredPayments.ignore}
+            onStopIgnoring={ignoredPayments.stopIgnoring}
             onRequirePremium={requireCategoryPremium}
           />
         </View>
@@ -772,6 +781,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
             onChangePeriod={changePeriod}
             onCreateCategory={createCategory}
             onCreateLimit={() => requestNewLimit({ kind: 'all' })}
+            onOpenIgnoredPayments={() => setActiveSheet('ignoredPayments')}
             onSelectGroup={setGroup}
             period={period}
           />
@@ -893,6 +903,14 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
           />
         ) : activeSheet === 'captureHealth' ? (
           <CaptureHealthScreen onClose={() => setActiveSheet(null)} records={records} />
+        ) : activeSheet === 'ignoredPayments' ? (
+          <IgnoredPaymentsScreen
+            onClose={() => setActiveSheet(null)}
+            onIgnore={ignoredPayments.ignore}
+            onStopIgnoring={ignoredPayments.stopIgnoring}
+            records={records}
+            rules={ignoredPayments.rules}
+          />
         ) : activeSheet === 'categories' ? (
           <CustomCategoriesScreen
             canAssignMerchant={premium?.isPremium === true}

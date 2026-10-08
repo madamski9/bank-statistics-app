@@ -7,6 +7,7 @@ import { AppState, Platform } from 'react-native';
 import type { AlertRule } from '@/features/alerts/alert-rule';
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
 import type { CustomCategory } from '@/features/classification/categories';
+import type { IgnoreRule } from '@/features/ignored-payments/ignore-rule';
 import { useLanguage } from '@/features/localization/language';
 
 import type { WidgetBackgroundConfiguration } from './widget-background';
@@ -31,6 +32,7 @@ interface SpendingWidgetSources {
   alertRules: AlertRule[];
   categorizationRules: CategorizationRule[];
   customCategories: CustomCategory[];
+  ignoreRules: IgnoreRule[];
 }
 
 function loadSpendingWidgets() {
@@ -84,6 +86,7 @@ export function useSpendingWidget({
   alertRules,
   categorizationRules,
   customCategories,
+  ignoreRules,
   privacy,
 }: SpendingWidgetSources): void {
   const foregroundTick = useForegroundTick();
@@ -105,6 +108,7 @@ export function useSpendingWidget({
         alertRules,
         categorizationRules,
         customCategories,
+        ignoreRules,
         openUrl,
         revealUrl,
         privacy,
@@ -135,6 +139,7 @@ export function useSpendingWidget({
     categorizationRules,
     customCategories,
     foregroundTick,
+    ignoreRules,
     isPremium,
     isReady,
     language,
