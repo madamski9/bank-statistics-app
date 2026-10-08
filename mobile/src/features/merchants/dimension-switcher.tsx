@@ -13,7 +13,7 @@ interface DimensionSwitcherProps {
   onChange: (dimension: SpendingDimension) => void;
 }
 
-const dimensionOrder: SpendingDimension[] = ['merchant', 'counterparty', 'category'];
+const dimensionOrder: SpendingDimension[] = ['merchant', 'category'];
 
 export function DimensionSwitcher({ dimension, onChange }: DimensionSwitcherProps) {
   const copy = useCopy(merchantsCopy);

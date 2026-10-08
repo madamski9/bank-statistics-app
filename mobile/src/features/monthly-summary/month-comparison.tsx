@@ -12,9 +12,10 @@ import type { MonthComparison } from './monthly-summary';
 
 interface MonthComparisonChartProps {
   months: MonthComparison[];
+  isActive?: boolean;
 }
 
-export function MonthComparisonChart({ months }: MonthComparisonChartProps) {
+export function MonthComparisonChart({ months, isActive = true }: MonthComparisonChartProps) {
   const calendar = useCopy(calendarCopy);
   const { formatCompactAmount } = useAmountFormatting();
   const maximum = Math.max(...months.map((month) => month.dailyAverageMinor), 1);
@@ -37,6 +38,7 @@ export function MonthComparisonChart({ months }: MonthComparisonChartProps) {
                   color={isSelected ? bubbleTints.expense.film : bubbleTints.net.film}
                   delayMs={index * 45}
                   fraction={Math.max(entry.dailyAverageMinor / maximum, 0.02)}
+                  isActive={isActive}
                   style={styles.fill}
                 />
               ) : null}

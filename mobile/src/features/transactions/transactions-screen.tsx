@@ -19,6 +19,7 @@ import { eventTint } from '@/features/events/event-colors';
 import { eventsCopy } from '@/features/events/events-copy';
 import { eventIdForRecord, type SpendingEvent } from '@/features/events/spending-event';
 import type { FinancialAccount } from '@/features/financial-accounts/financial-account';
+import type { IgnoreRule, IgnoreTarget } from '@/features/ignored-payments/ignore-rule';
 import { AmountText } from '@/features/privacy/amount-text';
 import { PrivacyShield } from '@/features/privacy/privacy-shield';
 import { impactLight } from '@/haptics';
@@ -59,6 +60,9 @@ interface TransactionsScreenProps {
   canCreateCategory: boolean;
   canRememberRule: boolean;
   onCreateCategory: (name: string) => Promise<CustomCategory>;
+  ignoreRules: IgnoreRule[];
+  onIgnore: (rule: IgnoreRule) => Promise<void>;
+  onStopIgnoring: (target: IgnoreTarget) => Promise<void>;
   onRequirePremium: () => void;
 }
 
@@ -80,6 +84,9 @@ function TransactionsScreenComponent({
   canCreateCategory,
   canRememberRule,
   onCreateCategory,
+  ignoreRules,
+  onIgnore,
+  onStopIgnoring,
   onRequirePremium,
 }: TransactionsScreenProps) {
   const { formatAmount } = useAmountFormatting();
@@ -335,6 +342,10 @@ function TransactionsScreenComponent({
             isWriting={isWriting}
             onClose={closeEditor}
             onDelete={handleDelete}
+            history={records}
+            ignoreRules={ignoreRules}
+            onIgnore={onIgnore}
+            onStopIgnoring={onStopIgnoring}
             onEdit={() => setEditor({ mode: 'edit', record: editor.record })}
             events={events}
             record={editor.record}

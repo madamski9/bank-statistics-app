@@ -2,15 +2,26 @@ import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { SymbolView } from 'expo-symbols';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useState } from 'react';
 
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
 import { classifyTransaction } from '@/features/classification/classify-transaction';
 import { reportingCurrency } from '@/features/currency-conversion/exchange-rate';
+import { IgnoreChoice, type IgnoreChoiceTarget } from '@/features/ignored-payments/ignore-choice';
+import {
+  historyCount,
+  ignoreTargetFor,
+  ruleFor,
+  type IgnoreRule,
+  type IgnoreTarget,
+} from '@/features/ignored-payments/ignore-rule';
+import { ignoredPaymentsCopy } from '@/features/ignored-payments/ignored-payments-copy';
 import { eventIdForRecord, type SpendingEvent } from '@/features/events/spending-event';
 import { AmountText } from '@/features/privacy/amount-text';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { useCopy } from '@/features/localization/language';
+import { selectionChanged } from '@/haptics';
 
 import { transactionsCopy } from './transactions-copy';
 import { formatDayHeading, formatTime } from './format-date';
@@ -32,6 +43,10 @@ interface TransactionDetailProps {
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  history: IngestionRecord[];
+  ignoreRules: IgnoreRule[];
+  onIgnore: (rule: IgnoreRule) => Promise<void>;
+  onStopIgnoring: (target: IgnoreTarget) => Promise<void>;
 }
 
 export function TransactionDetail({
@@ -43,10 +58,18 @@ export function TransactionDetail({
   onClose,
   onEdit,
   onDelete,
+  history,
+  ignoreRules,
+  onIgnore,
+  onStopIgnoring,
 }: TransactionDetailProps) {
   const { formatAmount } = useAmountFormatting();
   const insets = useSafeAreaInsets();
   const copy = useCopy(transactionsCopy);
+  const ignoreCopy = useCopy(ignoredPaymentsCopy);
+  const ignoreTarget = ignoreTargetFor(record);
+  const activeIgnoreRule = ignoreTarget === null ? null : ruleFor(ignoreRules, ignoreTarget);
+  const [ignoreChoice, setIgnoreChoice] = useState<IgnoreChoiceTarget | null>(null);
   const occurredAt = new Date(record.occurredAt);
   const isIncome = record.direction === 'income';
   const title = transactionTitle(record, rules);
@@ -195,6 +218,41 @@ export function TransactionDetail({
           </Text>
         ) : null}
 
+        {ignoreTarget !== null ? (
+          <Pressable
+            accessibilityRole="button"
+            disabled={isWriting}
+            onPress={() => {
+              selectionChanged();
+              setIgnoreChoice({
+                ...ignoreTarget,
+                rule: activeIgnoreRule,
+                historyCount: historyCount(history, ignoreTarget),
+              });
+            }}
+            style={({ pressed }) => [styles.ignoreButton, pressed ? styles.pressed : null]}
+          >
+            <SymbolView
+              name={
+                activeIgnoreRule === null
+                  ? { ios: 'eye.slash', android: 'visibility_off', web: 'visibility_off' }
+                  : { ios: 'checkmark.circle', android: 'check_circle', web: 'check_circle' }
+              }
+              size={16}
+              tintColor={activeIgnoreRule === null ? overviewColors.textPrimary : overviewColors.textSecondary}
+            />
+            <AmountText
+              maxFontSizeMultiplier={1.4}
+              numberOfLines={2}
+              style={[styles.ignoreLabel, activeIgnoreRule === null ? null : styles.ignoreLabelActive]}
+            >
+              {activeIgnoreRule === null
+                ? ignoreCopy.detailAction[ignoreTarget.kind](ignoreTarget.name)
+                : ignoreCopy.detailSkipping(ignoreTarget.name)}
+            </AmountText>
+          </Pressable>
+        ) : null}
+
         <Pressable
           accessibilityRole="button"
           disabled={isWriting}
@@ -206,6 +264,20 @@ export function TransactionDetail({
           </Text>
         </Pressable>
       </ScrollView>
+
+      <IgnoreChoice
+        onDismiss={() => setIgnoreChoice(null)}
+        onDone={(outcome) => {
+          setIgnoreChoice(null);
+
+          if (outcome === 'everything') {
+            onClose();
+          }
+        }}
+        onIgnore={onIgnore}
+        onStopIgnoring={onStopIgnoring}
+        target={ignoreChoice}
+      />
     </View>
   );
 }
@@ -335,6 +407,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: overviewColors.negative,
+  },
+  ignoreButton: {
+    minHeight: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    borderRadius: 17,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: overviewColors.hairline,
+    backgroundColor: overviewColors.surface,
+  },
+  ignoreLabel: {
+    flexShrink: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    textAlign: 'center',
+    color: overviewColors.textPrimary,
+  },
+  ignoreLabelActive: {
+    color: overviewColors.textSecondary,
   },
   deleteButton: {
     minHeight: 54,

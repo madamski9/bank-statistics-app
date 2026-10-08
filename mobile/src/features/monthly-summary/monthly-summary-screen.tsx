@@ -1,13 +1,13 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  Easing,
   FadeIn,
   FadeInLeft,
   FadeInRight,
-  Easing,
   ReduceMotion,
   useAnimatedStyle,
   useSharedValue,
@@ -46,6 +46,8 @@ import {
   parseMonthKey,
   summarizeMonth,
   summaryMonths,
+  type MonthComparison,
+  type MonthlySummary,
   type SummaryMonth,
 } from './monthly-summary';
 import { monthlySummaryCopy } from './monthly-summary-copy';
@@ -55,7 +57,57 @@ import type { MonthlySummaryReminder } from './use-monthly-summary-reminder';
 const swipeDistance = 72;
 const swipeVelocity = 600;
 const edgeResistance = 0.2;
-const exitEasing = Easing.bezier(0.23, 1, 0.32, 1);
+const settleMinMs = 140;
+const settleMaxMs = 280;
+const settleEasing = Easing.out(Easing.cubic);
+
+type BreakdownDimension = 'merchant' | 'category';
+
+interface MonthPageData {
+  offset: -1 | 0 | 1;
+  month: SummaryMonth;
+  summary: MonthlySummary;
+  comparedMonths: MonthComparison[];
+}
+
+type CachedPage = Omit<MonthPageData, 'offset'>;
+
+type SummaryOptions = Parameters<typeof summarizeMonth>[2];
+
+interface PageCacheEntry {
+  options: SummaryOptions;
+  page: CachedPage;
+}
+
+const pageCache = new WeakMap<IngestionRecord[], Map<string, PageCacheEntry>>();
+
+function cachedPage(records: IngestionRecord[], month: SummaryMonth, options: SummaryOptions): CachedPage {
+  const byMonth = pageCache.get(records) ?? new Map<string, PageCacheEntry>();
+  const key = monthKey(month);
+  const cached = byMonth.get(key);
+
+  pageCache.set(records, byMonth);
+
+  if (
+    cached !== undefined &&
+    cached.options.rules === options.rules &&
+    cached.options.events === options.events &&
+    cached.options.recurring === options.recurring &&
+    cached.options.now === options.now
+  ) {
+    return cached.page;
+  }
+
+  const page = {
+    month,
+    summary: summarizeMonth(records, month, options),
+    comparedMonths: compareMonths(records, month, options.now),
+  };
+
+  byMonth.set(key, { options, page });
+
+  return page;
+}
 
 interface MonthlySummaryScreenProps {
   records: IngestionRecord[];
@@ -74,11 +126,12 @@ interface ShareRowProps {
   value: string;
   detail: string;
   tint: string;
+  isActive: boolean;
   accessibilityHint: string;
   onPress: () => void;
 }
 
-function ShareRow({ group, index, fraction, value, detail, tint, accessibilityHint, onPress }: ShareRowProps) {
+function ShareRow({ group, index, fraction, value, detail, tint, isActive, accessibilityHint, onPress }: ShareRowProps) {
   return (
     <ScalePressable
       accessibilityHint={accessibilityHint}
@@ -107,6 +160,7 @@ function ShareRow({ group, index, fraction, value, detail, tint, accessibilityHi
             color={tint}
             delayMs={120 + index * 50}
             fraction={Math.max(fraction, 0.02)}
+            isActive={isActive}
             style={styles.shareFill}
           />
         </View>
@@ -153,6 +207,263 @@ function Highlight({ label, value, detail }: HighlightProps) {
   );
 }
 
+interface MonthPageProps {
+  month: SummaryMonth;
+  summary: MonthlySummary;
+  comparedMonths: MonthComparison[];
+  rules: CategorizationRule[];
+  breakdownDimension: BreakdownDimension;
+  showAllGroups: boolean;
+  isActive: boolean;
+  onChangeDimension: (dimension: BreakdownDimension) => void;
+  onToggleShowAll: () => void;
+  onSelectGroup: (selection: SummaryGroupSelection) => void;
+}
+
+const MonthPage = memo(function MonthPage({
+  month,
+  summary,
+  comparedMonths,
+  rules,
+  breakdownDimension,
+  showAllGroups,
+  isActive,
+  onChangeDimension,
+  onToggleShowAll,
+  onSelectGroup,
+}: MonthPageProps) {
+  const copy = useCopy(monthlySummaryCopy);
+  const calendar = useCopy(calendarCopy);
+  const language = useLanguage();
+  const { formatAmount, formatCompactAmount, formatSignedAmount } = useAmountFormatting();
+  const isEmpty = summary.expenseCount + summary.incomeCount === 0;
+  const dayLabel = (day: number) => calendar.dayMonth(day, calendar.monthsInGenitive[month.month] ?? '');
+  const busiestLabel = summary.busiestDay === null ? null : dayLabel(summary.busiestDay.day);
+  const activeDimension = summary.merchants.length === 0 ? 'category' : breakdownDimension;
+  const groups = activeDimension === 'merchant' ? summary.merchants : summary.categories;
+  const visibleGroups = showAllGroups ? groups : groups.slice(0, 5);
+  const leadingMinor = groups[0]?.totalMinor ?? 0;
+  const perDayCount = summary.transactionsPerDay.toFixed(1).replace('.', language === 'pl' ? ',' : '.');
+  const change = summary.dailyExpenseChange;
+  const chartCategories = summary.dailyCategories.slice(0, 3).map((group) => group.name);
+
+  if (summary.dailyCategories.length > 3) {
+    chartCategories.push(copy.other);
+  }
+
+  return (
+    <>
+      <View style={styles.card}>
+        <View style={styles.heroRow}>
+          <View style={styles.hero}>
+            <View style={styles.averageCaption}>
+              <View style={styles.averageSwatch} />
+              <Text maxFontSizeMultiplier={1.4} style={[styles.caption, styles.averageCaptionText]}>
+                {copy.dailyAverage}
+              </Text>
+            </View>
+            <AmountText adjustsFontSizeToFit maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.amount}>
+              {formatAmount(summary.dailyExpenseMinor, reportingCurrency)}
+            </AmountText>
+          </View>
+          {change !== null ? (
+            <AmountText
+              maxFontSizeMultiplier={1.4}
+              numberOfLines={2}
+              style={[styles.change, { color: change > 0 ? overviewColors.negative : overviewColors.positive }]}
+            >
+              {copy.versusPrevious(formatChange(change), change > 0)}
+            </AmountText>
+          ) : (
+            <Text maxFontSizeMultiplier={1.4} style={styles.change}>
+              {copy.noPrevious}
+            </Text>
+          )}
+        </View>
+        <DailySpendBars
+          accessibilityLabel={copy.chartLabel(
+            formatAmount(summary.dailyExpenseMinor, reportingCurrency),
+            busiestLabel,
+            chartCategories,
+          )}
+          averageLabel={copy.average}
+          averageMinor={summary.dailyExpenseMinor}
+          dailyCategories={summary.dailyCategories}
+          dailyExpensesMinor={summary.dailyExpensesMinor}
+          elapsedDays={summary.elapsedDays}
+          isActive={isActive}
+          otherLabel={copy.other}
+        />
+        <AmountText maxFontSizeMultiplier={1.4} style={styles.cardTotal}>
+          {copy.total(
+            formatAmount(summary.expenseMinor, reportingCurrency),
+            formatTransactionCount(summary.expenseCount),
+          )}
+        </AmountText>
+      </View>
+
+      {isEmpty ? (
+        <Text maxFontSizeMultiplier={1.5} style={styles.caption}>
+          {copy.empty}
+        </Text>
+      ) : null}
+
+      {groups.length > 0 ? (
+        <View style={styles.section}>
+          <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
+            {copy.spendingBy.toLocaleUpperCase()}
+          </Text>
+          <View accessibilityRole="tablist" style={styles.dimensionSwitcher}>
+            {(['merchant', 'category'] as const).map((dimension) => {
+              const selected = activeDimension === dimension;
+              const disabled = (dimension === 'merchant' ? summary.merchants : summary.categories).length === 0;
+
+              return (
+                <ScalePressable
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected, disabled }}
+                  containerStyle={styles.dimensionTabContainer}
+                  disabled={disabled}
+                  key={dimension}
+                  onPress={() => {
+                    selectionChanged();
+                    onChangeDimension(dimension);
+                  }}
+                  style={[styles.dimensionTab, selected ? styles.dimensionSelected : null]}
+                >
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.dimensionLabel, selected ? styles.dimensionLabelSelected : null]}>
+                    {dimension === 'merchant' ? copy.merchants : copy.categories}
+                  </Text>
+                </ScalePressable>
+              );
+            })}
+          </View>
+          <Animated.View
+            entering={FadeIn.duration(220).reduceMotion(ReduceMotion.System)}
+            key={activeDimension}
+            style={styles.shareList}
+          >
+            {visibleGroups.map((group, groupIndex) => (
+              <ShareRow
+                accessibilityHint={copy.openGroupDetail}
+                detail={copy.groupDetail(
+                  copy.payments(group.count),
+                  formatShare(summary.expenseMinor === 0 ? 0 : group.totalMinor / summary.expenseMinor),
+                )}
+                fraction={leadingMinor === 0 ? 0 : group.totalMinor / leadingMinor}
+                group={group}
+                index={groupIndex}
+                isActive={isActive}
+                key={group.key}
+                onPress={() => {
+                  selectionChanged();
+                  onSelectGroup({ dimension: activeDimension, key: group.key, name: group.name });
+                }}
+                tint={activeDimension === 'category'
+                  ? reportSeriesColors[Math.min(groupIndex, reportSeriesColors.length - 1)]
+                  : bubbleTints.expense.film}
+                value={formatAmount(group.totalMinor, reportingCurrency)}
+              />
+            ))}
+            {groups.length > 5 ? (
+              <ScalePressable
+                accessibilityRole="button"
+                onPress={() => {
+                  selectionChanged();
+                  onToggleShowAll();
+                }}
+                pressedScale={0.97}
+                style={styles.showAllButton}
+              >
+                <Text maxFontSizeMultiplier={1.4} style={styles.showAllLabel}>
+                  {showAllGroups ? copy.showLess : copy.showAll(groups.length)}
+                </Text>
+              </ScalePressable>
+            ) : null}
+          </Animated.View>
+        </View>
+      ) : null}
+
+      <View style={styles.section}>
+        <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
+          {copy.monthComparison.toLocaleUpperCase()}
+        </Text>
+        <Text maxFontSizeMultiplier={1.4} style={styles.caption}>
+          {copy.monthComparisonDetail}
+        </Text>
+        <MonthComparisonChart isActive={isActive} months={comparedMonths} />
+      </View>
+
+      {!isEmpty ? (
+        <>
+          <View style={styles.section}>
+            <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
+              {copy.highlights.toLocaleUpperCase()}
+            </Text>
+            <View style={styles.highlights}>
+              {summary.busiestDay !== null && busiestLabel !== null ? (
+                <Highlight
+                  detail={busiestLabel}
+                  label={copy.busiestDay}
+                  value={formatCompactAmount(summary.busiestDay.totalMinor, reportingCurrency)}
+                />
+              ) : null}
+              {summary.largestExpense !== null ? (
+                <Highlight
+                  detail={transactionTitle(summary.largestExpense, rules)}
+                  label={copy.largest}
+                  value={formatCompactAmount(summary.largestExpense.amountMinor, reportingCurrency)}
+                />
+              ) : null}
+              <Highlight
+                label={copy.noSpendDays}
+                value={copy.noSpendValue(summary.noSpendDays, summary.elapsedDays)}
+              />
+              <Highlight label={copy.perDayCount} value={perDayCount} />
+            </View>
+          </View>
+
+          <SheetSection label={copy.flow}>
+            <SheetRow
+              isFirst
+              label={copy.received}
+              value={`+${formatAmount(summary.incomeMinor, reportingCurrency)}`}
+              valueTone="positive"
+            />
+            <SheetRow
+              label={copy.net}
+              value={formatSignedAmount(summary.netMinor, reportingCurrency)}
+              valueTone={summary.netMinor < 0 ? 'negative' : 'positive'}
+            />
+            {summary.recurringMinor > 0 ? (
+              <SheetRow
+                label={copy.recurring}
+                value={copy.recurringValue(
+                  formatAmount(summary.recurringMinor, reportingCurrency),
+                  formatShare(summary.expenseMinor === 0 ? 0 : summary.recurringMinor / summary.expenseMinor),
+                )}
+              />
+            ) : null}
+          </SheetSection>
+
+          {summary.events.length > 0 ? (
+            <SheetSection label={copy.events}>
+              {summary.events.map((entry, rowIndex) => (
+                <SheetRow
+                  isFirst={rowIndex === 0}
+                  key={entry.event.id}
+                  label={entry.event.name}
+                  value={formatAmount(entry.expenseMinor, reportingCurrency)}
+                />
+              ))}
+            </SheetSection>
+          ) : null}
+        </>
+      ) : null}
+    </>
+  );
+});
+
 export function MonthlySummaryScreen({
   records,
   rules,
@@ -164,15 +475,15 @@ export function MonthlySummaryScreen({
 }: MonthlySummaryScreenProps) {
   const copy = useCopy(monthlySummaryCopy);
   const calendar = useCopy(calendarCopy);
-  const language = useLanguage();
-  const { formatAmount, formatCompactAmount, formatSignedAmount } = useAmountFormatting();
   const now = useMemo(() => new Date(), []);
   const requestedMonth = useMemo(() => initialMonth === null ? null : parseMonthKey(initialMonth), [initialMonth]);
   const months = useMemo(() => summaryMonths(records, now, requestedMonth), [now, records, requestedMonth]);
-  const [breakdownDimension, setBreakdownDimension] = useState<'merchant' | 'category'>('merchant');
+  const [breakdownDimension, setBreakdownDimension] = useState<BreakdownDimension>('merchant');
   const [showAllGroups, setShowAllGroups] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<SummaryGroupSelection | null>(null);
   const [travel, setTravel] = useState<'older' | 'newer' | null>(null);
+  const { width: screenWidth } = useWindowDimensions();
+  const [pageWidth, setPageWidth] = useState(screenWidth - overviewSpacing.gutter * 2);
   const { confirmPermission } = reminder;
 
   useEffect(() => {
@@ -191,68 +502,117 @@ export function MonthlySummaryScreen({
     () => months[index] ?? { year: now.getFullYear(), month: now.getMonth() },
     [index, months, now],
   );
-  const summary = useMemo(
-    () => summarizeMonth(records, month, { rules, events, recurring, now }),
-    [events, month, now, records, recurring, rules],
-  );
-  const comparedMonths = useMemo(() => compareMonths(records, month, now), [month, now, records]);
-  const title = `${calendar.monthNames[month.month] ?? ''} ${month.year}`;
-  const isEmpty = summary.expenseCount + summary.incomeCount === 0;
-  const dayLabel = (day: number) => calendar.dayMonth(day, calendar.monthsInGenitive[month.month] ?? '');
-  const busiestLabel = summary.busiestDay === null ? null : dayLabel(summary.busiestDay.day);
-  const activeDimension = summary.merchants.length === 0 ? 'category' : breakdownDimension;
-  const groups = activeDimension === 'merchant' ? summary.merchants : summary.categories;
-  const visibleGroups = showAllGroups ? groups : groups.slice(0, 5);
-  const leadingMinor = groups[0]?.totalMinor ?? 0;
-  const perDayCount = summary.transactionsPerDay.toFixed(1).replace('.', language === 'pl' ? ',' : '.');
-  const change = summary.dailyExpenseChange;
-  const chartCategories = summary.dailyCategories.slice(0, 3).map((group) => group.name);
+  const deferredIndex = useDeferredValue(index);
+  const pages = useMemo(() => {
+    const options = { rules, events, recurring, now };
+    const isPrepared = (candidate: number) => Math.abs(candidate - deferredIndex) <= 1;
+    const older = months[index + 1];
+    const newer = index > 0 ? months[index - 1] : undefined;
+    const result: MonthPageData[] = [{ offset: 0, ...cachedPage(records, month, options) }];
 
-  if (summary.dailyCategories.length > 3) {
-    chartCategories.push(copy.other);
-  }
-
-  const move = (delta: number) => {
-    const next = months[index + delta];
-
-    if (next !== undefined) {
-      selectionChanged();
-      setTravel(delta > 0 ? 'older' : 'newer');
-      setSelectedKey(monthKey(next));
-      setShowAllGroups(false);
+    if (older !== undefined && isPrepared(index + 1)) {
+      result.push({ offset: -1, ...cachedPage(records, older, options) });
     }
-  };
+
+    if (newer !== undefined && isPrepared(index - 1)) {
+      result.push({ offset: 1, ...cachedPage(records, newer, options) });
+    }
+
+    return result;
+  }, [deferredIndex, events, index, month, months, now, records, recurring, rules]);
+  const summary = pages[0].summary;
+  const title = `${calendar.monthNames[month.month] ?? ''} ${month.year}`;
+
+  const changeDimension = useCallback((dimension: BreakdownDimension) => {
+    setBreakdownDimension(dimension);
+    setShowAllGroups(false);
+  }, []);
+  const toggleShowAll = useCallback(() => setShowAllGroups((current) => !current), []);
+  const selectGroup = useCallback((selection: SummaryGroupSelection) => setSelectedGroup(selection), []);
 
   const canShowOlder = index < months.length - 1;
   const canShowNewer = index > 0;
-  const { width: screenWidth } = useWindowDimensions();
+  const travelDistance = pageWidth + overviewSpacing.gutter;
   const drag = useSharedValue(0);
+  const isSettling = useSharedValue(false);
 
   useLayoutEffect(() => {
     drag.set(0);
-  }, [drag, selectedKey]);
+    isSettling.set(false);
+  }, [drag, isSettling, selectedKey]);
+
+  const commitMove = (direction: number) => {
+    const next = months[index + direction];
+
+    if (next === undefined) {
+      isSettling.set(false);
+      return;
+    }
+
+    setTravel(direction > 0 ? 'older' : 'newer');
+    setSelectedKey(monthKey(next));
+    setShowAllGroups(false);
+  };
+
+  const settleTo = (direction: number, velocity: number) => {
+    'worklet';
+    const remaining = Math.abs(direction * travelDistance - drag.get());
+    const speed = Math.abs(velocity);
+    const duration = speed > 0
+      ? Math.min(Math.max((remaining / speed) * 1000 * 1.6, settleMinMs), settleMaxMs)
+      : settleMaxMs;
+
+    isSettling.set(true);
+    drag.set(
+      withTiming(
+        direction * travelDistance,
+        { duration, easing: settleEasing, reduceMotion: ReduceMotion.System },
+        (finished) => {
+          if (finished) {
+            scheduleOnRN(commitMove, direction);
+          } else {
+            isSettling.set(false);
+          }
+        },
+      ),
+    );
+  };
+
+  const move = (direction: number) => {
+    const isAllowed = direction > 0 ? canShowOlder : canShowNewer;
+
+    if (!isAllowed || isSettling.get()) {
+      return;
+    }
+
+    selectionChanged();
+    settleTo(direction, 0);
+  };
 
   const swipe = Gesture.Pan()
     .activeOffsetX([-16, 16])
     .failOffsetY([-12, 12])
     .onUpdate((event) => {
+      if (isSettling.get()) {
+        return;
+      }
+
       const isBlocked = event.translationX > 0 ? !canShowOlder : !canShowNewer;
 
       drag.set(isBlocked ? event.translationX * edgeResistance : event.translationX);
     })
     .onEnd((event) => {
+      if (isSettling.get()) {
+        return;
+      }
+
       const direction = event.translationX > 0 ? 1 : -1;
       const isAllowed = direction > 0 ? canShowOlder : canShowNewer;
       const isFlung = Math.abs(event.velocityX) > swipeVelocity && Math.sign(event.velocityX) === direction;
 
       if (isAllowed && (Math.abs(event.translationX) > swipeDistance || isFlung)) {
-        drag.set(
-          withTiming(direction * screenWidth, { duration: 130, easing: exitEasing }, (finished) => {
-            if (finished) {
-              scheduleOnRN(move, direction);
-            }
-          }),
-        );
+        scheduleOnRN(selectionChanged);
+        settleTo(direction, event.velocityX);
         return;
       }
 
@@ -325,219 +685,36 @@ export function MonthlySummaryScreen({
       </View>
 
       <GestureDetector gesture={swipe}>
-        <Animated.View style={dragStyle}>
-          <Animated.View
-            entering={travel === null ? FadeIn.duration(240).reduceMotion(ReduceMotion.System) : monthEntering(travel)}
-            key={selectedKey}
-            style={styles.monthContent}
-          >
-            <View style={styles.card}>
-              <View style={styles.heroRow}>
-                <View style={styles.hero}>
-                  <View style={styles.averageCaption}>
-                    <View style={styles.averageSwatch} />
-                    <Text maxFontSizeMultiplier={1.4} style={[styles.caption, styles.averageCaptionText]}>
-                      {copy.dailyAverage}
-                    </Text>
-                  </View>
-                  <AmountText adjustsFontSizeToFit maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.amount}>
-                    {formatAmount(summary.dailyExpenseMinor, reportingCurrency)}
-                  </AmountText>
-                </View>
-                {change !== null ? (
-                  <AmountText
-                    maxFontSizeMultiplier={1.4}
-                    numberOfLines={2}
-                    style={[styles.change, { color: change > 0 ? overviewColors.negative : overviewColors.positive }]}
-                  >
-                    {copy.versusPrevious(formatChange(change), change > 0)}
-                  </AmountText>
-                ) : (
-                  <Text maxFontSizeMultiplier={1.4} style={styles.change}>
-                    {copy.noPrevious}
-                  </Text>
-                )}
+        <Animated.View onLayout={(event) => setPageWidth(event.nativeEvent.layout.width)} style={dragStyle}>
+          {pages.map((page) => {
+            const isCurrent = page.offset === 0;
+
+            return (
+              <View
+                accessibilityElementsHidden={!isCurrent}
+                importantForAccessibility={isCurrent ? 'auto' : 'no-hide-descendants'}
+                key={monthKey(page.month)}
+                pointerEvents={isCurrent ? 'auto' : 'none'}
+                style={[
+                  styles.monthContent,
+                  isCurrent ? null : [styles.neighbourPage, { left: page.offset * (pageWidth + overviewSpacing.gutter) }],
+                ]}
+              >
+                <MonthPage
+                  breakdownDimension={breakdownDimension}
+                  comparedMonths={page.comparedMonths}
+                  month={page.month}
+                  onChangeDimension={changeDimension}
+                  onSelectGroup={selectGroup}
+                  onToggleShowAll={toggleShowAll}
+                  rules={rules}
+                  isActive={isCurrent}
+                  showAllGroups={isCurrent && showAllGroups}
+                  summary={page.summary}
+                />
               </View>
-              <DailySpendBars
-                accessibilityLabel={copy.chartLabel(
-                  formatAmount(summary.dailyExpenseMinor, reportingCurrency),
-                  busiestLabel,
-                  chartCategories,
-                )}
-                averageLabel={copy.average}
-                averageMinor={summary.dailyExpenseMinor}
-                dailyCategories={summary.dailyCategories}
-                dailyExpensesMinor={summary.dailyExpensesMinor}
-                elapsedDays={summary.elapsedDays}
-                otherLabel={copy.other}
-              />
-              <AmountText maxFontSizeMultiplier={1.4} style={styles.cardTotal}>
-                {copy.total(
-                  formatAmount(summary.expenseMinor, reportingCurrency),
-                  formatTransactionCount(summary.expenseCount),
-                )}
-              </AmountText>
-            </View>
-
-            {isEmpty ? (
-              <Text maxFontSizeMultiplier={1.5} style={styles.caption}>
-                {copy.empty}
-              </Text>
-            ) : null}
-
-            {groups.length > 0 ? (
-              <View style={styles.section}>
-                <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
-                  {copy.spendingBy.toLocaleUpperCase()}
-                </Text>
-                <View accessibilityRole="tablist" style={styles.dimensionSwitcher}>
-                  {(['merchant', 'category'] as const).map((dimension) => {
-                    const selected = activeDimension === dimension;
-                    const disabled = (dimension === 'merchant' ? summary.merchants : summary.categories).length === 0;
-
-                    return (
-                      <ScalePressable
-                        accessibilityRole="tab"
-                        accessibilityState={{ selected, disabled }}
-                        containerStyle={styles.dimensionTabContainer}
-                        disabled={disabled}
-                        key={dimension}
-                        onPress={() => {
-                          selectionChanged();
-                          setBreakdownDimension(dimension);
-                          setShowAllGroups(false);
-                        }}
-                        style={[styles.dimensionTab, selected ? styles.dimensionSelected : null]}
-                      >
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.dimensionLabel, selected ? styles.dimensionLabelSelected : null]}>
-                          {dimension === 'merchant' ? copy.merchants : copy.categories}
-                        </Text>
-                      </ScalePressable>
-                    );
-                  })}
-                </View>
-                <Animated.View
-                  entering={FadeIn.duration(220).reduceMotion(ReduceMotion.System)}
-                  key={activeDimension}
-                  style={styles.shareList}
-                >
-                  {visibleGroups.map((group, groupIndex) => (
-                    <ShareRow
-                      accessibilityHint={copy.openGroupDetail}
-                      detail={copy.groupDetail(
-                        copy.payments(group.count),
-                        formatShare(summary.expenseMinor === 0 ? 0 : group.totalMinor / summary.expenseMinor),
-                      )}
-                      fraction={leadingMinor === 0 ? 0 : group.totalMinor / leadingMinor}
-                      group={group}
-                      index={groupIndex}
-                      key={group.key}
-                      onPress={() => {
-                        selectionChanged();
-                        setSelectedGroup({ dimension: activeDimension, key: group.key, name: group.name });
-                      }}
-                      tint={activeDimension === 'category'
-                        ? reportSeriesColors[Math.min(groupIndex, reportSeriesColors.length - 1)]
-                        : bubbleTints.expense.film}
-                      value={formatAmount(group.totalMinor, reportingCurrency)}
-                    />
-                  ))}
-                  {groups.length > 5 ? (
-                    <ScalePressable
-                      accessibilityRole="button"
-                      onPress={() => {
-                        selectionChanged();
-                        setShowAllGroups((current) => !current);
-                      }}
-                      pressedScale={0.97}
-                      style={styles.showAllButton}
-                    >
-                      <Text maxFontSizeMultiplier={1.4} style={styles.showAllLabel}>
-                        {showAllGroups ? copy.showLess : copy.showAll(groups.length)}
-                      </Text>
-                    </ScalePressable>
-                  ) : null}
-                </Animated.View>
-              </View>
-            ) : null}
-
-            <View style={styles.section}>
-              <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
-                {copy.monthComparison.toLocaleUpperCase()}
-              </Text>
-              <Text maxFontSizeMultiplier={1.4} style={styles.caption}>
-                {copy.monthComparisonDetail}
-              </Text>
-              <MonthComparisonChart months={comparedMonths} />
-            </View>
-
-            {!isEmpty ? (
-              <>
-                <View style={styles.section}>
-                  <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
-                    {copy.highlights.toLocaleUpperCase()}
-                  </Text>
-                  <View style={styles.highlights}>
-                    {summary.busiestDay !== null && busiestLabel !== null ? (
-                      <Highlight
-                        detail={busiestLabel}
-                        label={copy.busiestDay}
-                        value={formatCompactAmount(summary.busiestDay.totalMinor, reportingCurrency)}
-                      />
-                    ) : null}
-                    {summary.largestExpense !== null ? (
-                      <Highlight
-                        detail={transactionTitle(summary.largestExpense, rules)}
-                        label={copy.largest}
-                        value={formatCompactAmount(summary.largestExpense.amountMinor, reportingCurrency)}
-                      />
-                    ) : null}
-                    <Highlight
-                      label={copy.noSpendDays}
-                      value={copy.noSpendValue(summary.noSpendDays, summary.elapsedDays)}
-                    />
-                    <Highlight label={copy.perDayCount} value={perDayCount} />
-                  </View>
-                </View>
-
-                <SheetSection label={copy.flow}>
-                  <SheetRow
-                    isFirst
-                    label={copy.received}
-                    value={`+${formatAmount(summary.incomeMinor, reportingCurrency)}`}
-                    valueTone="positive"
-                  />
-                  <SheetRow
-                    label={copy.net}
-                    value={formatSignedAmount(summary.netMinor, reportingCurrency)}
-                    valueTone={summary.netMinor < 0 ? 'negative' : 'positive'}
-                  />
-                  {summary.recurringMinor > 0 ? (
-                    <SheetRow
-                      label={copy.recurring}
-                      value={copy.recurringValue(
-                        formatAmount(summary.recurringMinor, reportingCurrency),
-                        formatShare(summary.expenseMinor === 0 ? 0 : summary.recurringMinor / summary.expenseMinor),
-                      )}
-                    />
-                  ) : null}
-                </SheetSection>
-
-                {summary.events.length > 0 ? (
-                  <SheetSection label={copy.events}>
-                    {summary.events.map((entry, rowIndex) => (
-                      <SheetRow
-                        isFirst={rowIndex === 0}
-                        key={entry.event.id}
-                        label={entry.event.name}
-                        value={formatAmount(entry.expenseMinor, reportingCurrency)}
-                      />
-                    ))}
-                  </SheetSection>
-                ) : null}
-              </>
-            ) : null}
-          </Animated.View>
+            );
+          })}
         </Animated.View>
       </GestureDetector>
 
@@ -562,6 +739,11 @@ function monthEntering(travel: 'older' | 'newer') {
 const styles = StyleSheet.create({
   monthContent: {
     gap: overviewSpacing.section,
+  },
+  neighbourPage: {
+    position: 'absolute',
+    top: 0,
+    width: '100%',
   },
   averageCaption: {
     flexDirection: 'row',

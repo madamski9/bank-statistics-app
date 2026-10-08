@@ -64,6 +64,10 @@ _Avoid_: Tag, label
 A user-approved rule that assigns a category to future matching transactions.
 _Avoid_: Correction, merchant alias
 
+**Ignore Rule**:
+A user-defined rule that keeps captured payments at a merchant, or transfers to or from a counterparty, out of the product entirely. Matching captured transactions are removed from the device as soon as they arrive; manual entries are never ignored.
+_Avoid_: Filter, hidden transaction, categorization rule
+
 **Transaction Split**:
 An allocation of one transaction's amount across multiple categories while preserving the original transaction total.
 _Avoid_: Separate transaction, installment
