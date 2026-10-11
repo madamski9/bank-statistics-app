@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   ReduceMotion,
   useAnimatedStyle,
@@ -13,6 +13,7 @@ import { reportingCurrency } from '@/features/currency-conversion/exchange-rate'
 import { AmountText } from '@/features/privacy/amount-text';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
 import { overviewColors } from '@/features/spending-overview/overview-theme';
+import { selectionChanged } from '@/haptics';
 
 import type { DailyCategorySeries } from './monthly-summary';
 import { reportSeriesColors } from './report-colors';
@@ -31,6 +32,9 @@ interface DailySpendBarsProps {
   otherLabel: string;
   accessibilityLabel: string;
   isActive?: boolean;
+  selectedDay?: number | null;
+  onSelectDay?: (day: number | null) => void;
+  barAccessibilityLabel?: (day: number, totalMinor: number) => string;
 }
 
 interface StackedBarProps {
@@ -83,6 +87,9 @@ export function DailySpendBars({
   otherLabel,
   accessibilityLabel,
   isActive = true,
+  selectedDay = null,
+  onSelectDay,
+  barAccessibilityLabel,
 }: DailySpendBarsProps) {
   const { formatCompactAmount } = useAmountFormatting();
   const mainSeries = dailyCategories.slice(0, 3);
@@ -133,8 +140,14 @@ export function DailySpendBars({
     (offset) => averageMinor <= 0 || Math.abs(offset - averageOffset) >= 14,
   );
 
+  const isSelectable = onSelectDay !== undefined;
+
   return (
-    <View accessibilityLabel={accessibilityLabel} accessible style={styles.chart}>
+    <View
+      accessibilityLabel={isSelectable ? undefined : accessibilityLabel}
+      accessible={!isSelectable}
+      style={styles.chart}
+    >
       <View style={styles.plotRow}>
         <View style={styles.plot}>
           <View style={[styles.gridLine, { bottom: plotHeight }]} />
@@ -157,10 +170,36 @@ export function DailySpendBars({
                 }))
                 .filter((segment) => segment.fraction > 0);
 
-              return (
-                <View key={index} style={styles.column}>
+              const day = index + 1;
+              const isDimmed = selectedDay !== null && selectedDay !== day;
+              const bar = (
+                <View style={[styles.barSlot, isDimmed ? styles.dimmed : null]}>
                   <StackedBar height={height} index={index} isActive={isActive} segments={segments} />
                 </View>
+              );
+
+              if (onSelectDay === undefined) {
+                return (
+                  <View key={index} style={styles.column}>
+                    {bar}
+                  </View>
+                );
+              }
+
+              return (
+                <Pressable
+                  accessibilityLabel={barAccessibilityLabel?.(day, totalMinor)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: selectedDay === day }}
+                  key={index}
+                  onPress={() => {
+                    selectionChanged();
+                    onSelectDay(selectedDay === day ? null : day);
+                  }}
+                  style={styles.column}
+                >
+                  {bar}
+                </Pressable>
               );
             })}
           </View>
@@ -245,6 +284,8 @@ const styles = StyleSheet.create({
   },
   bars: { height: '100%', flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
   column: { flex: 1, height: '100%', justifyContent: 'flex-end' },
+  barSlot: { width: '100%' },
+  dimmed: { opacity: 0.3 },
   stack: {
     width: '100%',
     flexDirection: 'column-reverse',

@@ -189,6 +189,35 @@ export function compareMonths(
   });
 }
 
+export interface ExpenseDay {
+  day: number;
+  totalMinor: number;
+  records: IngestionRecord[];
+}
+
+export function expenseDaysOf(records: IngestionRecord[], month: SummaryMonth): ExpenseDay[] {
+  const { startMs, endMs } = monthBounds(month);
+  const recordsByDay = new Map<number, IngestionRecord[]>();
+
+  for (const record of within(records, startMs, endMs)) {
+    if (record.direction !== 'expense') {
+      continue;
+    }
+
+    const day = new Date(record.occurredAt).getDate();
+
+    recordsByDay.set(day, [...(recordsByDay.get(day) ?? []), record]);
+  }
+
+  return [...recordsByDay.entries()]
+    .map(([day, dayRecords]) => ({
+      day,
+      totalMinor: dayRecords.reduce((total, record) => total + record.amountMinor, 0),
+      records: [...dayRecords].sort((left, right) => right.amountMinor - left.amountMinor),
+    }))
+    .sort((left, right) => right.totalMinor - left.totalMinor || left.day - right.day);
+}
+
 export function recordsForSummaryGroup(
   records: IngestionRecord[],
   month: SummaryMonth,
