@@ -385,7 +385,11 @@ export function parseStatement(text: string): StatementParseResult {
     return { ok: false, problem: 'unrecognized' };
   }
 
-  const bank = bankFromHeaders(headerRow) ?? detectStatementBank(text);
+  const preamble = table
+    .slice(0, headerIndex)
+    .map((row) => row.join(' '))
+    .join('\n');
+  const bank = bankFromHeaders(headerRow) ?? detectStatementBank(preamble);
 
   if (bank === null) {
     return { ok: false, problem: 'unsupportedBank' };

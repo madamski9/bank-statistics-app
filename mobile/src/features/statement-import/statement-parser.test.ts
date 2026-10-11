@@ -134,6 +134,14 @@ describe('parseStatement', () => {
     expect(result).toMatchObject({ ok: true, bank: 'erste', skippedCount: 1 });
   });
 
+  test('never takes the bank from transaction text', () => {
+    const otherBank = ['Data księgowania;Kwota operacji;Waluta;Opis', '21.09.2026;-10,00;PLN;BANKOMAT PKO BP WARSZAWA'].join(
+      '\n',
+    );
+
+    expect(parseStatement(otherBank)).toEqual({ ok: false, problem: 'unsupportedBank' });
+  });
+
   test('refuses a statement from a bank we do not offer', () => {
     expect(parseStatement('mBank S.A.;;\nData;Kwota;Opis\n21.09.2026;-10,00;Kawa')).toEqual({
       ok: false,

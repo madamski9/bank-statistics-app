@@ -6,7 +6,7 @@ import {
   type FinancialAccount,
 } from '@/features/financial-accounts/financial-account';
 
-import type { StatementBank } from './statement-bank';
+import { statementBanks, type StatementBank } from './statement-bank';
 import type { StatementRow } from './statement-parser';
 
 export const statementImportSourceApp = 'statement-import';
@@ -63,6 +63,20 @@ function amountsAgree(row: StatementRow, record: IngestionRecord): boolean {
   return row.currency === 'PLN' && record.reportingAmountMinor === row.amountMinor;
 }
 
+function isStatementBank(value: string): value is StatementBank {
+  return statementBanks.some((bank) => bank === value);
+}
+
+function belongsToOtherBank(record: IngestionRecord, bank: StatementBank): boolean {
+  if (record.origin !== 'manual') {
+    return isStatementBank(record.bank) && record.bank !== bank;
+  }
+
+  const accountBank = record.accountId?.startsWith('general-') ? record.accountId.slice('general-'.length) : null;
+
+  return accountBank !== null && isStatementBank(accountBank) && accountBank !== bank;
+}
+
 function matchOf(record: IngestionRecord): StatementMatch {
   return record.origin === 'manual' ? 'added' : 'notification';
 }
@@ -109,7 +123,9 @@ export function reconcileStatement(
   const candidates = records.flatMap((record) => {
     const date = localCalendarDate(record.occurredAt);
 
-    return record.status === 'reversed' || date === null ? [] : [{ record, date }];
+    return record.status === 'reversed' || date === null || belongsToOtherBank(record, bank)
+      ? []
+      : [{ record, date }];
   });
   const used = new Set<string>();
   const order = rows.map((_, index) => index).sort((left, right) => rows[left].date.localeCompare(rows[right].date));

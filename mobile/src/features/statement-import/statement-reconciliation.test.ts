@@ -71,6 +71,21 @@ describe('reconcileStatement', () => {
     expect(reconcileStatement([lidl], 'millennium', records).missingCount).toBe(1);
   });
 
+  test('ignores transactions that belong to another offered bank', () => {
+    const records = [
+      captured({ id: 'pko-capture', bank: 'pko', sourceApp: 'pl.pkobp.iko' }),
+      captured({ id: 'pko-manual', bank: 'manual', origin: 'manual', accountId: 'general-pko' }),
+    ];
+
+    expect(reconcileStatement([lidl], 'millennium', records).missingCount).toBe(1);
+  });
+
+  test('still matches cash and own-account manual entries', () => {
+    const records = [captured({ id: 'cash', bank: 'manual', origin: 'manual', accountId: 'general-manual' })];
+
+    expect(reconcileStatement([lidl], 'millennium', records).rows[0].match).toBe('added');
+  });
+
   test('uses each recorded transaction for one statement row only', () => {
     const result = reconcileStatement([lidl, { ...lidl, date: '2026-09-21' }], 'millennium', [
       captured({}),

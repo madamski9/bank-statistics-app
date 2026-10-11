@@ -236,7 +236,8 @@ BankStats earns revenue through an optional Premium subscription. The free produ
 ### Statement import
 
 - A user can choose a CSV account history downloaded from online banking. The file is read on the device, never uploaded, and deleted from the cache after parsing.
-- Parsing is header-driven: it needs a date column and either a signed amount column or separate debit and credit columns. Millennium and PKO BP headers identify their bank; other files import into the cash-and-other account.
+- Parsing is header-driven: it needs a date column and either a signed amount column or separate debit and credit columns. Millennium and PKO BP headers identify their bank; otherwise only bank names, websites or BIC codes in the lines above the header count, never transaction text. A statement from a bank outside Millennium, PKO BP and Erste is refused.
+- A statement row is matched only against transactions of its own bank, cash and the user's own accounts, never against another offered bank's transactions.
 - Each statement row is matched to at most one existing transaction with the same direction and amount, in the same currency or by its PLN reporting amount, whose date lies within three days of the statement date.
 - The import reports how many statement transactions notifications captured, as a share of the statement, so the user sees real capture coverage.
 - A Millennium PDF statement is read on iOS with PDFKit. Amounts that the PDF text layer places away from their operation are assigned in order, and every account section must reproduce each printed running balance from its opening balance; a statement that does not add up is refused rather than imported.

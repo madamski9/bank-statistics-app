@@ -85,13 +85,10 @@ export function useStatementImport(
 
     setState({ step: 'reading' });
 
-    try {
-      const file = new File(picked.assets[0].uri);
-      const parsed = await parseStatementFile(file);
+    const file = new File(picked.assets[0].uri);
 
-      if (file.exists) {
-        file.delete();
-      }
+    try {
+      const parsed = await parseStatementFile(file);
 
       if (!parsed.ok) {
         setState({ step: 'failed', problem: parsed.problem });
@@ -111,6 +108,10 @@ export function useStatementImport(
       });
     } catch {
       setState({ step: 'failed', problem: 'unreadable' });
+    } finally {
+      if (file.exists) {
+        file.delete();
+      }
     }
   }, [records]);
 
