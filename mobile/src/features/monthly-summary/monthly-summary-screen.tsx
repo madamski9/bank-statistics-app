@@ -39,6 +39,7 @@ import { selectionChanged } from '@/haptics';
 import { DailySpendBars } from './daily-spend-bars';
 import { GrowingFill } from './growing-fill';
 import { MonthlyGroupScreen, type SummaryGroupSelection } from './monthly-group-screen';
+import { MonthlyHighlightScreen, type HighlightSelection } from './monthly-highlight-screen';
 import { MonthComparisonChart } from './month-comparison';
 import {
   compareMonths,
@@ -183,18 +184,36 @@ interface HighlightProps {
   label: string;
   value: string;
   detail?: string;
+  accessibilityHint: string;
+  onPress: () => void;
 }
 
-function Highlight({ label, value, detail }: HighlightProps) {
+function Highlight({ label, value, detail, accessibilityHint, onPress }: HighlightProps) {
   return (
-    <View
+    <ScalePressable
+      accessibilityHint={accessibilityHint}
       accessibilityLabel={`${label}: ${value}${detail === undefined ? '' : `, ${detail}`}`}
-      accessible
+      accessibilityRole="button"
+      containerStyle={styles.highlightContainer}
+      onPress={() => {
+        selectionChanged();
+        onPress();
+      }}
+      pressedScale={0.96}
       style={styles.highlight}
     >
-      <AmountText maxFontSizeMultiplier={1.4} numberOfLines={1} style={styles.highlightLabel}>
-        {label}
-      </AmountText>
+      <View style={styles.highlightHeader}>
+        <AmountText maxFontSizeMultiplier={1.4} numberOfLines={1} style={styles.highlightLabel}>
+          {label}
+        </AmountText>
+        <SymbolView
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+          name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+          size={11}
+          tintColor={overviewColors.textDisabled}
+        />
+      </View>
       <AmountText adjustsFontSizeToFit maxFontSizeMultiplier={1.3} numberOfLines={1} style={styles.highlightValue}>
         {value}
       </AmountText>
@@ -203,7 +222,7 @@ function Highlight({ label, value, detail }: HighlightProps) {
           {detail}
         </Text>
       ) : null}
-    </View>
+    </ScalePressable>
   );
 }
 
@@ -218,6 +237,7 @@ interface MonthPageProps {
   onChangeDimension: (dimension: BreakdownDimension) => void;
   onToggleShowAll: () => void;
   onSelectGroup: (selection: SummaryGroupSelection) => void;
+  onSelectHighlight: (selection: HighlightSelection) => void;
 }
 
 const MonthPage = memo(function MonthPage({
@@ -231,6 +251,7 @@ const MonthPage = memo(function MonthPage({
   onChangeDimension,
   onToggleShowAll,
   onSelectGroup,
+  onSelectHighlight,
 }: MonthPageProps) {
   const copy = useCopy(monthlySummaryCopy);
   const calendar = useCopy(calendarCopy);
@@ -403,23 +424,38 @@ const MonthPage = memo(function MonthPage({
             <View style={styles.highlights}>
               {summary.busiestDay !== null && busiestLabel !== null ? (
                 <Highlight
+                  accessibilityHint={copy.openDay}
                   detail={busiestLabel}
                   label={copy.busiestDay}
+                  onPress={() => {
+                    if (summary.busiestDay !== null) {
+                      onSelectHighlight({ kind: 'day', day: summary.busiestDay.day });
+                    }
+                  }}
                   value={formatCompactAmount(summary.busiestDay.totalMinor, reportingCurrency)}
                 />
               ) : null}
               {summary.largestExpense !== null ? (
                 <Highlight
+                  accessibilityHint={copy.openHighlight}
                   detail={transactionTitle(summary.largestExpense, rules)}
                   label={copy.largest}
+                  onPress={() => onSelectHighlight({ kind: 'largest' })}
                   value={formatCompactAmount(summary.largestExpense.amountMinor, reportingCurrency)}
                 />
               ) : null}
               <Highlight
+                accessibilityHint={copy.openHighlight}
                 label={copy.noSpendDays}
+                onPress={() => onSelectHighlight({ kind: 'noSpend' })}
                 value={copy.noSpendValue(summary.noSpendDays, summary.elapsedDays)}
               />
-              <Highlight label={copy.perDayCount} value={perDayCount} />
+              <Highlight
+                accessibilityHint={copy.openHighlight}
+                label={copy.perDayCount}
+                onPress={() => onSelectHighlight({ kind: 'perDay' })}
+                value={perDayCount}
+              />
             </View>
           </View>
 
@@ -481,6 +517,7 @@ export function MonthlySummaryScreen({
   const [breakdownDimension, setBreakdownDimension] = useState<BreakdownDimension>('merchant');
   const [showAllGroups, setShowAllGroups] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<SummaryGroupSelection | null>(null);
+  const [selectedHighlight, setSelectedHighlight] = useState<HighlightSelection | null>(null);
   const [travel, setTravel] = useState<'older' | 'newer' | null>(null);
   const { width: screenWidth } = useWindowDimensions();
   const [pageWidth, setPageWidth] = useState(screenWidth - overviewSpacing.gutter * 2);
@@ -529,6 +566,7 @@ export function MonthlySummaryScreen({
   }, []);
   const toggleShowAll = useCallback(() => setShowAllGroups((current) => !current), []);
   const selectGroup = useCallback((selection: SummaryGroupSelection) => setSelectedGroup(selection), []);
+  const selectHighlight = useCallback((selection: HighlightSelection) => setSelectedHighlight(selection), []);
 
   const canShowOlder = index < months.length - 1;
   const canShowNewer = index > 0;
@@ -622,6 +660,20 @@ export function MonthlySummaryScreen({
     transform: [{ translateX: drag.get() }],
   }));
 
+  if (selectedHighlight !== null) {
+    return (
+      <MonthlyHighlightScreen
+        highlight={selectedHighlight}
+        month={month}
+        onBack={() => setSelectedHighlight(null)}
+        onClose={onClose}
+        records={records}
+        rules={rules}
+        summary={summary}
+      />
+    );
+  }
+
   if (selectedGroup !== null) {
     return (
       <MonthlyGroupScreen
@@ -706,6 +758,7 @@ export function MonthlySummaryScreen({
                   month={page.month}
                   onChangeDimension={changeDimension}
                   onSelectGroup={selectGroup}
+                  onSelectHighlight={selectHighlight}
                   onToggleShowAll={toggleShowAll}
                   rules={rules}
                   isActive={isCurrent}
@@ -942,9 +995,17 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: overviewSpacing.tight,
   },
-  highlight: {
+  highlightContainer: {
     flexGrow: 1,
     flexBasis: '45%',
+  },
+  highlightHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 4,
+  },
+  highlight: {
     gap: 4,
     padding: overviewSpacing.block,
     borderRadius: 18,

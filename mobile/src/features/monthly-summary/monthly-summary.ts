@@ -218,6 +218,19 @@ export function expenseDaysOf(records: IngestionRecord[], month: SummaryMonth): 
     .sort((left, right) => right.totalMinor - left.totalMinor || left.day - right.day);
 }
 
+export function largestExpensesOf(records: IngestionRecord[], month: SummaryMonth, limit = 10): IngestionRecord[] {
+  return expenseDaysOf(records, month)
+    .flatMap((expenseDay) => expenseDay.records)
+    .sort((left, right) => right.amountMinor - left.amountMinor)
+    .slice(0, limit);
+}
+
+export function noSpendDaysOf(summary: Pick<MonthlySummary, 'dailyExpensesMinor' | 'elapsedDays'>): number[] {
+  return summary.dailyExpensesMinor
+    .slice(0, summary.elapsedDays)
+    .flatMap((totalMinor, index) => (totalMinor === 0 ? [index + 1] : []));
+}
+
 export function recordsForSummaryGroup(
   records: IngestionRecord[],
   month: SummaryMonth,
