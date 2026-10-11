@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": 1,
+  "version": 2,
   "fragments": {
     "amount": "(?:[0-9]{1,3}(?:\\s[0-9]{3})+|[0-9]+)(?:[,.][0-9]{1,2})?"
   },
@@ -45,6 +45,29 @@
           "formats": ["yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd HH:mm"],
           "timeZone": "Europe/Warsaw"
         },
+        "status": "pending"
+      }
+    },
+    {
+      "id": "wallet.ersteCardPayment",
+      "whitespace": "keepDoubleSpace",
+      "requires": {
+        "subtitle": "present",
+        "title": { "pattern": "\\b(?:erste|santander)\\b", "caseInsensitive": true }
+      },
+      "match": {
+        "field": "body",
+        "pattern": "^(?:(?<symbolBefore>\\p{Sc})\\s*)?[-−]?\\s*(?<amount>{{amount}})\\s*(?<symbolAfter>zł|zl|\\p{Sc}|[A-Z]{3})?$",
+        "caseInsensitive": true
+      },
+      "record": {
+        "bank": "erste",
+        "sourceApp": "pl.bzwbk.mobile.bzwbk24",
+        "direction": "expense",
+        "transactionType": "cardPayment",
+        "amountGroup": "amount",
+        "currencyGroups": ["symbolAfter", "symbolBefore"],
+        "merchant": { "field": "subtitle", "stripLocation": true },
         "status": "pending"
       }
     },

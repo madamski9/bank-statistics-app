@@ -88,6 +88,7 @@ struct RecordTemplate: Decodable, Sendable {
 
 struct RuleRequirements: Decodable, Sendable {
   let subtitle: String?
+  let title: RulePattern?
 }
 
 struct RuleMatch: Decodable, Sendable {

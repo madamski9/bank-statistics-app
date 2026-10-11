@@ -47,7 +47,7 @@ export interface RecordTemplate {
 export interface NotificationRule {
   id: string;
   whitespace: WhitespaceMode;
-  requires?: { subtitle?: 'empty' | 'present' };
+  requires?: { subtitle?: 'empty' | 'present'; title?: RulePattern };
   match: RulePattern & { field: NotificationField };
   ignore?: string;
   record?: RecordTemplate;

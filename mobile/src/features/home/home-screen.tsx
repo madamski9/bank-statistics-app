@@ -852,6 +852,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
           <DataScreen
             accounts={financialAccounts.accounts}
             onClose={() => setActiveSheet(null)}
+            onRecordsChanged={refresh}
             records={records}
           />
         ) : activeSheet === 'premium' ? (

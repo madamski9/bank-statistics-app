@@ -9,10 +9,11 @@ import { withoutUndefined, type SyncCodec, type SyncedChange } from './sync-plan
 const captureSourceApps = {
   millennium: 'pl.millenniumbank.bankmillennium',
   pko: 'pl.pkobp.iko',
+  erste: 'pl.bzwbk.mobile.bzwbk24',
 } as const;
 
 function isCaptureBank(bank: string): bank is keyof typeof captureSourceApps {
-  return bank === 'millennium' || bank === 'pko';
+  return bank === 'millennium' || bank === 'pko' || bank === 'erste';
 }
 
 export type TransactionChange = TransactionContent;
@@ -22,7 +23,7 @@ export type RemoteTransaction = SyncedChange<TransactionChange>;
 export function changeFromRecord(record: IngestionRecord): TransactionChange {
   return withoutUndefined({
     clientId: record.id,
-    bank: record.bank,
+    bank: record.origin === 'manual' ? 'manual' : record.bank,
     origin: record.origin === 'manual' ? 'manual' : 'capture',
     direction: record.direction,
     transactionType: record.transactionType,

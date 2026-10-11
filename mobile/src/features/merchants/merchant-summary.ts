@@ -39,25 +39,25 @@ export function bucketSizeFor(
   earliestMs: number | null = null,
   endMs: number = Date.now(),
 ): BucketSize {
-  if (period === 'currentMonth' || period === 'week' || period === 'month') {
+  if (period === 'currentMonth' || period === 'week' || period === 'month' || period === 'quarter') {
     return 'day';
   }
 
-  if (period === 'quarter') {
+  if (period === 'year') {
     return 'week';
   }
 
-  if (period === 'year' || earliestMs === null) {
+  if (earliestMs === null) {
     return 'month';
   }
 
   const spanDays = (endMs - earliestMs) / dayMs;
 
-  if (spanDays <= 62) {
+  if (spanDays <= 92) {
     return 'day';
   }
 
-  return spanDays <= 210 ? 'week' : 'month';
+  return spanDays <= 730 ? 'week' : 'month';
 }
 
 function startOfBucket(date: Date, size: BucketSize): Date {

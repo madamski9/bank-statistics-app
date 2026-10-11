@@ -17,7 +17,7 @@ export const spendingOverviewCopy = defineCopy({
     openDetailsHint: 'Otwiera szczegóły',
     chartPeak: 'Najwięcej · ',
     chartLabel: (series: string[], from: string, to: string) => `Wykres: ${series.join(' i ')}. ${from} – ${to}.`,
-    banks: { millennium: 'Millennium', pko: 'PKO BP', manual: 'Wpis ręczny' },
+    banks: { millennium: 'Millennium', pko: 'PKO BP', erste: 'Erste', manual: 'Wpis ręczny' },
     sourceKinds: {
       cardPayment: 'Płatności kartą',
       blikPayment: 'Płatności BLIK',
@@ -48,7 +48,7 @@ export const spendingOverviewCopy = defineCopy({
     openDetailsHint: 'Opens the details',
     chartPeak: 'Highest · ',
     chartLabel: (series: string[], from: string, to: string) => `Chart: ${series.join(' and ')}. ${from} – ${to}.`,
-    banks: { millennium: 'Millennium', pko: 'PKO BP', manual: 'Manual entry' },
+    banks: { millennium: 'Millennium', pko: 'PKO BP', erste: 'Erste', manual: 'Manual entry' },
     sourceKinds: {
       cardPayment: 'Card payments',
       blikPayment: 'BLIK payments',

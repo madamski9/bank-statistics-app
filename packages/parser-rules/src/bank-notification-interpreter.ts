@@ -56,6 +56,9 @@ export class BankNotificationInterpreter {
 
     for (const rule of bundle.rules) {
       this.expression(rule.match);
+      if (rule.requires?.title !== undefined) {
+        this.expression(rule.requires.title);
+      }
     }
 
     this.expression(bundle.merchantLocationSuffix);
@@ -125,6 +128,10 @@ export class BankNotificationInterpreter {
   }
 
   private meetsRequirements(rule: NotificationRule, fields: PreparedFields): boolean {
+    if (rule.requires?.title !== undefined && this.expression(rule.requires.title).exec(fields.title) === null) {
+      return false;
+    }
+
     const subtitle = rule.requires?.subtitle;
 
     if (subtitle === 'empty') {

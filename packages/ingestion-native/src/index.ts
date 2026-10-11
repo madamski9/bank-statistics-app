@@ -1,7 +1,7 @@
 import { requireOptionalNativeModule } from 'expo-modules-core';
 import { Platform } from 'react-native';
 
-export type IngestionRecordSource = 'millennium' | 'pko' | 'manual';
+export type IngestionRecordSource = 'millennium' | 'pko' | 'erste' | 'manual';
 
 export type IngestionRecordOrigin = 'capture' | 'manual';
 
@@ -65,6 +65,7 @@ interface BankStatsIngestionNativeModule {
   saveRecord?(record: IngestionRecord): Promise<IngestionRecord>;
   deleteRecord?(id: string): Promise<number>;
   listRecords(): Promise<IngestionRecord[]>;
+  extractPdfText?(uri: string): Promise<string>;
   readDocument?(key: string): Promise<string | null>;
   writeDocument?(key: string, value: string): Promise<void>;
   deleteDocument?(key: string): Promise<void>;
@@ -141,6 +142,18 @@ export function deleteIngestionRecord(id: string): Promise<number> {
   }
 
   return module.deleteRecord(id);
+}
+
+export function extractPdfText(uri: string): Promise<string> {
+  const module = requireIosModule();
+
+  if (typeof module.extractPdfText !== 'function') {
+    return Promise.reject(
+      new Error('Reading a PDF statement requires a development build that includes extractPdfText'),
+    );
+  }
+
+  return module.extractPdfText(uri);
 }
 
 export function listIngestionRecords(): Promise<IngestionRecord[]> {

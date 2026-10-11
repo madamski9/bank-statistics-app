@@ -233,6 +233,16 @@ BankStats earns revenue through an optional Premium subscription. The free produ
 - Light and dark themes ship together.
 - Reduced Transparency replaces glass with opaque, high-contrast surfaces. Reduced Motion replaces the bubble expansion with a simple fade.
 
+### Statement import
+
+- A user can choose a CSV account history downloaded from online banking. The file is read on the device, never uploaded, and deleted from the cache after parsing.
+- Parsing is header-driven: it needs a date column and either a signed amount column or separate debit and credit columns. Millennium and PKO BP headers identify their bank; other files import into the cash-and-other account.
+- Each statement row is matched to at most one existing transaction with the same direction and amount, in the same currency or by its PLN reporting amount, whose date lies within three days of the statement date.
+- The import reports how many statement transactions notifications captured, as a share of the statement, so the user sees real capture coverage.
+- A Millennium PDF statement is read on iOS with PDFKit. Amounts that the PDF text layer places away from their operation are assigned in order, and every account section must reproduce each printed running balance from its opening balance; a statement that does not add up is refused rather than imported.
+- A foreign card payment is matched by the card amount and currency the statement prints alongside its PLN value.
+- Unmatched rows are listed, selected by default, and added only after confirmation as manual transactions in the bank's general account. Their identifiers derive from the row content, so importing the same file again cannot duplicate them.
+
 ### Onboarding and configuration
 
 - Onboarding presents the promise, explains notification-derived coverage and limitations, states that parsing is local and data is not sold, establishes a Clerk session, gathers platform and bank choices, guides permissions or Shortcuts setup, runs a control test, and opens Overview.
@@ -343,7 +353,7 @@ Before public launch, the parser corpus must demonstrate at least 98% accuracy f
 - Financial advice, credit scoring, investment advice, payment initiation, and lending are out of scope.
 - Banks beyond the currently implemented Millennium capture path remain unavailable until their parsers and capture paths are verified.
 - Receipt scanning and OCR are outside the MVP.
-- Bank statement and file import are outside the MVP.
+- PDF statements from banks other than Millennium and imports of other applications' data are outside the MVP. Statement import exists only to reconcile and complete notification capture.
 - A consumer web application is outside the MVP.
 - Shared or family finances are planned for later and are outside the MVP.
 - Transaction Split user interface is planned for later, although the domain model may reserve for it.

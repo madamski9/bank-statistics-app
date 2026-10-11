@@ -2,6 +2,54 @@
   "capturedAt": "2026-09-28T10:00:00Z",
   "examples": [
     {
+      "name": "Wallet card payment for an Erste card is attributed to Erste",
+      "input": {
+        "title": "Erste Bank Polska S.A.",
+        "subtitle": "Lidl  Gdańsk, Pomorskie",
+        "body": "5,08 zł",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "erste",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 508,
+          "currency": "PLN",
+          "merchant": "Lidl",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.bzwbk.mobile.bzwbk24",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Wallet card payment for an older Santander card title is attributed to Erste",
+      "input": {
+        "title": "Santander Bank Polska",
+        "subtitle": "Coffee Shop",
+        "body": "€ 12,50",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "erste",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 1250,
+          "currency": "EUR",
+          "merchant": "Coffee Shop",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.bzwbk.mobile.bzwbk24",
+          "status": "pending"
+        }
+      }
+    },
+    {
       "name": "Wallet card payment names the merchant and drops the voivodeship",
       "input": {
         "title": "Bank Millennium S.A.",

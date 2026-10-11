@@ -50,6 +50,10 @@ public final class BankStatsIngestionModule: Module {
       try EncryptedOutbox.shared.delete(id: id)
     }
 
+    AsyncFunction("extractPdfText") { (uri: String) -> String in
+      try StatementPdfText.extract(from: uri)
+    }
+
     AsyncFunction("listRecords") { () -> [[String: Any]] in
       try EncryptedOutbox.shared.records().map(\.dictionary)
     }

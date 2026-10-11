@@ -9,6 +9,7 @@ enum IngestionError: LocalizedError {
   case unsupportedNotification
   case parserRulesUnavailable
   case invalidRecord
+  case unreadableStatement
 
   var errorDescription: String? {
     switch self {
@@ -26,6 +27,8 @@ enum IngestionError: LocalizedError {
       return "The bundled bank notification rules could not be loaded"
     case .invalidRecord:
       return "The transaction needs a positive amount, a direction and a three-letter currency"
+    case .unreadableStatement:
+      return "The statement PDF could not be opened"
     }
   }
 
@@ -45,6 +48,8 @@ enum IngestionError: LocalizedError {
       return "parserRulesUnavailable"
     case .invalidRecord:
       return "invalidRecord"
+    case .unreadableStatement:
+      return "unreadableStatement"
     }
   }
 }

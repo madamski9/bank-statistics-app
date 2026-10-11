@@ -52,6 +52,16 @@ describe('planSync', () => {
     expect(result.ledger[lunch.id]).toEqual({ revision: now, fingerprint: fingerprint(lunch) });
   });
 
+  test('pushes a manual transaction under the manual bank whatever bank it was stored with', () => {
+    const imported = manual({ id: 'statement-1', bank: 'millennium', accountId: 'general-millennium' });
+
+    expect(changeFromRecord(imported)).toMatchObject({
+      bank: 'manual',
+      origin: 'manual',
+      accountId: 'general-millennium',
+    });
+  });
+
   test('pushes captured transactions with their source and review state', () => {
     const captured = manual({
       id: 'capture-1',
