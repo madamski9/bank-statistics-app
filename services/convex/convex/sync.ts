@@ -28,7 +28,7 @@ export type SyncedTable = (typeof syncedTables)[number];
 export const pullPageSize = 500;
 const tombstoneRetentionMs = 90 * 24 * 60 * 60 * 1000;
 const purgeBatchSize = 500;
-const generalAccountIds = new Set(['general-manual', 'general-millennium', 'general-pko', 'general-erste']);
+const generalAccountIds = new Set(['general-manual', 'general-millennium', 'general-pko', 'general-erste', 'general-ing']);
 
 const tombstone = v.object({ clientId: v.string(), revision: v.number(), deleted: v.literal(true) });
 

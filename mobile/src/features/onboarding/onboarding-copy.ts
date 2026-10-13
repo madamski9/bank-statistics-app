@@ -2,7 +2,8 @@ import { defineCopy } from '@/features/localization/language';
 
 export const onboardingCopy = defineCopy({
   pl: {
-    chooseBank: 'Wybierz Millennium lub PKO BP albo skonfiguruj przechwytywanie później.',
+    chooseBank: 'Wybierz Millennium, PKO BP lub ING albo skonfiguruj przechwytywanie później.',
+    shortcutUnavailable: 'Skrót dla tego zestawu banków będzie dostępny wkrótce. Zmień wybór albo skonfiguruj przechwytywanie później.',
     shortcutsIphoneOnly: 'Konfiguracja Skrótów jest dostępna na iPhonie.',
     progressSaveFailed: 'Nie udało się zapisać postępu konfiguracji. Spróbuj ponownie.',
     shortcutOpenFailed: 'Nie udało się otworzyć skrótu. Spróbuj ponownie.',
@@ -84,7 +85,7 @@ export const onboardingCopy = defineCopy({
       eyebrow: 'KONFIGURACJA SKRÓTÓW',
       title: 'Wybierz banki do konfiguracji',
       description:
-        'Zaznacz banki, a potem dodaj gotowy skrót. Automatyczne przechwytywanie działa na razie dla Millennium i PKO BP.',
+        'Zaznacz banki, a potem dodaj gotowy skrót. Automatyczne przechwytywanie działa na razie dla Millennium, PKO BP i ING.',
       soonSuffix: ', wkrótce',
       soon: 'Wkrótce',
       stepsTitle: 'Jak uruchomić przechwytywanie',
@@ -117,7 +118,8 @@ export const onboardingCopy = defineCopy({
     },
   },
   en: {
-    chooseBank: 'Choose Millennium or PKO BP, or set up capture later.',
+    chooseBank: 'Choose Millennium, PKO BP or ING, or set up capture later.',
+    shortcutUnavailable: 'The shortcut for this set of banks is coming soon. Change your selection or set up capture later.',
     shortcutsIphoneOnly: 'Shortcuts setup is available on iPhone.',
     progressSaveFailed: 'Could not save the setup progress. Please try again.',
     shortcutOpenFailed: 'Could not open the shortcut. Please try again.',
@@ -198,7 +200,7 @@ export const onboardingCopy = defineCopy({
       eyebrow: 'SHORTCUTS SETUP',
       title: 'Choose the banks to set up',
       description:
-        'Select your banks, then add the ready-made shortcut. For now, automatic capture works for Millennium and PKO BP.',
+        'Select your banks, then add the ready-made shortcut. For now, automatic capture works for Millennium, PKO BP and ING.',
       soonSuffix: ', coming soon',
       soon: 'Soon',
       stepsTitle: 'How to start capturing',

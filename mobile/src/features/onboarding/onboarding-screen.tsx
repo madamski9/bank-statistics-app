@@ -83,6 +83,12 @@ const banks = [
     logo: require('./assets/pko.png'),
     available: true,
   },
+  {
+    id: 'ing',
+    name: 'ING',
+    logo: require('./assets/ing.png'),
+    available: true,
+  },
 ] as const;
 
 const banksStep = 4;
@@ -209,6 +215,13 @@ export function OnboardingScreen({ flow, onCancel, onComplete }: OnboardingScree
       return;
     }
 
+    const shortcutUrl = shortcutUrlFor(selectedBanks);
+
+    if (shortcutUrl === null) {
+      setError(copy.shortcutUnavailable);
+      return;
+    }
+
     setError(null);
     if (userId != null) {
       try {
@@ -222,7 +235,7 @@ export function OnboardingScreen({ flow, onCancel, onComplete }: OnboardingScree
     leftApp.current = false;
 
     try {
-      await Linking.openURL(shortcutUrlFor(selectedBanks));
+      await Linking.openURL(shortcutUrl);
     } catch {
       launchedShortcuts.current = false;
       if (userId != null) {

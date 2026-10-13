@@ -28,6 +28,12 @@ Portfel). A Wallet push's title names the card's bank (`Bank Millennium S.A.`, `
 automation maps it to the optional `Notification Title`: a title containing `PKO` records the card
 payment as `pko`, anything else — including an unmapped title — as `millennium`.
 
+A push from Moje ING has no subtitle and reports a balance change — `2,00 PLN mniej na Twoim
+koncie - KONTO Mobi 18-26 - płatność BLIK` — and is saved as an `ing` record on the named account:
+`mniej` is an expense (a `blikPayment` when it ends with `płatność BLIK`, otherwise an
+`outgoingTransfer`), any other word is an `incomingTransfer`. A Wallet push titled
+`ING Bank Śląski S.A.` records the card payment as `ing`.
+
 A Wallet push whose body carries an amount with no currency symbol is still captured, as a Review
 Item flagged `currency`: the transaction reaches the timeline but stays out of statistics until the
 user confirms the currency.

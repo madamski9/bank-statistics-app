@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": 2,
+  "version": 3,
   "fragments": {
     "amount": "(?:[0-9]{1,3}(?:\\s[0-9]{3})+|[0-9]+)(?:[,.][0-9]{1,2})?"
   },
@@ -20,6 +20,50 @@
   },
   "fallbackIgnoreReason": "notTransaction",
   "rules": [
+    {
+      "id": "ing.blikPayment",
+      "whitespace": "single",
+      "requires": { "subtitle": "empty" },
+      "match": {
+        "field": "body",
+        "pattern": "^(?<amount>{{amount}})\\s*(?<currency>[A-Z]{3})\\s+mniej\\s+na\\s+twoim\\s+koncie\\s+-\\s+(?<account>(?:(?!\\s-\\s).)+)\\s+-\\s+płatność\\s+blik\\b.*$",
+        "caseInsensitive": true
+      },
+      "record": {
+        "bank": "ing",
+        "sourceApp": "pl.ing.mojeing",
+        "direction": "expense",
+        "transactionType": "blikPayment",
+        "amountGroup": "amount",
+        "currencyGroups": ["currency"],
+        "accountGroup": "account",
+        "status": "pending"
+      }
+    },
+    {
+      "id": "ing.balanceChange",
+      "whitespace": "single",
+      "requires": { "subtitle": "empty" },
+      "match": {
+        "field": "body",
+        "pattern": "^(?<amount>{{amount}})\\s*(?<currency>[A-Z]{3})\\s+(?<change>\\p{L}+)\\s+na\\s+twoim\\s+koncie(?:\\s+-\\s+(?<account>(?:(?!\\s-\\s).)+))?(?:\\s+-\\s+.*)?$",
+        "caseInsensitive": true
+      },
+      "record": {
+        "bank": "ing",
+        "sourceApp": "pl.ing.mojeing",
+        "direction": { "group": "change", "cases": { "mniej": "expense" }, "otherwise": "income" },
+        "transactionType": {
+          "group": "change",
+          "cases": { "mniej": "outgoingTransfer" },
+          "otherwise": "incomingTransfer"
+        },
+        "amountGroup": "amount",
+        "currencyGroups": ["currency"],
+        "accountGroup": "account",
+        "status": "pending"
+      }
+    },
     {
       "id": "pko.transfer",
       "whitespace": "single",
@@ -63,6 +107,29 @@
       "record": {
         "bank": "erste",
         "sourceApp": "pl.bzwbk.mobile.bzwbk24",
+        "direction": "expense",
+        "transactionType": "cardPayment",
+        "amountGroup": "amount",
+        "currencyGroups": ["symbolAfter", "symbolBefore"],
+        "merchant": { "field": "subtitle", "stripLocation": true },
+        "status": "pending"
+      }
+    },
+    {
+      "id": "wallet.ingCardPayment",
+      "whitespace": "keepDoubleSpace",
+      "requires": {
+        "subtitle": "present",
+        "title": { "pattern": "\\bing\\b", "caseInsensitive": true }
+      },
+      "match": {
+        "field": "body",
+        "pattern": "^(?:(?<symbolBefore>\\p{Sc})\\s*)?[-−]?\\s*(?<amount>{{amount}})\\s*(?<symbolAfter>zł|zl|\\p{Sc}|[A-Z]{3})?$",
+        "caseInsensitive": true
+      },
+      "record": {
+        "bank": "ing",
+        "sourceApp": "pl.ing.mojeing",
         "direction": "expense",
         "transactionType": "cardPayment",
         "amountGroup": "amount",

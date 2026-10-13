@@ -2,7 +2,7 @@ import { defineCopy } from '@/features/localization/language';
 
 export const transactionsCopy = defineCopy({
   pl: {
-    banks: { millennium: 'Millennium', pko: 'PKO BP', erste: 'Erste', manual: 'Wpis ręczny' },
+    banks: { millennium: 'Millennium', pko: 'PKO BP', erste: 'Erste', ing: 'ING', manual: 'Wpis ręczny' },
     types: {
       cardPayment: 'Płatność kartą',
       blikPayment: 'Płatność BLIK',
@@ -86,7 +86,7 @@ export const transactionsCopy = defineCopy({
     add: 'Dodaj transakcję',
   },
   en: {
-    banks: { millennium: 'Millennium', pko: 'PKO BP', erste: 'Erste', manual: 'Manual entry' },
+    banks: { millennium: 'Millennium', pko: 'PKO BP', erste: 'Erste', ing: 'ING', manual: 'Manual entry' },
     types: {
       cardPayment: 'Card payment',
       blikPayment: 'BLIK payment',

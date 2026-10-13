@@ -129,6 +129,7 @@ describe('export file', () => {
       'general-millennium',
       'general-pko',
       'general-erste',
+      'general-ing',
     ]);
     expect(data.notes.length).toBeGreaterThan(0);
   });

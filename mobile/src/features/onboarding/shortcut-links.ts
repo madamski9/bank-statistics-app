@@ -1,16 +1,13 @@
-const shortcutUrls = {
+const shortcutUrls: Record<string, string> = {
   millennium: 'https://www.icloud.com/shortcuts/45c335f2b7ad450885f9613939fe7b1f',
   pko: 'https://www.icloud.com/shortcuts/fc6262c04b8c4a218b88a9a92ce8f381',
-  millenniumAndPko: 'https://www.icloud.com/shortcuts/8920bdb2274d4782b71ae72b1732ea0e',
+  'millennium+pko': 'https://www.icloud.com/shortcuts/8920bdb2274d4782b71ae72b1732ea0e',
 };
 
-export function shortcutUrlFor(selectedBanks: string[]): string {
-  const includesMillennium = selectedBanks.includes('millennium');
-  const includesPko = selectedBanks.includes('pko');
+const shortcutBankOrder = ['millennium', 'pko', 'ing'];
 
-  if (includesMillennium && includesPko) {
-    return shortcutUrls.millenniumAndPko;
-  }
+export function shortcutUrlFor(selectedBanks: string[]): string | null {
+  const key = shortcutBankOrder.filter((bank) => selectedBanks.includes(bank)).join('+');
 
-  return includesPko ? shortcutUrls.pko : shortcutUrls.millennium;
+  return shortcutUrls[key] ?? null;
 }

@@ -17,6 +17,7 @@ describe('withGeneralAccounts', () => {
       'general-millennium',
       'general-pko',
       'general-erste',
+      'general-ing',
     ]);
     expect(accounts.every((account) => account.isGeneral)).toBe(true);
   });
@@ -38,7 +39,7 @@ describe('withGeneralAccounts', () => {
       { id: 'account-a', bank: 'manual', name: 'Oszczędnościowe', isGeneral: false },
     ]);
 
-    expect(accounts.slice(4).map((account) => account.name)).toEqual(['Oszczędnościowe', 'Walutowe']);
+    expect(accounts.slice(5).map((account) => account.name)).toEqual(['Oszczędnościowe', 'Walutowe']);
   });
 });
 

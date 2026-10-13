@@ -4,7 +4,7 @@ import AppIntents
 public struct IngestMillenniumNotificationIntent: AppIntent {
   public static let title: LocalizedStringResource = "Capture Bank Notification"
   public static let description = IntentDescription(
-    "Normalizes a Millennium or PKO BP notification locally and saves it in the encrypted BankStats outbox."
+    "Normalizes a Millennium, PKO BP or ING notification locally and saves it in the encrypted BankStats outbox."
   )
   public static let supportedModes: IntentModes = .background
 

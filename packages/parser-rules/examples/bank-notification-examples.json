@@ -2,6 +2,112 @@
   "capturedAt": "2026-09-28T10:00:00Z",
   "examples": [
     {
+      "name": "ING BLIK payment names the account it was paid from",
+      "input": {
+        "title": "Moje ING. Twój Asystent",
+        "subtitle": "",
+        "body": "2,00 PLN mniej na Twoim koncie - KONTO Mobi 18-26 - płatność BLIK",
+        "sourceApp": "pl.ing.mojeing"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "ing",
+          "direction": "expense",
+          "transactionType": "blikPayment",
+          "amountMinor": 200,
+          "currency": "PLN",
+          "accountName": "KONTO Mobi 18-26",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.ing.mojeing",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "ING balance decrease without a payment method is an outgoing transfer",
+      "input": {
+        "title": "Moje ING. Twój Asystent",
+        "subtitle": "",
+        "body": "655,34 PLN mniej na Twoim koncie -\nKONTO Mobi 18-26",
+        "sourceApp": "pl.ing.mojeing"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "ing",
+          "direction": "expense",
+          "transactionType": "outgoingTransfer",
+          "amountMinor": 65534,
+          "currency": "PLN",
+          "accountName": "KONTO Mobi 18-26",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.ing.mojeing",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "ING balance increase is an incoming transfer",
+      "input": {
+        "title": "Moje ING. Twój Asystent",
+        "subtitle": "",
+        "body": "1 250,00 PLN więcej na Twoim koncie - KONTO Mobi 18-26 - przelew",
+        "sourceApp": "pl.ing.mojeing"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "ing",
+          "direction": "income",
+          "transactionType": "incomingTransfer",
+          "amountMinor": 125000,
+          "currency": "PLN",
+          "accountName": "KONTO Mobi 18-26",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.ing.mojeing",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "ING push that is not a balance change is ignored",
+      "input": {
+        "title": "Moje ING. Twój Asystent",
+        "subtitle": "",
+        "body": "Twoje konta z innych banków w jednym miejscu? Tak. Możesz je dodać do Mojego ING i mieć tu do nich wygodny dostęp. Konto z VeloBanku też może tu być.",
+        "sourceApp": "pl.ing.mojeing"
+      },
+      "expected": { "outcome": "ignored", "reason": "notTransaction" }
+    },
+    {
+      "name": "Wallet card payment for an ING card is attributed to ING",
+      "input": {
+        "title": "ING Bank Śląski S.A.",
+        "subtitle": "Żabka  Kraków, Małopolskie",
+        "body": "2,50 zł",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "ing",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 250,
+          "currency": "PLN",
+          "merchant": "Żabka",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.ing.mojeing",
+          "status": "pending"
+        }
+      }
+    },
+    {
       "name": "Wallet card payment for an Erste card is attributed to Erste",
       "input": {
         "title": "Erste Bank Polska S.A.",
