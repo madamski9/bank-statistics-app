@@ -80,6 +80,15 @@ describe('reconcileStatement', () => {
     expect(reconcileStatement([lidl], 'millennium', records).missingCount).toBe(1);
   });
 
+  test('ignores transactions from a captured bank that has no statement import', () => {
+    const records = [
+      captured({ id: 'ing-capture', bank: 'ing', sourceApp: 'pl.ing.mojeing' }),
+      captured({ id: 'ing-manual', bank: 'manual', origin: 'manual', accountId: 'general-ing' }),
+    ];
+
+    expect(reconcileStatement([lidl], 'millennium', records).missingCount).toBe(1);
+  });
+
   test('still matches cash and own-account manual entries', () => {
     const records = [captured({ id: 'cash', bank: 'manual', origin: 'manual', accountId: 'general-manual' })];
 

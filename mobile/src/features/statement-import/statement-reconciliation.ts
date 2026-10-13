@@ -6,7 +6,7 @@ import {
   type FinancialAccount,
 } from '@/features/financial-accounts/financial-account';
 
-import { statementBanks, type StatementBank } from './statement-bank';
+import type { StatementBank } from './statement-bank';
 import type { StatementRow } from './statement-parser';
 
 export const statementImportSourceApp = 'statement-import';
@@ -63,18 +63,14 @@ function amountsAgree(row: StatementRow, record: IngestionRecord): boolean {
   return row.currency === 'PLN' && record.reportingAmountMinor === row.amountMinor;
 }
 
-function isStatementBank(value: string): value is StatementBank {
-  return statementBanks.some((bank) => bank === value);
-}
-
 function belongsToOtherBank(record: IngestionRecord, bank: StatementBank): boolean {
   if (record.origin !== 'manual') {
-    return isStatementBank(record.bank) && record.bank !== bank;
+    return record.bank !== bank;
   }
 
   const accountBank = record.accountId?.startsWith('general-') ? record.accountId.slice('general-'.length) : null;
 
-  return accountBank !== null && isStatementBank(accountBank) && accountBank !== bank;
+  return accountBank !== null && accountBank !== 'manual' && accountBank !== bank;
 }
 
 function matchOf(record: IngestionRecord): StatementMatch {
