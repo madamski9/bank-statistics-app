@@ -1,12 +1,126 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><defs>
-  <linearGradient id="inflow" x1="28" y1="20" x2="94" y2="62" gradientUnits="userSpaceOnUse">
-    <stop stop-color="#3DE8A0"/>
-    <stop offset="1" stop-color="#5FD8FF"/>
-  </linearGradient>
-  <linearGradient id="outflow" x1="28" y1="70" x2="94" y2="112" gradientUnits="userSpaceOnUse">
-    <stop stop-color="#5FD8FF"/>
-    <stop offset="1" stop-color="#8F7BFF"/>
-  </linearGradient>
-</defs>
-<path d="M34 57V24H65C88 24 88 57 65 57H34Z" fill="none" stroke="url(#inflow)" stroke-width="14" stroke-linejoin="round"/>
-<path d="M34 75V108H69C94 108 94 75 69 75H34Z" fill="none" stroke="url(#outflow)" stroke-width="14" stroke-linejoin="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><g transform="translate(69 14) scale(0.44)">
+  <defs>
+    <radialGradient id="brand-income-film" cx="46%" cy="42%" r="59%">
+      <stop stop-color="#3DE8A0" stop-opacity="0.08"/>
+      <stop offset="0.48" stop-color="#3DE8A0" stop-opacity="0.04"/>
+      <stop offset="0.74" stop-color="#3DE8A0" stop-opacity="0.18"/>
+      <stop offset="0.9" stop-color="#3DE8A0" stop-opacity="0.62"/>
+      <stop offset="0.98" stop-color="rgb(95, 216, 255)" stop-opacity="0.84"/>
+      <stop offset="1" stop-color="#3DE8A0" stop-opacity="0.5"/>
+    </radialGradient>
+    <radialGradient id="brand-income-light" cx="28%" cy="20%" r="76%">
+      <stop stop-color="#EAF7FF" stop-opacity="0.45"/>
+      <stop offset="0.36" stop-color="rgb(95, 216, 255)" stop-opacity="0.14"/>
+      <stop offset="0.7" stop-color="#3DE8A0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="brand-income-bounce">
+      <stop stop-color="rgb(95, 216, 255)" stop-opacity="0.65"/>
+      <stop offset="0.5" stop-color="rgb(95, 216, 255)" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="rgb(95, 216, 255)" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="brand-income-reflection">
+      <stop stop-color="#FFFFFF" stop-opacity="0.96"/>
+      <stop offset="0.3" stop-color="#FFFFFF" stop-opacity="0.7"/>
+      <stop offset="0.65" stop-color="#EAF7FF" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#EAF7FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="brand-income-edge" x1="12%" y1="0%" x2="86%" y2="100%">
+      <stop stop-color="#FFFFFF" stop-opacity="0.92"/>
+      <stop offset="0.3" stop-color="rgb(95, 216, 255)" stop-opacity="0.64"/>
+      <stop offset="0.56" stop-color="#3DE8A0" stop-opacity="0.24"/>
+      <stop offset="0.82" stop-color="rgb(95, 216, 255)" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.64"/>
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="49" fill="#050608"/>
+  <circle cx="50" cy="50" r="49" fill="url(#brand-income-film)"/>
+  <circle cx="50" cy="50" r="49" fill="url(#brand-income-light)"/>
+  <ellipse cx="54" cy="84" rx="29" ry="10" fill="url(#brand-income-bounce)" transform="rotate(-20 54 84)"/>
+  <circle cx="50" cy="50" r="48.8" fill="none" stroke="url(#brand-income-edge)" stroke-width="1.6"/>
+  <ellipse cx="30" cy="22" rx="18" ry="7" fill="url(#brand-income-reflection)" transform="rotate(-32 30 22)"/>
+  <ellipse cx="76" cy="82" rx="7" ry="3.5" fill="url(#brand-income-reflection)" opacity="0.65" transform="rotate(-38 76 82)"/>
+</g>
+<g transform="translate(80 78) scale(0.32)">
+  <defs>
+    <radialGradient id="brand-net-film" cx="46%" cy="42%" r="59%">
+      <stop stop-color="#8F7BFF" stop-opacity="0.08"/>
+      <stop offset="0.48" stop-color="#8F7BFF" stop-opacity="0.04"/>
+      <stop offset="0.74" stop-color="#8F7BFF" stop-opacity="0.18"/>
+      <stop offset="0.9" stop-color="#8F7BFF" stop-opacity="0.62"/>
+      <stop offset="0.98" stop-color="rgb(95, 200, 255)" stop-opacity="0.84"/>
+      <stop offset="1" stop-color="#8F7BFF" stop-opacity="0.5"/>
+    </radialGradient>
+    <radialGradient id="brand-net-light" cx="28%" cy="20%" r="76%">
+      <stop stop-color="#EAF7FF" stop-opacity="0.45"/>
+      <stop offset="0.36" stop-color="rgb(95, 200, 255)" stop-opacity="0.14"/>
+      <stop offset="0.7" stop-color="#8F7BFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="brand-net-bounce">
+      <stop stop-color="rgb(95, 200, 255)" stop-opacity="0.65"/>
+      <stop offset="0.5" stop-color="rgb(95, 200, 255)" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="rgb(95, 200, 255)" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="brand-net-reflection">
+      <stop stop-color="#FFFFFF" stop-opacity="0.96"/>
+      <stop offset="0.3" stop-color="#FFFFFF" stop-opacity="0.7"/>
+      <stop offset="0.65" stop-color="#EAF7FF" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#EAF7FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="brand-net-edge" x1="12%" y1="0%" x2="86%" y2="100%">
+      <stop stop-color="#FFFFFF" stop-opacity="0.92"/>
+      <stop offset="0.3" stop-color="rgb(95, 200, 255)" stop-opacity="0.64"/>
+      <stop offset="0.56" stop-color="#8F7BFF" stop-opacity="0.24"/>
+      <stop offset="0.82" stop-color="rgb(95, 200, 255)" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.64"/>
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="49" fill="#050608"/>
+  <circle cx="50" cy="50" r="49" fill="url(#brand-net-film)"/>
+  <circle cx="50" cy="50" r="49" fill="url(#brand-net-light)"/>
+  <ellipse cx="54" cy="84" rx="29" ry="10" fill="url(#brand-net-bounce)" transform="rotate(-20 54 84)"/>
+  <circle cx="50" cy="50" r="48.8" fill="none" stroke="url(#brand-net-edge)" stroke-width="1.6"/>
+  <ellipse cx="30" cy="22" rx="18" ry="7" fill="url(#brand-net-reflection)" transform="rotate(-32 30 22)"/>
+  <ellipse cx="76" cy="82" rx="7" ry="3.5" fill="url(#brand-net-reflection)" opacity="0.65" transform="rotate(-38 76 82)"/>
+</g>
+<g transform="translate(11 36) scale(0.66)">
+  <defs>
+    <radialGradient id="brand-expense-film" cx="46%" cy="42%" r="59%">
+      <stop stop-color="#FF5C8A" stop-opacity="0.08"/>
+      <stop offset="0.48" stop-color="#FF5C8A" stop-opacity="0.04"/>
+      <stop offset="0.74" stop-color="#FF5C8A" stop-opacity="0.18"/>
+      <stop offset="0.9" stop-color="#FF5C8A" stop-opacity="0.62"/>
+      <stop offset="0.98" stop-color="rgb(255, 196, 107)" stop-opacity="0.84"/>
+      <stop offset="1" stop-color="#FF5C8A" stop-opacity="0.5"/>
+    </radialGradient>
+    <radialGradient id="brand-expense-light" cx="28%" cy="20%" r="76%">
+      <stop stop-color="#EAF7FF" stop-opacity="0.45"/>
+      <stop offset="0.36" stop-color="rgb(255, 196, 107)" stop-opacity="0.14"/>
+      <stop offset="0.7" stop-color="#FF5C8A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="brand-expense-bounce">
+      <stop stop-color="rgb(255, 196, 107)" stop-opacity="0.65"/>
+      <stop offset="0.5" stop-color="rgb(255, 196, 107)" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="rgb(255, 196, 107)" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="brand-expense-reflection">
+      <stop stop-color="#FFFFFF" stop-opacity="0.96"/>
+      <stop offset="0.3" stop-color="#FFFFFF" stop-opacity="0.7"/>
+      <stop offset="0.65" stop-color="#EAF7FF" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#EAF7FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="brand-expense-edge" x1="12%" y1="0%" x2="86%" y2="100%">
+      <stop stop-color="#FFFFFF" stop-opacity="0.92"/>
+      <stop offset="0.3" stop-color="rgb(255, 196, 107)" stop-opacity="0.64"/>
+      <stop offset="0.56" stop-color="#FF5C8A" stop-opacity="0.24"/>
+      <stop offset="0.82" stop-color="rgb(255, 196, 107)" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.64"/>
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="49" fill="#050608"/>
+  <circle cx="50" cy="50" r="49" fill="url(#brand-expense-film)"/>
+  <circle cx="50" cy="50" r="49" fill="url(#brand-expense-light)"/>
+  <ellipse cx="54" cy="84" rx="29" ry="10" fill="url(#brand-expense-bounce)" transform="rotate(-20 54 84)"/>
+  <circle cx="50" cy="50" r="48.8" fill="none" stroke="url(#brand-expense-edge)" stroke-width="1.6"/>
+  <ellipse cx="30" cy="22" rx="18" ry="7" fill="url(#brand-expense-reflection)" transform="rotate(-32 30 22)"/>
+  <ellipse cx="76" cy="82" rx="7" ry="3.5" fill="url(#brand-expense-reflection)" opacity="0.65" transform="rotate(-38 76 82)"/>
+</g></svg>
