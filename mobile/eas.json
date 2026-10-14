@@ -12,6 +12,9 @@
       "environment": "development",
       "env": {
         "EXPO_PUBLIC_APP_ENV": "development"
+      },
+      "ios": {
+        "image": "macos-tahoe-26.6-xcode-27.0"
       }
     },
     "preview": {
@@ -21,6 +24,9 @@
       "environment": "preview",
       "env": {
         "EXPO_PUBLIC_APP_ENV": "preview"
+      },
+      "ios": {
+        "image": "macos-tahoe-26.6-xcode-27.0"
       }
     },
     "testflight": {
@@ -35,6 +41,9 @@
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_APP_ENV": "production"
+      },
+      "ios": {
+        "image": "macos-tahoe-26.6-xcode-27.0"
       }
     }
   },
