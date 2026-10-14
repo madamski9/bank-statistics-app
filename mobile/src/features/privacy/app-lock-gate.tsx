@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { useCopy } from '@/features/localization/language';
 
+import { LoadingScreen } from '@/features/brand/loading-screen';
+
 import { privacyCopy } from './privacy-copy';
 import { biometricLabels } from './biometrics';
 import { LockScreen } from './lock-screen';
@@ -14,7 +16,7 @@ export function AppLockGate({ children }: AppLockGateProps) {
   const { isLoaded } = usePrivacy();
 
   if (!isLoaded) {
-    return null;
+    return <LoadingScreen />;
   }
 
   return children;

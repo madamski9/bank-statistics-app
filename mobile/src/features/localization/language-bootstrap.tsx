@@ -1,5 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
+import { LoadingScreen } from '@/features/brand/loading-screen';
+
 import { deviceLanguage, setCurrentLanguage } from './language';
 import { readStoredLanguage } from './language-storage';
 
@@ -27,5 +29,5 @@ export function LanguageBootstrap({ children }: LanguageBootstrapProps) {
     };
   }, []);
 
-  return isReady ? children : null;
+  return isReady ? children : <LoadingScreen />;
 }

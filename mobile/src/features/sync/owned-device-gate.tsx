@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { LoadingScreen } from '@/features/brand/loading-screen';
+
 import { ForeignDeviceScreen } from './foreign-device-screen';
 import { useDeviceOwnership } from './use-device-ownership';
 
@@ -11,7 +13,7 @@ export function OwnedDeviceGate({ children }: OwnedDeviceGateProps) {
   const { ownership, takeOver } = useDeviceOwnership();
 
   if (ownership === 'checking') {
-    return null;
+    return <LoadingScreen />;
   }
 
   if (ownership === 'foreign') {
