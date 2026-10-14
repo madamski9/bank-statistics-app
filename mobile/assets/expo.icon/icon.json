@@ -6,8 +6,16 @@
     {
       "layers": [
         {
-          "image-name": "bankstats-mark.svg",
-          "name": "BankStats"
+          "image-name": "bubble-income.png",
+          "name": "BankStats income"
+        },
+        {
+          "image-name": "bubble-net.png",
+          "name": "BankStats net"
+        },
+        {
+          "image-name": "bubble-expense.png",
+          "name": "BankStats expense"
         }
       ],
       "shadow": {
