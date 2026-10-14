@@ -12,6 +12,8 @@ import { overviewColors, overviewSpacing } from '@/features/spending-overview/ov
 import { useCopy } from '@/features/localization/language';
 import { CloudSyncSection } from '@/features/sync/cloud-sync-section';
 import { PrivacyShield } from '@/features/privacy/privacy-shield';
+import { statementImportCopy } from '@/features/statement-import/statement-import-copy';
+import { StatementImportScreen } from '@/features/statement-import/statement-import-screen';
 
 import { accountDataCopy } from './account-data-copy';
 import { DeleteAccountScreen } from './delete-account-screen';
@@ -20,13 +22,16 @@ import { DevicesSection } from './devices-section';
 interface DataScreenProps {
   records: IngestionRecord[];
   accounts: FinancialAccount[];
+  onRecordsChanged: () => void | Promise<void>;
   onClose: () => void;
 }
 
-export function DataScreen({ records, accounts, onClose }: DataScreenProps) {
+export function DataScreen({ records, accounts, onRecordsChanged, onClose }: DataScreenProps) {
   const insets = useSafeAreaInsets();
   const copy = useCopy(accountDataCopy);
+  const importCopy = useCopy(statementImportCopy);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
   const exportAs = (format: ExportFormat) => {
@@ -92,6 +97,34 @@ export function DataScreen({ records, accounts, onClose }: DataScreenProps) {
           </Text>
         </View>
 
+        <View style={styles.section}>
+          <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
+            {copy.importSection}
+          </Text>
+          <View style={styles.card}>
+            <Pressable
+              accessibilityHint={importCopy.entryHint}
+              accessibilityRole="button"
+              onPress={() => setIsImporting(true)}
+              style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
+            >
+              <Text maxFontSizeMultiplier={1.4} style={styles.rowLabel}>
+                {importCopy.entryLabel}
+              </Text>
+              <SymbolView
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+                name={{ ios: 'square.and.arrow.down', android: 'download', web: 'download' }}
+                size={17}
+                tintColor={overviewColors.textSecondary}
+              />
+            </Pressable>
+          </View>
+          <Text maxFontSizeMultiplier={1.5} style={styles.footnote}>
+            {importCopy.entryFootnote}
+          </Text>
+        </View>
+
         <CloudSyncSection />
 
         <View style={styles.section}>
@@ -131,6 +164,21 @@ export function DataScreen({ records, accounts, onClose }: DataScreenProps) {
         visible={isDeleting}
       >
         <DeleteAccountScreen onCancel={() => setIsDeleting(false)} />
+        <PrivacyShield />
+      </Modal>
+
+      <Modal
+        animationType="slide"
+        onRequestClose={() => setIsImporting(false)}
+        presentationStyle="fullScreen"
+        visible={isImporting}
+      >
+        <StatementImportScreen
+          accounts={accounts}
+          onClose={() => setIsImporting(false)}
+          onImported={onRecordsChanged}
+          records={records}
+        />
         <PrivacyShield />
       </Modal>
     </View>

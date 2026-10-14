@@ -4,7 +4,7 @@ export const captureHealthCopy = defineCopy({
   pl: {
     title: 'Przechwytywanie',
     close: 'Zamknij',
-    banks: { millennium: 'Millennium', pko: 'PKO BP' },
+    banks: { millennium: 'Millennium', pko: 'PKO BP', ing: 'ING' },
     states: {
       working: 'Działa',
       attention: 'Wymaga uwagi',
@@ -51,7 +51,7 @@ export const captureHealthCopy = defineCopy({
   en: {
     title: 'Capture',
     close: 'Close',
-    banks: { millennium: 'Millennium', pko: 'PKO BP' },
+    banks: { millennium: 'Millennium', pko: 'PKO BP', ing: 'ING' },
     states: {
       working: 'Working',
       attention: 'Needs attention',

@@ -52,33 +52,37 @@ export function CaptureHealthScreen({ records, onClose }: CaptureHealthScreenPro
 
   return (
     <SheetLayout closeLabel={copy.close} onClose={onClose} title={copy.title}>
-      {health.banks.map((bank) => (
-        <SheetSection
-          footnote={bank.reason === null ? null : copy.reasons[bank.reason]}
-          key={bank.bank}
-          label={copy.banks[bank.bank]}
-        >
-          <SheetRow
-            detail={
-              bank.lastCaptureAt === null ? copy.noCapture : copy.lastCapture(moment(bank.lastCaptureAt, now))
-            }
-            isFirst
+      {health.banks.map((bank) => {
+        const shortcutUrl = shortcutUrlFor([bank.bank]);
+
+        return (
+          <SheetSection
+            footnote={bank.reason === null ? null : copy.reasons[bank.reason]}
+            key={bank.bank}
             label={copy.banks[bank.bank]}
-            value={copy.states[bank.state]}
-            valueTone={stateTones[bank.state]}
-          />
-          {bank.state !== 'working' ? (
+          >
             <SheetRow
-              label={
-                bank.state === 'unconfigured'
-                  ? copy.setUp(copy.banks[bank.bank])
-                  : copy.checkSetup(copy.banks[bank.bank])
+              detail={
+                bank.lastCaptureAt === null ? copy.noCapture : copy.lastCapture(moment(bank.lastCaptureAt, now))
               }
-              onPress={() => void Linking.openURL(shortcutUrlFor([bank.bank]))}
+              isFirst
+              label={copy.banks[bank.bank]}
+              value={copy.states[bank.state]}
+              valueTone={stateTones[bank.state]}
             />
-          ) : null}
-        </SheetSection>
-      ))}
+            {bank.state !== 'working' && shortcutUrl !== null ? (
+              <SheetRow
+                label={
+                  bank.state === 'unconfigured'
+                    ? copy.setUp(copy.banks[bank.bank])
+                    : copy.checkSetup(copy.banks[bank.bank])
+                }
+                onPress={() => void Linking.openURL(shortcutUrl)}
+              />
+            ) : null}
+          </SheetSection>
+        );
+      })}
 
       <SheetSection label={copy.automation}>
         <SheetRow

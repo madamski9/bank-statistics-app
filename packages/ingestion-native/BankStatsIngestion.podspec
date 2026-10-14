@@ -15,7 +15,7 @@ Pod::Spec.new do |s|
   s.source = { :git => 'https://github.com/madamski9/bank-statistics-app.git' }
   s.static_framework = true
   s.source_files = 'ios/**/*.{h,m,swift}'
-  s.frameworks = 'AppIntents', 'JavaScriptCore', 'WidgetKit'
+  s.frameworks = 'AppIntents', 'JavaScriptCore', 'PDFKit', 'WidgetKit'
   s.resource_bundles = {
     'BankStatsWidgets' => ['ios/Resources/*.js'],
     'BankStatsParserRules' => ['ios/Resources/*.json']

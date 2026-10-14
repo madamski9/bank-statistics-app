@@ -1,7 +1,17 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { describe, expect, test } from 'bun:test';
 
-import { compareMonths, monthKey, parseMonthKey, recordsForSummaryGroup, summarizeMonth, summaryMonths } from './monthly-summary';
+import {
+  compareMonths,
+  expenseDaysOf,
+  largestExpensesOf,
+  monthKey,
+  noSpendDaysOf,
+  parseMonthKey,
+  recordsForSummaryGroup,
+  summarizeMonth,
+  summaryMonths,
+} from './monthly-summary';
 
 function entry(id: string, occurredAt: Date, amountMinor: number, direction: 'expense' | 'income' = 'expense'): IngestionRecord {
   return {
@@ -114,5 +124,48 @@ describe('monthly summary', () => {
   test('reads back only real month keys', () => {
     expect(parseMonthKey('2026-09')).toEqual({ year: 2026, month: 8 });
     expect(parseMonthKey('2026-13')).toBeNull();
+  });
+});
+
+describe('expenseDaysOf', () => {
+  test('lists the month expenses day by day, from the costliest day down', () => {
+    const records = [
+      entry('Lidl', new Date(2026, 7, 3, 10), 3000),
+      entry('Żabka', new Date(2026, 7, 3, 18), 1000),
+      entry('Kino', new Date(2026, 7, 20, 20), 6000),
+      entry('Apteka', new Date(2026, 7, 9, 9), 4000),
+      entry('salary', new Date(2026, 7, 10), 500_000, 'income'),
+      entry('July', new Date(2026, 6, 31), 9000),
+    ];
+
+    const days = expenseDaysOf(records, { year: 2026, month: 7 });
+
+    expect(days.map((day) => [day.day, day.totalMinor, day.records.map((record) => record.id)])).toEqual([
+      [20, 6000, ['Kino']],
+      [3, 4000, ['Lidl', 'Żabka']],
+      [9, 4000, ['Apteka']],
+    ]);
+  });
+});
+
+describe('largestExpensesOf', () => {
+  test('lists the biggest expenses of the month, largest first', () => {
+    const records = [
+      entry('Lidl', new Date(2026, 7, 3), 3000),
+      entry('Kino', new Date(2026, 7, 20), 6000),
+      entry('Apteka', new Date(2026, 7, 9), 4000),
+      entry('salary', new Date(2026, 7, 10), 500_000, 'income'),
+    ];
+
+    expect(largestExpensesOf(records, { year: 2026, month: 7 }, 2).map((record) => record.id)).toEqual([
+      'Kino',
+      'Apteka',
+    ]);
+  });
+});
+
+describe('noSpendDaysOf', () => {
+  test('names the elapsed days without a single expense', () => {
+    expect(noSpendDaysOf({ dailyExpensesMinor: [100, 0, 50, 0, 0], elapsedDays: 4 })).toEqual([2, 4]);
   });
 });

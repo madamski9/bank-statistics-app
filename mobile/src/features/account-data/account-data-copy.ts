@@ -16,6 +16,7 @@ export const accountDataCopy = defineCopy({
     title: 'Twoje dane',
     close: 'Zamknij',
     exportSection: 'EKSPORT',
+    importSection: 'IMPORT',
     exportHint: 'Otwiera arkusz udostępniania z plikiem',
     exportFootnote: (count: string) =>
       `${count} z tego telefonu, z kontem, kategorią i statusem. Bez treści powiadomień bankowych.`,
@@ -77,6 +78,7 @@ export const accountDataCopy = defineCopy({
     title: 'Your data',
     close: 'Close',
     exportSection: 'EXPORT',
+    importSection: 'IMPORT',
     exportHint: 'Opens the share sheet with the file',
     exportFootnote: (count: string) =>
       `${count} from this phone, with account, category and status. Bank notification text is not included.`,

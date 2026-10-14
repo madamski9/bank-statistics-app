@@ -51,3 +51,21 @@ describe('chartWindow', () => {
     expect(chartWindow(window, 'day', new Date(2026, 8, 27).getTime())).toBe(window);
   });
 });
+
+describe('bucketSizeFor', () => {
+  const endMs = new Date(2026, 8, 29).getTime();
+  const daysAgo = (days: number) => endMs - days * 86_400_000;
+
+  test('shows days up to three months and weeks across a year', () => {
+    expect(bucketSizeFor('month')).toBe('day');
+    expect(bucketSizeFor('quarter')).toBe('day');
+    expect(bucketSizeFor('year')).toBe('week');
+  });
+
+  test('picks Max detail from how far back the history reaches', () => {
+    expect(bucketSizeFor('all', daysAgo(80), endMs)).toBe('day');
+    expect(bucketSizeFor('all', daysAgo(400), endMs)).toBe('week');
+    expect(bucketSizeFor('all', daysAgo(1000), endMs)).toBe('month');
+    expect(bucketSizeFor('all', null, endMs)).toBe('month');
+  });
+});

@@ -189,6 +189,48 @@ export function compareMonths(
   });
 }
 
+export interface ExpenseDay {
+  day: number;
+  totalMinor: number;
+  records: IngestionRecord[];
+}
+
+export function expenseDaysOf(records: IngestionRecord[], month: SummaryMonth): ExpenseDay[] {
+  const { startMs, endMs } = monthBounds(month);
+  const recordsByDay = new Map<number, IngestionRecord[]>();
+
+  for (const record of within(records, startMs, endMs)) {
+    if (record.direction !== 'expense') {
+      continue;
+    }
+
+    const day = new Date(record.occurredAt).getDate();
+
+    recordsByDay.set(day, [...(recordsByDay.get(day) ?? []), record]);
+  }
+
+  return [...recordsByDay.entries()]
+    .map(([day, dayRecords]) => ({
+      day,
+      totalMinor: dayRecords.reduce((total, record) => total + record.amountMinor, 0),
+      records: [...dayRecords].sort((left, right) => right.amountMinor - left.amountMinor),
+    }))
+    .sort((left, right) => right.totalMinor - left.totalMinor || left.day - right.day);
+}
+
+export function largestExpensesOf(records: IngestionRecord[], month: SummaryMonth, limit = 10): IngestionRecord[] {
+  return expenseDaysOf(records, month)
+    .flatMap((expenseDay) => expenseDay.records)
+    .sort((left, right) => right.amountMinor - left.amountMinor)
+    .slice(0, limit);
+}
+
+export function noSpendDaysOf(summary: Pick<MonthlySummary, 'dailyExpensesMinor' | 'elapsedDays'>): number[] {
+  return summary.dailyExpensesMinor
+    .slice(0, summary.elapsedDays)
+    .flatMap((totalMinor, index) => (totalMinor === 0 ? [index + 1] : []));
+}
+
 export function recordsForSummaryGroup(
   records: IngestionRecord[],
   month: SummaryMonth,

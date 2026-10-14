@@ -12,7 +12,13 @@ describe('withGeneralAccounts', () => {
   test('always offers a general account for manual entries and for each supported bank', () => {
     const accounts = withGeneralAccounts([]);
 
-    expect(accounts.map((account) => account.id)).toEqual([generalManualAccountId, 'general-millennium', 'general-pko']);
+    expect(accounts.map((account) => account.id)).toEqual([
+      generalManualAccountId,
+      'general-millennium',
+      'general-pko',
+      'general-erste',
+      'general-ing',
+    ]);
     expect(accounts.every((account) => account.isGeneral)).toBe(true);
   });
 
@@ -33,7 +39,7 @@ describe('withGeneralAccounts', () => {
       { id: 'account-a', bank: 'manual', name: 'Oszczędnościowe', isGeneral: false },
     ]);
 
-    expect(accounts.slice(3).map((account) => account.name)).toEqual(['Oszczędnościowe', 'Walutowe']);
+    expect(accounts.slice(5).map((account) => account.name)).toEqual(['Oszczędnościowe', 'Walutowe']);
   });
 });
 

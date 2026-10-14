@@ -62,6 +62,9 @@ struct BankNotificationInterpreter: @unchecked Sendable {
 
     for rule in bundle.rules {
       try compile(rule.match.pattern, caseInsensitive: rule.match.caseInsensitive)
+      if let title = rule.requires?.title {
+        try compile(title.pattern, caseInsensitive: title.caseInsensitive)
+      }
       try compileMapped(rule.record?.bank)
       try compileMapped(rule.record?.direction)
       try compileMapped(rule.record?.transactionType)
@@ -115,6 +118,11 @@ struct BankNotificationInterpreter: @unchecked Sendable {
   }
 
   private func meetsRequirements(_ rule: NotificationRule, fields: Fields) -> Bool {
+    if let title = rule.requires?.title,
+      match(title.pattern, caseInsensitive: title.caseInsensitive, in: fields[.title] ?? "") == nil {
+      return false
+    }
+
     switch rule.requires?.subtitle {
     case "empty":
       return fields[.subtitle]?.isEmpty ?? true

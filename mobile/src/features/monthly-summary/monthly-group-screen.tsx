@@ -1,6 +1,6 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { SymbolView } from 'expo-symbols';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { CategorizationRule } from '@/features/classification/categorization-rule';
@@ -9,14 +9,21 @@ import { calendarCopy } from '@/features/localization/calendar-copy';
 import { useCopy } from '@/features/localization/language';
 import { AmountText } from '@/features/privacy/amount-text';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
-import { SheetLayout } from '@/features/app-shell/sheet-layout';
+import { SheetLayout, SheetRow, SheetSection } from '@/features/app-shell/sheet-layout';
+import { transactionParty } from '@/features/merchants/transaction-party';
 import { formatChange, formatShare, formatTransactionCount } from '@/features/spending-overview/formatting';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 import { selectionChanged } from '@/haptics';
 
 import { DailySpendBars } from './daily-spend-bars';
 import { MonthComparisonChart } from './month-comparison';
-import { compareMonths, recordsForSummaryGroup, summarizeMonth, type SummaryMonth } from './monthly-summary';
+import {
+  compareMonths,
+  expenseDaysOf,
+  recordsForSummaryGroup,
+  summarizeMonth,
+  type SummaryMonth,
+} from './monthly-summary';
 import { monthlySummaryCopy } from './monthly-summary-copy';
 
 export interface SummaryGroupSelection {
@@ -58,6 +65,11 @@ export function MonthlyGroupScreen({
     [groupRecords, month, now, rules],
   );
   const comparedMonths = useMemo(() => compareMonths(groupRecords, month, now), [groupRecords, month, now]);
+  const expenseDays = useMemo(() => expenseDaysOf(groupRecords, month), [groupRecords, month]);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const visibleDays =
+    selectedDay === null ? expenseDays : expenseDays.filter((expenseDay) => expenseDay.day === selectedDay);
+  const dayDate = (day: number) => calendar.dayMonth(day, calendar.monthsInGenitive[month.month] ?? '');
   const chartCategories = summary.dailyCategories.slice(0, 3).map((entry) => entry.name);
 
   if (summary.dailyCategories.length > 3) {
@@ -134,8 +146,13 @@ export function MonthlyGroupScreen({
           averageMinor={summary.dailyExpenseMinor}
           dailyCategories={summary.dailyCategories}
           dailyExpensesMinor={summary.dailyExpensesMinor}
+          barAccessibilityLabel={(day, totalMinor) =>
+            copy.barLabel(dayDate(day), formatAmount(totalMinor, reportingCurrency))
+          }
           elapsedDays={summary.elapsedDays}
+          onSelectDay={setSelectedDay}
           otherLabel={copy.other}
+          selectedDay={selectedDay}
         />
         <AmountText maxFontSizeMultiplier={1.4} style={styles.cardTotal}>
           {copy.total(
@@ -144,6 +161,49 @@ export function MonthlyGroupScreen({
           )}
         </AmountText>
       </View>
+
+      {expenseDays.length > 0 ? (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
+              {copy.dayTransactions.toLocaleUpperCase()}
+            </Text>
+            {selectedDay !== null ? (
+              <Pressable
+                accessibilityRole="button"
+                hitSlop={8}
+                onPress={() => {
+                  selectionChanged();
+                  setSelectedDay(null);
+                }}
+                style={({ pressed }) => (pressed ? styles.pressed : null)}
+              >
+                <Text maxFontSizeMultiplier={1.4} style={styles.showAll}>
+                  {copy.showAllDays}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+          <Text maxFontSizeMultiplier={1.4} style={styles.caption}>
+            {selectedDay === null ? copy.dayTransactionsHint : copy.selectedDayHint}
+          </Text>
+          {visibleDays.map((expenseDay) => (
+            <SheetSection
+              key={expenseDay.day}
+              label={copy.dayHeading(dayDate(expenseDay.day), formatAmount(expenseDay.totalMinor, reportingCurrency))}
+            >
+              {expenseDay.records.map((record, index) => (
+                <SheetRow
+                  isFirst={index === 0}
+                  key={record.id}
+                  label={transactionParty(record, rules)}
+                  value={`− ${formatAmount(record.amountMinor, record.currency)}`}
+                />
+              ))}
+            </SheetSection>
+          ))}
+        </View>
+      ) : null}
 
       <View style={styles.section}>
         <Text maxFontSizeMultiplier={1.4} style={styles.sectionLabel}>
@@ -201,6 +261,8 @@ const styles = StyleSheet.create({
     color: overviewColors.textSecondary,
   },
   section: { gap: overviewSpacing.tight },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  showAll: { fontSize: 13, fontWeight: '600', color: overviewColors.textPrimary },
   sectionLabel: {
     fontSize: 12,
     fontWeight: '600',
