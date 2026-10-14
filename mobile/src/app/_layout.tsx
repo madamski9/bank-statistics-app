@@ -1,17 +1,25 @@
 import { ClerkProvider, useAuth } from '@clerk/expo';
 import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { Slot } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { appEnvironment } from '@/app-environment';
+import { brandColors } from '@/features/brand/brand-artwork';
 import { tokenCache } from '@/features/auth/token-cache';
 import { LanguageBootstrap } from '@/features/localization/language-bootstrap';
 import { convexClient } from '@/convex-client';
 
+void SplashScreen.preventAutoHideAsync().catch(() => undefined);
+
+function hideNativeSplash() {
+  void SplashScreen.hideAsync().catch(() => undefined);
+}
+
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView style={styles.root}>
+    <GestureHandlerRootView onLayout={hideNativeSplash} style={styles.root}>
       <ClerkProvider
         tokenCache={tokenCache}
         publishableKey={appEnvironment.clerkPublishableKey}
@@ -29,5 +37,6 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: brandColors.background,
   },
 });

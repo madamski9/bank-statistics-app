@@ -1,4 +1,6 @@
-import { Show } from '@clerk/expo';
+import { Show, useAuth } from '@clerk/expo';
+
+import { LoadingScreen } from '@/features/brand/loading-screen';
 
 import { AccountStandingGate } from '@/features/account-data/account-standing-gate';
 import { SignInScreen } from '@/features/auth/sign-in-screen';
@@ -12,6 +14,12 @@ import { OwnedDeviceGate } from '@/features/sync/owned-device-gate';
 import { SignedOutSpendingWidget } from '@/features/widgets/use-spending-widget';
 
 export default function Index() {
+  const { isLoaded } = useAuth();
+
+  if (!isLoaded) {
+    return <LoadingScreen />;
+  }
+
   return (
     <>
       <Show when="signed-in">

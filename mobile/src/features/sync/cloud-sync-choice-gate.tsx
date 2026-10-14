@@ -2,6 +2,8 @@ import { useCallback, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { LoadingScreen } from '@/features/brand/loading-screen';
+
 import { useCopy } from '@/features/localization/language';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 
@@ -16,7 +18,7 @@ export function CloudSyncChoiceGate({ children }: CloudSyncChoiceGateProps) {
   const choice = useCloudSyncChoice();
 
   if (choice === 'loading') {
-    return null;
+    return <LoadingScreen />;
   }
 
   return choice === 'undecided' ? <CloudSyncChoiceScreen /> : children;

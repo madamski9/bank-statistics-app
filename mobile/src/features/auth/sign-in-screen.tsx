@@ -16,6 +16,8 @@ import {
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BrandMark } from '@/features/brand/brand-mark';
+import { brandName } from '@/features/brand/brand-artwork';
 import { AnimatedReveal } from '@/features/app-shell/animated-reveal';
 import { ScalePressable } from '@/features/app-shell/scale-pressable';
 import { useCopy } from '@/features/localization/language';
@@ -94,10 +96,8 @@ export function SignInScreen() {
         >
           <View style={styles.content}>
             <AnimatedReveal style={styles.brandRow}>
-              <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.brandMark}>
-                <View style={styles.brandCore} />
-              </View>
-              <Text style={styles.brandName}>BankStats</Text>
+              <BrandMark size={32} />
+              <Text style={styles.brandName}>{brandName}</Text>
             </AnimatedReveal>
 
             <SignInIllustration
@@ -258,22 +258,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
     marginBottom: 8,
-  },
-  brandMark: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.accentBorder,
-    backgroundColor: colors.accentMuted,
-  },
-  brandCore: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.accent,
   },
   brandName: {
     fontSize: 17,

@@ -78,9 +78,8 @@ const config: ExpoConfig = {
   android: {
     package: identity.bundleIdentifier,
     adaptiveIcon: {
-      backgroundColor: '#E6F4FE',
+      backgroundColor: '#000000',
       foregroundImage: './assets/images/android-icon-foreground.png',
-      backgroundImage: './assets/images/android-icon-background.png',
       monochromeImage: './assets/images/android-icon-monochrome.png',
     },
     predictiveBackGestureEnabled: false,
@@ -94,9 +93,14 @@ const config: ExpoConfig = {
     [
       'expo-splash-screen',
       {
-        backgroundColor: '#208AEF',
+        backgroundColor: '#000000',
         image: './assets/images/splash-icon.png',
-        imageWidth: 76,
+        imageWidth: 112,
+        resizeMode: 'contain',
+        ios: {
+          image: './assets/images/splash-lockup.png',
+          imageWidth: 240,
+        },
       },
     ],
     'expo-secure-store',
