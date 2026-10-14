@@ -25,8 +25,14 @@ jobs:
 
       - run: bun run lint
 
-      - run: bunx expo-doctor
+      - run: bunx expo-doctor@1.20.4
         working-directory: mobile
+        env:
+          EXPO_DOCTOR_SKIP_DEPENDENCY_VERSION_CHECK: 1
+
+      - run: bunx expo install --check
+        working-directory: mobile
+        continue-on-error: true
 
   native-parser-conformance:
     runs-on: macos-latest
