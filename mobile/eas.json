@@ -21,6 +21,11 @@
         "EXPO_PUBLIC_APP_ENV": "preview"
       }
     },
+    "testflight": {
+      "extends": "preview",
+      "distribution": "store",
+      "autoIncrement": true
+    },
     "production": {
       "channel": "production",
       "environment": "production",
@@ -31,6 +36,7 @@
     }
   },
   "submit": {
+    "testflight": {},
     "production": {}
   }
 }
