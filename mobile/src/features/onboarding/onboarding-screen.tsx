@@ -6,7 +6,6 @@ import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import {
   ActivityIndicator,
-  AppState,
   Linking,
   Platform,
   ScrollView,
@@ -31,6 +30,7 @@ import {
 } from '@/features/spending-overview/overview-theme';
 import { AnimatedReveal } from '@/features/app-shell/animated-reveal';
 import { ScalePressable } from '@/features/app-shell/scale-pressable';
+import { LoadingScreen } from '@/features/brand/loading-screen';
 import { useCopy } from '@/features/localization/language';
 import { biometricLabels } from '@/features/privacy/biometrics';
 import { PinSetup } from '@/features/privacy/pin-setup';
@@ -51,6 +51,7 @@ import {
 } from './onboarding-motion';
 import { readSelectedBanks } from './selected-banks';
 import { shortcutUrlFor } from './shortcut-links';
+import { pendingShortcutBanks, shortcutSetupProgressKey } from './shortcut-setup-progress';
 
 interface OnboardingScreenProps {
   flow: 'full' | 'shortcuts';
@@ -96,9 +97,6 @@ const automationStep = 5;
 const pinStep = 6;
 const stepCount = 7;
 const shortcutsAppUrl = 'shortcuts://';
-function pendingReturnKey(userId: string): string {
-  return `bankstats.onboarding.shortcuts-return.v1.${userId}`;
-}
 
 export function OnboardingScreen({ flow, onCancel, onComplete }: OnboardingScreenProps) {
   const copy = useCopy(onboardingCopy);
@@ -114,9 +112,11 @@ export function OnboardingScreen({ flow, onCancel, onComplete }: OnboardingScree
   const [error, setError] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'premium'>('free');
   const [isFinishing, setIsFinishing] = useState(false);
+  const [isRestoringShortcut, setIsRestoringShortcut] = useState(true);
+  const [hasOpenedShortcut, setHasOpenedShortcut] = useState(false);
+  const [isOpeningShortcut, setIsOpeningShortcut] = useState(false);
+  const [isSavingProgress, setIsSavingProgress] = useState(false);
   const progress = useSharedValue(0);
-  const launchedShortcuts = useRef(false);
-  const leftApp = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
   const flowStart = isShortcutsFlow ? banksStep : 0;
   const flowLength = isShortcutsFlow ? automationStep - banksStep + 1 : stepCount;
@@ -131,17 +131,37 @@ export function OnboardingScreen({ flow, onCancel, onComplete }: OnboardingScree
   }, [flowLength, flowPosition, progress]);
 
   useEffect(() => {
-    if (!isShortcutsFlow || userId == null) {
+    if (userId == null) {
       return;
     }
 
     let isActive = true;
 
-    void readSelectedBanks(userId).then((savedBanks) => {
-      if (isActive && savedBanks.length > 0) {
-        setSelectedBanks(savedBanks);
-      }
-    });
+    void Promise.all([
+      readSelectedBanks(userId),
+      SecureStore.getItemAsync(shortcutSetupProgressKey(userId)),
+    ])
+      .then(([savedBanks, storedProgress]) => {
+        if (!isActive) {
+          return;
+        }
+
+        const pendingBanks = pendingShortcutBanks(storedProgress, savedBanks);
+
+        if (pendingBanks !== null) {
+          setSelectedBanks(pendingBanks);
+          setHasOpenedShortcut(true);
+          setStep(banksStep);
+        } else if (isShortcutsFlow && savedBanks.length > 0) {
+          setSelectedBanks(savedBanks);
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (isActive) {
+          setIsRestoringShortcut(false);
+        }
+      });
 
     return () => {
       isActive = false;
@@ -151,48 +171,6 @@ export function OnboardingScreen({ flow, onCancel, onComplete }: OnboardingScree
   const progressStyle = useAnimatedStyle(() => ({
     width: `${progress.value * 100}%` as `${number}%`,
   }));
-
-  useEffect(() => {
-    if (userId == null) {
-      return;
-    }
-
-    let isActive = true;
-
-    void SecureStore.getItemAsync(pendingReturnKey(userId))
-      .then((value) => {
-        if (isActive && value === 'true') {
-          setStep(automationStep);
-          void SecureStore.deleteItemAsync(pendingReturnKey(userId));
-        }
-      })
-      .catch(() => undefined);
-
-    return () => {
-      isActive = false;
-    };
-  }, [userId]);
-
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (!launchedShortcuts.current) {
-        return;
-      }
-
-      if (state === 'background') {
-        leftApp.current = true;
-      } else if (state === 'active' && leftApp.current) {
-        launchedShortcuts.current = false;
-        leftApp.current = false;
-        setStep(automationStep);
-        if (userId != null) {
-          void SecureStore.deleteItemAsync(pendingReturnKey(userId));
-        }
-      }
-    });
-
-    return () => subscription.remove();
-  }, [userId]);
 
   const changeStep = useCallback(
     (next: number) => {
@@ -205,6 +183,10 @@ export function OnboardingScreen({ flow, onCancel, onComplete }: OnboardingScree
   );
 
   const openShortcuts = useCallback(async () => {
+    if (isOpeningShortcut || isSavingProgress) {
+      return;
+    }
+
     if (selectedBanks.length === 0) {
       setError(copy.chooseBank);
       return;
@@ -223,27 +205,54 @@ export function OnboardingScreen({ flow, onCancel, onComplete }: OnboardingScree
     }
 
     setError(null);
+    setIsOpeningShortcut(true);
     if (userId != null) {
       try {
-        await SecureStore.setItemAsync(pendingReturnKey(userId), 'true');
+        await SecureStore.setItemAsync(shortcutSetupProgressKey(userId), JSON.stringify(selectedBanks));
       } catch {
         setError(copy.progressSaveFailed);
+        setIsOpeningShortcut(false);
         return;
       }
     }
-    launchedShortcuts.current = true;
-    leftApp.current = false;
 
     try {
       await Linking.openURL(shortcutUrl);
+      setHasOpenedShortcut(true);
     } catch {
-      launchedShortcuts.current = false;
-      if (userId != null) {
-        void SecureStore.deleteItemAsync(pendingReturnKey(userId));
+      if (userId != null && !hasOpenedShortcut) {
+        await SecureStore.deleteItemAsync(shortcutSetupProgressKey(userId)).catch(() => undefined);
       }
       setError(copy.shortcutOpenFailed);
+    } finally {
+      setIsOpeningShortcut(false);
     }
-  }, [copy, selectedBanks, userId]);
+  }, [copy, hasOpenedShortcut, isOpeningShortcut, isSavingProgress, selectedBanks, userId]);
+
+  const leaveShortcutSetup = useCallback(async (nextStep: number | null) => {
+    if (isOpeningShortcut || isSavingProgress) {
+      return;
+    }
+
+    setError(null);
+    setIsSavingProgress(true);
+
+    try {
+      if (userId != null) {
+        await SecureStore.deleteItemAsync(shortcutSetupProgressKey(userId));
+      }
+
+      if (nextStep === null) {
+        onCancel();
+      } else {
+        changeStep(nextStep);
+      }
+    } catch {
+      setError(copy.progressSaveFailed);
+    } finally {
+      setIsSavingProgress(false);
+    }
+  }, [changeStep, copy.progressSaveFailed, isOpeningShortcut, isSavingProgress, onCancel, userId]);
 
   const finish = useCallback(async () => {
     setIsFinishing(true);
@@ -266,7 +275,8 @@ export function OnboardingScreen({ flow, onCancel, onComplete }: OnboardingScree
     [changePin, changeStep, updateSettings],
   );
 
-  const isPrimaryDisabled = isFinishing || (step === banksStep && selectedBanks.length === 0);
+  const isBusy = isFinishing || isOpeningShortcut || isSavingProgress;
+  const isPrimaryDisabled = isBusy || (step === banksStep && selectedBanks.length === 0);
 
   const primaryLabel =
     step === 2
@@ -276,7 +286,7 @@ export function OnboardingScreen({ flow, onCancel, onComplete }: OnboardingScree
       : step === 3
         ? copy.goToSetup
         : step === banksStep
-          ? copy.addShortcut
+          ? hasOpenedShortcut ? copy.shortcutAdded : copy.addShortcut
           : step === automationStep
             ? copy.automationEnabled
             : step === stepCount
@@ -284,13 +294,17 @@ export function OnboardingScreen({ flow, onCancel, onComplete }: OnboardingScree
               : copy.next;
   const primaryAction =
     step === banksStep
-      ? openShortcuts
+      ? hasOpenedShortcut ? () => leaveShortcutSetup(automationStep) : openShortcuts
       : step === stepCount || (isShortcutsFlow && step === automationStep)
         ? finish
         : step === 2 && selectedPlan === 'premium'
           ? () =>
               setError(copy.premiumSoon)
           : () => changeStep(step + 1);
+
+  if (isRestoringShortcut) {
+    return <LoadingScreen />;
+  }
 
   return (
     <View style={styles.screen}>
@@ -300,8 +314,9 @@ export function OnboardingScreen({ flow, onCancel, onComplete }: OnboardingScree
           <ScalePressable
             accessibilityLabel={copy.back}
             accessibilityRole="button"
+            disabled={isBusy}
             onPress={() =>
-              isShortcutsFlow && step === banksStep ? onCancel() : changeStep(step - 1)
+              isShortcutsFlow && step === banksStep ? void leaveShortcutSetup(null) : changeStep(step - 1)
             }
             style={styles.topAction}
           >
@@ -376,13 +391,16 @@ export function OnboardingScreen({ flow, onCancel, onComplete }: OnboardingScree
           {step === 3 ? <ShortcutsIntro /> : null}
           {step === banksStep ? (
             <BanksSetup
-              onToggle={(bankId) =>
+              disabled={isBusy}
+              onToggle={(bankId) => {
+                setHasOpenedShortcut(false);
+                setError(null);
                 setSelectedBanks((current) =>
                   current.includes(bankId)
                     ? current.filter((id) => id !== bankId)
                     : [...current, bankId],
-                )
-              }
+                );
+              }}
               selectedBanks={selectedBanks}
             />
           ) : null}
@@ -406,16 +424,16 @@ export function OnboardingScreen({ flow, onCancel, onComplete }: OnboardingScree
         {step !== pinStep ? (
           <ScalePressable
             accessibilityRole="button"
-            accessibilityState={{ disabled: isPrimaryDisabled, busy: isFinishing }}
+            accessibilityState={{ disabled: isPrimaryDisabled, busy: isBusy }}
             containerStyle={isPrimaryDisabled && styles.disabled}
             disabled={isPrimaryDisabled}
             onPress={() => void primaryAction()}
             style={styles.primaryButton}
           >
             <Text style={styles.primaryLabel}>
-              {isFinishing ? copy.saving : primaryLabel}
+              {isOpeningShortcut ? copy.openingShortcut : isBusy ? copy.saving : primaryLabel}
             </Text>
-            {isFinishing ? (
+            {isBusy ? (
               <ActivityIndicator color={overviewColors.background} size="small" />
             ) : (
               <SymbolView
@@ -434,10 +452,23 @@ export function OnboardingScreen({ flow, onCancel, onComplete }: OnboardingScree
             <Text style={styles.secondaryLabel}>{copy.notNow}</Text>
           </ScalePressable>
         )}
+        {step === banksStep && hasOpenedShortcut ? (
+          <ScalePressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: isBusy, busy: isOpeningShortcut }}
+            disabled={isBusy}
+            onPress={() => void openShortcuts()}
+            style={styles.secondaryButton}
+          >
+            <Text style={styles.secondaryLabel}>{copy.addShortcutAgain}</Text>
+          </ScalePressable>
+        ) : null}
         {step === banksStep ? (
           <ScalePressable
             accessibilityRole="button"
-            onPress={() => (isShortcutsFlow ? onCancel() : changeStep(pinStep))}
+            accessibilityState={{ disabled: isBusy }}
+            disabled={isBusy}
+            onPress={() => void leaveShortcutSetup(isShortcutsFlow ? null : pinStep)}
             style={styles.secondaryButton}
           >
             <Text style={styles.secondaryLabel}>{copy.setUpLater}</Text>
@@ -725,9 +756,11 @@ function ShortcutsIntro() {
 }
 
 function BanksSetup({
+  disabled,
   onToggle,
   selectedBanks,
 }: {
+  disabled: boolean;
   onToggle: (bankId: string) => void;
   selectedBanks: string[];
 }) {
@@ -751,9 +784,9 @@ function BanksSetup({
               accessibilityRole="checkbox"
               accessibilityState={{
                 checked: selected,
-                disabled: !bank.available,
+                disabled: disabled || !bank.available,
               }}
-              disabled={!bank.available}
+              disabled={disabled || !bank.available}
               key={bank.id}
               onPress={() => onToggle(bank.id)}
               style={[
