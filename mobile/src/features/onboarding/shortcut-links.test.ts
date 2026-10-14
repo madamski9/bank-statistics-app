@@ -14,11 +14,11 @@ describe('shortcutUrlFor', () => {
     expect(shortcutUrlFor(['ing'])).not.toBeNull();
     expect(shortcutUrlFor(['pko', 'ing'])).not.toBeNull();
     expect(shortcutUrlFor(['millennium', 'ing'])).not.toBeNull();
+    expect(shortcutUrlFor(['ing', 'pko', 'millennium'])).not.toBeNull();
   });
 
   test('has no shortcut for a selection that has not been published yet', () => {
     expect(shortcutUrlFor(['revolut'])).toBeNull();
     expect(shortcutUrlFor([])).toBeNull();
-    expect(shortcutUrlFor(['millennium', 'pko', 'ing'])).toBeNull();
   });
 });

@@ -5,6 +5,7 @@ const shortcutUrls: Record<string, string> = {
   ing: 'https://www.icloud.com/shortcuts/5b288903ffb54dcc81855d2cd6708c10',
   'pko+ing': 'https://www.icloud.com/shortcuts/0670b6ddc85b4414aa1f258704a5f3e5',
   'millennium+ing': 'https://www.icloud.com/shortcuts/c763e56eaf82408a9aaab02829893a0d',
+  'millennium+pko+ing': 'https://www.icloud.com/shortcuts/61b8589ba38b45df8dfb0c6f46ee47cc',
 };
 
 const shortcutBankOrder = ['millennium', 'pko', 'ing'];
