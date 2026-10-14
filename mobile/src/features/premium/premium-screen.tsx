@@ -56,7 +56,13 @@ export function PremiumScreen({ status, reason, onClose }: PremiumScreenProps) {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        automaticallyAdjustKeyboardInsets
+        contentContainerStyle={styles.content}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         {reason !== null && !isPremium ? (
           <View accessibilityLiveRegion="polite" style={styles.reason}>
             <SymbolView
