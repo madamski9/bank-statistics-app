@@ -73,6 +73,7 @@ const config: ExpoConfig = {
     deploymentTarget: '17.0',
     infoPlist: {
       CFBundleDisplayName: identity.displayName,
+      ITSAppUsesNonExemptEncryption: false,
     },
   },
   android: {
