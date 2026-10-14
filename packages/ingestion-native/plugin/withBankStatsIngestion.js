@@ -9,15 +9,9 @@ const {
   IOSConfig,
 } = require('expo/config-plugins');
 
-const APP_INTENTS_PACKAGE_SOURCE = `import AppIntents
-public import BankStatsIngestion
-
-struct BankStatsAppIntentsPackage: AppIntentsPackage {
-  static var includedPackages: [any AppIntentsPackage.Type] {
-    [BankStatsIngestionAppIntentsPackage.self]
-  }
-}
-`;
+const APP_INTENT_SOURCE = path.join(__dirname, '..', 'app', 'IngestMillenniumNotificationIntent.swift');
+const APP_INTENT_FILENAME = 'IngestMillenniumNotificationIntent.swift';
+const LEGACY_APP_INTENTS_PACKAGE_FILENAME = 'BankStatsAppIntentsPackage.swift';
 
 function resolveAppGroup(config) {
   const bundleIdentifier = config.ios?.bundleIdentifier;
@@ -106,12 +100,18 @@ function withBankStatsIngestion(config) {
       result.modRequest.projectRoot,
       result
     );
-    const filepath = `${projectName}/BankStatsAppIntentsPackage.swift`;
-    const absoluteFilepath = path.join(platformProjectRoot, filepath);
+    const filepath = `${projectName}/${APP_INTENT_FILENAME}`;
+    const legacyFilepath = `${projectName}/${LEGACY_APP_INTENTS_PACKAGE_FILENAME}`;
     const project = result.modResults;
     const target = IOSConfig.XcodeUtils.getApplicationNativeTarget({ project, projectName });
 
-    fs.writeFileSync(absoluteFilepath, APP_INTENTS_PACKAGE_SOURCE);
+    fs.copyFileSync(APP_INTENT_SOURCE, path.join(platformProjectRoot, filepath));
+
+    if (project.hasFile(legacyFilepath)) {
+      project.removeSourceFile(legacyFilepath, { target: target.uuid }, project.findPBXGroupKey({ name: projectName }));
+    }
+
+    fs.rmSync(path.join(platformProjectRoot, legacyFilepath), { force: true });
 
     if (!project.hasFile(filepath)) {
       IOSConfig.XcodeUtils.addBuildSourceFileToGroup({
