@@ -17,13 +17,13 @@ const laneIdentities: Record<string, LaneIdentity> = {
   preview: {
     bundleIdentifier: 'com.bankstats.app.preview',
     scheme: 'bankstats-preview',
-    displayName: 'BankStats Preview',
+    displayName: 'Bank Stats',
     signsUpdates: true,
   },
   production: {
     bundleIdentifier: 'com.bankstats.app',
     scheme: 'bankstats',
-    displayName: 'BankStats',
+    displayName: 'Bank Stats',
     signsUpdates: true,
   },
 };
@@ -55,7 +55,7 @@ const signedUpdates = {
 const config: ExpoConfig = {
   name: 'BankStats',
   slug: 'bank-statistics-app',
-  version: '1.0.0',
+  version: '1.0.1',
   runtimeVersion: {
     policy: 'appVersion',
   },
