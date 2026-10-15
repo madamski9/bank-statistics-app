@@ -29,7 +29,11 @@
 ### Android environment on the Linux workstation
 
 - Bun 1.4.2 and JDK 17 come from mise. The Android SDK is in `~/Android/Sdk`, and Gradle gets 4 GB of memory through `~/.gradle/gradle.properties`.
-- The emulator is the AVD `BankStats_API36` (Android 16). Open it through the T3 device panel. The session sets `EXPO_DEVICE_HUB_EMULATOR_EXTRA_ARGS="-gpu host"` in `~/.config/uwsm/env.d/20-android`, so the panel boots it on the NVIDIA GPU. If the emulator command line shows SwiftShader or `-gpu auto` without `-gpu host`, stop and tell the user: SwiftShader crashes the emulator while BankStats renders.
+- The emulator is the AVD `BankStats_API36` (Android 16). The user watches it in its own desktop window and in the T3 Device panel at the same time, so do not let the panel boot it headless:
+  1. If `adb devices` already lists `emulator-5554` with a window and `-gpu host`, reuse it.
+  2. Otherwise start it with a window on the NVIDIA GPU, detached from the shell: `setsid nohup ~/Android/Sdk/emulator/emulator -avd BankStats_API36 -gpu host -no-boot-anim -port 5554 > /tmp/bankstats-emulator.log 2>&1 < /dev/null &`. Wait until `adb -s emulator-5554 shell getprop sys.boot_completed` prints `1`.
+  3. Attach the T3 Device panel to that running instance with `device_open` and the device id `emulator-5554`.
+- The AVD's `config.ini` sets `hw.gpu.enabled=yes` and `hw.gpu.mode=host`. Check the renderer with `adb -s emulator-5554 shell dumpsys SurfaceFlinger | grep GLES:`, which must name the NVIDIA GPU. If the emulator command line shows SwiftShader or `-gpu auto` without `-gpu host`, stop and tell the user: SwiftShader crashes the emulator while BankStats renders.
 - Build and run from `mobile` with `REACT_NATIVE_PACKAGER_HOSTNAME=10.0.2.2 bunx expo run:android --device BankStats_API36`. After the first build, `bunx expo start --dev-client` is enough until native code changes.
 - Check UI changes with screenshots on the emulator. Capture, battery and lock behaviour is checked on the user's Samsung S24 FE over USB, so ask the user to connect it when an issue needs it.
 - Before opening a pull request, run `bun run typecheck`, `bun test` and `bun run lint` from the repository root.
