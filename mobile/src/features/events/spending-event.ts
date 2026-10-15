@@ -97,8 +97,16 @@ export function sortedEvents(events: SpendingEvent[]): SpendingEvent[] {
   });
 }
 
-function containsMoment(event: SpendingEvent, momentMs: number): boolean {
+const minuteMs = 60_000;
+
+export function eventStartMs(event: SpendingEvent): number {
   const startMs = new Date(event.startedAt).getTime();
+
+  return startMs - (startMs % minuteMs);
+}
+
+function containsMoment(event: SpendingEvent, momentMs: number): boolean {
+  const startMs = eventStartMs(event);
   const endMs = event.endedAt === undefined ? Number.POSITIVE_INFINITY : new Date(event.endedAt).getTime();
 
   return momentMs >= startMs && momentMs <= endMs;

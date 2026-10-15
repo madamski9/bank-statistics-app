@@ -76,4 +76,12 @@ describe('events', () => {
     expect(eventNameError('x'.repeat(61))).not.toBeNull();
     expect(eventNameError('Majówka')).toBeNull();
   });
+
+  test('counts a payment entered in the minute the event started', () => {
+    const holiday: SpendingEvent = { id: 'event-holiday', name: 'Wakacje', startedAt: '2026-10-15T10:33:45.500Z' };
+
+    expect(eventIdForRecord(payment('coffee', '2026-10-15T10:33:00.000Z'), [holiday])).toBe('event-holiday');
+    expect(eventIdForRecord(payment('earlier', '2026-10-15T10:32:00.000Z'), [holiday])).toBeNull();
+  });
 });
+
