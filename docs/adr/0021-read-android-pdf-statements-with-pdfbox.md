@@ -1,0 +1,3 @@
+# Read Android PDF statements with PdfBox
+
+On iOS, PDFKit extracts the text of a Millennium PDF statement and the shared TypeScript parser interprets it. Android has no built-in text extraction below Android 15, while the app supports Android 7, so the Kotlin module extracts the text with PdfBox-Android behind the same `extractPdfText` function and normalizes its order to what the TypeScript parser expects. A real, sanitized Millennium statement checks that both platforms feed the parser equivalent text. pdf.js was rejected because it runs poorly in React Native and would change behaviour that already works on iOS. The platform `PdfRenderer` text API was rejected because it would leave older devices without statement import.
