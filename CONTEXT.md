@@ -20,6 +20,10 @@ _Avoid_: Data source, provider
 A user's configuration for capturing notifications from one supported bank on one device. It can be working, require attention, or remain unconfigured.
 _Avoid_: Bank, financial account
 
+**Allowlisted Source App**:
+An application whose notifications the product may read on a device, identified by its platform package or bundle identifier and mapped to one supported bank or wallet. Notifications from any other application are discarded before parsing.
+_Avoid_: Bank app, notification source
+
 **Device**:
 An installation authorized by a user to capture bank notifications, synchronize transactions, and receive alerts.
 _Avoid_: User, session

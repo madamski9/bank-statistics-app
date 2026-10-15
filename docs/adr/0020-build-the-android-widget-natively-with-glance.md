@@ -1,0 +1,3 @@
+# Build the Android widget natively with Glance
+
+The iOS widget is declared in TypeScript through expo-widgets and SwiftUI, and the native capture code refreshes it as soon as a Transaction is saved, without starting React Native. Neither expo-widgets nor SwiftUI runs on Android, so the Android widget is written in Kotlin with Jetpack Glance inside the ingestion module, and the Kotlin collector refreshes it right after it writes a record to the encrypted outbox. A TypeScript widget library was rejected because it would have to start React Native in the background to redraw after a capture, or leave the widget stale while the application is closed.
