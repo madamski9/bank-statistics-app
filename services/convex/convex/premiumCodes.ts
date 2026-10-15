@@ -1,7 +1,7 @@
 import { ConvexError, v } from 'convex/values';
 
 import { internal } from './_generated/api';
-import { internalAction, internalMutation, mutation } from './_generated/server';
+import { internalAction, internalMutation, mutation, type MutationCtx } from './_generated/server';
 import { requireTrustedSession } from './devices';
 import { premiumAlreadyPermanentError, premiumCodeInvalidError } from './premiumCodeErrors';
 import { findProfile } from './profiles';
@@ -61,45 +61,60 @@ export const store = internalMutation({
   },
 });
 
+async function redeemCode(ctx: MutationCtx, { code }: { code: string }) {
+  const { ownerId } = await requireTrustedSession(ctx);
+  const premiumCode = await ctx.db
+    .query('premiumCodes')
+    .withIndex('by_code', (index) => index.eq('code', normalizePremiumCode(code)))
+    .unique();
+
+  if (premiumCode === null || premiumCode.redeemedAt !== undefined) {
+    return { status: 'rejected' as const, error: premiumCodeInvalidError() };
+  }
+
+  const profile = await findProfile(ctx, ownerId);
+
+  if (profile?.isPremium === true && profile.premiumUntil === undefined) {
+    return { status: 'rejected' as const, error: premiumAlreadyPermanentError() };
+  }
+
+  const now = Date.now();
+  const currentEnd = profile?.isPremium === true && profile.premiumUntil !== undefined ? profile.premiumUntil : now;
+  const premiumUntil =
+    premiumCode.months === undefined ? undefined : premiumEndAfter(Math.max(currentEnd, now), premiumCode.months);
+  const grant = { isPremium: true, premiumSince: profile?.premiumSince ?? now, premiumUntil };
+
+  if (profile === null) {
+    await ctx.db.insert('profiles', { ownerId, ...grant });
+  } else {
+    await ctx.db.patch(profile._id, grant);
+  }
+
+  await ctx.db.patch(premiumCode._id, { redeemedAt: now });
+
+  if (premiumUntil !== undefined) {
+    await ctx.scheduler.runAt(premiumUntil, internal.premiumCodes.expire, { ownerId });
+  }
+
+  return { status: 'redeemed' as const, premiumUntil: premiumUntil ?? null };
+}
+
 export const redeem = mutation({
   args: { code: v.string() },
-  handler: async (ctx, { code }) => {
-    const { ownerId } = await requireTrustedSession(ctx);
-    const premiumCode = await ctx.db
-      .query('premiumCodes')
-      .withIndex('by_code', (index) => index.eq('code', normalizePremiumCode(code)))
-      .unique();
+  handler: async (ctx, args) => {
+    const result = await redeemCode(ctx, args);
 
-    if (premiumCode === null || premiumCode.redeemedAt !== undefined) {
-      throw new ConvexError(premiumCodeInvalidError());
+    if (result.status === 'rejected') {
+      throw new ConvexError(result.error);
     }
 
-    const profile = await findProfile(ctx, ownerId);
-
-    if (profile?.isPremium === true && profile.premiumUntil === undefined) {
-      throw new ConvexError(premiumAlreadyPermanentError());
-    }
-
-    const now = Date.now();
-    const currentEnd = profile?.isPremium === true && profile.premiumUntil !== undefined ? profile.premiumUntil : now;
-    const premiumUntil =
-      premiumCode.months === undefined ? undefined : premiumEndAfter(Math.max(currentEnd, now), premiumCode.months);
-    const grant = { isPremium: true, premiumSince: profile?.premiumSince ?? now, premiumUntil };
-
-    if (profile === null) {
-      await ctx.db.insert('profiles', { ownerId, ...grant });
-    } else {
-      await ctx.db.patch(profile._id, grant);
-    }
-
-    await ctx.db.patch(premiumCode._id, { redeemedAt: now });
-
-    if (premiumUntil !== undefined) {
-      await ctx.scheduler.runAt(premiumUntil, internal.premiumCodes.expire, { ownerId });
-    }
-
-    return { premiumUntil: premiumUntil ?? null };
+    return { premiumUntil: result.premiumUntil };
   },
+});
+
+export const redeemWithResult = mutation({
+  args: { code: v.string() },
+  handler: redeemCode,
 });
 
 export const expire = internalMutation({

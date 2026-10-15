@@ -26,13 +26,20 @@ telefonu`, `Data: 2026-09-28 13:14:57`, `Kwota: 30,00 PLN` — and is saved as a
 action serves both banks; the shared shortcut decides which apps trigger it (IKO, Millennium,
 Portfel). A Wallet push's title names the card's bank (`Bank Millennium S.A.`, `PKO BP`), so the
 automation maps it to the optional `Notification Title`: a title containing `PKO` records the card
-payment as `pko`, anything else — including an unmapped title — as `millennium`.
+payment as `pko`; the other supported banks, including mBank, have dedicated title rules.
 
 A push from Moje ING has no subtitle and reports a balance change — `2,00 PLN mniej na Twoim
 koncie - KONTO Mobi 18-26 - płatność BLIK` — and is saved as an `ing` record on the named account:
 `mniej` is an expense (a `blikPayment` when it ends with `płatność BLIK`, otherwise an
 `outgoingTransfer`), any other word is an `incomingTransfer`. A Wallet push titled
 `ING Bank Śląski S.A.` records the card payment as `ing`.
+
+A push from mBank PL uses the title `Przelew z konta` with body `1,00 PLN do JAN .`
+for an outgoing transfer, or `Nowy przelew` with body `5,00 PLN wpłynęło od KOWALSKI JAN`
+for an incoming transfer. The automation must pass `Notification Title` and `Notification Body`,
+with an empty subtitle. The sender or recipient is retained as the counterparty, and the capture
+time is used as the occurrence time because these pushes contain no transaction timestamp.
+A Wallet push whose title names mBank records the card payment as `mbank`.
 
 A Wallet push whose body carries an amount with no currency symbol is still captured, as a Review
 Item flagged `currency`: the transaction reaches the timeline but stays out of statistics until the

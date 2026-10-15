@@ -1,6 +1,6 @@
 import type { IngestionRecord, StorageDiagnostics } from '@bankstats/ingestion-native';
 
-export const capturedBanks = ['millennium', 'pko', 'ing'] as const;
+export const capturedBanks = ['millennium', 'pko', 'ing', 'mbank'] as const;
 
 export type CapturedBank = (typeof capturedBanks)[number];
 

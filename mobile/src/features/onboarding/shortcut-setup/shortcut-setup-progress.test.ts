@@ -9,6 +9,12 @@ describe('pending shortcut setup', () => {
     expect(pendingShortcutBanks(JSON.stringify(banks), ['millennium'])).toEqual(banks);
   });
 
+  test('restores a published shortcut selection that includes mBank', () => {
+    const banks = ['ing', 'pko', 'mbank', 'millennium'];
+
+    expect(pendingShortcutBanks(JSON.stringify(banks), ['millennium'])).toEqual(banks);
+  });
+
   test('resumes an older pending launch with saved banks or the original default', () => {
     expect(pendingShortcutBanks('true', ['ing'])).toEqual(['ing']);
     expect(pendingShortcutBanks('true', [])).toEqual(['millennium']);

@@ -333,6 +333,44 @@ describe('sync', () => {
     ]);
   });
 
+  test('synchronizes mBank transfers, accounts and manual entries assigned to mBank', async () => {
+    const { user } = await signedIn(alice, 'phone');
+
+    await user.mutation(api.sync.push, {
+      installationId: 'phone',
+      changes: {
+        financialAccounts: [{
+          clientId: 'general-mbank',
+          bank: 'mbank',
+          name: 'mBank',
+          isGeneral: true,
+          revision: 1,
+          deleted: false,
+        }],
+        transactions: [
+          lunch({
+            clientId: 'capture-mbank',
+            bank: 'mbank',
+            origin: 'capture',
+            direction: 'income',
+            transactionType: 'incomingTransfer',
+            accountId: undefined,
+            sourceApp: 'pl.mbank',
+          }),
+          lunch({ clientId: 'manual-mbank', accountId: 'general-mbank' }),
+        ],
+      },
+    });
+
+    expect(await pulled(user, 'phone', 'transactions')).toEqual(expect.arrayContaining([
+      expect.objectContaining({ clientId: 'capture-mbank', bank: 'mbank', direction: 'income' }),
+      expect.objectContaining({ clientId: 'manual-mbank', accountId: 'general-mbank' }),
+    ]));
+    expect(await pulled(user, 'phone', 'financialAccounts')).toEqual([
+      expect.objectContaining({ clientId: 'general-mbank', bank: 'mbank' }),
+    ]);
+  });
+
   test('keeps captured Millennium transactions under the signed-in owner', async () => {
     const { backend, user } = await signedIn(alice, 'phone');
     await user.mutation(api.sync.push, {

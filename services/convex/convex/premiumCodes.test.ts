@@ -31,6 +31,44 @@ async function withCode(months?: number) {
 }
 
 describe('premium codes', () => {
+  test('returns invalid-code validation without throwing or changing the account', async () => {
+    const backend = convexTest(schema, modules);
+
+    const result = await backend.withIdentity(alice).mutation(api.premiumCodes.redeemWithResult, { code: 'ABCDE-FGHJK' });
+
+    expect(result).toMatchObject({ status: 'rejected', error: { code: 'premiumCodeInvalid' } });
+    expect((await backend.withIdentity(alice).query(api.profiles.current, {})).isPremium).toBe(false);
+    expect(await backend.run((ctx) => ctx.db.query('profiles').collect())).toEqual([]);
+  });
+
+  test('returns validation for an already-used code without granting another account Premium', async () => {
+    const { backend, code } = await withCode(1);
+    const first = await backend.withIdentity(alice).mutation(api.premiumCodes.redeemWithResult, { code });
+    const second = await backend.withIdentity(bob).mutation(api.premiumCodes.redeemWithResult, { code });
+
+    expect(first).toMatchObject({ status: 'redeemed', premiumUntil: expect.any(Number) });
+    expect(second).toMatchObject({ status: 'rejected', error: { code: 'premiumCodeInvalid' } });
+    expect((await backend.withIdentity(bob).query(api.profiles.current, {})).isPremium).toBe(false);
+  });
+
+  test('returns permanent-Premium validation and keeps the code available for another person', async () => {
+    const { backend, code } = await withCode();
+    await backend.mutation(internal.profiles.setPremium, { ownerId: alice.subject, isPremium: true });
+
+    const rejected = await backend.withIdentity(alice).mutation(api.premiumCodes.redeemWithResult, { code });
+    const redeemed = await backend.withIdentity(bob).mutation(api.premiumCodes.redeemWithResult, { code });
+
+    expect(rejected).toMatchObject({ status: 'rejected', error: { code: 'premiumAlreadyPermanent' } });
+    expect(redeemed).toEqual({ status: 'redeemed', premiumUntil: null });
+    expect((await backend.withIdentity(bob).query(api.profiles.current, {})).isPremium).toBe(true);
+  });
+
+  test('still rejects an anonymous caller when returning validation results', async () => {
+    const { backend, code } = await withCode(1);
+
+    await expect(backend.mutation(api.premiumCodes.redeemWithResult, { code })).rejects.toThrow('Sign in');
+  });
+
   test('creates readable codes without look-alike characters', async () => {
     const backend = convexTest(schema, modules);
     const codes = await backend.action(internal.premiumCodes.create, { months: 3, count: 20 });
