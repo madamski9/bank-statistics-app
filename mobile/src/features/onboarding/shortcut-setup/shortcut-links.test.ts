@@ -21,4 +21,11 @@ describe('shortcutUrlFor', () => {
     expect(shortcutUrlFor(['revolut'])).toBeNull();
     expect(shortcutUrlFor([])).toBeNull();
   });
+
+  test('does not silently omit mBank while its shortcuts are awaiting publication', () => {
+    expect(shortcutUrlFor(['mbank'])).toBeNull();
+    expect(shortcutUrlFor(['mbank', 'millennium'])).toBeNull();
+    expect(shortcutUrlFor(['pko', 'ing', 'mbank'])).toBeNull();
+    expect(shortcutUrlFor(['millennium', 'pko', 'ing', 'mbank'])).toBeNull();
+  });
 });

@@ -4,8 +4,8 @@ export const maximumAccountNameLength = 60;
 export const maximumCategoryNameLength = 40;
 export const maximumEventNameLength = 60;
 
-const captureBanks = new Set(['millennium', 'pko', 'erste', 'ing']);
-const financialAccountBanks = new Set(['manual', 'millennium', 'pko', 'erste', 'ing']);
+const captureBanks = new Set(['millennium', 'pko', 'erste', 'ing', 'mbank']);
+const financialAccountBanks = new Set(['manual', 'millennium', 'pko', 'erste', 'ing', 'mbank']);
 const currencyPattern = /^[A-Z]{3}$/;
 const customCategoryIdPattern = /^category-[a-z0-9-]{1,60}$/;
 const decimalRatePattern = /^\d{1,6}(?:\.\d{1,8})?$/;

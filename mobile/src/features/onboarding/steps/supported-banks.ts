@@ -21,7 +21,7 @@ export const supportedBanks = [
     id: 'mbank',
     name: 'mBank',
     logo: require('../assets/mbank.png'),
-    available: false,
+    available: true,
   },
   {
     id: 'revolut',

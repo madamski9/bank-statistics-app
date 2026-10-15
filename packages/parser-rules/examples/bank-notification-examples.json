@@ -2,6 +2,191 @@
   "capturedAt": "2026-09-28T10:00:00Z",
   "examples": [
     {
+      "name": "mBank outgoing transfer captures its recipient and trims sentence punctuation",
+      "input": {
+        "title": "Przelew z konta",
+        "subtitle": "",
+        "body": "1,00 PLN do JAN .",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "mbank",
+          "direction": "expense",
+          "transactionType": "outgoingTransfer",
+          "amountMinor": 100,
+          "currency": "PLN",
+          "merchant": "JAN",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.mbank",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "mBank incoming transfer keeps the sender and address",
+      "input": {
+        "title": "Nowy przelew",
+        "subtitle": "",
+        "body": "5,00 PLN wpłynęło od KOWALSKI JAN UL\nTESTOWA 14",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "mbank",
+          "direction": "income",
+          "transactionType": "incomingTransfer",
+          "amountMinor": 500,
+          "currency": "PLN",
+          "merchant": "KOWALSKI JAN UL TESTOWA 14",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.mbank",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "mBank foreign currency transfer handles grouped amounts and whitespace",
+      "input": {
+        "title": "  PRZELEW Z KONTA ",
+        "subtitle": "",
+        "body": "1 234,50 EUR do FIRMA SP. Z O.O.",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "mbank",
+          "direction": "expense",
+          "transactionType": "outgoingTransfer",
+          "amountMinor": 123450,
+          "currency": "EUR",
+          "merchant": "FIRMA SP. Z O.O.",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.mbank",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "mBank incoming transfer overrides the legacy Shortcuts source app",
+      "input": {
+        "title": "Nowy przelew",
+        "subtitle": "",
+        "body": "125,00 PLN wpłynęło od JAN",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "mbank",
+          "direction": "income",
+          "transactionType": "incomingTransfer",
+          "amountMinor": 12500,
+          "currency": "PLN",
+          "merchant": "JAN",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.mbank",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Wallet card payment for an mBank card is attributed to mBank",
+      "input": {
+        "title": "mBank",
+        "subtitle": "Żabka  Kraków, Małopolskie",
+        "body": "2,50 zł",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "mbank",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 250,
+          "currency": "PLN",
+          "merchant": "Żabka",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.mbank",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "mBank marketing push is ignored",
+      "input": {
+        "title": "mBank PL",
+        "subtitle": "",
+        "body": "Sprawdź ofertę konta i odbierz 100 PLN premii.",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "ignored",
+        "reason": "notTransaction"
+      }
+    },
+    {
+      "name": "mBank zero amount transfer is ignored",
+      "input": {
+        "title": "Przelew z konta",
+        "subtitle": "",
+        "body": "0,00 PLN do JAN .",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "ignored",
+        "reason": "notTransaction"
+      }
+    },
+    {
+      "name": "mBank outgoing transfer without recipient is ignored",
+      "input": {
+        "title": "Przelew z konta",
+        "subtitle": "",
+        "body": "1,00 PLN do ",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "ignored",
+        "reason": "notTransaction"
+      }
+    },
+    {
+      "name": "mBank incoming transfer without sender is ignored",
+      "input": {
+        "title": "Nowy przelew",
+        "subtitle": "",
+        "body": "5,00 PLN wpłynęło od ",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "ignored",
+        "reason": "notTransaction"
+      }
+    },
+    {
+      "name": "Transfer-shaped marketing body with another title is ignored",
+      "input": {
+        "title": "Oferta",
+        "subtitle": "",
+        "body": "1,00 PLN do JAN .",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "ignored",
+        "reason": "notTransaction"
+      }
+    },
+    {
       "name": "ING BLIK payment names the account it was paid from",
       "input": {
         "title": "Moje ING. Twój Asystent",

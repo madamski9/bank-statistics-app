@@ -11,10 +11,11 @@ const captureSourceApps = {
   pko: 'pl.pkobp.iko',
   erste: 'pl.bzwbk.mobile.bzwbk24',
   ing: 'pl.ing.mojeing',
+  mbank: 'pl.mbank',
 } as const;
 
 function isCaptureBank(bank: string): bank is keyof typeof captureSourceApps {
-  return bank === 'millennium' || bank === 'pko' || bank === 'erste' || bank === 'ing';
+  return bank === 'millennium' || bank === 'pko' || bank === 'erste' || bank === 'ing' || bank === 'mbank';
 }
 
 export type TransactionChange = TransactionContent;

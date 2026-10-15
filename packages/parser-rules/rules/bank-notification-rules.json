@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": 3,
+  "version": 5,
   "fragments": {
     "amount": "(?:[0-9]{1,3}(?:\\s[0-9]{3})+|[0-9]+)(?:[,.][0-9]{1,2})?"
   },
@@ -20,6 +20,98 @@
   },
   "fallbackIgnoreReason": "notTransaction",
   "rules": [
+    {
+      "id": "mbank.outgoingTransfer",
+      "whitespace": "single",
+      "requires": {
+        "subtitle": "empty",
+        "title": {
+          "pattern": "^przelew z konta$",
+          "caseInsensitive": true
+        }
+      },
+      "match": {
+        "field": "body",
+        "pattern": "^(?<amount>{{amount}})\\s*(?<currency>[A-Z]{3})\\s+do\\s+(?<party>.+?)(?:\\s+\\.)?$",
+        "caseInsensitive": true
+      },
+      "record": {
+        "bank": "mbank",
+        "sourceApp": "pl.mbank",
+        "direction": "expense",
+        "transactionType": "outgoingTransfer",
+        "amountGroup": "amount",
+        "currencyGroups": [
+          "currency"
+        ],
+        "merchant": {
+          "group": "party"
+        },
+        "status": "pending"
+      }
+    },
+    {
+      "id": "mbank.incomingTransfer",
+      "whitespace": "single",
+      "requires": {
+        "subtitle": "empty",
+        "title": {
+          "pattern": "^nowy przelew$",
+          "caseInsensitive": true
+        }
+      },
+      "match": {
+        "field": "body",
+        "pattern": "^(?<amount>{{amount}})\\s*(?<currency>[A-Z]{3})\\s+wpłynęło\\s+od\\s+(?<party>.+?)(?:\\s+\\.)?$",
+        "caseInsensitive": true
+      },
+      "record": {
+        "bank": "mbank",
+        "sourceApp": "pl.mbank",
+        "direction": "income",
+        "transactionType": "incomingTransfer",
+        "amountGroup": "amount",
+        "currencyGroups": [
+          "currency"
+        ],
+        "merchant": {
+          "group": "party"
+        },
+        "status": "pending"
+      }
+    },
+    {
+      "id": "wallet.mbankCardPayment",
+      "whitespace": "keepDoubleSpace",
+      "requires": {
+        "subtitle": "present",
+        "title": {
+          "pattern": "\\bmbank\\b",
+          "caseInsensitive": true
+        }
+      },
+      "match": {
+        "field": "body",
+        "pattern": "^(?:(?<symbolBefore>\\p{Sc})\\s*)?[-−]?\\s*(?<amount>{{amount}})\\s*(?<symbolAfter>zł|zl|\\p{Sc}|[A-Z]{3})?$",
+        "caseInsensitive": true
+      },
+      "record": {
+        "bank": "mbank",
+        "sourceApp": "pl.mbank",
+        "direction": "expense",
+        "transactionType": "cardPayment",
+        "amountGroup": "amount",
+        "currencyGroups": [
+          "symbolAfter",
+          "symbolBefore"
+        ],
+        "merchant": {
+          "field": "subtitle",
+          "stripLocation": true
+        },
+        "status": "pending"
+      }
+    },
     {
       "id": "ing.blikPayment",
       "whitespace": "single",

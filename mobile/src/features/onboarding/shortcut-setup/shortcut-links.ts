@@ -8,7 +8,7 @@ const shortcutUrls: Record<string, string> = {
   'millennium+pko+ing': 'https://www.icloud.com/shortcuts/61b8589ba38b45df8dfb0c6f46ee47cc',
 };
 
-const shortcutBankOrder = ['millennium', 'pko', 'ing'];
+const shortcutBankOrder = ['millennium', 'pko', 'ing', 'mbank'];
 
 export function shortcutUrlFor(selectedBanks: string[]): string | null {
   const key = shortcutBankOrder.filter((bank) => selectedBanks.includes(bank)).join('+');
