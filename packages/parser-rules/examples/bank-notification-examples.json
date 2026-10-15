@@ -341,6 +341,174 @@
       }
     },
     {
+      "name": "Wallet card payment from ZEN.COM keeps an unknown bank",
+      "input": {
+        "title": "ZEN.COM",
+        "subtitle": "Lidl  Gdańsk, Pomorskie",
+        "body": "5,08 zł",
+        "sourceApp": "com.apple.Passbook"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "unknown",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 508,
+          "currency": "PLN",
+          "merchant": "Lidl",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "com.apple.Passbook",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Wallet card payment from ZEN keeps an unknown bank",
+      "input": {
+        "title": "ZEN",
+        "subtitle": "Lidl  Gdańsk, Pomorskie",
+        "body": "5,08 zł",
+        "sourceApp": "com.apple.Passbook"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "unknown",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 508,
+          "currency": "PLN",
+          "merchant": "Lidl",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "com.apple.Passbook",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Wallet card payment from Revolut keeps an unknown bank",
+      "input": {
+        "title": "Revolut",
+        "subtitle": "Lidl  Gdańsk, Pomorskie",
+        "body": "5,08 zł",
+        "sourceApp": "com.apple.Passbook"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "unknown",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 508,
+          "currency": "PLN",
+          "merchant": "Lidl",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "com.apple.Passbook",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Wallet card payment from Unknown issuer keeps an unknown bank",
+      "input": {
+        "title": "Unknown issuer",
+        "subtitle": "Lidl  Gdańsk, Pomorskie",
+        "body": "5,08 zł",
+        "sourceApp": "com.apple.Passbook"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "unknown",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 508,
+          "currency": "PLN",
+          "merchant": "Lidl",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "com.apple.Passbook",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Wallet card payment from NotMillennium keeps an unknown bank",
+      "input": {
+        "title": "NotMillennium",
+        "subtitle": "Lidl  Gdańsk, Pomorskie",
+        "body": "5,08 zł",
+        "sourceApp": "com.apple.Passbook"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "unknown",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 508,
+          "currency": "PLN",
+          "merchant": "Lidl",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "com.apple.Passbook",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Wallet card payment from NotPKO keeps an unknown bank",
+      "input": {
+        "title": "NotPKO",
+        "subtitle": "Lidl  Gdańsk, Pomorskie",
+        "body": "5,08 zł",
+        "sourceApp": "com.apple.Passbook"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "unknown",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 508,
+          "currency": "PLN",
+          "merchant": "Lidl",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "com.apple.Passbook",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Wallet Millennium title matching ignores case",
+      "input": {
+        "title": "bank MILLENNIUM s.a.",
+        "subtitle": "Lidl  Gdańsk, Pomorskie",
+        "body": "5,08 zł",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "millennium",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 508,
+          "currency": "PLN",
+          "merchant": "Lidl",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.millenniumbank.bankmillennium",
+          "status": "pending"
+        }
+      }
+    },
+    {
       "name": "Wallet card payment names the merchant and drops the voivodeship",
       "input": {
         "title": "Bank Millennium S.A.",
@@ -399,7 +567,7 @@
       "expected": {
         "outcome": "record",
         "record": {
-          "bank": "millennium",
+          "bank": "unknown",
           "direction": "expense",
           "transactionType": "cardPayment",
           "amountMinor": 1250,

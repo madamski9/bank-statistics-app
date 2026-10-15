@@ -231,6 +231,28 @@
       }
     },
     {
+      "id": "wallet.millenniumCardPayment",
+      "whitespace": "keepDoubleSpace",
+      "requires": {
+        "subtitle": "present",
+        "title": { "pattern": "\\bmillennium\\b", "caseInsensitive": true }
+      },
+      "match": {
+        "field": "body",
+        "pattern": "^(?:(?<symbolBefore>\\p{Sc})\\s*)?[-−]?\\s*(?<amount>{{amount}})\\s*(?<symbolAfter>zł|zl|\\p{Sc}|[A-Z]{3})?$",
+        "caseInsensitive": true
+      },
+      "record": {
+        "bank": "millennium",
+        "direction": "expense",
+        "transactionType": "cardPayment",
+        "amountGroup": "amount",
+        "currencyGroups": ["symbolAfter", "symbolBefore"],
+        "merchant": { "field": "subtitle", "stripLocation": true },
+        "status": "pending"
+      }
+    },
+    {
       "id": "wallet.cardPayment",
       "whitespace": "keepDoubleSpace",
       "requires": { "subtitle": "present" },
@@ -245,7 +267,7 @@
           "pattern": "\\bpko\\b",
           "caseInsensitive": true,
           "whenMatched": "pko",
-          "otherwise": "millennium"
+          "otherwise": "unknown"
         },
         "direction": "expense",
         "transactionType": "cardPayment",

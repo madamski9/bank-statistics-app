@@ -26,7 +26,9 @@ telefonu`, `Data: 2026-09-28 13:14:57`, `Kwota: 30,00 PLN` — and is saved as a
 action serves both banks; the shared shortcut decides which apps trigger it (IKO, Millennium,
 Portfel). A Wallet push's title names the card's bank (`Bank Millennium S.A.`, `PKO BP`), so the
 automation maps it to the optional `Notification Title`: a title containing `PKO` records the card
-payment as `pko`; the other supported banks, including mBank, have dedicated title rules.
+payment as `pko`, and a title containing `Millennium` records it as `millennium`. Titles naming
+ING, mBank or Erste/Santander use their dedicated rules. Any other title, including a missing title,
+records the payment as `unknown` (displayed as “Unknown bank”), without guessing a supported bank.
 
 A push from Moje ING has no subtitle and reports a balance change — `2,00 PLN mniej na Twoim
 koncie - KONTO Mobi 18-26 - płatność BLIK` — and is saved as an `ing` record on the named account:
