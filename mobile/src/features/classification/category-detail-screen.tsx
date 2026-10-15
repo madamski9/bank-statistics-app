@@ -1,9 +1,8 @@
-import { SymbolView } from 'expo-symbols';
 import { useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, { FadeIn, FadeInRight, ReduceMotion } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, FadeInRight, FadeOutDown, ReduceMotion } from 'react-native-reanimated';
 
-import { ScalePressable } from '@/features/app-shell/scale-pressable';
+import { BackButton } from '@/features/app-shell/back-button';
 import { SheetButton, SheetLayout, SheetRow, SheetSection } from '@/features/app-shell/sheet-layout';
 import { useCopy } from '@/features/localization/language';
 import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
@@ -26,40 +25,13 @@ interface CategoryDetailScreenProps {
   category: CategoryDetailTarget;
   merchants: HistoryMerchant[];
   rules: CategorizationRule[];
-  onAssign: (merchant: HistoryMerchant) => Promise<boolean>;
+  onAssign: (merchants: HistoryMerchant[]) => Promise<boolean>;
   onRequirePremium: () => void;
   onUnassign: (merchantKey: string) => Promise<void>;
   onRename?: () => void;
   onDelete?: () => void;
   onBack: () => void;
   onClose: () => void;
-}
-
-interface BackButtonProps {
-  label: string;
-  onPress: () => void;
-}
-
-function BackButton({ label, onPress }: BackButtonProps) {
-  return (
-    <ScalePressable
-      accessibilityLabel={label}
-      accessibilityRole="button"
-      hitSlop={8}
-      onPress={() => {
-        selectionChanged();
-        onPress();
-      }}
-      pressedScale={0.88}
-      style={styles.backButton}
-    >
-      <SymbolView
-        name={{ ios: 'chevron.left', android: 'chevron_left', web: 'chevron_left' }}
-        size={17}
-        tintColor={overviewColors.textPrimary}
-      />
-    </ScalePressable>
-  );
 }
 
 export function CategoryDetailScreen({
@@ -78,6 +50,8 @@ export function CategoryDetailScreen({
   const copy = useCopy(customCategoriesCopy);
   const [isPicking, setIsPicking] = useState(false);
   const [query, setQuery] = useState('');
+  const [selectedKeys, setSelectedKeys] = useState<ReadonlySet<string>>(new Set());
+  const [isSaving, setIsSaving] = useState(false);
   const assigned = useMemo(
     () =>
       rules
@@ -99,6 +73,45 @@ export function CategoryDetailScreen({
     [candidates, query],
   );
 
+  const closePicker = () => {
+    setQuery('');
+    setSelectedKeys(new Set());
+    setIsPicking(false);
+  };
+
+  const toggle = (key: string) => {
+    selectionChanged();
+    setSelectedKeys((current) => {
+      const next = new Set(current);
+
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+
+      return next;
+    });
+  };
+
+  const assignSelected = () => {
+    const picked = candidates.filter((merchant) => selectedKeys.has(merchant.key));
+
+    if (picked.length === 0 || isSaving) {
+      return;
+    }
+
+    impactLight();
+    setIsSaving(true);
+    void onAssign(picked)
+      .then((saved) => {
+        if (saved) {
+          closePicker();
+        }
+      })
+      .finally(() => setIsSaving(false));
+  };
+
   const confirmRemove = (rule: CategorizationRule) => {
     Alert.alert(copy.removeTitle(rule.merchantName), copy.removeBody, [
       { style: 'cancel', text: copy.cancel },
@@ -110,7 +123,22 @@ export function CategoryDetailScreen({
     return (
       <SheetLayout
         closeLabel={copy.close}
-        leading={<BackButton label={copy.back} onPress={() => setIsPicking(false)} />}
+        footer={
+          selectedKeys.size > 0 ? (
+            <Animated.View
+              entering={FadeInDown.duration(220).reduceMotion(ReduceMotion.System)}
+              exiting={FadeOutDown.duration(160).reduceMotion(ReduceMotion.System)}
+            >
+              <SheetButton
+                disabled={isSaving}
+                label={copy.addSelected(selectedKeys.size)}
+                onPress={assignSelected}
+                tone="primary"
+              />
+            </Animated.View>
+          ) : undefined
+        }
+        leading={<BackButton label={copy.back} onPress={closePicker} />}
         onClose={onClose}
         title={copy.pickTitle}
       >
@@ -138,17 +166,10 @@ export function CategoryDetailScreen({
                   accessibilityHint={copy.assignHint}
                   detail={copy.currently(merchant.categoryName, copy.payments(merchant.count))}
                   isFirst={index === 0}
+                  isSelected={selectedKeys.has(merchant.key)}
                   key={merchant.key}
                   label={merchant.name}
-                  onPress={() => {
-                    impactLight();
-                    void onAssign(merchant).then((saved) => {
-                      if (saved) {
-                        setQuery('');
-                        setIsPicking(false);
-                      }
-                    });
-                  }}
+                  onPress={() => toggle(merchant.key)}
                 />
               ))}
             </SheetSection>
@@ -231,14 +252,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     fontSize: 17,
     color: overviewColors.textPrimary,
-    backgroundColor: overviewColors.surfacePressed,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 22,
     backgroundColor: overviewColors.surfacePressed,
   },
 });

@@ -11,10 +11,11 @@ interface SheetLayoutProps {
   closeLabel: string;
   onClose: () => void;
   leading?: ReactNode;
+  footer?: ReactNode;
   children: ReactNode;
 }
 
-export function SheetLayout({ title, closeLabel, onClose, leading, children }: SheetLayoutProps) {
+export function SheetLayout({ title, closeLabel, onClose, leading, footer, children }: SheetLayoutProps) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -39,13 +40,16 @@ export function SheetLayout({ title, closeLabel, onClose, leading, children }: S
         </Pressable>
       </View>
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: (footer === undefined ? insets.bottom : 0) + 32 }]}
         indicatorStyle="white"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         {children}
       </ScrollView>
+      {footer !== undefined ? (
+        <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>{footer}</View>
+      ) : null}
     </View>
   );
 }
@@ -80,6 +84,7 @@ interface SheetRowProps {
   value?: string;
   valueTone?: 'default' | 'positive' | 'negative' | 'caution' | 'muted';
   isFirst?: boolean;
+  isSelected?: boolean;
   onPress?: () => void;
   accessibilityHint?: string;
 }
@@ -90,6 +95,7 @@ export function SheetRow({
   value,
   valueTone = 'default',
   isFirst = false,
+  isSelected,
   onPress,
   accessibilityHint,
 }: SheetRowProps) {
@@ -110,7 +116,19 @@ export function SheetRow({
           {value}
         </AmountText>
       ) : null}
-      {onPress !== undefined ? (
+      {isSelected !== undefined ? (
+        <SymbolView
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+          name={
+            isSelected
+              ? { ios: 'checkmark.circle.fill', android: 'check_circle', web: 'check_circle' }
+              : { ios: 'circle', android: 'radio_button_unchecked', web: 'radio_button_unchecked' }
+          }
+          size={22}
+          tintColor={isSelected ? overviewColors.positive : overviewColors.textDisabled}
+        />
+      ) : onPress !== undefined ? (
         <SymbolView
           accessibilityElementsHidden
           importantForAccessibility="no"
@@ -133,7 +151,8 @@ export function SheetRow({
   return (
     <Pressable
       accessibilityHint={accessibilityHint}
-      accessibilityRole="button"
+      accessibilityRole={isSelected === undefined ? 'button' : 'checkbox'}
+      accessibilityState={isSelected === undefined ? undefined : { checked: isSelected }}
       onPress={onPress}
       style={({ pressed }) => [styles.row, isFirst ? null : styles.rowDivider, pressed ? styles.rowPressed : null]}
     >
@@ -242,6 +261,13 @@ const styles = StyleSheet.create({
     gap: overviewSpacing.section,
     paddingHorizontal: overviewSpacing.gutter,
     paddingTop: overviewSpacing.block,
+  },
+  footer: {
+    paddingHorizontal: overviewSpacing.gutter,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: overviewColors.hairline,
+    backgroundColor: overviewColors.background,
   },
   section: {
     gap: overviewSpacing.tight,

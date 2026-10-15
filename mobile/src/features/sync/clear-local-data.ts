@@ -9,6 +9,7 @@ import { clearAccountStorage } from '@/features/financial-accounts/encrypted-acc
 import { clearMonthlySummaryPreference } from '@/features/monthly-summary/monthly-summary-preference';
 import { clearPrivacyStorage } from '@/features/privacy/privacy-storage';
 import { clearDismissedSubscriptions } from '@/features/subscriptions/dismissed-subscriptions';
+import { clearTrackedSubscriptions } from '@/features/subscriptions/tracked-subscriptions';
 
 import { clearCloudSyncPreference } from './cloud-sync-preference';
 import { clearLedger } from './encrypted-ledger-storage';
@@ -27,6 +28,7 @@ export async function clearLocalData(): Promise<void> {
     clearPrivacyStorage(),
     clearCloudSyncPreference(),
     clearDismissedSubscriptions(),
+    clearTrackedSubscriptions(),
     clearIgnoreRules(),
     clearMonthlySummaryPreference(),
   ]);

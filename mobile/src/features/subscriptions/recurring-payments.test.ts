@@ -1,7 +1,13 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { describe, expect, test } from 'bun:test';
 
-import { detectRecurringPayments, hasPriceIncrease, monthlyRecurringCost } from './recurring-payments';
+import {
+  detectRecurringPayments,
+  hasPriceIncrease,
+  monthlyRecurringCost,
+  recurringCandidates,
+  upcomingFirst,
+} from './recurring-payments';
 
 let sequence = 0;
 
@@ -96,5 +102,68 @@ describe('recurring payments', () => {
     const [payment] = detectRecurringPayments(records, [], now);
 
     expect(detectRecurringPayments(records, [], now, new Set([payment!.key]))).toEqual([]);
+  });
+
+  test('tracks a payment the user added after a single charge', () => {
+    const records = [charge('Anthropic', '2026-09-12T08:00:00Z', 9000)];
+    const [candidate] = recurringCandidates(records, [], now, new Set());
+
+    expect(detectRecurringPayments(records, [], now)).toEqual([]);
+
+    const [payment] = detectRecurringPayments(records, [], now, new Set(), [
+      { key: candidate!.key, name: candidate!.name, cadence: 'monthly' },
+    ]);
+
+    expect(payment).toMatchObject({ name: 'Anthropic', isTracked: true, isActive: true, lastAmountMinor: 9000 });
+    expect(payment?.nextExpectedAt.slice(0, 10)).toBe('2026-10-12');
+  });
+
+  test('rolls a tracked payment forward to its next upcoming charge', () => {
+    const records = [charge('Anthropic', '2026-06-12T08:00:00Z', 9000)];
+    const [candidate] = recurringCandidates(records, [], now, new Set());
+    const [payment] = detectRecurringPayments(records, [], now, new Set(), [
+      { key: candidate!.key, name: candidate!.name, cadence: 'monthly' },
+    ]);
+
+    expect(payment?.nextExpectedAt.slice(0, 10)).toBe('2026-10-12');
+    expect(payment?.isActive).toBe(true);
+  });
+
+  test('keeps a tracked payment even after it was hidden before', () => {
+    const records = [charge('Anthropic', '2026-09-12T08:00:00Z', 9000)];
+    const [candidate] = recurringCandidates(records, [], now, new Set());
+    const payments = detectRecurringPayments(records, [], now, new Set([candidate!.key]), [
+      { key: candidate!.key, name: candidate!.name, cadence: 'yearly' },
+    ]);
+
+    expect(payments.map((payment) => payment.cadence)).toEqual(['yearly']);
+  });
+
+  test('offers the most recent payees as candidates, without the excluded ones', () => {
+    const records = [
+      charge('Żabka', '2026-09-01T08:00:00Z', 1200),
+      charge('Anthropic', '2026-09-12T08:00:00Z', 9000),
+      charge('Spotify', '2026-09-05T08:00:00Z', 2399),
+    ];
+    const all = recurringCandidates(records, [], now, new Set());
+    const spotify = all.find((candidate) => candidate.name === 'Spotify');
+
+    expect(all.map((candidate) => candidate.name)).toEqual(['Anthropic', 'Spotify', 'Żabka']);
+    expect(
+      recurringCandidates(records, [], now, new Set([spotify!.key])).map((candidate) => candidate.name),
+    ).toEqual(['Anthropic', 'Żabka']);
+  });
+
+  test('orders payments by the closest upcoming charge', () => {
+    const records = [
+      charge('Netflix', '2026-08-25T08:00:00Z', 4900),
+      charge('Netflix', '2026-09-25T08:00:00Z', 4900),
+      charge('Spotify', '2026-07-05T08:00:00Z', 2399),
+      charge('Spotify', '2026-08-05T08:00:00Z', 2399),
+      charge('Spotify', '2026-09-05T08:00:00Z', 2399),
+    ];
+    const ordered = upcomingFirst(detectRecurringPayments(records, [], new Date('2026-09-26T12:00:00Z')));
+
+    expect(ordered.map((payment) => payment.name)).toEqual(['Spotify', 'Netflix']);
   });
 });

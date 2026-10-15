@@ -1,75 +1,93 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 
 import { reportingCurrency } from '@/features/currency-conversion/exchange-rate';
-import { SheetButton, SheetLayout, SheetRow, SheetSection } from '@/features/app-shell/sheet-layout';
+import { SheetButton, SheetLayout, SheetSection } from '@/features/app-shell/sheet-layout';
 import { useCopy } from '@/features/localization/language';
 import { AmountText } from '@/features/privacy/amount-text';
 import { useAmountFormatting } from '@/features/privacy/use-private-amounts';
-import { overviewColors } from '@/features/spending-overview/overview-theme';
-import { formatDayHeading } from '@/features/transactions/format-date';
+import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
 
+import { AddRecurringPayment } from './add-recurring-payment';
+import { daysUntil, RecurringPaymentRow } from './recurring-payment-row';
 import {
-  hasPriceIncrease,
   monthlyRecurringCost,
+  upcomingFirst,
+  type RecurringCandidate,
   type RecurringPayment,
+  type TrackedPayment,
 } from './recurring-payments';
 import { subscriptionsCopy } from './subscriptions-copy';
 
 interface SubscriptionsScreenProps {
   payments: RecurringPayment[];
+  candidates: RecurringCandidate[];
   hasDismissed: boolean;
   onDismiss: (key: string) => Promise<void>;
+  onRemoveTracked: (key: string) => Promise<void>;
+  onTrack: (payment: TrackedPayment) => Promise<void>;
   onRestoreAll: () => Promise<void>;
   onClose: () => void;
 }
 
 export function SubscriptionsScreen({
   payments,
+  candidates,
   hasDismissed,
   onDismiss,
+  onRemoveTracked,
+  onTrack,
   onRestoreAll,
   onClose,
 }: SubscriptionsScreenProps) {
   const copy = useCopy(subscriptionsCopy);
   const { formatAmount } = useAmountFormatting();
   const now = useMemo(() => new Date(), []);
-  const active = payments.filter((payment) => payment.isActive);
+  const [isAdding, setIsAdding] = useState(false);
+  const active = useMemo(() => upcomingFirst(payments.filter((payment) => payment.isActive)), [payments]);
   const inactive = payments.filter((payment) => !payment.isActive);
   const monthlyMinor = monthlyRecurringCost(payments);
+  const nextUp = active[0];
 
-  const confirmDismiss = (payment: RecurringPayment) => {
+  if (isAdding) {
+    return (
+      <AddRecurringPayment
+        candidates={candidates}
+        now={now}
+        onAdd={async (payment) => {
+          await onTrack(payment);
+          setIsAdding(false);
+        }}
+        onBack={() => setIsAdding(false)}
+        onClose={onClose}
+      />
+    );
+  }
+
+  const manage = (payment: RecurringPayment) => {
+    if (payment.isTracked) {
+      Alert.alert(copy.removeTitle(payment.name), copy.removeBody, [
+        { style: 'cancel', text: copy.cancel },
+        { style: 'destructive', text: copy.remove, onPress: () => void onRemoveTracked(payment.key) },
+      ]);
+      return;
+    }
+
     Alert.alert(copy.dismissTitle(payment.name), copy.dismissBody, [
       { style: 'cancel', text: copy.cancel },
       { style: 'destructive', text: copy.hide, onPress: () => void onDismiss(payment.key) },
     ]);
   };
 
-  const row = (payment: RecurringPayment, index: number) => {
-    const increase = hasPriceIncrease(payment) && payment.previousAmountMinor !== null;
-    const when = payment.isActive
-      ? copy.next(formatDayHeading(new Date(payment.nextExpectedAt), now))
-      : copy.lapsed(formatDayHeading(new Date(payment.lastChargedAt), now));
-    const detail = increase
-      ? `${copy.cadences[payment.cadence]} · ${copy.priceIncrease(
-          formatAmount(payment.previousAmountMinor ?? 0, reportingCurrency),
-          formatAmount(payment.lastAmountMinor, reportingCurrency),
-        )}`
-      : `${copy.cadences[payment.cadence]} · ${when}`;
-
-    return (
-      <SheetRow
-        accessibilityHint={copy.dismiss}
-        detail={detail}
-        isFirst={index === 0}
-        key={payment.key}
-        label={payment.name}
-        onPress={() => confirmDismiss(payment)}
-        value={formatAmount(payment.lastAmountMinor, reportingCurrency)}
-        valueTone={increase ? 'caution' : payment.isActive ? 'default' : 'muted'}
-      />
-    );
-  };
+  const row = (payment: RecurringPayment, index: number) => (
+    <RecurringPaymentRow
+      isFirst={index === 0}
+      key={payment.key}
+      now={now}
+      onPress={() => manage(payment)}
+      payment={payment}
+    />
+  );
 
   return (
     <SheetLayout closeLabel={copy.close} onClose={onClose} title={copy.title}>
@@ -83,7 +101,20 @@ export function SubscriptionsScreen({
         <AmountText maxFontSizeMultiplier={1.4} style={styles.caption}>
           {copy.activeCount(active.length)} · {copy.yearly(formatAmount(monthlyMinor * 12, reportingCurrency))}
         </AmountText>
+        {nextUp !== undefined ? (
+          <View style={styles.nextUp}>
+            <Text maxFontSizeMultiplier={1.4} style={styles.nextUpLabel}>
+              {copy.nextUp}
+            </Text>
+            <AmountText maxFontSizeMultiplier={1.4} numberOfLines={1} style={styles.nextUpValue}>
+              {copy.nextUpLine(nextUp.name, copy.inDays(daysUntil(new Date(nextUp.nextExpectedAt), now)))} ·{' '}
+              {formatAmount(nextUp.lastAmountMinor, reportingCurrency)}
+            </AmountText>
+          </View>
+        ) : null}
       </View>
+
+      <SheetButton label={copy.add} onPress={() => setIsAdding(true)} tone="primary" />
 
       {payments.length === 0 ? (
         <Text maxFontSizeMultiplier={1.5} style={styles.empty}>
@@ -91,13 +122,9 @@ export function SubscriptionsScreen({
         </Text>
       ) : null}
 
-      {active.length > 0 ? (
-        <SheetSection label={copy.active}>{active.map(row)}</SheetSection>
-      ) : null}
+      {active.length > 0 ? <SheetSection label={copy.active}>{active.map(row)}</SheetSection> : null}
 
-      {inactive.length > 0 ? (
-        <SheetSection label={copy.inactive}>{inactive.map(row)}</SheetSection>
-      ) : null}
+      {inactive.length > 0 ? <SheetSection label={copy.inactive}>{inactive.map(row)}</SheetSection> : null}
 
       <Text maxFontSizeMultiplier={1.5} style={styles.footnote}>
         {copy.footnote}
@@ -122,6 +149,29 @@ const styles = StyleSheet.create({
     letterSpacing: -1.2,
     color: overviewColors.textPrimary,
     fontVariant: ['tabular-nums'],
+  },
+  nextUp: {
+    marginTop: overviewSpacing.tight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: overviewColors.surface,
+  },
+  nextUpLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: overviewColors.caution,
+  },
+  nextUpValue: {
+    flexShrink: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: overviewColors.textPrimary,
   },
   empty: {
     fontSize: 14,

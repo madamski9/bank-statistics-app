@@ -14,6 +14,7 @@ import { CategoryDetailScreen, type CategoryDetailTarget } from './category-deta
 import { customCategoriesCopy } from './custom-categories-copy';
 import { customCategoryNameError } from './custom-category';
 import { merchantHistory } from './merchant-history';
+import type { AssignedMerchant } from './use-categorization-rules';
 
 interface CustomCategoriesScreenProps {
   categories: CustomCategory[];
@@ -25,10 +26,9 @@ interface CustomCategoriesScreenProps {
   onCreate: (name: string) => Promise<CustomCategory>;
   onRename: (id: string, name: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
-  onAssignMerchant: (merchantKey: string, merchantName: string, category: string) => Promise<boolean>;
+  onAssignMerchants: (merchants: AssignedMerchant[], category: string) => Promise<boolean>;
   onForgetMerchant: (merchantKey: string) => Promise<void>;
   onClose: () => void;
-  opensCreatePrompt?: boolean;
 }
 
 type Prompt = { kind: 'create' } | { kind: 'rename'; category: CustomCategory };
@@ -43,20 +43,12 @@ export function CustomCategoriesScreen({
   onCreate,
   onRename,
   onDelete,
-  onAssignMerchant,
+  onAssignMerchants,
   onForgetMerchant,
   onClose,
-  opensCreatePrompt = false,
 }: CustomCategoriesScreenProps) {
   const copy = useCopy(customCategoriesCopy);
-  const [chosenPrompt, setChosenPrompt] = useState<Prompt | null>(null);
-  const [isCreateRequestHandled, setIsCreateRequestHandled] = useState(false);
-  const prompt: Prompt | null =
-    chosenPrompt ?? (opensCreatePrompt && canCreate && !isCreateRequestHandled ? { kind: 'create' } : null);
-  const setPrompt = (next: Prompt | null) => {
-    setIsCreateRequestHandled(true);
-    setChosenPrompt(next);
-  };
+  const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [openedId, setOpenedId] = useState<string | null>(null);
   const ordered = [...categories].sort((left, right) => left.name.localeCompare(right.name, 'pl'));
   const builtIn = categoryOptions().filter((option) => !isCustomCategoryId(option.id));
@@ -133,7 +125,7 @@ export function CustomCategoriesScreen({
           canAssign={canAssignMerchant}
           category={opened}
           merchants={merchants}
-          onAssign={(merchant) => onAssignMerchant(merchant.key, merchant.name, opened.id)}
+          onAssign={(picked) => onAssignMerchants(picked, opened.id)}
           onBack={() => setOpenedId(null)}
           onClose={onClose}
           onDelete={openedCustom === undefined ? undefined : () => confirmDelete(openedCustom)}
