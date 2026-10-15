@@ -12,10 +12,11 @@ const captureSourceApps = {
   erste: 'pl.bzwbk.mobile.bzwbk24',
   ing: 'pl.ing.mojeing',
   mbank: 'pl.mbank',
+  unknown: 'com.apple.Passbook',
 } as const;
 
 function isCaptureBank(bank: string): bank is keyof typeof captureSourceApps {
-  return bank === 'millennium' || bank === 'pko' || bank === 'erste' || bank === 'ing' || bank === 'mbank';
+  return bank === 'millennium' || bank === 'pko' || bank === 'erste' || bank === 'ing' || bank === 'mbank' || bank === 'unknown';
 }
 
 export type TransactionChange = TransactionContent;

@@ -107,6 +107,28 @@ describe('planSync', () => {
     expect(transactionCodec.fromChange(pushed)).toMatchObject({ bank: 'pko' });
   });
 
+  test('synchronizes an unknown captured bank without changing its attribution', () => {
+    const captured = manual({
+      id: 'capture-zen',
+      bank: 'unknown',
+      origin: 'capture',
+      transactionType: 'cardPayment',
+      accountId: undefined,
+      sourceApp: 'com.apple.Passbook',
+    });
+    const result = plan({ local: [captured], remote: [], ledger: {}, now });
+    const [pushed] = result.push;
+
+    if (pushed === undefined || pushed.deleted) {
+      throw new Error('Expected the captured payment to be pushed.');
+    }
+
+    expect(transactionCodec.isPushable(pushed)).toBe(true);
+    expect(pushed).toMatchObject({ bank: 'unknown', origin: 'capture' });
+    expect(transactionCodec.fromChange(pushed)).toEqual(captured);
+    expect(plan({ local: [], remote: [pushed], ledger: {}, now }).saveLocally).toEqual([captured]);
+  });
+
   test('synchronizes mBank transfers and restores their bank and source on another device', () => {
     const captured = manual({
       id: 'capture-mbank',

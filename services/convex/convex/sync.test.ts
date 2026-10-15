@@ -312,6 +312,31 @@ describe('sync', () => {
     ]);
   });
 
+  test('accepts an unknown captured bank and preserves it through synchronization', async () => {
+    const { user } = await signedIn(alice, 'phone');
+
+    await user.mutation(api.sync.push, {
+      installationId: 'phone',
+      changes: { transactions: [lunch({
+        clientId: 'capture-zen',
+        bank: 'unknown',
+        origin: 'capture',
+        transactionType: 'cardPayment',
+        accountId: undefined,
+        sourceApp: 'com.apple.Passbook',
+      })] },
+    });
+
+    expect(await pulled(user, 'phone', 'transactions')).toEqual([
+      expect.objectContaining({
+        clientId: 'capture-zen',
+        bank: 'unknown',
+        origin: 'capture',
+        sourceApp: 'com.apple.Passbook',
+      }),
+    ]);
+  });
+
   test('accepts a captured PKO BP transfer with no Financial Account', async () => {
     const { user } = await signedIn(alice, 'phone');
 

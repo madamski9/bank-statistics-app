@@ -64,6 +64,10 @@ describe('transactionBadge', () => {
 });
 
 describe('transactionContext', () => {
+  test('names an unknown captured bank without attributing it to Millennium', () => {
+    expect(transactionContext(record({ bank: 'unknown' }))).toBe('Nieznany bank');
+  });
+
   test('names the bank and the financial account', () => {
     expect(transactionContext(record())).toBe('Millennium');
     expect(transactionContext(record({ accountName: 'Konto osobiste' }))).toBe(
