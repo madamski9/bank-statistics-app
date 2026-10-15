@@ -23,15 +23,15 @@ describe('shortcutUrlFor', () => {
   });
 
   test.each([
-    [['pko', 'mbank'], 'a1a0fbe99ccb4be2bd9a2260560f0a0f'],
-    [['ing', 'mbank'], '1b207fe5db114930819eb25568de16ad'],
-    [['millennium', 'pko', 'mbank'], '03df27ce98ca4bec91ff443a70c65a00'],
-    [['ing', 'pko', 'mbank'], 'd91a07d24ac847918da222f10f0c87e3'],
-    [['ing', 'millennium', 'mbank'], 'c5570d68a62e4e21b63bd5160a8551eb'],
-    [['ing', 'pko', 'mbank', 'millennium'], '3630b8160ef5414ead8cd73409084683'],
-    [['ing', 'pko', 'millennium'], '773e06a3ce0f4030ab224290847c435d'],
-    [['mbank'], '989e494fd2ba4616bf0ec8882e4ae588'],
-    [['millennium', 'mbank'], 'bdcb39305ccc42a1bd7a0c8ada00b692'],
+    [['pko', 'mbank'], 'eb69dc71732444b39787c011afb6613c'],
+    [['ing', 'mbank'], 'e6c859ae1ad948a7ac6d0bc59182d08e'],
+    [['millennium', 'pko', 'mbank'], '0ce2aef5e1ef4129b70fd891c90cafee'],
+    [['ing', 'pko', 'mbank'], '435b9d93616941f8bce2995bd1d69785'],
+    [['ing', 'millennium', 'mbank'], '1733b1c9724c45898667e7d581f9f419'],
+    [['ing', 'pko', 'mbank', 'millennium'], 'ac848cfcdff9495cacd509cc747954fe'],
+    [['ing', 'pko', 'millennium'], '3a3ef3e991e2436fadc30adef065f75e'],
+    [['mbank'], '71c04a24f39b49189a74c93afd7ef428'],
+    [['millennium', 'mbank'], 'fc812d66fe134e94bf0024ffda882641'],
   ] satisfies [string[], string][])('opens the published shortcut for %j in any selection order', (banks, identifier) => {
     const expected = `https://www.icloud.com/shortcuts/${identifier}`;
 
