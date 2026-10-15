@@ -713,7 +713,7 @@ function PremiumIntro({
           <Text style={styles.newYearlyPrice}>{copy.yearlyPrice}</Text>
         </View>
         <View style={styles.premiumDivider} />
-        {[copy.unlimitedLimits, copy.moreStatistics, copy.sharedAccount].map((benefit) => (
+        {[copy.unlimitedLimits, copy.moreStatistics].map((benefit) => (
           <View key={benefit} style={styles.benefitRow}>
             <OnboardingIcon name="check" size={16} />
             <Text style={styles.premiumBenefit}>{benefit}</Text>
