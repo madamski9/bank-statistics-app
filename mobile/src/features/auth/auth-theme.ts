@@ -1,4 +1,4 @@
-import { bubbleTints, overviewColors } from '@/features/spending-overview/overview-theme';
+import { bubbleTints, overviewColors } from '@/features/app-shell/theme/overview-theme';
 
 export const authColors = {
   ...overviewColors,

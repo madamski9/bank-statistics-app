@@ -1,6 +1,6 @@
 import { Easing, ReduceMotion } from 'react-native-reanimated';
 
-import { bubbleTints, overviewColors } from '@/features/spending-overview/overview-theme';
+import { bubbleTints, overviewColors } from '@/features/app-shell/theme/overview-theme';
 
 export const onboardingColors = {
   ...overviewColors,

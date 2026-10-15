@@ -1,17 +1,17 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 
-import { alertProgress } from '@/features/alerts/alert-evaluation';
-import type { AlertRule, AlertScope } from '@/features/alerts/alert-rule';
-import type { CategorizationRule } from '@/features/classification/categorization-rule';
-import { categoryLabel } from '@/features/classification/categories';
-import { groupSpending } from '@/features/classification/spending-groups';
-import { calendarCopy } from '@/features/localization/calendar-copy';
-import { currentCopy } from '@/features/localization/language';
-import { expenseRhythm, rhythmAverageMinor } from '@/features/overview/spending-rhythm';
-import { formatAmount, formatCompactAmount } from '@/features/spending-overview/formatting';
-import { periodWindow, type SpendingPeriod } from '@/features/spending-overview/periods';
-import { summarizeSpending } from '@/features/spending-overview/spending-summary';
-import { statisticalRecords } from '@/features/transactions/transaction-record';
+import { alertProgress } from '@/features/insights/alerts/evaluation/alert-evaluation';
+import type { AlertRule, AlertScope } from '@/features/insights/alerts/rules/alert-rule';
+import type { CategorizationRule } from '@/features/data/classification/categorization-rule';
+import { categoryLabel } from '@/features/data/classification/categories';
+import { groupSpending } from '@/features/data/classification/spending-groups';
+import { calendarCopy } from '@/features/app-shell/localization/calendar-copy';
+import { currentCopy } from '@/features/app-shell/localization/language';
+import { expenseRhythm, rhythmAverageMinor } from '@/features/home/overview/spending/spending-rhythm';
+import { formatAmount, formatCompactAmount } from '@/features/app-shell/formatting/formatting';
+import { periodWindow, type SpendingPeriod } from '@/features/home/overview/period/periods';
+import { summarizeSpending } from '@/features/home/overview/spending/spending-summary';
+import { statisticalRecords } from '@/features/home/transactions/record/transaction-record';
 
 import { widgetsCopy } from './widgets-copy';
 

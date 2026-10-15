@@ -2,9 +2,9 @@ import { SymbolView } from 'expo-symbols';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { LimitProgressBar } from '@/features/alerts/limit-progress-bar';
-import { useCopy } from '@/features/localization/language';
-import { overviewColors, overviewSpacing } from '@/features/spending-overview/overview-theme';
+import { LimitProgressBar } from '@/features/insights/alerts/components/limit-progress-bar';
+import { useCopy } from '@/features/app-shell/localization/language';
+import { overviewColors, overviewSpacing } from '@/features/app-shell/theme/overview-theme';
 
 import type { SpendingWidgetProps, WidgetLimitTone } from './widget-snapshot';
 import { widgetsCopy } from './widgets-copy';
