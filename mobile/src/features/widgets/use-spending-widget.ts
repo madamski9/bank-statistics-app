@@ -4,11 +4,11 @@ import * as Linking from 'expo-linking';
 import { useEffect, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 
-import type { AlertRule } from '@/features/alerts/alert-rule';
-import type { CategorizationRule } from '@/features/classification/categorization-rule';
-import type { CustomCategory } from '@/features/classification/categories';
-import type { IgnoreRule } from '@/features/ignored-payments/ignore-rule';
-import { useLanguage } from '@/features/localization/language';
+import type { AlertRule } from '@/features/insights/alerts/rules/alert-rule';
+import type { CategorizationRule } from '@/features/data/classification/categorization-rule';
+import type { CustomCategory } from '@/features/data/classification/categories';
+import type { IgnoreRule } from '@/features/data/ignored-payments/ignore-rule';
+import { useLanguage } from '@/features/app-shell/localization/language';
 
 import type { WidgetBackgroundConfiguration } from './widget-background';
 import { widgetRevealParams } from './widget-links';

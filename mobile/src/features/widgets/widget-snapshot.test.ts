@@ -1,11 +1,11 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { describe, expect, test } from 'bun:test';
 
-import type { AlertRule } from '@/features/alerts/alert-rule';
-import { expenseRhythm, rhythmAverageMinor } from '@/features/overview/spending-rhythm';
-import { formatAmount, formatCompactAmount } from '@/features/spending-overview/formatting';
-import { periodWindow } from '@/features/spending-overview/periods';
-import { summarizeSpending } from '@/features/spending-overview/spending-summary';
+import type { AlertRule } from '@/features/insights/alerts/rules/alert-rule';
+import { expenseRhythm, rhythmAverageMinor } from '@/features/home/overview/spending/spending-rhythm';
+import { formatAmount, formatCompactAmount } from '@/features/app-shell/formatting/formatting';
+import { periodWindow } from '@/features/home/overview/period/periods';
+import { summarizeSpending } from '@/features/home/overview/spending/spending-summary';
 
 import {
   buildSpendingWidgetProps,

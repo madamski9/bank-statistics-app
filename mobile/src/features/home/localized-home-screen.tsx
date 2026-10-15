@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { useLanguage } from '@/features/localization/language';
+import { useLanguage } from '@/features/app-shell/localization/language';
 
 import { HomeScreen } from './home-screen';
 

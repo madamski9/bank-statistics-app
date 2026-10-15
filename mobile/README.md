@@ -52,7 +52,7 @@ Two more platforms are available: `./run.sh web` (browser) and `./run.sh start` 
 
 - `app.config.ts` — Expo configuration; derives the app identity from the active delivery lane.
 - `src/app` — expo-router routes, kept thin.
-- `src/features/*` — feature-based UI, hooks, and state, colocated per feature.
+- `src/features/*` — feature-based UI, hooks, and state, grouped by product area; see [src/features/README.md](src/features/README.md) for the map.
 - `src/app-environment.ts` — resolves and validates the lane and its credentials at startup.
 - `src/convex-client.ts` — shared Convex React client.
 - `plugins/` — local Expo config plugins, see [plugins/README.md](plugins/README.md).

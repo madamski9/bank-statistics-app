@@ -1,8 +1,8 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 
-import { setCustomCategories, type CustomCategory } from '@/features/classification/categories';
-import { isIgnored, type IgnoreRule } from '@/features/ignored-payments/ignore-rule';
-import { setCurrentLanguage, type Language } from '@/features/localization/language';
+import { setCustomCategories, type CustomCategory } from '@/features/data/classification/categories';
+import { isIgnored, type IgnoreRule } from '@/features/data/ignored-payments/ignore-rule';
+import { setCurrentLanguage, type Language } from '@/features/app-shell/localization/language';
 
 import {
   buildSpendingWidgetProps,

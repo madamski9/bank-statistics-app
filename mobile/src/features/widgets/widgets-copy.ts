@@ -1,6 +1,6 @@
-import { defineCopy } from '@/features/localization/language';
-import { calendarCopy } from '@/features/localization/calendar-copy';
-import { englishPlural, polishPlural } from '@/features/localization/plural';
+import { defineCopy } from '@/features/app-shell/localization/language';
+import { calendarCopy } from '@/features/app-shell/localization/calendar-copy';
+import { englishPlural, polishPlural } from '@/features/app-shell/localization/plural';
 
 export const widgetsCopy = defineCopy({
   pl: {

@@ -2,7 +2,7 @@ import { useAuth } from '@clerk/expo';
 import * as SecureStore from 'expo-secure-store';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
-import { LoadingScreen } from '@/features/brand/loading-screen';
+import { LoadingScreen } from '@/features/app-shell/brand/loading-screen';
 
 import { finishOnboardingReplay, useOnboardingReplay } from './onboarding-replay';
 import { OnboardingScreen } from './onboarding-screen';

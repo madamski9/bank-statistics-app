@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { runInNewContext } from 'node:vm';
 
-import { setCurrentLanguage } from '@/features/localization/language';
+import { setCurrentLanguage } from '@/features/app-shell/localization/language';
 
 import { buildWidgetCalculator } from './build-calculator.cjs';
 import { snapshot, timeline, type WidgetBackgroundConfiguration } from './widget-background';

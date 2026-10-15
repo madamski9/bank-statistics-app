@@ -6,9 +6,9 @@ import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { appEnvironment } from '@/app-environment';
-import { brandColors } from '@/features/brand/brand-artwork';
-import { tokenCache } from '@/features/auth/token-cache';
-import { LanguageBootstrap } from '@/features/localization/language-bootstrap';
+import { brandColors } from '@/features/app-shell/brand/brand-artwork';
+import { tokenCache } from '@/features/auth/session/token-cache';
+import { LanguageBootstrap } from '@/features/app-shell/localization/language-bootstrap';
 import { convexClient } from '@/convex-client';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);

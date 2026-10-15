@@ -1,4 +1,4 @@
-import { defineCopy } from '@/features/localization/language';
+import { defineCopy } from '@/features/app-shell/localization/language';
 
 export const authCopy = defineCopy({
   pl: {

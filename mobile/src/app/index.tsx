@@ -1,16 +1,16 @@
 import { Show, useAuth } from '@clerk/expo';
 
-import { LoadingScreen } from '@/features/brand/loading-screen';
+import { LoadingScreen } from '@/features/app-shell/brand/loading-screen';
 
-import { AccountStandingGate } from '@/features/account-data/account-standing-gate';
-import { SignInScreen } from '@/features/auth/sign-in-screen';
+import { AccountStandingGate } from '@/features/settings/account-data/account-standing/account-standing-gate';
+import { SignInScreen } from '@/features/auth/sign-in/sign-in-screen';
 import { LocalizedHomeScreen } from '@/features/home/localized-home-screen';
 import { OnboardingGate } from '@/features/onboarding/onboarding-gate';
-import { AppLockGate, AppLockScreen } from '@/features/privacy/app-lock-gate';
-import { PrivacyProvider } from '@/features/privacy/privacy-provider';
-import { PrivacyBoundary } from '@/features/privacy/privacy-shield';
-import { CloudSyncChoiceGate } from '@/features/sync/cloud-sync-choice-gate';
-import { OwnedDeviceGate } from '@/features/sync/owned-device-gate';
+import { AppLockGate, AppLockScreen } from '@/features/settings/privacy/app-lock/app-lock-gate';
+import { PrivacyProvider } from '@/features/settings/privacy/privacy-provider';
+import { PrivacyBoundary } from '@/features/settings/privacy/privacy-shield';
+import { CloudSyncChoiceGate } from '@/features/data/sync/cloud-sync/cloud-sync-choice-gate';
+import { OwnedDeviceGate } from '@/features/data/sync/device-ownership/owned-device-gate';
 import { SignedOutSpendingWidget } from '@/features/widgets/use-spending-widget';
 
 export default function Index() {
