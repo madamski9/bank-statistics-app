@@ -33,7 +33,7 @@ final class EncryptedOutbox: @unchecked Sendable {
   }
 
   func delete(id: String) throws -> Int {
-    let deletedCount = try queue.sync {
+    let deletedCount = try serialized {
       let database = try openDatabase()
       defer { sqlite3_close(database) }
       let sql = "DELETE FROM outbox WHERE id = ?"
@@ -51,7 +51,7 @@ final class EncryptedOutbox: @unchecked Sendable {
   }
 
   private func persist(_ record: NormalizedRecord) throws {
-    try queue.sync {
+    try serialized {
       let database = try openDatabase()
       defer { sqlite3_close(database) }
       let sql = "INSERT OR REPLACE INTO outbox (id, payload, captured_at) VALUES (?, ?, ?)"
@@ -71,7 +71,7 @@ final class EncryptedOutbox: @unchecked Sendable {
 
   func clear() throws {
     defer { SpendingWidgetUpdater.shared.refresh() }
-    try queue.sync {
+    try serialized {
       let configuration = try IngestionConfiguration.current()
       let database = try openDatabase(configuration: configuration)
       defer { sqlite3_close(database) }
@@ -82,7 +82,7 @@ final class EncryptedOutbox: @unchecked Sendable {
   }
 
   func readDocument(key: String) throws -> String? {
-    try queue.sync {
+    try serialized {
       let database = try openDatabase()
       defer { sqlite3_close(database) }
       let sql = "SELECT value FROM documents WHERE key = ?"
@@ -105,7 +105,7 @@ final class EncryptedOutbox: @unchecked Sendable {
   }
 
   func writeDocument(key: String, value: String) throws {
-    try queue.sync {
+    try serialized {
       let database = try openDatabase()
       defer { sqlite3_close(database) }
       let sql = "INSERT OR REPLACE INTO documents (key, value) VALUES (?, ?)"
@@ -119,7 +119,7 @@ final class EncryptedOutbox: @unchecked Sendable {
   }
 
   func deleteDocument(key: String) throws {
-    try queue.sync {
+    try serialized {
       let database = try openDatabase()
       defer { sqlite3_close(database) }
       let sql = "DELETE FROM documents WHERE key = ?"
@@ -132,7 +132,7 @@ final class EncryptedOutbox: @unchecked Sendable {
   }
 
   func deleteSyntheticRecords() throws -> Int {
-    let deletedCount = try queue.sync {
+    let deletedCount = try serialized {
       let database = try openDatabase()
       defer { sqlite3_close(database) }
       let identifiers = try syntheticIdentifiers(database)
@@ -161,7 +161,7 @@ final class EncryptedOutbox: @unchecked Sendable {
   }
 
   func records() throws -> [NormalizedRecord] {
-    try queue.sync {
+    try serialized {
       let database = try openDatabase()
       defer { sqlite3_close(database) }
       let sql = "SELECT payload FROM outbox ORDER BY captured_at DESC"
@@ -189,7 +189,7 @@ final class EncryptedOutbox: @unchecked Sendable {
   }
 
   func diagnostics() throws -> [String: String] {
-    try queue.sync {
+    try serialized {
       let configuration = try IngestionConfiguration.current()
       let database = try openDatabase(configuration: configuration)
       defer { sqlite3_close(database) }
@@ -231,6 +231,19 @@ final class EncryptedOutbox: @unchecked Sendable {
 
     try check(status, database, accepted: [SQLITE_DONE])
     return identifiers
+  }
+
+  private func serialized<Result>(_ work: () throws -> Result) throws -> Result {
+    try queue.sync {
+      let finished = DispatchSemaphore(value: 0)
+      ProcessInfo.processInfo.performExpiringActivity(withReason: "Saving encrypted BankStats data") { expired in
+        if !expired {
+          finished.wait()
+        }
+      }
+      defer { finished.signal() }
+      return try work()
+    }
   }
 
   private func openDatabase(configuration: IngestionConfiguration? = nil) throws -> OpaquePointer {
