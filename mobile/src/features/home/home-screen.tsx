@@ -39,7 +39,7 @@ import {
   type SpendingGroup,
 } from '@/features/classification/spending-groups';
 import { CustomCategoriesScreen } from '@/features/classification/custom-categories-screen';
-import { useCategorizationRules } from '@/features/classification/use-categorization-rules';
+import { useCategorizationRules, type AssignedMerchant } from '@/features/classification/use-categorization-rules';
 import { useCustomCategories } from '@/features/classification/use-custom-categories';
 import { CaptureHealthScreen } from '@/features/capture-health/capture-health-screen';
 import { useCurrencyConversion } from '@/features/currency-conversion/use-currency-conversion';
@@ -58,9 +58,11 @@ import { useMonthlySummaryReminder } from '@/features/monthly-summary/use-monthl
 import {
   detectRecurringPayments,
   monthlyRecurringCost,
+  recurringCandidates,
 } from '@/features/subscriptions/recurring-payments';
 import { SubscriptionsScreen } from '@/features/subscriptions/subscriptions-screen';
 import { useDismissedSubscriptions } from '@/features/subscriptions/use-dismissed-subscriptions';
+import { useTrackedSubscriptions } from '@/features/subscriptions/use-tracked-subscriptions';
 import { DataScreen } from '@/features/account-data/data-screen';
 import { accountInitial } from '@/features/profile/account-identity';
 import { OverviewScreen } from '@/features/overview/overview-screen';
@@ -200,12 +202,13 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   });
   useCurrencyConversion(records, refresh);
   const dismissedSubscriptions = useDismissedSubscriptions();
+  const trackedSubscriptions = useTrackedSubscriptions();
   const premium = usePremium();
   const monthlySummaryReminder = useMonthlySummaryReminder(premium?.isPremium);
   const { confirmPermission: confirmMonthlySummaryPermission } = monthlySummaryReminder;
   const [eventsSheetTarget, setEventsSheetTarget] = useState<string | null>(null);
   const [summaryMonthKey, setSummaryMonthKey] = useState<string | null>(null);
-  const { assignMerchant, forget: forgetMerchant, remember, rules } = useCategorizationRules();
+  const { assignMerchants, forget: forgetMerchant, remember, rules } = useCategorizationRules();
   const hasPremiumAccess = premium === undefined || premium.isPremium;
   const periodLocks = useMemo(() => lockedPeriods(hasPremiumAccess), [hasPremiumAccess]);
   const period = periodLocks.has(requestedPeriod) ? fallbackPeriod : requestedPeriod;
@@ -268,8 +271,26 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   const insightsNow = useMemo(() => new Date(spendWindow.endMs), [spendWindow.endMs]);
   const recurringPayments = useMemo(
     () =>
-      detectRecurringPayments(countedRecords, rules, insightsNow, dismissedSubscriptions.dismissed),
-    [countedRecords, dismissedSubscriptions.dismissed, insightsNow, rules],
+      detectRecurringPayments(
+        countedRecords,
+        rules,
+        insightsNow,
+        dismissedSubscriptions.dismissed,
+        trackedSubscriptions.tracked,
+      ),
+    [countedRecords, dismissedSubscriptions.dismissed, insightsNow, rules, trackedSubscriptions.tracked],
+  );
+  const recurringPaymentCandidates = useMemo(
+    () =>
+      activeSheet === 'recurring'
+        ? recurringCandidates(
+            countedRecords,
+            rules,
+            insightsNow,
+            new Set(recurringPayments.map((payment) => payment.key)),
+          )
+        : [],
+    [activeSheet, countedRecords, insightsNow, recurringPayments, rules],
   );
   const monthlyLimitTarget = useMemo(
     () =>
@@ -342,38 +363,18 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   );
   const openReport = useCallback(() => openMonthlySummary(null), [openMonthlySummary]);
   const requireCategoryPremium = useCallback(() => openPremium('category'), [openPremium]);
-  const [opensCategoryCreate, setOpensCategoryCreate] = useState(false);
-  const [isSheetPresented, setIsSheetPresented] = useState(false);
-  const isSheetVisible = activeSheet !== null || alertEditor !== null;
-
-  if (!isSheetVisible && isSheetPresented) {
-    setIsSheetPresented(false);
-  }
-
-  const openCategories = useCallback(() => {
-    setOpensCategoryCreate(false);
-    setActiveSheet('categories');
-  }, []);
-  const createCategory = useCallback(() => {
-    if (!canCreateCustomCategory(hasPremiumAccess)) {
-      requireCategoryPremium();
-      return;
-    }
-
-    setOpensCategoryCreate(true);
-    setActiveSheet('categories');
-  }, [hasPremiumAccess, requireCategoryPremium]);
-  const assignCategoryMerchant = useCallback(
-    async (merchantKey: string, merchantName: string, category: string) => {
+  const openCategories = useCallback(() => setActiveSheet('categories'), []);
+  const assignCategoryMerchants = useCallback(
+    async (merchants: AssignedMerchant[], category: string) => {
       if (premium?.isPremium !== true) {
         requireCategoryPremium();
         return false;
       }
 
-      await assignMerchant(merchantKey, merchantName, category);
+      await assignMerchants(merchants, category);
       return true;
     },
-    [assignMerchant, premium?.isPremium, requireCategoryPremium],
+    [assignMerchants, premium?.isPremium, requireCategoryPremium],
   );
   const rememberCategoryRule = useCallback(
     async (merchantLabel: string, category: string) => {
@@ -779,7 +780,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
             onChangeDimension={setDimension}
             lockedPeriods={periodLocks}
             onChangePeriod={changePeriod}
-            onCreateCategory={createCategory}
+            onOpenCategories={openCategories}
             onCreateLimit={() => requestNewLimit({ kind: 'all' })}
             onOpenIgnoredPayments={() => setActiveSheet('ignoredPayments')}
             onSelectGroup={setGroup}
@@ -832,9 +833,8 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
       <Modal
         animationType="slide"
         onRequestClose={() => (alertEditor === null ? setActiveSheet(null) : setAlertEditor(null))}
-        onShow={() => setIsSheetPresented(true)}
         presentationStyle="pageSheet"
-        visible={isSheetVisible}
+        visible={activeSheet !== null || alertEditor !== null}
       >
         {alertEditor !== null ? (
           <AlertRuleSheet
@@ -879,10 +879,16 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
           />
         ) : activeSheet === 'recurring' ? (
           <SubscriptionsScreen
+            candidates={recurringPaymentCandidates}
             hasDismissed={dismissedSubscriptions.dismissed.size > 0}
             onClose={() => setActiveSheet(null)}
             onDismiss={dismissedSubscriptions.dismiss}
+            onRemoveTracked={async (key) => {
+              await dismissedSubscriptions.dismiss(key);
+              await trackedSubscriptions.untrack(key);
+            }}
             onRestoreAll={dismissedSubscriptions.restoreAll}
+            onTrack={trackedSubscriptions.track}
             payments={recurringPayments}
           />
         ) : activeSheet === 'monthlySummary' ? (
@@ -917,14 +923,13 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
             canAssignMerchant={premium?.isPremium === true}
             canCreate={canCreateCustomCategory(hasPremiumAccess)}
             categories={customCategories.categories}
-            onAssignMerchant={assignCategoryMerchant}
+            onAssignMerchants={assignCategoryMerchants}
             onClose={() => setActiveSheet(null)}
             onCreate={customCategories.create}
             onDelete={customCategories.remove}
             onForgetMerchant={forgetMerchant}
             onRename={customCategories.rename}
             onRequirePremium={requireCategoryPremium}
-            opensCreatePrompt={opensCategoryCreate && isSheetPresented}
             records={countedRecords}
             rules={rules}
           />

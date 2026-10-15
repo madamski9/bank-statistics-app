@@ -18,7 +18,22 @@ export interface RecurringPayment {
   lastChargedAt: string;
   nextExpectedAt: string;
   isActive: boolean;
+  isTracked: boolean;
   records: IngestionRecord[];
+}
+
+export interface TrackedPayment {
+  key: string;
+  name: string;
+  cadence: Cadence;
+}
+
+export interface RecurringCandidate {
+  key: string;
+  name: string;
+  lastAmountMinor: number;
+  lastChargedAt: string;
+  chargeCount: number;
 }
 
 interface CadenceRule {
@@ -110,31 +125,36 @@ function hasSteadyAmount(amounts: number[]): boolean {
   return steady / amounts.length >= matchingShare;
 }
 
-export function nextChargeAfter(lastChargedAt: string, cadence: Cadence): Date {
+export function nextChargeAfter(lastChargedAt: string, cadence: Cadence, periods = 1): Date {
   const last = new Date(lastChargedAt);
   const rule = cadences[cadence];
 
   if (rule.months === 0) {
-    return new Date(last.getTime() + rule.days * dayMs);
+    return new Date(last.getTime() + rule.days * periods * dayMs);
   }
 
   const next = new Date(last);
   const day = next.getDate();
   next.setDate(1);
-  next.setMonth(next.getMonth() + rule.months);
+  next.setMonth(next.getMonth() + rule.months * periods);
   const lastDayOfMonth = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
   next.setDate(Math.min(day, lastDayOfMonth));
 
   return next;
 }
 
-export function detectRecurringPayments(
+interface PartyGroup {
+  name: string;
+  category?: string;
+  records: IngestionRecord[];
+}
+
+function groupExpensesByParty(
   records: IngestionRecord[],
   rules: CategorizationRule[],
   now: Date,
-  dismissed: ReadonlySet<string> = new Set(),
-): RecurringPayment[] {
-  const groups = new Map<string, { name: string; category?: string; records: IngestionRecord[] }>();
+): Map<string, PartyGroup> {
+  const groups = new Map<string, PartyGroup>();
 
   for (const record of records) {
     if (record.direction !== 'expense' || Number.isNaN(occurredMs(record)) || occurredMs(record) > now.getTime()) {
@@ -143,7 +163,7 @@ export function detectRecurringPayments(
 
     const party = partyOf(record, rules);
 
-    if (party === null || dismissed.has(party.key)) {
+    if (party === null) {
       continue;
     }
 
@@ -152,12 +172,85 @@ export function detectRecurringPayments(
     groups.set(party.key, group);
   }
 
+  for (const group of groups.values()) {
+    group.records.sort((left, right) => occurredMs(left) - occurredMs(right));
+  }
+
+  return groups;
+}
+
+export function upcomingChargeAfter(lastChargedAt: string, cadence: Cadence, now: Date): Date {
+  const earliestNextMs = now.getTime() - graceDays * dayMs;
+  let periods = 1;
+  let next = nextChargeAfter(lastChargedAt, cadence);
+
+  while (next.getTime() < earliestNextMs) {
+    periods += 1;
+    next = nextChargeAfter(lastChargedAt, cadence, periods);
+  }
+
+  return next;
+}
+
+function trackedPayment(key: string, group: PartyGroup, tracked: TrackedPayment, now: Date): RecurringPayment | null {
+  const charges = group.records.slice(-analysedCharges);
+  const last = charges[charges.length - 1];
+
+  if (last === undefined) {
+    return null;
+  }
+
+  const previous = charges[charges.length - 2];
+  const rule = cadences[tracked.cadence];
+  const next = upcomingChargeAfter(last.occurredAt, tracked.cadence, now);
+
+  return {
+    key,
+    name: group.name,
+    cadence: tracked.cadence,
+    category: group.category,
+    lastAmountMinor: last.amountMinor,
+    previousAmountMinor: previous?.amountMinor ?? null,
+    priceChangeMinor: previous === undefined ? 0 : last.amountMinor - previous.amountMinor,
+    monthlyCostMinor: Math.round((last.amountMinor * averageMonthDays) / rule.days),
+    chargeCount: charges.length,
+    lastChargedAt: last.occurredAt,
+    nextExpectedAt: next.toISOString(),
+    isActive: true,
+    isTracked: true,
+    records: [...charges].reverse(),
+  };
+}
+
+export function detectRecurringPayments(
+  records: IngestionRecord[],
+  rules: CategorizationRule[],
+  now: Date,
+  dismissed: ReadonlySet<string> = new Set(),
+  tracked: TrackedPayment[] = [],
+): RecurringPayment[] {
+  const groups = groupExpensesByParty(records, rules, now);
+  const trackedByKey = new Map(tracked.map((payment) => [payment.key, payment]));
   const payments: RecurringPayment[] = [];
 
   for (const [key, group] of groups) {
-    const charges = group.records
-      .sort((left, right) => occurredMs(left) - occurredMs(right))
-      .slice(-analysedCharges);
+    const trackedEntry = trackedByKey.get(key);
+
+    if (trackedEntry !== undefined) {
+      const payment = trackedPayment(key, group, trackedEntry, now);
+
+      if (payment !== null) {
+        payments.push(payment);
+      }
+
+      continue;
+    }
+
+    if (dismissed.has(key)) {
+      continue;
+    }
+
+    const charges = group.records.slice(-analysedCharges);
 
     if (charges.length < 2) {
       continue;
@@ -208,6 +301,7 @@ export function detectRecurringPayments(
       lastChargedAt: last.occurredAt,
       nextExpectedAt: next.toISOString(),
       isActive: overdueMs <= Math.max(rule.days * 0.5, graceDays) * dayMs,
+      isTracked: false,
       records: [...charges].reverse(),
     });
   }
@@ -219,6 +313,41 @@ export function detectRecurringPayments(
 
     return right.monthlyCostMinor - left.monthlyCostMinor;
   });
+}
+
+export function recurringCandidates(
+  records: IngestionRecord[],
+  rules: CategorizationRule[],
+  now: Date,
+  excludedKeys: ReadonlySet<string>,
+): RecurringCandidate[] {
+  const candidates: RecurringCandidate[] = [];
+
+  for (const [key, group] of groupExpensesByParty(records, rules, now)) {
+    const last = group.records[group.records.length - 1];
+
+    if (last === undefined || excludedKeys.has(key)) {
+      continue;
+    }
+
+    candidates.push({
+      key,
+      name: group.name,
+      lastAmountMinor: last.amountMinor,
+      lastChargedAt: last.occurredAt,
+      chargeCount: group.records.length,
+    });
+  }
+
+  return candidates.sort(
+    (left, right) => new Date(right.lastChargedAt).getTime() - new Date(left.lastChargedAt).getTime(),
+  );
+}
+
+export function upcomingFirst(payments: RecurringPayment[]): RecurringPayment[] {
+  return [...payments].sort(
+    (left, right) => new Date(left.nextExpectedAt).getTime() - new Date(right.nextExpectedAt).getTime(),
+  );
 }
 
 export function monthlyRecurringCost(payments: RecurringPayment[]): number {

@@ -26,7 +26,7 @@ interface MerchantsScreenProps {
   onChangePeriod: (period: SpendingPeriod) => void;
   lockedPeriods: ReadonlySet<SpendingPeriod>;
   onCreateLimit: () => void;
-  onCreateCategory: () => void;
+  onOpenCategories: () => void;
   onOpenIgnoredPayments: () => void;
   onSelectGroup: (group: SpendingGroup) => void;
   error: string | null;
@@ -78,7 +78,7 @@ function MerchantsScreenComponent({
   onChangePeriod,
   lockedPeriods,
   onCreateLimit,
-  onCreateCategory,
+  onOpenCategories,
   onOpenIgnoredPayments,
   onSelectGroup,
   error,
@@ -108,9 +108,9 @@ function MerchantsScreenComponent({
           </AmountText>
           <View style={styles.headerActions}>
             <HeaderAction
-              accessibilityHint={copy.createCategoryHint}
-              accessibilityLabel={copy.createCategoryLabel}
-              onPress={onCreateCategory}
+              accessibilityHint={copy.openCategoriesHint}
+              accessibilityLabel={copy.openCategoriesLabel}
+              onPress={onOpenCategories}
               symbol={categorySymbol}
             />
             <HeaderAction

@@ -88,4 +88,32 @@ describe('history sections', () => {
       -1_000,
     ]);
   });
+
+  test('puts a payment added in the minute an event started above its start line', () => {
+    const trip: SpendingEvent = { id: 'trip', name: 'Wakacje', startedAt: '2026-07-15T08:33:45.120Z' };
+    const added = payment('added', '2026-07-15T08:33:00.000Z');
+
+    expect(rowKeys([trip], [added, ...records]).slice(0, 3)).toEqual(['added', 'trip-start', 'after']);
+  });
+
+  test('keeps a payment assigned to an event by hand inside its lines', () => {
+    const trip: SpendingEvent = {
+      id: 'trip',
+      name: 'Chorwacja',
+      startedAt: '2026-07-01T08:00:00.000Z',
+      endedAt: '2026-07-10T20:00:00.000Z',
+    };
+    const assigned = { ...payment('assigned', '2026-06-30T09:00:00.000Z'), eventId: 'trip' };
+
+    expect(rowKeys([trip], [assigned, ...records])).toEqual([
+      'after',
+      'trip-end',
+      'inside-late',
+      'inside-early',
+      'assigned',
+      'trip-start',
+      'before',
+    ]);
+  });
 });
+

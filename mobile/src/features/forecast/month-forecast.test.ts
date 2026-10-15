@@ -121,6 +121,7 @@ describe('month forecast', () => {
       lastChargedAt: rent.occurredAt,
       nextExpectedAt: new Date(2026, 8, 25).toISOString(),
       isActive: true,
+      isTracked: false,
       records: [rent],
     };
 
@@ -145,6 +146,7 @@ describe('month forecast', () => {
       lastChargedAt: augustRent.occurredAt,
       nextExpectedAt: new Date(2026, 8, 25).toISOString(),
       isActive: true,
+      isTracked: false,
       records: [augustRent, julyRent],
     };
     const records = [

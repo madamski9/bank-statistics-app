@@ -1,6 +1,6 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 
-import type { SpendingEvent } from '@/features/events/spending-event';
+import { eventIdForRecord, eventStartMs, type SpendingEvent } from '@/features/events/spending-event';
 
 import { dayKey, formatDayHeading } from './format-date';
 import { affectsStatistics } from './transaction-record';
@@ -25,6 +25,21 @@ interface TimedRow {
   row: HistoryRow;
 }
 
+function recordMoment(record: IngestionRecord, events: SpendingEvent[]): number {
+  const occurredMs = new Date(record.occurredAt).getTime();
+  const eventId = eventIdForRecord(record, events);
+  const event = eventId === null ? undefined : events.find((candidate) => candidate.id === eventId);
+
+  if (event === undefined || Number.isNaN(occurredMs)) {
+    return occurredMs;
+  }
+
+  const startMs = eventStartMs(event);
+  const endMs = event.endedAt === undefined ? Number.POSITIVE_INFINITY : new Date(event.endedAt).getTime();
+
+  return Math.min(Math.max(occurredMs, startMs), endMs);
+}
+
 function eventMarkers(events: SpendingEvent[]): TimedRow[] {
   return events.flatMap((event) => {
     const boundaries: { boundary: EventBoundary; at: string }[] = [{ boundary: 'start', at: event.startedAt }];
@@ -34,7 +49,7 @@ function eventMarkers(events: SpendingEvent[]): TimedRow[] {
     }
 
     return boundaries.map(({ boundary, at }) => ({
-      atMs: new Date(at).getTime(),
+      atMs: boundary === 'start' ? eventStartMs(event) : new Date(at).getTime(),
       order: boundary === 'end' ? 0 : 2,
       row: { kind: 'marker' as const, key: `${event.id}-${boundary}`, event, boundary },
     }));
@@ -49,7 +64,7 @@ export function buildSections(
   const sections = new Map<string, DaySection>();
   const rows: TimedRow[] = [
     ...records.map((record) => ({
-      atMs: new Date(record.occurredAt).getTime(),
+      atMs: recordMoment(record, events),
       order: 1,
       row: { kind: 'record' as const, key: record.id, record },
     })),
