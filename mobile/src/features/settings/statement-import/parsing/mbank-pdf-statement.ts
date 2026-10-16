@@ -19,6 +19,7 @@ const phoneDetailPattern = /\s+Od: .*$/;
 const accountNumberPattern = /^[\d ]{16,}$/;
 const columnHeading = 'Opis operacji Kwota Saldo po';
 const pageMarkerPattern = /^Strona : (\d+) \/ (\d+)$/;
+const operationCountPattern = /^Łącznie (\d+)(?: |$)/;
 
 const pageChromePatterns = [pageMarkerPattern, /^Data$/, /^księgowania$/, /^operacji$/, new RegExp(`^${columnHeading}$`)];
 
@@ -34,6 +35,7 @@ interface Statement {
   currency: string;
   openingBalanceMinor: number;
   closingBalanceMinor: number | null;
+  operationCount: number | null;
   operations: PendingOperation[];
 }
 
@@ -89,12 +91,19 @@ function hasCompletePages(lines: string[]): boolean {
 
 function statementOf(lines: string[]): Statement | 'unrecognized' | 'inconsistent' {
   let currency = 'PLN';
+  let operationCount: number | null = null;
   let statement: Statement | null = null;
   let open: PendingOperation | null = null;
   const sharedDates: string[] = [];
 
   for (const line of lines) {
     if (statement === null) {
+      const count = operationCountPattern.exec(line);
+
+      if (count !== null) {
+        operationCount = Number(count[1]);
+      }
+
       const currencyMatch = currencyPattern.exec(line);
 
       if (currencyMatch !== null) {
@@ -108,6 +117,7 @@ function statementOf(lines: string[]): Statement | 'unrecognized' | 'inconsisten
           currency,
           openingBalanceMinor: signed(opening[1]) ?? 0,
           closingBalanceMinor: null,
+          operationCount,
           operations: [],
         };
       }
@@ -197,6 +207,10 @@ function statementOf(lines: string[]): Statement | 'unrecognized' | 'inconsisten
 }
 
 function balances(statement: Statement): boolean {
+  if (statement.operationCount !== null && statement.operations.length !== statement.operationCount) {
+    return false;
+  }
+
   let balance = statement.openingBalanceMinor;
 
   for (const operation of statement.operations) {

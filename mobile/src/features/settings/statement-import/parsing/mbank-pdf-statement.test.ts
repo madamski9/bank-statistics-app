@@ -102,6 +102,10 @@ describe('parseMbankPdfStatement', () => {
     const firstPage = [
       'mBank S.A.',
       'Waluta PLN',
+      'Podsumowanie obrotów na rachunku Liczba operacji Wartość operacji',
+      'Uznania 1 50,00',
+      'Obciążenia 3 80,00',
+      'Łącznie 4 -30,00',
       'Saldo początkowe: 100,00',
       ...columnHeader,
       '2025-01-18 2025-01-18 ZAKUP PRZY UŻYCIU KARTY',
@@ -131,6 +135,16 @@ describe('parseMbankPdfStatement', () => {
 
     expect(complete.ok ? complete.rows.length : 0).toBe(4);
     expect(parseMbankPdfStatement([firstPage, lastPage].join('\n'))).toEqual({ ok: false, problem: 'inconsistent' });
+    expect(parseMbankPdfStatement([firstPage, 'Strona : 2 / 3', lastPage].join('\n'))).toEqual({
+      ok: false,
+      problem: 'inconsistent',
+    });
+  });
+
+  test('refuses an operation count that disagrees with the printed summary', () => {
+    const broken = statement.replace('Łącznie 8', 'Łącznie 9');
+
+    expect(parseMbankPdfStatement(broken)).toEqual({ ok: false, problem: 'inconsistent' });
   });
 
   test.each([
