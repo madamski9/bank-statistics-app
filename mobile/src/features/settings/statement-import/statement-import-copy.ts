@@ -9,7 +9,13 @@ export const statementImportCopy = defineCopy({
     entryFootnote:
       'Porównamy wyciąg z transakcjami z powiadomień i dodamy tylko te, których brakuje. Plik zostaje na telefonie.',
     intro:
-      'Wybierz wyciąg PDF albo historię konta pobraną jako CSV. Sprawdzimy, ile transakcji wyłapały powiadomienia, i uzupełnimy resztę. Na razie obsługujemy wyciągi PDF tylko z mBanku i Millennium.',
+      'Wybierz wyciąg PDF albo historię konta pobraną jako CSV. Sprawdzimy, ile transakcji wyłapały powiadomienia, i uzupełnimy resztę.',
+    supportedPdf: {
+      before: 'Na razie obsługujemy wyciągi PDF tylko z ',
+      banks: ['mBanku', 'Millennium'],
+      separator: ' i ',
+      after: '.',
+    },
     choose: 'Wybierz plik',
     reading: 'Czytamy wyciąg…',
     chooseAnother: 'Wybierz inny plik',
@@ -51,7 +57,13 @@ export const statementImportCopy = defineCopy({
     entryFootnote:
       'We compare the statement with transactions from notifications and add only the missing ones. The file stays on this phone.',
     intro:
-      'Choose a PDF statement or an account history downloaded as CSV. We check how many transactions notifications caught and fill in the rest. For now we only read PDF statements from mBank and Millennium.',
+      'Choose a PDF statement or an account history downloaded as CSV. We check how many transactions notifications caught and fill in the rest.',
+    supportedPdf: {
+      before: 'For now we only read PDF statements from ',
+      banks: ['mBank', 'Millennium'],
+      separator: ' and ',
+      after: '.',
+    },
     choose: 'Choose a file',
     reading: 'Reading the statement…',
     chooseAnother: 'Choose another file',

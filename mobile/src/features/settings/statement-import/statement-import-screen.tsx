@@ -58,7 +58,14 @@ export function StatementImportScreen({
         {state.step === 'idle' || state.step === 'failed' ? (
           <>
             <Text maxFontSizeMultiplier={1.5} style={importStyles.body}>
-              {copy.intro}
+              {`${copy.intro} ${copy.supportedPdf.before}`}
+              {copy.supportedPdf.banks.map((bank, index) => (
+                <Text key={bank}>
+                  {index === 0 ? '' : copy.supportedPdf.separator}
+                  <Text style={styles.bankName}>{bank}</Text>
+                </Text>
+              ))}
+              {copy.supportedPdf.after}
             </Text>
             {state.step === 'failed' ? (
               <Text accessibilityRole="alert" maxFontSizeMultiplier={1.5} style={styles.problem}>
@@ -104,6 +111,10 @@ export function StatementImportScreen({
 }
 
 const styles = StyleSheet.create({
+  bankName: {
+    fontWeight: '700',
+    color: overviewColors.textPrimary,
+  },
   screen: {
     flex: 1,
     backgroundColor: overviewColors.background,
