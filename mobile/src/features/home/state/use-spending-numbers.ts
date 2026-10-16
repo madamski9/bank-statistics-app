@@ -5,7 +5,7 @@ import type { IngestionRecord } from '@bankstats/ingestion-native';
 import type { CategorizationRule } from '@/features/data/classification/categorization-rule';
 import { groupSpending, type SpendingDimension } from '@/features/data/classification/spending-groups';
 import { periodWindow, previousPeriodWindow, type SpendingPeriod } from '@/features/home/overview/period/periods';
-import { periodChange, summarizeSpending } from '@/features/home/overview/spending/spending-summary';
+import { summarizeSpending } from '@/features/home/overview/spending/spending-summary';
 import { spendingTrend } from '@/features/home/overview/spending/spending-trend';
 
 interface SpendingNumbersOptions {
@@ -40,10 +40,5 @@ export function useSpendingNumbers({ records, countedRecords, rules, period, dim
     () => groupSpending(countedRecords, { window: spendWindow, rules, dimension }),
     [countedRecords, dimension, rules, spendWindow],
   );
-  const expenseChange =
-    previousSummary === null
-      ? null
-      : periodChange(summary.expenseMinor, previousSummary.expenseMinor);
-
-  return { spendWindow, summary, previousSummary, trend, groups, expenseChange };
+  return { spendWindow, summary, previousSummary, trend, groups };
 }

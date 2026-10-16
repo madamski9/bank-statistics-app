@@ -3,6 +3,8 @@ import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { setCustomCategories, type CustomCategory } from '@/features/data/classification/categories';
 import { isIgnored, type IgnoreRule } from '@/features/data/ignored-payments/ignore-rule';
 import { setCurrentLanguage, type Language } from '@/features/app-shell/localization/language';
+import type { AlertMessage } from '@/features/insights/alerts/delivery/alert-message';
+import { paymentAlertMessages } from '@/features/insights/alerts/delivery/payment-alert';
 
 import {
   buildSpendingWidgetProps,
@@ -26,6 +28,22 @@ export interface WidgetBackgroundConfiguration {
   language?: Language;
 }
 
+function countedRecords(configuration: WidgetBackgroundConfiguration, records: IngestionRecord[]) {
+  return records.filter(
+    (record) =>
+      (record.merchant !== 'SKLEP TEST' || record.origin === 'manual') &&
+      !isIgnored(record, configuration.ignoreRules ?? []),
+  );
+}
+
+function applyEnvironment(configuration: WidgetBackgroundConfiguration): void {
+  if (configuration.language !== undefined) {
+    setCurrentLanguage(configuration.language);
+  }
+
+  setCustomCategories(configuration.customCategories ?? []);
+}
+
 export function snapshot(
   configuration: WidgetBackgroundConfiguration,
   records: IngestionRecord[],
@@ -34,11 +52,7 @@ export function snapshot(
 ) {
   const reference = new Date(referenceMs);
 
-  if (configuration.language !== undefined) {
-    setCurrentLanguage(configuration.language);
-  }
-
-  setCustomCategories(configuration.customCategories ?? []);
+  applyEnvironment(configuration);
 
   if (!configuration.enabled) {
     return signedOutWidgetProps(reference, configuration.openUrl);
@@ -50,11 +64,7 @@ export function snapshot(
 
   return buildSpendingWidgetProps({
     ...configuration,
-    records: records.filter(
-      (record) =>
-        (record.merchant !== 'SKLEP TEST' || record.origin === 'manual') &&
-        !isIgnored(record, configuration.ignoreRules ?? []),
-    ),
+    records: countedRecords(configuration, records),
     reference,
     updatedAt: new Date(updatedAtMs),
   });
@@ -70,4 +80,29 @@ export function timeline(
     configuration.privacy ?? { isBlurred: false, revealedUntilMs: 0 },
     new Date(referenceMs),
   ).map((entry) => ({ timestamp: entry.date.getTime(), props: entry.props }));
+}
+
+export function paymentAlerts(
+  configuration: WidgetBackgroundConfiguration,
+  records: IngestionRecord[],
+  recordId: string,
+  referenceMs: number,
+): AlertMessage[] {
+  if (!configuration.enabled) {
+    return [];
+  }
+
+  applyEnvironment(configuration);
+  const counted = countedRecords(configuration, records);
+  const record = counted.find((candidate) => candidate.id === recordId);
+
+  if (record === undefined) {
+    return [];
+  }
+
+  return paymentAlertMessages(configuration.alertRules, record, counted, {
+    reference: new Date(referenceMs),
+    rules: configuration.categorizationRules,
+    hasAggressiveTone: configuration.isPremium === true,
+  });
 }

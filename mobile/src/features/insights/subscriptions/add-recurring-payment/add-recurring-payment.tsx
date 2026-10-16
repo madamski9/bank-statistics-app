@@ -18,7 +18,9 @@ import { impactLight, selectionChanged } from '@/haptics';
 import {
   type Cadence,
   type RecurringCandidate,
+  type RecurringCandidatePayment,
   type TrackedPayment,
+  trackedPaymentKey,
   upcomingChargeAfter,
 } from '../recurring-payments';
 import { subscriptionsCopy } from '../subscriptions-copy';
@@ -45,6 +47,7 @@ export function AddRecurringPayment({ candidates, now, onAdd, onBack, onClose }:
   const { formatAmount } = useAmountFormatting();
   const [query, setQuery] = useState('');
   const [picked, setPicked] = useState<RecurringCandidate | null>(null);
+  const [pickedPayment, setPickedPayment] = useState<RecurringCandidatePayment | null>(null);
   const [cadence, setCadence] = useState<Cadence>('monthly');
   const [isSaving, setIsSaving] = useState(false);
   const matching = useMemo(
@@ -52,9 +55,22 @@ export function AddRecurringPayment({ candidates, now, onAdd, onBack, onClose }:
     [candidates, query],
   );
 
-  if (picked !== null) {
-    const lastDate = new Date(picked.lastChargedAt);
-    const next = upcomingChargeAfter(picked.lastChargedAt, cadence, now);
+  const pickCadence = (payment: RecurringCandidatePayment) => {
+    selectionChanged();
+    setCadence('monthly');
+    setPickedPayment(payment);
+  };
+
+  if (picked !== null && pickedPayment !== null) {
+    const lastDate = new Date(pickedPayment.lastChargedAt);
+    const next = upcomingChargeAfter(pickedPayment.lastChargedAt, cadence, now);
+    const leaveCadence = () => {
+      setPickedPayment(null);
+
+      if (picked.payments.length === 1) {
+        setPicked(null);
+      }
+    };
 
     const save = () => {
       if (isSaving) {
@@ -63,7 +79,13 @@ export function AddRecurringPayment({ candidates, now, onAdd, onBack, onClose }:
 
       impactLight();
       setIsSaving(true);
-      void onAdd({ key: picked.key, name: picked.name, cadence }).finally(() => setIsSaving(false));
+      void onAdd({
+        key: trackedPaymentKey(picked.key, pickedPayment.amountMinor),
+        partyKey: picked.key,
+        name: picked.name,
+        cadence,
+        amountMinor: pickedPayment.amountMinor,
+      }).finally(() => setIsSaving(false));
     };
 
     return (
@@ -72,7 +94,7 @@ export function AddRecurringPayment({ candidates, now, onAdd, onBack, onClose }:
         footer={
           <SheetButton disabled={isSaving} label={copy.confirmAdd} onPress={save} tone="primary" />
         }
-        leading={<BackButton label={copy.back} onPress={() => setPicked(null)} />}
+        leading={<BackButton label={copy.back} onPress={leaveCadence} />}
         onClose={onClose}
         title={picked.name}
       >
@@ -82,10 +104,10 @@ export function AddRecurringPayment({ candidates, now, onAdd, onBack, onClose }:
         >
           <View style={styles.summary}>
             <AmountText maxFontSizeMultiplier={1.3} style={styles.amount}>
-              {formatAmount(picked.lastAmountMinor, reportingCurrency)}
+              {formatAmount(pickedPayment.amountMinor, reportingCurrency)}
             </AmountText>
             <AmountText maxFontSizeMultiplier={1.4} style={styles.caption}>
-              {copy.lastCharge(formatAmount(picked.lastAmountMinor, reportingCurrency), formatDayHeading(lastDate, now))}
+              {copy.lastCharge(formatAmount(pickedPayment.amountMinor, reportingCurrency), formatDayHeading(lastDate, now))}
             </AmountText>
           </View>
 
@@ -100,6 +122,38 @@ export function AddRecurringPayment({ candidates, now, onAdd, onBack, onClose }:
                   selectionChanged();
                   setCadence(choice);
                 }}
+              />
+            ))}
+          </SheetSection>
+        </Animated.View>
+      </SheetLayout>
+    );
+  }
+
+  if (picked !== null) {
+    return (
+      <SheetLayout
+        closeLabel={copy.close}
+        leading={<BackButton label={copy.back} onPress={() => setPicked(null)} />}
+        onClose={onClose}
+        title={picked.name}
+      >
+        <Animated.View
+          entering={FadeInRight.duration(240).reduceMotion(ReduceMotion.System)}
+          style={styles.content}
+        >
+          <Text maxFontSizeMultiplier={1.5} style={styles.note}>
+            {copy.pickPaymentIntro(picked.name)}
+          </Text>
+          <SheetSection>
+            {picked.payments.map((payment, index) => (
+              <SheetRow
+                accessibilityHint={copy.pickHint}
+                detail={copy.paymentDetail(formatDayHeading(new Date(payment.lastChargedAt), now), payment.chargeCount)}
+                isFirst={index === 0}
+                key={payment.amountMinor}
+                label={formatAmount(payment.amountMinor, reportingCurrency)}
+                onPress={() => pickCadence(payment)}
               />
             ))}
           </SheetSection>
@@ -140,17 +194,26 @@ export function AddRecurringPayment({ candidates, now, onAdd, onBack, onClose }:
             {matching.map((candidate, index) => (
               <SheetRow
                 accessibilityHint={copy.pickHint}
-                detail={copy.candidateDetail(
-                  formatDayHeading(new Date(candidate.lastChargedAt), now),
-                  candidate.chargeCount,
-                )}
+                detail={
+                  candidate.payments.length > 1
+                    ? copy.candidatePaymentsDetail(
+                        formatDayHeading(new Date(candidate.lastChargedAt), now),
+                        candidate.payments.length,
+                      )
+                    : copy.candidateDetail(formatDayHeading(new Date(candidate.lastChargedAt), now), candidate.chargeCount)
+                }
                 isFirst={index === 0}
                 key={candidate.key}
                 label={candidate.name}
                 onPress={() => {
-                  selectionChanged();
-                  setCadence('monthly');
                   setPicked(candidate);
+                  const [only] = candidate.payments;
+
+                  if (candidate.payments.length === 1 && only !== undefined) {
+                    pickCadence(only);
+                  } else {
+                    selectionChanged();
+                  }
                 }}
                 value={formatAmount(candidate.lastAmountMinor, reportingCurrency)}
                 valueTone="muted"

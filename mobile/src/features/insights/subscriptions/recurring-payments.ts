@@ -26,6 +26,14 @@ export interface TrackedPayment {
   key: string;
   name: string;
   cadence: Cadence;
+  partyKey?: string;
+  amountMinor?: number;
+}
+
+export interface RecurringCandidatePayment {
+  amountMinor: number;
+  lastChargedAt: string;
+  chargeCount: number;
 }
 
 export interface RecurringCandidate {
@@ -34,6 +42,7 @@ export interface RecurringCandidate {
   lastAmountMinor: number;
   lastChargedAt: string;
   chargeCount: number;
+  payments: RecurringCandidatePayment[];
 }
 
 interface CadenceRule {
@@ -117,9 +126,73 @@ function cadenceFor(intervals: number[]): Cadence | null {
   return null;
 }
 
+function toleranceFor(amountMinor: number): number {
+  return Math.max(amountMinor * amountTolerance, minimumToleranceMinor);
+}
+
+function isSimilarAmount(amountMinor: number, referenceMinor: number): boolean {
+  return Math.abs(amountMinor - referenceMinor) <= toleranceFor(referenceMinor);
+}
+
+function byOccurrence(left: IngestionRecord, right: IngestionRecord): number {
+  return occurredMs(left) - occurredMs(right);
+}
+
+function amountClusters(records: IngestionRecord[]): IngestionRecord[][] {
+  const clusters: IngestionRecord[][] = [];
+  let current: IngestionRecord[] = [];
+  let referenceMinor = 0;
+
+  for (const record of [...records].sort((left, right) => left.amountMinor - right.amountMinor)) {
+    if (current.length > 0 && !isSimilarAmount(record.amountMinor, referenceMinor)) {
+      clusters.push(current);
+      current = [];
+    }
+
+    if (current.length === 0) {
+      referenceMinor = record.amountMinor;
+    }
+
+    current.push(record);
+  }
+
+  if (current.length > 0) {
+    clusters.push(current);
+  }
+
+  return clusters.map((cluster) => cluster.sort(byOccurrence));
+}
+
+export function trackedPaymentKey(partyKey: string, amountMinor: number): string {
+  return `${partyKey}#${amountMinor}`;
+}
+
+function clusterKey(partyKey: string, cluster: IngestionRecord[]): string {
+  return `${partyKey}@${cluster[0]?.amountMinor ?? 0}`;
+}
+
+function trackedPartyKey(tracked: TrackedPayment): string {
+  return tracked.partyKey ?? tracked.key;
+}
+
+function trackedRecords(tracked: TrackedPayment, records: IngestionRecord[]): IngestionRecord[] {
+  if (tracked.amountMinor !== undefined) {
+    const referenceMinor = tracked.amountMinor;
+
+    return records.filter((record) => isSimilarAmount(record.amountMinor, referenceMinor));
+  }
+
+  const latestMs = (cluster: IngestionRecord[]) => Math.max(...cluster.map(occurredMs));
+  const [busiest] = amountClusters(records).sort(
+    (left, right) => right.length - left.length || latestMs(right) - latestMs(left),
+  );
+
+  return busiest ?? [];
+}
+
 function hasSteadyAmount(amounts: number[]): boolean {
   const typical = median(amounts);
-  const tolerance = Math.max(typical * amountTolerance, minimumToleranceMinor);
+  const tolerance = toleranceFor(typical);
   const steady = amounts.filter((amount) => Math.abs(amount - typical) <= tolerance).length;
 
   return steady / amounts.length >= matchingShare;
@@ -173,7 +246,7 @@ function groupExpensesByParty(
   }
 
   for (const group of groups.values()) {
-    group.records.sort((left, right) => occurredMs(left) - occurredMs(right));
+    group.records.sort(byOccurrence);
   }
 
   return groups;
@@ -192,8 +265,13 @@ export function upcomingChargeAfter(lastChargedAt: string, cadence: Cadence, now
   return next;
 }
 
-function trackedPayment(key: string, group: PartyGroup, tracked: TrackedPayment, now: Date): RecurringPayment | null {
-  const charges = group.records.slice(-analysedCharges);
+function trackedPayment(
+  group: PartyGroup,
+  records: IngestionRecord[],
+  tracked: TrackedPayment,
+  now: Date,
+): RecurringPayment | null {
+  const charges = records.slice(-analysedCharges);
   const last = charges[charges.length - 1];
 
   if (last === undefined) {
@@ -205,7 +283,7 @@ function trackedPayment(key: string, group: PartyGroup, tracked: TrackedPayment,
   const next = upcomingChargeAfter(last.occurredAt, tracked.cadence, now);
 
   return {
-    key,
+    key: tracked.key,
     name: group.name,
     cadence: tracked.cadence,
     category: group.category,
@@ -222,6 +300,66 @@ function trackedPayment(key: string, group: PartyGroup, tracked: TrackedPayment,
   };
 }
 
+function detectedPayment(
+  key: string,
+  group: PartyGroup,
+  records: IngestionRecord[],
+  now: Date,
+): RecurringPayment | null {
+  const charges = records.slice(-analysedCharges);
+
+  if (charges.length < 2) {
+    return null;
+  }
+
+  const intervals = charges
+    .slice(1)
+    .map((charge, index) => (occurredMs(charge) - occurredMs(charges[index] ?? charge)) / dayMs);
+  const cadence = cadenceFor(intervals);
+
+  if (cadence === null) {
+    return null;
+  }
+
+  const rule = cadences[cadence];
+  const isKnownSubscription = group.category === subscriptionCategory && cadence === 'monthly';
+
+  if (charges.length < rule.minimumCharges && !isKnownSubscription) {
+    return null;
+  }
+
+  if (!hasSteadyAmount(charges.map((charge) => charge.amountMinor))) {
+    return null;
+  }
+
+  const last = charges[charges.length - 1];
+  const previous = charges[charges.length - 2];
+
+  if (last === undefined || previous === undefined) {
+    return null;
+  }
+
+  const next = nextChargeAfter(last.occurredAt, cadence);
+  const overdueMs = now.getTime() - next.getTime();
+
+  return {
+    key,
+    name: group.name,
+    cadence,
+    category: group.category,
+    lastAmountMinor: last.amountMinor,
+    previousAmountMinor: previous.amountMinor,
+    priceChangeMinor: last.amountMinor - previous.amountMinor,
+    monthlyCostMinor: Math.round((last.amountMinor * averageMonthDays) / rule.days),
+    chargeCount: charges.length,
+    lastChargedAt: last.occurredAt,
+    nextExpectedAt: next.toISOString(),
+    isActive: overdueMs <= Math.max(rule.days * 0.5, graceDays) * dayMs,
+    isTracked: false,
+    records: [...charges].reverse(),
+  };
+}
+
 export function detectRecurringPayments(
   records: IngestionRecord[],
   rules: CategorizationRule[],
@@ -230,80 +368,37 @@ export function detectRecurringPayments(
   tracked: TrackedPayment[] = [],
 ): RecurringPayment[] {
   const groups = groupExpensesByParty(records, rules, now);
-  const trackedByKey = new Map(tracked.map((payment) => [payment.key, payment]));
   const payments: RecurringPayment[] = [];
 
-  for (const [key, group] of groups) {
-    const trackedEntry = trackedByKey.get(key);
+  for (const [partyKey, group] of groups) {
+    let remaining = group.records;
 
-    if (trackedEntry !== undefined) {
-      const payment = trackedPayment(key, group, trackedEntry, now);
+    for (const entry of tracked.filter((payment) => trackedPartyKey(payment) === partyKey)) {
+      const matched = trackedRecords(entry, remaining);
+      const matchedIds = new Set(matched.map((record) => record.id));
+      remaining = remaining.filter((record) => !matchedIds.has(record.id));
+      const payment = trackedPayment(group, matched, entry, now);
 
       if (payment !== null) {
         payments.push(payment);
       }
-
-      continue;
     }
 
-    if (dismissed.has(key)) {
-      continue;
+    const clusters = amountClusters(remaining);
+
+    for (const cluster of clusters) {
+      const key = clusterKey(partyKey, cluster);
+
+      if (dismissed.has(partyKey) || dismissed.has(key)) {
+        continue;
+      }
+
+      const payment = detectedPayment(key, group, cluster, now);
+
+      if (payment !== null) {
+        payments.push(payment);
+      }
     }
-
-    const charges = group.records.slice(-analysedCharges);
-
-    if (charges.length < 2) {
-      continue;
-    }
-
-    const intervals = charges
-      .slice(1)
-      .map((charge, index) => (occurredMs(charge) - occurredMs(charges[index] ?? charge)) / dayMs);
-    const cadence = cadenceFor(intervals);
-
-    if (cadence === null) {
-      continue;
-    }
-
-    const rule = cadences[cadence];
-    const isKnownSubscription = group.category === subscriptionCategory && cadence === 'monthly';
-
-    if (charges.length < rule.minimumCharges && !isKnownSubscription) {
-      continue;
-    }
-
-    const amounts = charges.map((charge) => charge.amountMinor);
-
-    if (!hasSteadyAmount(amounts)) {
-      continue;
-    }
-
-    const last = charges[charges.length - 1];
-    const previous = charges[charges.length - 2];
-
-    if (last === undefined || previous === undefined) {
-      continue;
-    }
-
-    const next = nextChargeAfter(last.occurredAt, cadence);
-    const overdueMs = now.getTime() - next.getTime();
-
-    payments.push({
-      key,
-      name: group.name,
-      cadence,
-      category: group.category,
-      lastAmountMinor: last.amountMinor,
-      previousAmountMinor: previous.amountMinor,
-      priceChangeMinor: last.amountMinor - previous.amountMinor,
-      monthlyCostMinor: Math.round((last.amountMinor * averageMonthDays) / rule.days),
-      chargeCount: charges.length,
-      lastChargedAt: last.occurredAt,
-      nextExpectedAt: next.toISOString(),
-      isActive: overdueMs <= Math.max(rule.days * 0.5, graceDays) * dayMs,
-      isTracked: false,
-      records: [...charges].reverse(),
-    });
   }
 
   return payments.sort((left, right) => {
@@ -319,23 +414,35 @@ export function recurringCandidates(
   records: IngestionRecord[],
   rules: CategorizationRule[],
   now: Date,
-  excludedKeys: ReadonlySet<string>,
+  existing: RecurringPayment[],
 ): RecurringCandidate[] {
+  const coveredIds = new Set(existing.flatMap((payment) => payment.records.map((record) => record.id)));
   const candidates: RecurringCandidate[] = [];
 
   for (const [key, group] of groupExpensesByParty(records, rules, now)) {
-    const last = group.records[group.records.length - 1];
+    const payments = amountClusters(group.records)
+      .filter((cluster) => !cluster.some((record) => coveredIds.has(record.id)))
+      .flatMap((cluster): RecurringCandidatePayment[] => {
+        const last = cluster[cluster.length - 1];
 
-    if (last === undefined || excludedKeys.has(key)) {
+        return last === undefined
+          ? []
+          : [{ amountMinor: last.amountMinor, lastChargedAt: last.occurredAt, chargeCount: cluster.length }];
+      })
+      .sort((left, right) => new Date(right.lastChargedAt).getTime() - new Date(left.lastChargedAt).getTime());
+    const [latest] = payments;
+
+    if (latest === undefined) {
       continue;
     }
 
     candidates.push({
       key,
       name: group.name,
-      lastAmountMinor: last.amountMinor,
-      lastChargedAt: last.occurredAt,
-      chargeCount: group.records.length,
+      lastAmountMinor: latest.amountMinor,
+      lastChargedAt: latest.lastChargedAt,
+      chargeCount: payments.reduce((sum, payment) => sum + payment.chargeCount, 0),
+      payments,
     });
   }
 

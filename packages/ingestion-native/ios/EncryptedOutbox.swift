@@ -23,7 +23,7 @@ final class EncryptedOutbox: @unchecked Sendable {
       return outcome
     }
     try persist(record)
-    SpendingWidgetUpdater.shared.refresh()
+    SpendingWidgetUpdater.shared.refresh(capturedRecordId: record.id)
     return outcome
   }
 

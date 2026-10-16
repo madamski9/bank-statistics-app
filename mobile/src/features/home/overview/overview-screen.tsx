@@ -18,7 +18,6 @@ import { useOverviewBubbles } from './use-overview-bubbles';
 
 interface OverviewScreenProps extends OverviewShortcutsProps {
   summary: SpendingSummary;
-  expenseChange: number | null;
   period: SpendingPeriod;
   onChangePeriod: (period: SpendingPeriod) => void;
   lockedPeriods: ReadonlySet<SpendingPeriod>;
@@ -37,7 +36,6 @@ interface OverviewScreenProps extends OverviewShortcutsProps {
 
 function OverviewScreenComponent({
   summary,
-  expenseChange,
   period,
   onChangePeriod,
   lockedPeriods,
@@ -61,7 +59,6 @@ function OverviewScreenComponent({
   return (
     <View style={styles.page}>
       <OverviewHeader
-        expenseChange={expenseChange}
         focusedEvent={focusedEvent}
         lockedPeriods={lockedPeriods}
         onChangePeriod={onChangePeriod}

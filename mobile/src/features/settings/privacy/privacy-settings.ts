@@ -13,7 +13,7 @@ export const defaultPrivacySettings: PrivacySettings = {
   isLockEnabled: false,
   lockTimeout: 'immediate',
   isPrivacyModeEnabled: false,
-  isWidgetBlurred: true,
+  isWidgetBlurred: false,
 };
 
 const lockTimeoutMs: Record<LockTimeout, number> = {
