@@ -92,6 +92,16 @@ export function OnboardingGate({ children }: OnboardingGateProps) {
     return <LoadingScreen />;
   }
 
+  if (replay === 'focus') {
+    return (
+      <OnboardingScreen
+        flow="focus"
+        onCancel={finishOnboardingReplay}
+        onComplete={async () => finishOnboardingReplay()}
+      />
+    );
+  }
+
   if (state.completed && replay === 'none') {
     const showsFocusAnnouncement = shouldShowFocusAnnouncement({
       hasCompletedOnboarding: state.completed,
