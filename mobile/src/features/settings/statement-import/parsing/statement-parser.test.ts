@@ -143,7 +143,7 @@ describe('parseStatement', () => {
   });
 
   test('refuses a statement from a bank we do not offer', () => {
-    expect(parseStatement('mBank S.A.;;\nData;Kwota;Opis\n21.09.2026;-10,00;Kawa')).toEqual({
+    expect(parseStatement('Alior Bank S.A.;;\nData;Kwota;Opis\n21.09.2026;-10,00;Kawa')).toEqual({
       ok: false,
       problem: 'unsupportedBank',
     });

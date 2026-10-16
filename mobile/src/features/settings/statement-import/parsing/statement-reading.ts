@@ -1,3 +1,4 @@
+import { parseMbankPdfStatement } from './mbank-pdf-statement';
 import { parseMillenniumPdfStatement } from './millennium-pdf-statement';
 import { detectStatementBank } from './statement-bank';
 import { parseStatement, type StatementParseResult } from './statement-parser';
@@ -19,9 +20,13 @@ export function readStatement(text: string, format: StatementFormat): StatementP
     return { ok: false, problem: 'unsupportedBank' };
   }
 
-  if (bank !== 'millennium') {
-    return { ok: false, problem: 'unsupportedPdf' };
+  if (bank === 'millennium') {
+    return parseMillenniumPdfStatement(text);
   }
 
-  return parseMillenniumPdfStatement(text);
+  if (bank === 'mbank') {
+    return parseMbankPdfStatement(text);
+  }
+
+  return { ok: false, problem: 'unsupportedPdf' };
 }

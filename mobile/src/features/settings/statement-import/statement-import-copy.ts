@@ -5,11 +5,11 @@ export const statementImportCopy = defineCopy({
     title: 'Import wyciągu',
     close: 'Zamknij',
     entryLabel: 'Importuj wyciąg',
-    entryHint: 'Wybierz wyciąg PDF z Millennium albo plik CSV z bankowości internetowej',
+    entryHint: 'Wybierz wyciąg PDF z mBanku lub Millennium albo plik CSV z bankowości internetowej',
     entryFootnote:
       'Porównamy wyciąg z transakcjami z powiadomień i dodamy tylko te, których brakuje. Plik zostaje na telefonie.',
     intro:
-      'Wybierz wyciąg PDF z Millennium albo historię konta pobraną jako CSV. Sprawdzimy, ile transakcji wyłapały powiadomienia, i uzupełnimy resztę.',
+      'Wybierz wyciąg PDF albo historię konta pobraną jako CSV. Sprawdzimy, ile transakcji wyłapały powiadomienia, i uzupełnimy resztę. Na razie obsługujemy wyciągi PDF tylko z mBanku i Millennium.',
     choose: 'Wybierz plik',
     reading: 'Czytamy wyciąg…',
     chooseAnother: 'Wybierz inny plik',
@@ -18,10 +18,10 @@ export const statementImportCopy = defineCopy({
       unrecognized:
         'Nie rozpoznajemy tego pliku. Potrzebny jest wyciąg PDF albo CSV z kolumnami daty i kwoty, pobrany z historii rachunku.',
       unsupportedBank:
-        'Nie rozpoznajemy banku, z którego pochodzi ten wyciąg. Importujemy tylko wyciągi z Millennium, PKO BP i Erste.',
+        'Nie rozpoznajemy banku, z którego pochodzi ten wyciąg. Importujemy tylko wyciągi z mBanku, Millennium, PKO BP i Erste.',
       noTransactions: 'W tym pliku nie ma transakcji, które dałoby się odczytać.',
       unreadable: 'Nie udało się otworzyć pliku. Spróbuj ponownie.',
-      unsupportedPdf: 'Z plików PDF czytamy na razie tylko wyciągi z Millennium. Dla PKO BP i Erste wybierz plik CSV.',
+      unsupportedPdf: 'Z plików PDF czytamy na razie tylko wyciągi z mBanku i Millennium. Dla PKO BP i Erste wybierz plik CSV.',
       inconsistent:
         'Kwoty w tym wyciągu nie zgadzają się z saldem, więc nie importujemy go, żeby nie dodać błędnych transakcji.',
       pickerUnavailable: 'Ta wersja aplikacji nie umie jeszcze otwierać plików. Zaktualizuj aplikację.',
@@ -47,11 +47,11 @@ export const statementImportCopy = defineCopy({
     title: 'Statement import',
     close: 'Close',
     entryLabel: 'Import a statement',
-    entryHint: 'Choose a Millennium PDF statement or a CSV file from online banking',
+    entryHint: 'Choose an mBank or Millennium PDF statement or a CSV file from online banking',
     entryFootnote:
       'We compare the statement with transactions from notifications and add only the missing ones. The file stays on this phone.',
     intro:
-      'Choose a Millennium PDF statement or an account history downloaded as CSV. We check how many transactions notifications caught and fill in the rest.',
+      'Choose a PDF statement or an account history downloaded as CSV. We check how many transactions notifications caught and fill in the rest. For now we only read PDF statements from mBank and Millennium.',
     choose: 'Choose a file',
     reading: 'Reading the statement…',
     chooseAnother: 'Choose another file',
@@ -60,10 +60,10 @@ export const statementImportCopy = defineCopy({
       unrecognized:
         'We do not recognise this file. It needs to be a PDF statement or a CSV with date and amount columns, downloaded from the account history.',
       unsupportedBank:
-        'We cannot tell which bank this statement is from. We only import statements from Millennium, PKO BP and Erste.',
+        'We cannot tell which bank this statement is from. We only import statements from mBank, Millennium, PKO BP and Erste.',
       noTransactions: 'This file has no transactions we can read.',
       unreadable: 'Could not open the file. Please try again.',
-      unsupportedPdf: 'For now we only read PDF statements from Millennium. For PKO BP and Erste, choose a CSV file.',
+      unsupportedPdf: 'For now we only read PDF statements from mBank and Millennium. For PKO BP and Erste, choose a CSV file.',
       inconsistent:
         'The amounts in this statement do not add up to its balance, so we are not importing it to avoid adding wrong transactions.',
       pickerUnavailable: 'This version of the app cannot open files yet. Please update the app.',
