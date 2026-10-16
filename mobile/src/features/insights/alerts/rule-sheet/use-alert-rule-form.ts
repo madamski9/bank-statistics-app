@@ -81,15 +81,14 @@ export function useAlertRuleForm({ scope, rule, onSave, onRequestPermission }: A
     setError(null);
 
     try {
-      if (!(await onRequestPermission())) {
-        setError(
-          copy.permissionDenied,
-        );
+      const condition = metric === 'income' && missingIncome ? 'missingIncome' : 'threshold';
+      const needsPermission = condition === 'missingIncome' || isNotifying;
+
+      if (needsPermission && !(await onRequestPermission())) {
+        setError(copy.permissionDenied);
 
         return;
       }
-
-      const condition = metric === 'income' && missingIncome ? 'missingIncome' : 'threshold';
 
       impactLight();
       await onSave({

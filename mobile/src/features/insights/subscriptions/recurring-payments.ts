@@ -360,14 +360,6 @@ function detectedPayment(
   };
 }
 
-function detectedClusters(records: IngestionRecord[]): IngestionRecord[][] {
-  if (records.length >= 2 && hasSteadyAmount(records.map((record) => record.amountMinor))) {
-    return [records];
-  }
-
-  return amountClusters(records);
-}
-
 export function detectRecurringPayments(
   records: IngestionRecord[],
   rules: CategorizationRule[],
@@ -392,7 +384,7 @@ export function detectRecurringPayments(
       }
     }
 
-    const clusters = detectedClusters(remaining);
+    const clusters = amountClusters(remaining);
 
     for (const cluster of clusters) {
       const key = clusterKey(partyKey, cluster, clusters.length);

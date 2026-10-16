@@ -241,6 +241,41 @@ describe('recurring payments', () => {
     expect(new Set(payments.map((payment) => payment.key)).size).toBe(2);
   });
 
+  test('separates a yearly charge from a more frequent monthly payment', () => {
+    const records = [
+      ...Array.from({ length: 12 }, (_, month) =>
+        charge('Apple', new Date(Date.UTC(2025, 9 + month, 3, 8)).toISOString(), 1499),
+      ),
+      charge('Apple', '2025-09-14T08:00:00Z', 42000),
+      charge('Apple', '2026-09-14T08:00:00Z', 42000),
+    ];
+    const payments = detectRecurringPayments(records, [], now);
+
+    expect(payments.map((payment) => [payment.cadence, payment.lastAmountMinor])).toEqual([
+      ['yearly', 42000],
+      ['monthly', 1499],
+    ]);
+    expect(payments.map((payment) => payment.chargeCount)).toEqual([2, 12]);
+    expect(recurringCandidates(records, [], now, payments)).toEqual([]);
+  });
+
+  test('keeps a single yearly charge available beside a detected monthly payment', () => {
+    const records = [
+      ...Array.from({ length: 12 }, (_, month) =>
+        charge('Apple', new Date(Date.UTC(2025, 9 + month, 3, 8)).toISOString(), 1499),
+      ),
+      charge('Apple', '2026-09-14T08:00:00Z', 42000),
+    ];
+    const payments = detectRecurringPayments(records, [], now);
+
+    expect(payments.map((payment) => [payment.cadence, payment.lastAmountMinor])).toEqual([
+      ['monthly', 1499],
+    ]);
+    expect(recurringCandidates(records, [], now, payments)[0]?.payments).toEqual([
+      { amountMinor: 42000, lastChargedAt: '2026-09-14T08:00:00Z', chargeCount: 1 },
+    ]);
+  });
+
   test('orders payments by the closest upcoming charge', () => {
     const records = [
       charge('Netflix', '2026-08-25T08:00:00Z', 4900),

@@ -144,6 +144,29 @@ describe('paymentAlertMessage', () => {
     }
   });
 
+  test('bounds titles for long shop names while retaining the full name in the body', () => {
+    const shops = ['Media Expert', 'Very Long Merchant Name With More Than Thirty Characters', '😀'.repeat(20)];
+    const tones = ['passive', 'mild', 'aggressive'] as const;
+
+    for (const shop of shops) {
+      for (const tone of tones) {
+        for (const amount of [1_234_567, 8_500, 9_500, 12_000]) {
+          const record = payment(`long-${shop}-${tone}-${amount}`, amount, { merchant: shop });
+          const message = paymentAlertMessage(otherShopLimit(shop, { tone }), record, [record], {
+            reference,
+            rules: [],
+            hasAggressiveTone: true,
+          });
+
+          expect(message).not.toBeNull();
+          expect(message!.title.length).toBeLessThanOrEqual(30);
+          expect(message!.title.isWellFormed()).toBe(true);
+          expect(message!.body).toContain(shop);
+        }
+      }
+    }
+  });
+
   test('stays quiet when the user switched notifications off', () => {
     const record = payment('silent', 12_000);
 

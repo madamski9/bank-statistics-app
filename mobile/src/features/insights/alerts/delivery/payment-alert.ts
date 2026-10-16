@@ -105,8 +105,31 @@ function shopName(record: IngestionRecord, rules: CategorizationRule[]): string 
   return classified.merchantName ?? classified.counterpartyName ?? classified.bankLabel ?? '';
 }
 
+const titleLimit = 30;
+
+function notificationTitle(title: string): string {
+  if (title.length <= titleLimit) {
+    return title;
+  }
+
+  let shortened = '';
+
+  for (const character of title) {
+    if (shortened.length + character.length >= titleLimit) {
+      break;
+    }
+
+    shortened += character;
+  }
+
+  return `${shortened.trimEnd()}…`;
+}
+
 function withStanding(text: { title: string; body: string }, standing: string): AlertMessage {
-  return { title: text.title, body: [text.body, standing].filter((part) => part !== '').join(' ') };
+  return {
+    title: notificationTitle(text.title),
+    body: [text.body, standing].filter((part) => part !== '').join(' '),
+  };
 }
 
 function isWithinWindow(record: IngestionRecord, progress: AlertProgress): boolean {
