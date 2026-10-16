@@ -38,9 +38,9 @@ export function OverviewHeader({
           entering={contextEntering}
           exiting={contextExiting}
           key={`event-${focusedEvent.event.id}`}
-          style={styles.contextRow}
+          style={[styles.contextRow, styles.eventRow]}
         >
-          <Text maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.contextLabel}>
+          <Text maxFontSizeMultiplier={1.6} numberOfLines={1} style={[styles.contextLabel, styles.eventName]}>
             {eventCopy.eventContext(focusedEvent.event.name)}
           </Text>
           <Text maxFontSizeMultiplier={1.6} style={styles.contextLabel}>
@@ -73,8 +73,16 @@ const styles = StyleSheet.create({
     gap: overviewSpacing.tight,
   },
   contextRow: {
-    minHeight: 34,
-    gap: 2,
+    minHeight: 18,
+    justifyContent: 'center',
+  },
+  eventRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  eventName: {
+    flexShrink: 1,
   },
   rangeSwitcherHidden: {
     opacity: 0,
