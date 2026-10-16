@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeInRight, ReduceMotion } from 'react-native-reanimated';
 
+import { useAndroidBack } from '@/features/app-shell/sheet/sheet-modal';
 import { BackButton } from '@/features/app-shell/sheet/back-button';
 import { SheetButton } from '@/features/app-shell/sheet/components/sheet-button';
 import { SheetRow } from '@/features/app-shell/sheet/components/sheet-row';
@@ -61,16 +62,26 @@ export function AddRecurringPayment({ candidates, now, onAdd, onBack, onClose }:
     setPickedPayment(payment);
   };
 
-  if (picked !== null && pickedPayment !== null) {
-    const lastDate = new Date(pickedPayment.lastChargedAt);
-    const next = upcomingChargeAfter(pickedPayment.lastChargedAt, cadence, now);
-    const leaveCadence = () => {
+  const goBack = () => {
+    if (picked !== null && pickedPayment !== null) {
       setPickedPayment(null);
 
       if (picked.payments.length === 1) {
         setPicked(null);
       }
-    };
+    } else if (picked !== null) {
+      setPicked(null);
+    } else {
+      onBack();
+    }
+  };
+
+  useAndroidBack(goBack);
+
+  if (picked !== null && pickedPayment !== null) {
+    const lastDate = new Date(pickedPayment.lastChargedAt);
+    const next = upcomingChargeAfter(pickedPayment.lastChargedAt, cadence, now);
+
 
     const save = () => {
       if (isSaving) {
@@ -94,7 +105,7 @@ export function AddRecurringPayment({ candidates, now, onAdd, onBack, onClose }:
         footer={
           <SheetButton disabled={isSaving} label={copy.confirmAdd} onPress={save} tone="primary" />
         }
-        leading={<BackButton label={copy.back} onPress={leaveCadence} />}
+        leading={<BackButton label={copy.back} onPress={goBack} />}
         onClose={onClose}
         title={picked.name}
       >
@@ -134,7 +145,7 @@ export function AddRecurringPayment({ candidates, now, onAdd, onBack, onClose }:
     return (
       <SheetLayout
         closeLabel={copy.close}
-        leading={<BackButton label={copy.back} onPress={() => setPicked(null)} />}
+        leading={<BackButton label={copy.back} onPress={goBack} />}
         onClose={onClose}
         title={picked.name}
       >
@@ -165,7 +176,7 @@ export function AddRecurringPayment({ candidates, now, onAdd, onBack, onClose }:
   return (
     <SheetLayout
       closeLabel={copy.close}
-      leading={<BackButton label={copy.back} onPress={onBack} />}
+      leading={<BackButton label={copy.back} onPress={goBack} />}
       onClose={onClose}
       title={copy.pickTitle}
     >

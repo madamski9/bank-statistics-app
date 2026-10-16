@@ -1,4 +1,4 @@
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useCopy } from '@/features/app-shell/localization/language';
@@ -22,7 +22,7 @@ export function PurchaseFooter() {
         </Text>
       </Pressable>
       <Text maxFontSizeMultiplier={1.4} style={styles.footnote}>
-        {copy.footnote}
+        {Platform.OS === 'android' ? copy.footnoteAndroid : copy.footnote}
       </Text>
     </View>
   );

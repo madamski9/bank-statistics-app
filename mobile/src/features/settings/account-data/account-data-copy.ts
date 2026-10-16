@@ -32,6 +32,8 @@ export const accountDataCopy = defineCopy({
     subscriptionTitle: 'Usunięcie konta nie anuluje subskrypcji',
     subscriptionBody:
       'Płatności w App Store prowadzi Apple. Jeśli masz aktywną subskrypcję, anuluj ją w ustawieniach subskrypcji, zanim usuniesz konto.',
+    subscriptionBodyAndroid:
+      'Płatności w Google Play prowadzi Google. Jeśli masz aktywną subskrypcję, anuluj ją w ustawieniach subskrypcji, zanim usuniesz konto.',
     manageSubscriptions: 'Zarządzaj subskrypcjami',
     continue: 'Kontynuuj',
     confirmIdentity: 'Potwierdź, że to Ty. Bez tego nie usuniemy konta.',
@@ -50,6 +52,7 @@ export const accountDataCopy = defineCopy({
     revoke: 'Odłącz',
     revokeLabel: (name: string) => `Odłącz ${name}`,
     revokeFailed: 'Nie udało się odłączyć urządzenia. Spróbuj ponownie.',
+    devicesLocalOnly: 'Włącz synchronizację z chmurą, aby zobaczyć swoje urządzenia.',
     devicesOffline: 'Lista urządzeń pojawi się po połączeniu z internetem.',
     thisDevice: (name: string) => `${name} (to urządzenie)`,
     codeSendFailed: 'Nie udało się wysłać kodu. Spróbuj ponownie.',
@@ -94,6 +97,8 @@ export const accountDataCopy = defineCopy({
     subscriptionTitle: 'Deleting your account does not cancel subscriptions',
     subscriptionBody:
       'App Store payments are handled by Apple. If you have an active subscription, cancel it in your subscription settings before deleting your account.',
+    subscriptionBodyAndroid:
+      'Google Play payments are handled by Google. If you have an active subscription, cancel it in your subscription settings before deleting your account.',
     manageSubscriptions: 'Manage subscriptions',
     continue: 'Continue',
     confirmIdentity: 'Confirm it is you. We cannot delete the account without it.',
@@ -112,6 +117,7 @@ export const accountDataCopy = defineCopy({
     revoke: 'Disconnect',
     revokeLabel: (name: string) => `Disconnect ${name}`,
     revokeFailed: 'Could not disconnect the device. Please try again.',
+    devicesLocalOnly: 'Turn on cloud sync to see your devices.',
     devicesOffline: 'Your devices will appear once you are online.',
     thisDevice: (name: string) => `${name} (this device)`,
     codeSendFailed: 'Could not send the code. Please try again.',

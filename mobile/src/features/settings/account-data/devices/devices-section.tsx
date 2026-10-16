@@ -1,10 +1,11 @@
 import { api } from '@bankstats/convex/convex/_generated/api';
 import type { Id } from '@bankstats/convex/convex/_generated/dataModel';
-import { useMutation, useQuery } from 'convex/react';
+import { useConvexAuth, useMutation, useQuery } from 'convex/react';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { overviewColors, overviewSpacing } from '@/features/app-shell/theme/overview-theme';
+import { useCloudSyncEnabled } from '@/features/data/sync/cloud-sync/cloud-sync-preference';
 import { useInstallationId } from '@/features/data/sync/device-ownership/use-installation-id';
 import { useCopy } from '@/features/app-shell/localization/language';
 
@@ -14,7 +15,16 @@ import { devicePlatformName, lastSeenLabel } from './device-labels';
 export function DevicesSection() {
   const copy = useCopy(accountDataCopy);
   const installationId = useInstallationId();
-  const devices = useQuery(api.devices.list, installationId === null ? 'skip' : { installationId });
+  const { isAuthenticated } = useConvexAuth();
+  const isCloudEnabled = useCloudSyncEnabled();
+  const standing = useQuery(
+    api.devices.standing,
+    isAuthenticated && installationId !== null ? { installationId } : 'skip',
+  );
+  const devices = useQuery(
+    api.devices.list,
+    isAuthenticated && installationId !== null && standing === 'active' ? { installationId } : 'skip',
+  );
   const revoke = useMutation(api.devices.revoke);
   const [error, setError] = useState<string | null>(null);
   const [revokingId, setRevokingId] = useState<Id<'devices'> | null>(null);
@@ -48,9 +58,11 @@ export function DevicesSection() {
   if (devices === undefined) {
     return (
       <View style={styles.placeholder}>
-        {installationId === null ? null : <ActivityIndicator color={overviewColors.textSecondary} />}
+        {isAuthenticated && installationId !== null && (standing === undefined || standing === 'active') ? (
+          <ActivityIndicator color={overviewColors.textSecondary} />
+        ) : null}
         <Text maxFontSizeMultiplier={1.5} style={styles.meta}>
-          {copy.devicesOffline}
+          {isCloudEnabled === false && standing === 'unregistered' ? copy.devicesLocalOnly : copy.devicesOffline}
         </Text>
       </View>
     );
