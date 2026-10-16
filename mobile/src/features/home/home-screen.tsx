@@ -104,7 +104,6 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
         <View style={{ width }}>
           <OverviewScreen
             error={ledger.error}
-            expenseChange={numbers.expenseChange}
             forecast={insights.forecast}
             hasData={ledger.records.length > 0}
             isLoading={ledger.isLoading}

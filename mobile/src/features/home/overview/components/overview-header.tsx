@@ -1,7 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, ReduceMotion } from 'react-native-reanimated';
 
-import { formatChange } from '@/features/app-shell/formatting/formatting';
 import { useCopy } from '@/features/app-shell/localization/language';
 import { overviewColors, overviewSpacing } from '@/features/app-shell/theme/overview-theme';
 import type { EventSummary } from '@/features/insights/events/event-summary';
@@ -17,7 +16,6 @@ const contextExiting = FadeOut.duration(160).reduceMotion(ReduceMotion.System);
 
 interface OverviewHeaderProps {
   focusedEvent: EventSummary | null;
-  expenseChange: number | null;
   period: SpendingPeriod;
   lockedPeriods: ReadonlySet<SpendingPeriod>;
   onChangePeriod: (period: SpendingPeriod) => void;
@@ -25,7 +23,6 @@ interface OverviewHeaderProps {
 
 export function OverviewHeader({
   focusedEvent,
-  expenseChange,
   period,
   lockedPeriods,
   onChangePeriod,
@@ -55,18 +52,6 @@ export function OverviewHeader({
           <AmountText maxFontSizeMultiplier={1.6} style={styles.contextLabel}>
             {copy.context(option.label)}
           </AmountText>
-          {expenseChange !== null ? (
-            <AmountText
-              maxFontSizeMultiplier={1.6}
-              style={[
-                styles.contextChange,
-                { color: expenseChange < 0 ? overviewColors.positive : overviewColors.negative },
-              ]}
-            >
-              {expenseChange >= 0 ? '▲' : '▼'} {formatChange(expenseChange)} {copy.versus}{' '}
-              {option.previousLabel}
-            </AmountText>
-          ) : null}
         </Animated.View>
       )}
 
@@ -97,9 +82,5 @@ const styles = StyleSheet.create({
   contextLabel: {
     fontSize: 13,
     color: overviewColors.textSecondary,
-  },
-  contextChange: {
-    fontSize: 13,
-    fontWeight: '600',
   },
 });
