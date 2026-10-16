@@ -1,0 +1,28 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.bankstats'
+version = '0.0.0'
+
+android {
+  namespace "com.bankstats.ingestion"
+  defaultConfig {
+    versionCode 1
+    versionName "0.0.0"
+    testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+  }
+  sourceSets {
+    main.assets.srcDirs += file("../../parser-rules/rules")
+    androidTest.assets.srcDirs += file("../../parser-rules/examples")
+  }
+}
+
+dependencies {
+  implementation "net.zetetic:sqlcipher-android:4.10.0@aar"
+  implementation "androidx.sqlite:sqlite:2.2.0"
+  androidTestImplementation "androidx.test:runner:1.6.2"
+  androidTestImplementation "androidx.test.ext:junit:1.2.1"
+  androidTestImplementation "junit:junit:4.13.2"
+}

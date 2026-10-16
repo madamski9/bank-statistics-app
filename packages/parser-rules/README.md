@@ -16,8 +16,9 @@ data rather than JavaScript:
 - [`src/bank-notification-interpreter.ts`](src/bank-notification-interpreter.ts) is the reference
   interpreter, run against the examples by `bun test`.
 - The Swift interpreter lives in `packages/ingestion-native/ios` and is checked against the same
-  examples by `sh conformance/swift/run.sh` (a CI job on macOS). A Kotlin interpreter will join the
-  same corpus when Android capture is built.
+  examples by `sh conformance/swift/run.sh` (a CI job on macOS).
+- The Kotlin interpreter lives in `packages/ingestion-native/android` and is checked against the same
+  examples by its instrumented tests on an Android emulator or device.
 
 Patterns are written in the subset shared by ICU and JavaScript `u`-mode regular expressions: named
 groups, no inline flags (`caseInsensitive` replaces `(?i)`), and `{{fragment}}` placeholders for
@@ -32,4 +33,5 @@ are not built yet; the bundled rules are the only ones in use.
 
 1. Add sanitized examples for the new or changed notification shape.
 2. Update the rule bundle and increase `version`.
-3. Run `bun test packages/parser-rules` and `sh packages/parser-rules/conformance/swift/run.sh`.
+3. Run `bun test packages/parser-rules`, `sh packages/parser-rules/conformance/swift/run.sh` and, from
+   `mobile/android`, `./gradlew :bankstats-ingestion-native:connectedDebugAndroidTest`.
