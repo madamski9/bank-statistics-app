@@ -1,5 +1,5 @@
 import type { AlertPeriod } from '../evaluation/alert-period';
-import type { AlertRule, AlertScope } from './alert-rule';
+import { alertTones, type AlertRule, type AlertScope } from './alert-rule';
 
 function isScope(value: unknown): value is AlertScope {
   if (typeof value !== 'object' || value === null) {
@@ -58,7 +58,8 @@ function isAlertRule(value: unknown): value is AlertRule {
     Array.isArray(rule.thresholdShares) &&
     rule.thresholdShares.every((share) => typeof share === 'number') &&
     typeof rule.isActive === 'boolean' &&
-    typeof rule.createdAt === 'string'
+    typeof rule.createdAt === 'string' &&
+    (rule.tone === undefined || alertTones.includes(rule.tone))
   );
 }
 

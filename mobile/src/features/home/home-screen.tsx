@@ -47,7 +47,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
   const [dimension, setDimension] = useState<SpendingDimension>('merchant');
   const { period, periodLocks, changePeriod } = useSpendingPeriod(hasPremiumAccess, openPremium);
   const numbers = useSpendingNumbers({ records: ledger.records, countedRecords, rules, period, dimension });
-  const alerts = useAlerts({ records: countedRecords, categorizationRules: rules });
+  const alerts = useAlerts({ records: countedRecords, categorizationRules: rules, hasAggressiveTone: isPremium });
   const insights = useOverviewInsights({
     countedRecords,
     rules,

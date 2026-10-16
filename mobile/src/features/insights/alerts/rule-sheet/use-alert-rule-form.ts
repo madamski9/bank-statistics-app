@@ -6,11 +6,17 @@ import { impactLight } from '@/haptics';
 
 import { alertsCopy } from '../alerts-copy';
 import type { AlertPeriod } from '../evaluation/alert-period';
-import type { AlertMetric, AlertRule, AlertScope } from '../rules/alert-rule';
+import {
+  toneDelivery,
+  defaultAlertTone,
+  notificationShares,
+  type AlertMetric,
+  type AlertRule,
+  type AlertScope,
+  type AlertTone,
+} from '../rules/alert-rule';
 
 export type RepeatingPeriod = Exclude<AlertPeriod, { kind: 'custom' }>['kind'];
-
-const defaultApproachShare = 0.8;
 
 function amountFromMinor(minor: number): string {
   return `${Math.trunc(minor / 100)}${currentCopy(alertsCopy).decimalSeparator}${String(minor % 100).padStart(2, '0')}`;
@@ -35,12 +41,15 @@ export function useAlertRuleForm({ scope, rule, onSave, onRequestPermission }: A
     rule === null || rule.period.kind === 'custom' ? 'month' : rule.period.kind,
   );
   const [amount, setAmountState] = useState(rule === null ? '' : amountFromMinor(rule.targetMinor));
-  const [approachShare, setApproachShare] = useState<number | null>(
-    rule === null
-      ? defaultApproachShare
-      : (rule.thresholdShares.find((share) => share < 1) ?? null),
-  );
+  const [isNotifying, setIsNotifying] = useState(rule === null || rule.thresholdShares.length > 0);
   const [missingIncome, setMissingIncome] = useState(rule?.condition === 'missingIncome');
+  const [tone, setTone] = useState<AlertTone>(rule?.tone ?? defaultAlertTone);
+  const delivery = toneDelivery({
+    metric,
+    scope: selectedScope,
+    condition: missingIncome ? 'missingIncome' : 'threshold',
+  });
+  const hasTone = delivery !== null;
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -90,10 +99,10 @@ export function useAlertRuleForm({ scope, rule, onSave, onRequestPermission }: A
         period: { kind: period },
         condition,
         targetMinor,
-        thresholdShares:
-          condition === 'missingIncome' || approachShare === null ? [1] : [approachShare, 1],
+        thresholdShares: condition === 'missingIncome' ? [1] : isNotifying ? notificationShares : [],
         isActive: true,
         createdAt: rule?.createdAt ?? new Date().toISOString(),
+        ...(hasTone ? { tone } : {}),
       });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
@@ -102,15 +111,17 @@ export function useAlertRuleForm({ scope, rule, onSave, onRequestPermission }: A
     }
   }, [
     amount,
-    approachShare,
     copy,
     metric,
     missingIncome,
     onRequestPermission,
     onSave,
+    hasTone,
+    isNotifying,
     period,
     rule,
     selectedScope,
+    tone,
   ]);
 
   return {
@@ -118,15 +129,18 @@ export function useAlertRuleForm({ scope, rule, onSave, onRequestPermission }: A
     selectedScope,
     period,
     amount,
-    approachShare,
+    isNotifying,
     missingIncome,
+    tone,
+    delivery,
     error,
     isSaving,
     setMetric,
     setSelectedScope,
     setPeriod,
     setAmount,
-    setApproachShare,
+    setIsNotifying,
+    setTone,
     toggleMissingIncome,
     save,
   };

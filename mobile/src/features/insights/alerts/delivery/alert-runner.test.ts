@@ -7,12 +7,12 @@ import { runAlerts, type AlertNotifier } from './alert-runner';
 
 const reference = new Date(2026, 8, 22, 17, 44);
 
-function record(amountMinor: number, merchant = 'Żabka'): IngestionRecord {
+function record(amountMinor: number, merchant = 'Jan Kowalski'): IngestionRecord {
   return {
     id: `record-${amountMinor}-${merchant}`,
     bank: 'millennium',
     direction: 'expense',
-    transactionType: 'cardPayment',
+    transactionType: 'outgoingTransfer',
     amountMinor,
     currency: 'PLN',
     merchant,
@@ -28,7 +28,7 @@ function rule(overrides: Partial<AlertRule> = {}): AlertRule {
   return {
     id: 'rule-1',
     metric: 'expense',
-    scope: { kind: 'merchant', key: 'żabka', name: 'Żabka' },
+    scope: { kind: 'counterparty', name: 'Jan Kowalski' },
     period: { kind: 'month' },
     condition: 'threshold',
     targetMinor: 50_000,
@@ -66,7 +66,7 @@ describe('runAlerts', () => {
     });
 
     expect(sink.presented).toHaveLength(1);
-    expect(sink.presented[0].title).toBe('Blisko limitu w Żabka');
+    expect(sink.presented[0].title).toBe('Blisko limitu dla Jan Kowalski');
     expect(sent).toHaveLength(1);
   });
 
@@ -100,7 +100,7 @@ describe('runAlerts', () => {
     });
 
     expect(sink.presented).toHaveLength(1);
-    expect(sink.presented[0].title).toBe('Limit w Żabka osiągnięty');
+    expect(sink.presented[0].title).toBe('Limit dla Jan Kowalski osiągnięty');
     expect(sent).toHaveLength(2);
   });
 

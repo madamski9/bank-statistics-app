@@ -1,6 +1,6 @@
 import type { SpendingPeriod } from '@/features/home/overview/period/periods';
 
-export type PremiumReason = 'period' | 'limit' | 'widget' | 'category' | 'report' | 'event';
+export type PremiumReason = 'period' | 'limit' | 'widget' | 'category' | 'report' | 'event' | 'alertTone';
 
 const freePeriods: readonly SpendingPeriod[] = ['currentMonth', 'week', 'month', 'quarter'];
 

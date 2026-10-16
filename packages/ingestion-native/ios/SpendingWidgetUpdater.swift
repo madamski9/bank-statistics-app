@@ -1,6 +1,7 @@
 import Foundation
 import JavaScriptCore
 import OSLog
+import UserNotifications
 import WidgetKit
 
 final class SpendingWidgetUpdater: @unchecked Sendable {
@@ -30,13 +31,13 @@ final class SpendingWidgetUpdater: @unchecked Sendable {
     try publish(configuration: parsed, defaults: defaults)
   }
 
-  func refresh() {
+  func refresh(capturedRecordId: String? = nil) {
     lock.lock()
     defer { lock.unlock() }
     do {
       let defaults = try sharedDefaults()
       guard let configuration = defaults.dictionary(forKey: configurationKey) else { return }
-      try publish(configuration: configuration, defaults: defaults)
+      try publish(configuration: configuration, defaults: defaults, capturedRecordId: capturedRecordId)
     } catch {
       logger.error("Could not refresh spending widgets")
     }
@@ -50,7 +51,11 @@ final class SpendingWidgetUpdater: @unchecked Sendable {
     return defaults
   }
 
-  private func publish(configuration: [String: Any], defaults: UserDefaults) throws {
+  private func publish(
+    configuration: [String: Any],
+    defaults: UserDefaults,
+    capturedRecordId: String? = nil
+  ) throws {
     let enabled = configuration["enabled"] as? Bool == true
     if !enabled {
       for name in screens.keys {
@@ -97,5 +102,44 @@ final class SpendingWidgetUpdater: @unchecked Sendable {
       defaults.set(screenEntries, forKey: "__expo_widgets_\(name)_timeline")
       WidgetCenter.shared.reloadTimelines(ofKind: name)
     }
+
+    if let capturedRecordId {
+      announceLimits(
+        calculator: calculator,
+        context: context,
+        arguments: [configuration, records, capturedRecordId, timestamp]
+      )
+    }
+  }
+
+  private func announceLimits(calculator: JSValue?, context: JSContext, arguments: [Any]) {
+    guard let result = calculator?.invokeMethod("paymentAlerts", withArguments: arguments),
+      context.exception == nil,
+      let messages = result.toArray() as? [[String: Any]]
+    else {
+      logger.error("Could not evaluate shop limits")
+      return
+    }
+
+    let center = UNUserNotificationCenter.current()
+    let delivered = DispatchGroup()
+
+    for message in messages {
+      guard let title = message["title"] as? String, let body = message["body"] as? String else { continue }
+      let content = UNMutableNotificationContent()
+      content.title = title
+      content.body = body
+      content.sound = .default
+      let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+      delivered.enter()
+      center.add(request) { [logger] error in
+        if error != nil {
+          logger.error("Could not deliver a shop limit alert")
+        }
+        delivered.leave()
+      }
+    }
+
+    _ = delivered.wait(timeout: .now() + 5)
   }
 }

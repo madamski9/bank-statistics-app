@@ -81,6 +81,10 @@ export function useAlertEditor({
   }, [alerts.rules, group, requestNewLimit]);
 
   const editRule = useCallback((rule: AlertRule) => setEditor({ scope: rule.scope, rule }), []);
+  const requireTonePremium = useCallback(() => {
+    setEditor(null);
+    openPremium('alertTone');
+  }, [openPremium]);
   const close = useCallback(() => setEditor(null), []);
 
   const save = useCallback(
@@ -102,6 +106,8 @@ export function useAlertEditor({
   return {
     editor,
     isFirstRule: alerts.rules.length === 0,
+    canUseAggressiveTone: hasPremiumAccess,
+    requireTonePremium,
     merchants,
     selectedLimit,
     entries,
