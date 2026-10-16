@@ -76,24 +76,30 @@ const nativeModule = requireOptionalNativeModule<BankStatsIngestionNativeModule>
   'BankStatsIngestion',
 );
 
-function requireIosModule(): BankStatsIngestionNativeModule {
-  if (Platform.OS !== 'ios' || nativeModule === null) {
-    throw new Error('BankStats notification ingestion requires an iOS development build');
+const nativePlatforms: readonly string[] = ['ios', 'android'];
+
+function isNativePlatform(): boolean {
+  return nativePlatforms.includes(Platform.OS);
+}
+
+function requireNativeModule(): BankStatsIngestionNativeModule {
+  if (!isNativePlatform() || nativeModule === null) {
+    throw new Error('BankStats notification ingestion requires an iOS or Android development build');
   }
 
   return nativeModule;
 }
 
 export function ingestSyntheticMillenniumNotification(): Promise<IngestionRecord> {
-  return requireIosModule().ingestSynthetic();
+  return requireNativeModule().ingestSynthetic();
 }
 
 export function ingestSyntheticApplePayTransaction(): Promise<IngestionRecord> {
-  return requireIosModule().ingestSyntheticApplePayTransaction();
+  return requireNativeModule().ingestSyntheticApplePayTransaction();
 }
 
 export function clearIngestionRecords(): Promise<void> {
-  const module = requireIosModule();
+  const module = requireNativeModule();
 
   if (typeof module.clearRecords !== 'function') {
     return Promise.reject(
@@ -111,7 +117,7 @@ export function isSyntheticIngestionRecord(record: IngestionRecord): boolean {
 }
 
 export function deleteSyntheticIngestionRecords(): Promise<number> {
-  const module = requireIosModule();
+  const module = requireNativeModule();
 
   if (typeof module.deleteSyntheticRecords !== 'function') {
     return Promise.resolve(0);
@@ -121,7 +127,7 @@ export function deleteSyntheticIngestionRecords(): Promise<number> {
 }
 
 export function saveIngestionRecord(record: IngestionRecord): Promise<IngestionRecord> {
-  const module = requireIosModule();
+  const module = requireNativeModule();
 
   if (typeof module.saveRecord !== 'function') {
     return Promise.reject(
@@ -133,7 +139,7 @@ export function saveIngestionRecord(record: IngestionRecord): Promise<IngestionR
 }
 
 export function deleteIngestionRecord(id: string): Promise<number> {
-  const module = requireIosModule();
+  const module = requireNativeModule();
 
   if (typeof module.deleteRecord !== 'function') {
     return Promise.reject(
@@ -145,7 +151,7 @@ export function deleteIngestionRecord(id: string): Promise<number> {
 }
 
 export function extractPdfText(uri: string): Promise<string> {
-  const module = requireIosModule();
+  const module = requireNativeModule();
 
   if (typeof module.extractPdfText !== 'function') {
     return Promise.reject(
@@ -157,12 +163,12 @@ export function extractPdfText(uri: string): Promise<string> {
 }
 
 export function listIngestionRecords(): Promise<IngestionRecord[]> {
-  return requireIosModule().listRecords();
+  return requireNativeModule().listRecords();
 }
 
 export function supportsEncryptedDocuments(): boolean {
   return (
-    Platform.OS === 'ios' &&
+    isNativePlatform() &&
     typeof nativeModule?.readDocument === 'function' &&
     typeof nativeModule.writeDocument === 'function' &&
     typeof nativeModule.deleteDocument === 'function'
@@ -170,21 +176,21 @@ export function supportsEncryptedDocuments(): boolean {
 }
 
 export async function readEncryptedDocument(key: string): Promise<string | null> {
-  const value = await requireIosModule().readDocument?.(key);
+  const value = await requireNativeModule().readDocument?.(key);
 
   return value ?? null;
 }
 
 export async function writeEncryptedDocument(key: string, value: string): Promise<void> {
-  await requireIosModule().writeDocument?.(key, value);
+  await requireNativeModule().writeDocument?.(key, value);
 }
 
 export async function deleteEncryptedDocument(key: string): Promise<void> {
-  await requireIosModule().deleteDocument?.(key);
+  await requireNativeModule().deleteDocument?.(key);
 }
 
 export function getIngestionStorageDiagnostics(): Promise<StorageDiagnostics> {
-  return requireIosModule().storageDiagnostics();
+  return requireNativeModule().storageDiagnostics();
 }
 
 export function configureSpendingWidget(configuration: string): boolean {

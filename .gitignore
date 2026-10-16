@@ -7,3 +7,5 @@ node_modules/
 *.tsbuildinfo
 
 /packages/ingestion-native/ios/Resources/
+/packages/ingestion-native/android/build/
+/packages/ingestion-native/android/.gradle/

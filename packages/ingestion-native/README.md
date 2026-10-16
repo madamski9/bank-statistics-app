@@ -51,6 +51,19 @@ for both notification shapes, stored records, storage diagnostics, and writes â€
 (insert or replace by identifier, used for manual transactions, corrections and review decisions)
 and `deleteIngestionRecord` â€” to the mobile application.
 
+On Android the same API is implemented in Kotlin in [`android/`](android). Its
+`BankNotificationInterpreter` applies the same rule bundle, which Gradle adds to the module's
+assets straight from `@bankstats/parser-rules`. Records and documents live in a SQLCipher database
+in the app's no-backup directory. The database key is 32 random bytes that never leave the device:
+they are encrypted with an AES-GCM key that Android Keystore generates and never exports, and only
+that encrypted form is written to disk. Notification capture, the widget and PDF statements are not
+built on Android yet. `ingestSyntheticMillenniumNotification` and
+`ingestSyntheticApplePayTransaction` run the same synthetic samples through the interpreter. The
+instrumented tests in `android/src/androidTest` check the shared examples, persistence across
+restarts and that nothing reaches the disk in plaintext. Run them from `mobile/android` with
+`./gradlew :bankstats-ingestion-native:connectedDebugAndroidTest` while an emulator or device is
+connected.
+
 See [ADR 0004](../../docs/adr/0004-use-expo-with-native-platform-modules.md),
 [ADR 0015](../../docs/adr/0015-use-a-shared-encrypted-local-outbox.md), and the
 [iOS 27 notification automation spike](../../docs/spikes/ios-27-notification-automation.md).
