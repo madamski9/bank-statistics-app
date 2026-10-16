@@ -9,7 +9,7 @@ import { stepStyles } from './step-styles';
 interface InstructionCardProps {
   number: number;
   title: string;
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 export function InstructionCard({ number, title, children }: InstructionCardProps) {

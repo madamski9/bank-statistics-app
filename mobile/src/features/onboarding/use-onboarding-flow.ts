@@ -10,6 +10,8 @@ import { onboardingCopy } from './onboarding-copy';
 import {
   automationStep,
   banksStep,
+  focusIntroStep,
+  focusSetupStep,
   pinStep,
   plansStep,
   shortcutsIntroStep,
@@ -40,7 +42,7 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
   const shortcut = useShortcutSetup({ isShortcutsFlow, onError: setError, onResume: resumeAtBanks });
   const { leave: leaveShortcutSetup, openShortcut, selectedBanks } = shortcut;
   const flowStart = isShortcutsFlow ? banksStep : 0;
-  const flowLength = isShortcutsFlow ? automationStep - banksStep + 1 : stepCount;
+  const flowLength = isShortcutsFlow ? focusSetupStep - banksStep + 1 : stepCount;
   const flowPosition = Math.min(step - flowStart + 1, flowLength);
 
   const changeStep = useCallback(
@@ -107,13 +109,17 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
           ? shortcut.hasOpenedShortcut ? copy.shortcutAdded : copy.addShortcut
           : step === automationStep
             ? copy.automationEnabled
-            : step === stepCount
-              ? copy.goToApp
-              : copy.next;
+            : step === focusIntroStep
+              ? copy.showFocusSetup
+              : step === focusSetupStep
+                ? copy.focusConfigured
+                : step === stepCount
+                  ? copy.goToApp
+                  : copy.next;
   const primaryAction =
     step === banksStep
       ? shortcut.hasOpenedShortcut ? () => leaveTo(automationStep) : openShortcut
-      : step === stepCount || (isShortcutsFlow && step === automationStep)
+      : step === stepCount || (isShortcutsFlow && step === focusSetupStep)
         ? finish
         : step === plansStep && selectedPlan === 'premium'
           ? () =>
