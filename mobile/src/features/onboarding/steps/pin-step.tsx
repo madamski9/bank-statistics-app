@@ -26,7 +26,7 @@ export function PinStep({ biometricName, onComplete }: PinStepProps) {
         eyebrow={copy.eyebrow}
         title={copy.title}
       />
-      <PinSetup onComplete={onComplete} />
+      <PinSetup isCompact onComplete={onComplete} />
     </View>
   );
 }
