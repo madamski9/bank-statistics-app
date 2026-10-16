@@ -40,3 +40,5 @@ jobs:
       - uses: actions/checkout@v4
 
       - run: sh packages/parser-rules/conformance/swift/run.sh
+
+      - run: sh packages/ingestion-native/conformance/card-payment-pairing/run.sh
