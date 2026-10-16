@@ -6,6 +6,7 @@ import {
   hasPriceIncrease,
   monthlyRecurringCost,
   recurringCandidates,
+  trackedPaymentKey,
   upcomingFirst,
 } from './recurring-payments';
 
@@ -106,7 +107,7 @@ describe('recurring payments', () => {
 
   test('tracks a payment the user added after a single charge', () => {
     const records = [charge('Anthropic', '2026-09-12T08:00:00Z', 9000)];
-    const [candidate] = recurringCandidates(records, [], now, new Set());
+    const [candidate] = recurringCandidates(records, [], now, []);
 
     expect(detectRecurringPayments(records, [], now)).toEqual([]);
 
@@ -120,7 +121,7 @@ describe('recurring payments', () => {
 
   test('rolls a tracked payment forward to its next upcoming charge', () => {
     const records = [charge('Anthropic', '2026-06-12T08:00:00Z', 9000)];
-    const [candidate] = recurringCandidates(records, [], now, new Set());
+    const [candidate] = recurringCandidates(records, [], now, []);
     const [payment] = detectRecurringPayments(records, [], now, new Set(), [
       { key: candidate!.key, name: candidate!.name, cadence: 'monthly' },
     ]);
@@ -131,7 +132,7 @@ describe('recurring payments', () => {
 
   test('keeps a tracked payment even after it was hidden before', () => {
     const records = [charge('Anthropic', '2026-09-12T08:00:00Z', 9000)];
-    const [candidate] = recurringCandidates(records, [], now, new Set());
+    const [candidate] = recurringCandidates(records, [], now, []);
     const payments = detectRecurringPayments(records, [], now, new Set([candidate!.key]), [
       { key: candidate!.key, name: candidate!.name, cadence: 'yearly' },
     ]);
@@ -145,13 +146,99 @@ describe('recurring payments', () => {
       charge('Anthropic', '2026-09-12T08:00:00Z', 9000),
       charge('Spotify', '2026-09-05T08:00:00Z', 2399),
     ];
-    const all = recurringCandidates(records, [], now, new Set());
+    const all = recurringCandidates(records, [], now, []);
     const spotify = all.find((candidate) => candidate.name === 'Spotify');
+    const tracked = detectRecurringPayments(records, [], now, new Set(), [
+      { key: spotify!.key, name: spotify!.name, cadence: 'monthly' },
+    ]);
 
     expect(all.map((candidate) => candidate.name)).toEqual(['Anthropic', 'Spotify', 'Żabka']);
-    expect(
-      recurringCandidates(records, [], now, new Set([spotify!.key])).map((candidate) => candidate.name),
-    ).toEqual(['Anthropic', 'Żabka']);
+    expect(recurringCandidates(records, [], now, tracked).map((candidate) => candidate.name)).toEqual([
+      'Anthropic',
+      'Żabka',
+    ]);
+  });
+
+  test('offers each distinct payment at one shop separately', () => {
+    const records = [
+      charge('Apple', '2026-03-14T08:00:00Z', 42000),
+      charge('Apple', '2026-08-03T08:00:00Z', 1499),
+      charge('Apple', '2026-09-03T08:00:00Z', 1499),
+    ];
+    const [apple] = recurringCandidates(records, [], now, []);
+
+    expect(apple?.payments.map((payment) => payment.amountMinor)).toEqual([1499, 42000]);
+    expect(apple?.payments.map((payment) => payment.chargeCount)).toEqual([2, 1]);
+  });
+
+  test('keeps the other payment at a shop available after tracking one of them', () => {
+    const records = [
+      charge('Apple', '2026-03-14T08:00:00Z', 42000),
+      charge('Apple', '2026-08-03T08:00:00Z', 1499),
+      charge('Apple', '2026-09-03T08:00:00Z', 1499),
+    ];
+    const [apple] = recurringCandidates(records, [], now, []);
+    const monthly = {
+      key: trackedPaymentKey(apple!.key, 1499),
+      partyKey: apple!.key,
+      name: apple!.name,
+      cadence: 'monthly' as const,
+      amountMinor: 1499,
+    };
+    const afterMonthly = detectRecurringPayments(records, [], now, new Set(), [monthly]);
+    const [remaining] = recurringCandidates(records, [], now, afterMonthly);
+
+    expect(remaining?.payments.map((payment) => payment.amountMinor)).toEqual([42000]);
+
+    const yearly = {
+      key: trackedPaymentKey(apple!.key, 42000),
+      partyKey: apple!.key,
+      name: apple!.name,
+      cadence: 'yearly' as const,
+      amountMinor: 42000,
+    };
+    const both = detectRecurringPayments(records, [], now, new Set(), [monthly, yearly]);
+
+    expect(both.map((payment) => [payment.cadence, payment.lastAmountMinor])).toEqual([
+      ['yearly', 42000],
+      ['monthly', 1499],
+    ]);
+    expect(recurringCandidates(records, [], now, both)).toEqual([]);
+  });
+
+  test('reads a payment tracked before amounts were remembered as the most frequent one', () => {
+    const records = [
+      charge('Apple', '2026-03-14T08:00:00Z', 42000),
+      charge('Apple', '2026-08-03T08:00:00Z', 1499),
+      charge('Apple', '2026-09-03T08:00:00Z', 1499),
+    ];
+    const [apple] = recurringCandidates(records, [], now, []);
+    const payments = detectRecurringPayments(records, [], now, new Set(), [
+      { key: apple!.key, name: apple!.name, cadence: 'monthly' },
+    ]);
+
+    expect(payments.map((payment) => payment.lastAmountMinor)).toEqual([1499]);
+    expect(recurringCandidates(records, [], now, payments)[0]?.payments.map((payment) => payment.amountMinor)).toEqual([
+      42000,
+    ]);
+  });
+
+  test('detects two subscriptions at one shop on their own schedules', () => {
+    const records = [
+      charge('Apple', '2025-03-14T08:00:00Z', 42000),
+      charge('Apple', '2026-03-14T08:00:00Z', 42000),
+      charge('Apple', '2026-06-03T08:00:00Z', 1499),
+      charge('Apple', '2026-07-03T08:00:00Z', 1499),
+      charge('Apple', '2026-08-03T08:00:00Z', 1499),
+      charge('Apple', '2026-09-03T08:00:00Z', 1499),
+    ];
+    const payments = detectRecurringPayments(records, [], now);
+
+    expect(payments.map((payment) => [payment.cadence, payment.lastAmountMinor])).toEqual([
+      ['yearly', 42000],
+      ['monthly', 1499],
+    ]);
+    expect(new Set(payments.map((payment) => payment.key)).size).toBe(2);
   });
 
   test('orders payments by the closest upcoming charge', () => {

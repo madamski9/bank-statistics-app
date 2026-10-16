@@ -15,7 +15,9 @@ function isTrackedPayment(value: unknown): value is TrackedPayment {
   return (
     typeof candidate.key === 'string' &&
     typeof candidate.name === 'string' &&
-    cadences.includes(candidate.cadence as Cadence)
+    cadences.includes(candidate.cadence as Cadence) &&
+    (candidate.partyKey === undefined || typeof candidate.partyKey === 'string') &&
+    (candidate.amountMinor === undefined || typeof candidate.amountMinor === 'number')
   );
 }
 

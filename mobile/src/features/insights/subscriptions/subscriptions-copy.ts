@@ -31,6 +31,11 @@ export const subscriptionsCopy = defineCopy({
     candidateDetail: (date: string, count: number) =>
       `ostatnio ${date} · ${count} ${polishPlural(count, 'płatność', 'płatności', 'płatności')}`,
     back: 'Wróć',
+    pickPaymentIntro: (name: string) => `W ${name} masz kilka różnych płatności. Wybierz tę, która się powtarza.`,
+    paymentDetail: (date: string, count: number) =>
+      `ostatnio ${date} · ${count} ${polishPlural(count, 'raz', 'razy', 'razy')}`,
+    candidatePaymentsDetail: (date: string, count: number) =>
+      `ostatnio ${date} · ${count} ${polishPlural(count, 'różna kwota', 'różne kwoty', 'różnych kwot')}`,
     cadenceTitle: 'JAK CZĘSTO?',
     cadenceOptions: {
       weekly: 'Co tydzień',
@@ -88,6 +93,10 @@ export const subscriptionsCopy = defineCopy({
     candidateDetail: (date: string, count: number) =>
       `last ${date} · ${count} ${englishPlural(count, 'payment', 'payments')}`,
     back: 'Back',
+    pickPaymentIntro: (name: string) => `You have several different payments at ${name}. Pick the one that repeats.`,
+    paymentDetail: (date: string, count: number) => `last ${date} · ${count} ${englishPlural(count, 'time', 'times')}`,
+    candidatePaymentsDetail: (date: string, count: number) =>
+      `last ${date} · ${count} different ${englishPlural(count, 'amount', 'amounts')}`,
     cadenceTitle: 'HOW OFTEN?',
     cadenceOptions: {
       weekly: 'Every week',
