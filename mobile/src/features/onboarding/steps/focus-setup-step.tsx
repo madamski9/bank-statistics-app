@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { useCopy } from '@/features/app-shell/localization/language';
 import { overviewColors } from '@/features/app-shell/theme/overview-theme';
@@ -36,6 +36,7 @@ export function FocusSetupStep() {
           style={[styles.stepScreenshot, styles.allowScreenshot]}
         />
       </InstructionCard>
+      <Text maxFontSizeMultiplier={1.5} style={stepStyles.smallNote}>{copy.verification}</Text>
     </View>
   );
 }

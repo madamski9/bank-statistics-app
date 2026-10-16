@@ -82,7 +82,7 @@ export const onboardingCopy = defineCopy({
       description:
         'Na iPhonie Skróty przekazują powiadomienia o transakcjach do BankStats. To Ty tworzysz i zatwierdzasz automatyzację.',
       warning:
-        'Włącz powiadomienia banku i Portfela Apple. Gdy są wyłączone albo działa tryb Nie przeszkadzać, aplikacja nie otrzyma tych transakcji automatycznie.',
+        'Włącz powiadomienia banku i Portfela Apple. Wyłączone powiadomienia uniemożliwiają automatyczny zapis transakcji, a tryb Nie przeszkadzać lub inny tryb skupienia może go zakłócić.',
       manualNote: 'Transakcje nadal możesz dodać ręcznie.',
     },
     banks: {
@@ -109,16 +109,18 @@ export const onboardingCopy = defineCopy({
       eyebrow: 'TRYB NIE PRZESZKADZAĆ',
       title: 'Przepuść powiadomienia banku',
       description:
-        'Gdy włączony jest tryb Nie przeszkadzać, iOS wycisza powiadomienia i automatyzacja nie zapisuje transakcji. Dodaj aplikacje banków i Portfel do wyjątków, żeby BankStats działał także wtedy.',
+        'Tryb Nie przeszkadzać może zakłócić przechwytywanie transakcji. Dodaj aplikacje banków i Portfel do wyjątków, aby ich powiadomienia nie były wyciszane, a potem sprawdź zapis na swoim telefonie.',
       note: 'To samo ustaw w innych trybach skupienia, z których korzystasz, na przykład w trybie Sen.',
     },
     focusSetup: {
       eyebrow: 'USTAWIENIA IPHONE’A',
       title: 'Dodaj banki do wyjątków',
-      description: 'Ustawiasz to raz. Wyjątki działają za każdym razem, gdy włączysz tryb Nie przeszkadzać.',
+      description: 'Po dodaniu wyjątków sprawdź, czy transakcje zapisują się także przy włączonym trybie Nie przeszkadzać.',
       stepOne: '1. Otwórz Ustawienia, stuknij Skupienie, a potem Nie przeszkadzać.',
       stepTwo: '2. W sekcji Włącz powiadomienia stuknij Aplikacje.',
       stepThree: '3. Wybierz Pozwalaj na powiadomienia, stuknij Dodaj i zaznacz aplikacje swoich banków oraz Portfel.',
+      verification:
+        'Po prawdziwej transakcji sprawdź zapis w profilu, w sekcji Przechwytywanie. Jeśli jej brakuje, wyłącz tryb skupienia i sprawdź kolejne powiadomienie. Pominięte transakcje dodaj ręcznie.',
     },
     pin: {
       eyebrow: 'ZABEZPIECZENIE',
@@ -216,7 +218,7 @@ export const onboardingCopy = defineCopy({
       description:
         'On iPhone, Shortcuts passes transaction notifications to BankStats. You create and approve the automation yourself.',
       warning:
-        "Turn on notifications for your bank and Apple Wallet. When they're off or Do Not Disturb is on, the app won't receive those transactions automatically.",
+        'Turn on notifications for your bank and Apple Wallet. Disabled notifications prevent automatic capture, and Do Not Disturb or another Focus may interfere with it.',
       manualNote: 'You can still add transactions manually.',
     },
     banks: {
@@ -243,16 +245,18 @@ export const onboardingCopy = defineCopy({
       eyebrow: 'DO NOT DISTURB',
       title: 'Let your bank notifications through',
       description:
-        "While Do Not Disturb is on, iOS silences notifications and the automation doesn't save transactions. Allow your bank apps and Wallet so BankStats keeps working then too.",
+        'Do Not Disturb may interfere with transaction capture. Allow your bank apps and Wallet so their notifications are not silenced, then check saving on your phone.',
       note: 'Do the same in any other Focus you use, such as Sleep.',
     },
     focusSetup: {
       eyebrow: 'IPHONE SETTINGS',
       title: 'Allow your banks',
-      description: 'You only do this once. The allowed apps apply every time you turn on Do Not Disturb.',
+      description: 'After allowing the apps, check whether transactions also save while Do Not Disturb is on.',
       stepOne: '1. Open Settings, tap Focus, then Do Not Disturb.',
       stepTwo: '2. Under Allow Notifications, tap Apps.',
       stepThree: '3. Choose Allow Notifications From, tap Add and select your bank apps and Wallet.',
+      verification:
+        'After a real transaction, check saving under Capture in your profile. If it is missing, turn off Focus and check the next notification. Add missed transactions manually.',
     },
     pin: {
       eyebrow: 'SECURITY',
