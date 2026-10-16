@@ -1,8 +1,9 @@
 import { useAuth } from '@clerk/expo';
 import { useConvex } from 'convex/react';
 import { useState } from 'react';
-import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 
+import { SettingsSwitch } from '@/features/app-shell/controls/settings-switch';
 import { useCopy } from '@/features/app-shell/localization/language';
 import { overviewColors, overviewSpacing } from '@/features/app-shell/theme/overview-theme';
 
@@ -57,11 +58,10 @@ export function CloudSyncSection() {
           <Text maxFontSizeMultiplier={1.4} style={styles.rowLabel}>
             {copy.label}
           </Text>
-          <Switch
-            accessibilityLabel={copy.label}
-            disabled={isEnabled === null || status === 'deleting'}
+          <SettingsSwitch
+            isDisabled={isEnabled === null || status === 'deleting'}
+            label={copy.label}
             onValueChange={(next) => (next ? void setCloudSyncEnabled(true) : turnOff())}
-            trackColor={{ true: overviewColors.positive, false: overviewColors.surfacePressed }}
             value={isEnabled === true}
           />
         </View>

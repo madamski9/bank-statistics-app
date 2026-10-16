@@ -1,6 +1,6 @@
-import { Switch, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
-import { overviewColors } from '@/features/app-shell/theme/overview-theme';
+import { SettingsSwitch } from '@/features/app-shell/controls/settings-switch';
 import { AmountText } from '@/features/settings/privacy/amounts/amount-text';
 
 import { sheetRowStyles } from './sheet-row-styles';
@@ -34,13 +34,7 @@ export function SheetSwitchRow({
           </Text>
         ) : null}
       </View>
-      <Switch
-        accessibilityLabel={label}
-        disabled={disabled}
-        onValueChange={onChange}
-        trackColor={{ true: overviewColors.positive, false: overviewColors.surfacePressed }}
-        value={value}
-      />
+      <SettingsSwitch isDisabled={disabled} label={label} onValueChange={onChange} value={value} />
     </View>
   );
 }
