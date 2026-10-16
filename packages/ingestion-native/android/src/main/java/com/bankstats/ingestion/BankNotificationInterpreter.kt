@@ -212,6 +212,8 @@ class BankNotificationInterpreter(val bundle: BankNotificationRuleBundle) {
   companion object {
     const val SUPPORTED_SCHEMA_VERSION = 1
 
+    private const val DAY_MILLIS = 24L * 60 * 60 * 1000
+
     private val fragmentPlaceholder = Regex("\\{\\{(\\w+)\\}\\}")
     private val groupNamePattern = Regex("\\(\\?<([A-Za-z][A-Za-z0-9]*)>")
     private val formatTokenPattern = Regex("yyyy|MM|dd|HH|mm|ss")
@@ -252,22 +254,35 @@ class BankNotificationInterpreter(val bundle: BankNotificationRuleBundle) {
           components.getValue("mm"),
           components.getValue("ss")
         )
-        val date = calendar.time
-        val roundTrip = GregorianCalendar(timeZone, Locale.US)
-        roundTrip.time = date
+        val instant = calendar.timeInMillis
 
-        if (roundTrip.get(Calendar.YEAR) == components.getValue("yyyy") &&
-          roundTrip.get(Calendar.MONTH) == components.getValue("MM") - 1 &&
-          roundTrip.get(Calendar.DAY_OF_MONTH) == components.getValue("dd") &&
-          roundTrip.get(Calendar.HOUR_OF_DAY) == components.getValue("HH") &&
-          roundTrip.get(Calendar.MINUTE) == components.getValue("mm") &&
-          roundTrip.get(Calendar.SECOND) == components.getValue("ss")
-        ) {
-          return date
+        if (!showsLocalTime(instant, components, timeZone)) {
+          continue
         }
+
+        val repeatedHourShift = timeZone.getOffset(instant - DAY_MILLIS) - timeZone.getOffset(instant)
+        val earlierInstant = instant - repeatedHourShift
+
+        if (repeatedHourShift > 0 && showsLocalTime(earlierInstant, components, timeZone)) {
+          return Date(earlierInstant)
+        }
+
+        return Date(instant)
       }
 
       return null
+    }
+
+    private fun showsLocalTime(instant: Long, components: Map<String, Int>, timeZone: TimeZone): Boolean {
+      val calendar = GregorianCalendar(timeZone, Locale.US)
+      calendar.timeInMillis = instant
+
+      return calendar.get(Calendar.YEAR) == components.getValue("yyyy") &&
+        calendar.get(Calendar.MONTH) == components.getValue("MM") - 1 &&
+        calendar.get(Calendar.DAY_OF_MONTH) == components.getValue("dd") &&
+        calendar.get(Calendar.HOUR_OF_DAY) == components.getValue("HH") &&
+        calendar.get(Calendar.MINUTE) == components.getValue("mm") &&
+        calendar.get(Calendar.SECOND) == components.getValue("ss")
     }
 
     private fun localComponents(value: String, format: String): Map<String, Int>? {
