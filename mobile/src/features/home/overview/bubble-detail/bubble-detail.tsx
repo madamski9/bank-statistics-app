@@ -1,3 +1,4 @@
+import { useAndroidBack } from '@/features/app-shell/sheet/sheet-modal';
 import { StyleSheet } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
@@ -49,6 +50,7 @@ export function BubbleDetail({
   const { key, origin } = selection;
   const tint = bubbleTints[key];
   const motion = useBubbleDetailMotion(origin, onClosed);
+  useAndroidBack(motion.requestClose);
 
   const amountMinor =
     key === 'expense' ? summary.expenseMinor : key === 'income' ? summary.incomeMinor : summary.netMinor;

@@ -21,7 +21,7 @@ export interface DeviceOwnershipState {
 export function useDeviceOwnership(): DeviceOwnershipState {
   const { userId } = useAuth();
   const [check, setCheck] = useState<OwnershipCheck | null>(null);
-  const isSupported = Platform.OS === 'ios';
+  const isSupported = Platform.OS === 'ios' || Platform.OS === 'android';
 
   useEffect(() => {
     if (!isSupported || userId == null) {

@@ -1,5 +1,5 @@
 import { SymbolView } from 'expo-symbols';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useCopy } from '@/features/app-shell/localization/language';
 import { overviewColors, overviewSpacing } from '@/features/app-shell/theme/overview-theme';
@@ -27,7 +27,7 @@ export function PremiumScreen({ status, reason, onClose }: PremiumScreenProps) {
   const isPreviewingWithoutPremium = usePreviewWithoutPremium();
 
   return (
-    <View style={[styles.screen, styles.sheetTop]}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'android' ? 'height' : undefined} style={[styles.screen, styles.sheetTop]}>
       <View style={styles.header}>
         <Pressable
           accessibilityLabel={copy.close}
@@ -61,7 +61,7 @@ export function PremiumScreen({ status, reason, onClose }: PremiumScreenProps) {
       </ScrollView>
 
       {isPremium ? null : <PurchaseFooter />}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

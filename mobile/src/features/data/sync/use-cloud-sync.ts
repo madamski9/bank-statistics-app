@@ -29,6 +29,7 @@ import { claimDevice, runSync, type SyncPorts } from './engine/sync-runner';
 import { trackSyncRun } from './engine/sync-activity';
 import type { SyncStatus } from './engine/sync-status';
 
+const devicePlatform = Platform.OS === 'ios' || Platform.OS === 'android' ? Platform.OS : null;
 const retryDelayMs = 30_000;
 const triggerDebounceMs = 250;
 
@@ -61,7 +62,7 @@ export function useCloudSync({
     () => convex.connectionState().isWebSocketConnected,
   );
   const isCloudEnabled = useCloudSyncEnabled();
-  const isSupported = Platform.OS === 'ios' && isCloudEnabled === true;
+  const isSupported = devicePlatform !== null && isCloudEnabled === true;
   const installationId =
     registration !== null && registration.sessionId === sessionId ? registration.installationId : null;
   const isReady = isSupported && isAuthenticated && installationId !== null;
@@ -71,7 +72,7 @@ export function useCloudSync({
   const isRerunNeeded = useRef(false);
 
   useEffect(() => {
-    if (!isSupported || !isAuthenticated || userId == null || sessionId == null) {
+    if (!isSupported || devicePlatform === null || !isAuthenticated || userId == null || sessionId == null) {
       return;
     }
 
@@ -89,7 +90,7 @@ export function useCloudSync({
           return;
         }
 
-        await convex.mutation(api.devices.register, { installationId: id, platform: 'ios' });
+        await convex.mutation(api.devices.register, { installationId: id, platform: devicePlatform });
 
         if (isActive) {
           setRegistration({ sessionId, installationId: id });

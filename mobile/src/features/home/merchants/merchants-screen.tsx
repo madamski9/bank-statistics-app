@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useCopy } from '@/features/app-shell/localization/language';
@@ -34,11 +34,9 @@ function MerchantsScreenComponent({ groups, onSelectGroup, error, isLoading, ...
   const emptyMessage =
     error !== null
       ? error
-      : Platform.OS !== 'ios'
-        ? copy.captureIosOnly
-        : isLoading
-          ? copy.loading
-          : copy.empty[dimension];
+      : isLoading
+        ? copy.loading
+        : copy.empty[dimension];
 
   return (
     <View style={styles.page}>

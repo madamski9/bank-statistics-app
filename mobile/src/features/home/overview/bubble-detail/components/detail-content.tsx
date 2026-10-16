@@ -1,4 +1,4 @@
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { useCopy } from '@/features/app-shell/localization/language';
 import { bubbleTints, overviewColors, type BubbleKey } from '@/features/app-shell/theme/overview-theme';
@@ -50,9 +50,7 @@ export function DetailContent({ bubbleKey, summary, trend, period, onSelectSourc
         <NetBreakdown summary={summary} />
       ) : sources.length === 0 ? (
         <AmountText maxFontSizeMultiplier={1.6} style={styles.explainer}>
-          {Platform.OS === 'ios'
-            ? copy.noDataInPeriod(periodOption(period).label)
-            : copy.captureIosOnly}
+          {copy.noDataInPeriod(periodOption(period).label)}
         </AmountText>
       ) : (
         sources.map((source) => (

@@ -1,7 +1,7 @@
 import { SymbolView } from 'expo-symbols';
-import type { ComponentProps } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import type { PlatformSymbol } from '@/features/app-shell/symbols/platform-symbol';
 import { formatDayHeading } from '@/features/app-shell/formatting/format-date';
 import { useCopy } from '@/features/app-shell/localization/language';
 import { overviewColors, overviewSpacing } from '@/features/app-shell/theme/overview-theme';
@@ -11,9 +11,7 @@ import { ignoredPaymentsCopy } from '../../ignored-payments-copy';
 import type { IgnoreKind } from '../../ignore-rule';
 import type { IgnoreChoiceTarget } from '../use-ignore-choice-actions';
 
-type SymbolName = ComponentProps<typeof SymbolView>['name'];
-
-const kindSymbols: Record<IgnoreKind, SymbolName> = {
+const kindSymbols: Record<IgnoreKind, PlatformSymbol> = {
   payment: { ios: 'cart', android: 'shopping_cart', web: 'shopping_cart' },
   outgoingTransfer: { ios: 'arrow.up.right', android: 'north_east', web: 'north_east' },
   incomingTransfer: { ios: 'arrow.down.left', android: 'south_west', web: 'south_west' },

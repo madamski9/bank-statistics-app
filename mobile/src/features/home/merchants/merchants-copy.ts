@@ -10,7 +10,6 @@ export const merchantsCopy = defineCopy({
       category:
         'Brak wydatków w tym okresie. Kategoria pojawi się, gdy transakcja zostanie rozpoznana lub poprawiona.',
     },
-    captureIosOnly: 'Przechwytywanie powiadomień działa na razie tylko na iOS.',
     loading: 'Wczytywanie…',
     createLimitHint: 'Otwiera formularz wyboru sklepu i kwoty limitu',
     createLimitLabel: 'Ustaw limit sklepu',
@@ -48,7 +47,6 @@ export const merchantsCopy = defineCopy({
       category:
         'No spending in this period. A category appears once a transaction is recognised or corrected.',
     },
-    captureIosOnly: 'Notification capture currently works on iOS only.',
     loading: 'Loading…',
     createLimitHint: 'Opens the form to pick a shop and a limit amount',
     createLimitLabel: 'Set a shop limit',

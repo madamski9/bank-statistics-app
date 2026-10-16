@@ -1,3 +1,4 @@
+import { useAndroidBack } from '@/features/app-shell/sheet/sheet-modal';
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text } from 'react-native';
@@ -72,6 +73,8 @@ export function CustomCategoriesScreen({
     : openedBuiltIn !== undefined
       ? { id: openedBuiltIn.id, label: openedBuiltIn.label, isCustom: false }
       : null;
+
+  useAndroidBack(() => setOpenedId(null), opened !== null);
 
   const open = (id: string) => {
     selectionChanged();

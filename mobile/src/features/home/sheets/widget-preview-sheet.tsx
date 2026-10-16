@@ -1,4 +1,4 @@
-import { Modal } from 'react-native';
+import { SheetModal } from '@/features/app-shell/sheet/sheet-modal';
 
 import { PrivacyShield } from '@/features/settings/privacy/privacy-shield';
 import { WidgetPreview } from '@/features/widgets/widget-preview';
@@ -11,7 +11,7 @@ interface WidgetPreviewSheetProps {
 
 export function WidgetPreviewSheet({ props, onClose }: WidgetPreviewSheetProps) {
   return (
-    <Modal
+    <SheetModal
       animationType="slide"
       onRequestClose={onClose}
       presentationStyle="pageSheet"
@@ -19,6 +19,6 @@ export function WidgetPreviewSheet({ props, onClose }: WidgetPreviewSheetProps) 
     >
       {props !== null ? <WidgetPreview onClose={onClose} props={props} /> : null}
       <PrivacyShield />
-    </Modal>
+    </SheetModal>
   );
 }

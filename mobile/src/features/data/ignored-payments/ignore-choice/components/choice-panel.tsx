@@ -1,3 +1,4 @@
+import { useAndroidBack } from '@/features/app-shell/sheet/sheet-modal';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -34,6 +35,7 @@ export function ChoicePanel({ visible, dismissLabel, onDismiss, children }: Choi
   const insets = useSafeAreaInsets();
   const [isRendered, setIsRendered] = useState(visible);
   const [panelHeight, setPanelHeight] = useState(420);
+  useAndroidBack(onDismiss, visible, 10);
   const progress = useSharedValue(0);
   const drag = useSharedValue(0);
 

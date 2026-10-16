@@ -89,7 +89,7 @@ export function TransactionEditor({
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.screen}
     >
       <EditorHeader isWriting={isWriting} onCancel={onCancel} onSubmit={submit} title={title} />

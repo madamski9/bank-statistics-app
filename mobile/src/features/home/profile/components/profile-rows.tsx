@@ -1,10 +1,9 @@
 import { SymbolView } from 'expo-symbols';
-import type { ComponentProps, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import type { PlatformSymbol } from '@/features/app-shell/symbols/platform-symbol';
 import { overviewColors } from '@/features/app-shell/theme/overview-theme';
-
-type SymbolName = ComponentProps<typeof SymbolView>['name'];
 
 interface ProfileSectionProps {
   label: string;
@@ -22,7 +21,7 @@ export function ProfileSection({ label, children }: ProfileSectionProps) {
   );
 }
 
-function RowIcon({ symbol, size }: { symbol: SymbolName; size: number }) {
+function RowIcon({ symbol, size }: { symbol: PlatformSymbol; size: number }) {
   return (
     <View accessibilityElementsHidden importantForAccessibility="no" style={styles.rowIcon}>
       <SymbolView name={symbol} size={size} tintColor={overviewColors.textSecondary} />
@@ -31,7 +30,7 @@ function RowIcon({ symbol, size }: { symbol: SymbolName; size: number }) {
 }
 
 interface ProfileInfoRowProps {
-  symbol: SymbolName;
+  symbol: PlatformSymbol;
   label: string;
   value: string;
   accessibilityLabel: string;
@@ -61,7 +60,7 @@ export function ProfileInfoRow({ symbol, label, value, accessibilityLabel, isLiv
 }
 
 interface ProfileActionRowProps {
-  symbol: SymbolName;
+  symbol: PlatformSymbol;
   label: string;
   value?: string;
   accessibilityHint?: string;

@@ -8,6 +8,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 
 async function loadRealRecords(): Promise<IngestionRecord[]> {
+  if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
+    return [];
+  }
+
   await deleteSyntheticIngestionRecords();
   const records = await listIngestionRecords();
 
@@ -17,13 +21,9 @@ async function loadRealRecords(): Promise<IngestionRecord[]> {
 export function useCapturedSpending() {
   const [records, setRecords] = useState<IngestionRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(Platform.OS === 'ios');
+  const [isLoading, setIsLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    if (Platform.OS !== 'ios') {
-      return;
-    }
-
     setError(null);
 
     try {
@@ -36,10 +36,6 @@ export function useCapturedSpending() {
   }, []);
 
   useEffect(() => {
-    if (Platform.OS !== 'ios') {
-      return;
-    }
-
     let isActive = true;
 
     loadRealRecords()
@@ -65,10 +61,6 @@ export function useCapturedSpending() {
   }, []);
 
   useEffect(() => {
-    if (Platform.OS !== 'ios') {
-      return;
-    }
-
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') {
         void refresh();

@@ -11,7 +11,6 @@ export const spendingOverviewCopy = defineCopy({
     netExplainer: 'Przepływ to przychody minus wydatki w wybranym okresie. To nie jest saldo konta.',
     noDataInPeriod: (period: string) =>
       `Brak danych w okresie „${period}”. Wybierz Max, aby zobaczyć wszystko, co udało się przechwycić.`,
-    captureIosOnly: 'Przechwytywanie powiadomień działa na razie tylko na iOS.',
     sourceHint: 'Otwiera historię i wykres wydatków',
     dataFrom: (accounts: string) => `Dane z: ${accounts}`,
     openDetailsHint: 'Otwiera szczegóły',
@@ -42,7 +41,6 @@ export const spendingOverviewCopy = defineCopy({
     netExplainer: 'Net flow is income minus spending in the selected period. It is not your account balance.',
     noDataInPeriod: (period: string) =>
       `No data for “${period}”. Choose Max to see everything that has been captured.`,
-    captureIosOnly: 'Notification capture currently works on iOS only.',
     sourceHint: 'Opens the spending history and chart',
     dataFrom: (accounts: string) => `Data from: ${accounts}`,
     openDetailsHint: 'Opens the details',

@@ -1,3 +1,4 @@
+import { useAndroidBack } from '@/features/app-shell/sheet/sheet-modal';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
@@ -38,6 +39,7 @@ export function MerchantDetail({
 }: MerchantDetailProps) {
   const insets = useSafeAreaInsets();
   const motion = useDetailSheetMotion(onClosed);
+  useAndroidBack(motion.requestClose);
   const [selectedBucket, setSelectedBucket] = useState<string | null>(null);
 
   const buckets = useMemo(() => {

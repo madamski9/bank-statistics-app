@@ -1,7 +1,7 @@
 import { SymbolView } from 'expo-symbols';
-import type { ComponentProps } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import type { PlatformSymbol } from '@/features/app-shell/symbols/platform-symbol';
 import { useCopy } from '@/features/app-shell/localization/language';
 import { ScalePressable } from '@/features/app-shell/motion/scale-pressable';
 import { overviewColors, overviewSpacing } from '@/features/app-shell/theme/overview-theme';
@@ -15,15 +15,13 @@ import { groupCount } from '../group-counts';
 import { merchantsCopy } from '../merchants-copy';
 import { DimensionSwitcher } from './dimension-switcher';
 
-type SymbolName = ComponentProps<typeof SymbolView>['name'];
-
-const categorySymbol: SymbolName = { ios: 'tag', android: 'sell', web: 'sell' };
-const limitSymbol: SymbolName = {
+const categorySymbol: PlatformSymbol = { ios: 'tag', android: 'sell', web: 'sell' };
+const limitSymbol: PlatformSymbol = {
   ios: 'gauge.with.dots.needle.33percent',
   android: 'speed',
   web: 'speed',
 };
-const skipSymbol: SymbolName = { ios: 'eye.slash', android: 'visibility_off', web: 'visibility_off' };
+const skipSymbol: PlatformSymbol = { ios: 'eye.slash', android: 'visibility_off', web: 'visibility_off' };
 
 interface MerchantsHeaderProps {
   groupTotal: number;
@@ -84,7 +82,7 @@ export function MerchantsHeader({
 }
 
 interface HeaderActionProps {
-  symbol: SymbolName;
+  symbol: PlatformSymbol;
   accessibilityLabel: string;
   accessibilityHint: string;
   onPress: () => void;

@@ -1,10 +1,9 @@
 import { SymbolView } from 'expo-symbols';
-import type { ComponentProps, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import type { PlatformSymbol } from '@/features/app-shell/symbols/platform-symbol';
 import { overviewColors, overviewSpacing } from '@/features/app-shell/theme/overview-theme';
-
-type SymbolName = ComponentProps<typeof SymbolView>['name'];
 
 interface DataSectionProps {
   label: string;
@@ -30,7 +29,7 @@ export function DataSection({ label, footnote, children }: DataSectionProps) {
 
 interface DataRowProps {
   label: string;
-  symbol?: SymbolName;
+  symbol?: PlatformSymbol;
   tone?: 'default' | 'danger';
   accessibilityHint?: string;
   onPress: () => void;

@@ -2,6 +2,7 @@ import { ClerkProvider, useAuth } from '@clerk/expo';
 import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { Slot } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as WebBrowser from 'expo-web-browser';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -10,6 +11,8 @@ import { brandColors } from '@/features/app-shell/brand/brand-artwork';
 import { tokenCache } from '@/features/auth/session/token-cache';
 import { LanguageBootstrap } from '@/features/app-shell/localization/language-bootstrap';
 import { convexClient } from '@/convex-client';
+
+WebBrowser.maybeCompleteAuthSession();
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 

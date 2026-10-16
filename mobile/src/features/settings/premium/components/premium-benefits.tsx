@@ -1,19 +1,20 @@
-import { SymbolView, type SFSymbol } from 'expo-symbols';
+import { SymbolView } from 'expo-symbols';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useCopy } from '@/features/app-shell/localization/language';
+import type { PlatformSymbol } from '@/features/app-shell/symbols/platform-symbol';
 import { overviewColors } from '@/features/app-shell/theme/overview-theme';
 
 import { premiumCopy } from '../premium-copy';
 
-const benefitSymbols: SFSymbol[] = [
-  'chart.bar.xaxis',
-  'chart.line.uptrend.xyaxis',
-  'square.grid.2x2',
-  'bell.badge',
-  'tag',
-  'flag',
-  'heart',
+const benefitSymbols: PlatformSymbol[] = [
+  { ios: 'chart.bar.xaxis', android: 'bar_chart', web: 'bar_chart' },
+  { ios: 'chart.line.uptrend.xyaxis', android: 'trending_up', web: 'trending_up' },
+  { ios: 'square.grid.2x2', android: 'grid_view', web: 'grid_view' },
+  { ios: 'bell.badge', android: 'notifications_active', web: 'notifications_active' },
+  { ios: 'tag', android: 'sell', web: 'sell' },
+  { ios: 'flag', android: 'flag', web: 'flag' },
+  { ios: 'heart', android: 'favorite', web: 'favorite' },
 ];
 
 export function PremiumBenefits({ isPremium }: { isPremium: boolean }) {
@@ -30,7 +31,7 @@ export function PremiumBenefits({ isPremium }: { isPremium: boolean }) {
         >
           <View style={styles.benefitIcon}>
             <SymbolView
-              name={{ ios: benefitSymbols[index], android: 'check', web: 'check' }}
+              name={benefitSymbols[index]}
               size={18}
               tintColor={overviewColors.textPrimary}
             />

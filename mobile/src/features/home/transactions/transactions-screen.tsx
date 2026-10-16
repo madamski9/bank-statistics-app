@@ -59,11 +59,9 @@ function TransactionsScreenComponent({
   const emptyMessage =
     error !== null
       ? error
-      : Platform.OS !== 'ios'
-        ? copy.captureIosOnly
-        : isLoading
-          ? copy.loading
-          : copy.empty;
+      : isLoading
+        ? copy.loading
+        : Platform.OS === 'android' ? copy.emptyAndroid : copy.empty;
 
   return (
     <View style={styles.screen}>

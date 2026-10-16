@@ -9,9 +9,9 @@ export const overviewCopy = defineCopy({
     incomeLabel: (amount: string, period: string) => `Przychody, ${amount}, ${period}`,
     netLabel: (amount: string, period: string) => `Przepływ, przychody minus wydatki, ${amount}, ${period}`,
     context: (period: string) => `Wydatki · ${period}`,
-    captureIosOnly: 'Przechwytywanie powiadomień działa na razie tylko na iOS.',
     noTransactions:
       'Nie przechwycono jeszcze żadnej transakcji. Skonfiguruj automatyzację powiadomień w aplikacji Skróty.',
+    noTransactionsAndroid: 'Brak transakcji. Możesz dodać transakcję ręcznie lub zaimportować wyciąg CSV.',
     forecast: 'Prognoza',
     forecastValue: (amount: string) => `~${amount}`,
     report: 'Raport miesięczny',
@@ -30,9 +30,9 @@ export const overviewCopy = defineCopy({
     incomeLabel: (amount: string, period: string) => `Income, ${amount}, ${period}`,
     netLabel: (amount: string, period: string) => `Net flow, income minus spending, ${amount}, ${period}`,
     context: (period: string) => `Spending · ${period}`,
-    captureIosOnly: 'Notification capture currently works on iOS only.',
     noTransactions:
       'No transactions captured yet. Set up the notification automation in the Shortcuts app.',
+    noTransactionsAndroid: 'No transactions yet. You can add a transaction manually or import a CSV statement.',
     forecast: 'Forecast',
     forecastValue: (amount: string) => `~${amount}`,
     report: 'Monthly report',

@@ -22,18 +22,10 @@ export function OverviewStatus({ error, isLoading, hasData }: OverviewStatusProp
     );
   }
 
-  if (Platform.OS !== 'ios') {
-    return (
-      <Text maxFontSizeMultiplier={1.6} style={styles.hint}>
-        {copy.captureIosOnly}
-      </Text>
-    );
-  }
-
   if (!hasData && !isLoading) {
     return (
       <Text maxFontSizeMultiplier={1.6} style={styles.hint}>
-        {copy.noTransactions}
+        {Platform.OS === 'android' ? copy.noTransactionsAndroid : copy.noTransactions}
       </Text>
     );
   }

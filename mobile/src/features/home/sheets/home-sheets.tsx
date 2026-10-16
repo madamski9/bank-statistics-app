@@ -1,4 +1,4 @@
-import { Modal } from 'react-native';
+import { SheetModal } from '@/features/app-shell/sheet/sheet-modal';
 
 import { CustomCategoriesScreen } from '@/features/data/classification/custom-categories/custom-categories-screen';
 import { IgnoredPaymentsScreen } from '@/features/data/ignored-payments/ignored-payments-screen';
@@ -42,15 +42,15 @@ export function HomeSheets(props: HomeSheetsProps) {
   const { sheets, alertEditing } = props;
 
   return (
-    <Modal
+    <SheetModal
       animationType="slide"
-      onRequestClose={alertEditing.editor === null ? sheets.closeSheet : alertEditing.close}
+      onRequestClose={alertEditing.editor !== null ? alertEditing.close : sheets.activeSheet === 'premium' ? sheets.closePremium : sheets.closeSheet}
       presentationStyle="pageSheet"
       visible={sheets.activeSheet !== null || alertEditing.editor !== null}
     >
       <ActiveSheet {...props} />
       <PrivacyShield />
-    </Modal>
+    </SheetModal>
   );
 }
 
