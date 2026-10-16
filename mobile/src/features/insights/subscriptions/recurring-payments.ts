@@ -167,8 +167,8 @@ export function trackedPaymentKey(partyKey: string, amountMinor: number): string
   return `${partyKey}#${amountMinor}`;
 }
 
-function clusterKey(partyKey: string, cluster: IngestionRecord[], clusterCount: number): string {
-  return clusterCount === 1 ? partyKey : `${partyKey}@${cluster[0]?.amountMinor ?? 0}`;
+function clusterKey(partyKey: string, cluster: IngestionRecord[]): string {
+  return `${partyKey}@${cluster[0]?.amountMinor ?? 0}`;
 }
 
 function trackedPartyKey(tracked: TrackedPayment): string {
@@ -387,9 +387,9 @@ export function detectRecurringPayments(
     const clusters = amountClusters(remaining);
 
     for (const cluster of clusters) {
-      const key = clusterKey(partyKey, cluster, clusters.length);
+      const key = clusterKey(partyKey, cluster);
 
-      if (dismissed.has(key)) {
+      if (dismissed.has(partyKey) || dismissed.has(key)) {
         continue;
       }
 

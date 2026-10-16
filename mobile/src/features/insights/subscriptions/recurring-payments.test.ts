@@ -276,6 +276,70 @@ describe('recurring payments', () => {
     ]);
   });
 
+  test('keeps a dismissed payment hidden when another amount appears at the shop', () => {
+    const monthly = [
+      charge('Apple', '2026-07-03T08:00:00Z', 1499),
+      charge('Apple', '2026-08-03T08:00:00Z', 1499),
+      charge('Apple', '2026-09-03T08:00:00Z', 1499),
+    ];
+    const [payment] = detectRecurringPayments(monthly, [], now);
+    const dismissed = new Set([payment!.key]);
+    const records = [...monthly, charge('Apple', '2026-09-14T08:00:00Z', 42000)];
+
+    expect(detectRecurringPayments(records, [], now, dismissed)).toEqual([]);
+  });
+
+  test('keeps a dismissed payment hidden when the other amount is tracked', () => {
+    const records = [
+      charge('Apple', '2026-07-03T08:00:00Z', 1499),
+      charge('Apple', '2026-08-03T08:00:00Z', 1499),
+      charge('Apple', '2026-09-03T08:00:00Z', 1499),
+      charge('Apple', '2026-09-14T08:00:00Z', 42000),
+    ];
+    const [payment] = detectRecurringPayments(records, [], now);
+    const [candidate] = recurringCandidates(records, [], now, [payment!]);
+    const tracked = {
+      key: trackedPaymentKey(candidate!.key, 42000),
+      partyKey: candidate!.key,
+      name: candidate!.name,
+      cadence: 'yearly' as const,
+      amountMinor: 42000,
+    };
+    const payments = detectRecurringPayments(records, [], now, new Set([payment!.key]), [tracked]);
+
+    expect(payments.map((entry) => [entry.cadence, entry.lastAmountMinor, entry.isTracked])).toEqual([
+      ['yearly', 42000, true],
+    ]);
+  });
+
+  test('honors merchant dismissal keys saved before amount identities', () => {
+    const records = [
+      charge('Spotify', '2026-07-05T08:00:00Z', 2399),
+      charge('Spotify', '2026-08-05T08:00:00Z', 2399),
+      charge('Spotify', '2026-09-05T08:00:00Z', 2399),
+    ];
+    const [candidate] = recurringCandidates(records, [], now, []);
+
+    expect(detectRecurringPayments(records, [], now, new Set([candidate!.key]))).toEqual([]);
+  });
+
+  test('keeps a dismissal through price changes within the supported tolerance', () => {
+    const records = [
+      charge('Apple', '2026-06-03T08:00:00Z', 1499),
+      charge('Apple', '2026-07-03T08:00:00Z', 1499),
+      charge('Apple', '2026-08-03T08:00:00Z', 1499),
+    ];
+    const [payment] = detectRecurringPayments(records, [], now);
+    const dismissed = new Set([payment!.key]);
+
+    for (const amount of [1399, 1699]) {
+      const updated = [...records, charge('Apple', '2026-09-03T08:00:00Z', amount)];
+
+      expect(detectRecurringPayments(updated, [], now)[0]?.key).toBe(payment!.key);
+      expect(detectRecurringPayments(updated, [], now, dismissed)).toEqual([]);
+    }
+  });
+
   test('orders payments by the closest upcoming charge', () => {
     const records = [
       charge('Netflix', '2026-08-25T08:00:00Z', 4900),
