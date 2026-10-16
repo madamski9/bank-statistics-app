@@ -1,0 +1,158 @@
+import Foundation
+
+func card(
+  _ id: String,
+  from sourceApp: String,
+  at capturedAt: String,
+  amountMinor: Int = 2670,
+  currency: String = "PLN",
+  bank: String = "mbank",
+  merchant: String? = "AUTOPAY MOBILITY WARSZAWA",
+  origin: String = NormalizedRecordOrigin.capture
+) -> NormalizedRecord {
+  NormalizedRecord(
+    id: id,
+    bank: bank,
+    direction: "expense",
+    transactionType: "cardPayment",
+    amountMinor: amountMinor,
+    currency: currency,
+    merchant: merchant,
+    accountName: nil,
+    occurredAt: capturedAt,
+    capturedAt: capturedAt,
+    sourceApp: sourceApp,
+    status: "pending",
+    origin: origin
+  )
+}
+
+let wallet = CardPaymentPairing.walletSourceApp
+let bankApp = "pl.mbank"
+
+func walletCard(_ id: String, at capturedAt: String, amountMinor: Int = 2670, currency: String = "PLN") -> NormalizedRecord {
+  card(id, from: wallet, at: capturedAt, amountMinor: amountMinor, currency: currency, merchant: "Autopay Mobility")
+}
+
+func merged(_ record: NormalizedRecord, merchant: String) -> NormalizedRecord {
+  var copy = record
+  copy.merchant = merchant
+  return copy
+}
+
+struct Case {
+  let name: String
+  let record: NormalizedRecord
+  let existing: [NormalizedRecord]
+  let paired: Set<String>
+  let expected: CardPaymentResolution
+
+  init(
+    _ name: String,
+    record: NormalizedRecord,
+    existing: [NormalizedRecord],
+    paired: Set<String> = [],
+    expected: CardPaymentResolution
+  ) {
+    self.name = name
+    self.record = record
+    self.existing = existing
+    self.paired = paired
+    self.expected = expected
+  }
+}
+
+let bankPush = card("bank", from: bankApp, at: "2026-10-16T14:21:00Z")
+let walletPush = walletCard("wallet", at: "2026-10-16T14:20:30Z")
+
+let cases = [
+  Case(
+    "mBank push after the Wallet push keeps the Wallet record",
+    record: bankPush,
+    existing: [walletPush],
+    expected: .keepExisting(id: "wallet")
+  ),
+  Case(
+    "Wallet push after the mBank push names the merchant on the existing record",
+    record: walletCard("wallet", at: "2026-10-16T14:21:40Z"),
+    existing: [bankPush],
+    expected: .replace(merged(bankPush, merchant: "Autopay Mobility"))
+  ),
+  Case("mBank push alone is saved", record: bankPush, existing: [], expected: .insert),
+  Case("Wallet push alone is saved", record: walletPush, existing: [], expected: .insert),
+  Case(
+    "the same amount outside the window is a separate payment",
+    record: bankPush,
+    existing: [walletCard("wallet", at: "2026-10-16T14:10:59Z")],
+    expected: .insert
+  ),
+  Case(
+    "the window edge still pairs",
+    record: bankPush,
+    existing: [walletCard("wallet", at: "2026-10-16T14:11:00Z")],
+    expected: .keepExisting(id: "wallet")
+  ),
+  Case(
+    "a different amount inside the window is a separate payment",
+    record: bankPush,
+    existing: [walletCard("wallet", at: "2026-10-16T14:20:30Z", amountMinor: 2671)],
+    expected: .insert
+  ),
+  Case(
+    "a different currency inside the window is a separate payment",
+    record: bankPush,
+    existing: [walletCard("wallet", at: "2026-10-16T14:20:30Z", currency: "EUR")],
+    expected: .insert
+  ),
+  Case(
+    "two mBank pushes for the same amount are two payments",
+    record: bankPush,
+    existing: [card("earlier", from: bankApp, at: "2026-10-16T14:20:00Z")],
+    expected: .insert
+  ),
+  Case(
+    "two Wallet pushes for the same amount are two payments",
+    record: walletPush,
+    existing: [walletCard("earlier", at: "2026-10-16T14:20:00Z")],
+    expected: .insert
+  ),
+  Case(
+    "a Wallet record already paired is not paired again",
+    record: bankPush,
+    existing: [walletPush],
+    paired: ["wallet"],
+    expected: .insert
+  ),
+  Case(
+    "the closest unpaired counterpart is chosen",
+    record: bankPush,
+    existing: [walletCard("far", at: "2026-10-16T14:14:00Z"), walletCard("near", at: "2026-10-16T14:20:50Z")],
+    expected: .keepExisting(id: "near")
+  ),
+  Case(
+    "another bank's Wallet payment is not paired",
+    record: bankPush,
+    existing: [card("ing", from: wallet, at: "2026-10-16T14:20:30Z", bank: "ing")],
+    expected: .insert
+  ),
+  Case(
+    "a manual transaction is never paired",
+    record: bankPush,
+    existing: [card("manual", from: wallet, at: "2026-10-16T14:20:30Z", origin: NormalizedRecordOrigin.manual)],
+    expected: .insert
+  ),
+]
+
+var failures = 0
+
+for testCase in cases {
+  let actual = CardPaymentPairing(paired: testCase.paired).resolve(testCase.record, existing: testCase.existing)
+
+  if actual != testCase.expected {
+    failures += 1
+    print("FAIL \(testCase.name)\n  expected: \(testCase.expected)\n  actual:   \(actual)")
+  }
+}
+
+print("\(cases.count - failures)/\(cases.count) pairing cases pass")
+exit(failures == 0 ? 0 : 1)

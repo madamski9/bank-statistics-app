@@ -170,6 +170,30 @@
       }
     },
     {
+      "name": "mBank card operation trims sentence punctuation after the merchant",
+      "input": {
+        "title": "Nowa operacja kartą",
+        "subtitle": "",
+        "body": "4,50 PLN w KAWIARNIA TEST .",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "mbank",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 450,
+          "currency": "PLN",
+          "merchant": "KAWIARNIA TEST",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.mbank",
+          "status": "pending"
+        }
+      }
+    },
+    {
       "name": "mBank card-shaped marketing with another title is ignored",
       "input": {
         "title": "Oferta",
@@ -240,7 +264,7 @@
           "merchant": "Żabka",
           "occurredAt": "2026-09-28T10:00:00Z",
           "capturedAt": "2026-09-28T10:00:00Z",
-          "sourceApp": "pl.mbank",
+          "sourceApp": "com.apple.Passbook",
           "status": "pending"
         }
       }

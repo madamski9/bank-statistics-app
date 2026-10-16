@@ -12,14 +12,14 @@ enum ReviewReason {
   static let merchant = "merchant"
 }
 
-struct NormalizedRecord: Codable, Sendable {
+struct NormalizedRecord: Codable, Equatable, Sendable {
   let id: String
   let bank: String
   let direction: String
   let transactionType: String?
   let amountMinor: Int
   let currency: String
-  let merchant: String?
+  var merchant: String?
   let accountName: String?
   let occurredAt: String
   let capturedAt: String
@@ -72,5 +72,6 @@ enum NormalizationOutcome {
 
 enum IgnoredReason {
   static let cardPaymentAwaitingApplePay = "cardPaymentAwaitingApplePay"
+  static let cardPaymentAlreadySaved = "cardPaymentAlreadySaved"
   static let notTransaction = "notTransaction"
 }

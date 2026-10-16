@@ -4,6 +4,7 @@ public enum NotificationCaptureResult: Sendable {
   case saved(label: String, amountMinor: Int)
   case notTransaction
   case awaitingApplePay
+  case alreadySaved
 }
 
 public enum NotificationCapture {
@@ -27,10 +28,14 @@ public enum NotificationCapture {
         return .saved(label: label, amountMinor: record.amountMinor)
       case .ignored(let reasonCode):
         IngestionAttemptLog.record { $0.recordIgnored(reasonCode) }
-        if reasonCode == IgnoredReason.notTransaction {
+        switch reasonCode {
+        case IgnoredReason.notTransaction:
           return .notTransaction
+        case IgnoredReason.cardPaymentAlreadySaved:
+          return .alreadySaved
+        default:
+          return .awaitingApplePay
         }
-        return .awaitingApplePay
       }
     } catch {
       let reasonCode = (error as? IngestionError)?.reasonCode ?? "unknown"

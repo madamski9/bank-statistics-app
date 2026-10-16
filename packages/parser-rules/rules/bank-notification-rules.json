@@ -92,7 +92,7 @@
       },
       "match": {
         "field": "body",
-        "pattern": "^(?<amount>{{amount}})\\s*(?<currency>[A-Z]{3})\\s+w\\s+(?<merchant>.+)$",
+        "pattern": "^(?<amount>{{amount}})\\s*(?<currency>[A-Z]{3})\\s+w\\s+(?<merchant>.+?)(?:\\s+\\.)?$",
         "caseInsensitive": true
       },
       "record": {
@@ -123,7 +123,7 @@
       },
       "record": {
         "bank": "mbank",
-        "sourceApp": "pl.mbank",
+        "sourceApp": "com.apple.Passbook",
         "direction": "expense",
         "transactionType": "cardPayment",
         "amountGroup": "amount",

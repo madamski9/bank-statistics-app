@@ -41,6 +41,8 @@ struct IngestMillenniumNotificationIntent: AppIntent {
       return .result(dialog: "Not a transaction - nothing saved")
     case .awaitingApplePay:
       return .result(dialog: "Ignored - waiting for the matching Apple Pay transaction")
+    case .alreadySaved:
+      return .result(dialog: "Already saved from the matching Apple Pay transaction")
     }
   }
 }
