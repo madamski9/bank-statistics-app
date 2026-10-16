@@ -16,6 +16,8 @@ export const onboardingCopy = defineCopy({
     shortcutAdded: 'Skrót dodany — dalej',
     openingShortcut: 'Otwieranie Skrótów…',
     automationEnabled: 'Automatyzacja włączona',
+    showFocusSetup: 'Pokaż, jak to ustawić',
+    focusConfigured: 'Wyjątki dodane',
     openShortcuts: 'Otwórz Skróty',
     goToApp: 'Przejdź do aplikacji',
     next: 'Dalej',
@@ -103,6 +105,21 @@ export const onboardingCopy = defineCopy({
       stepOne: '1. W aplikacji Skróty otwórz Bibliotekę i stuknij Automatyzacja.',
       stepTwo: '2. Włącz przełącznik przy automatyzacji BankStats.',
     },
+    focusIntro: {
+      eyebrow: 'TRYB NIE PRZESZKADZAĆ',
+      title: 'Przepuść powiadomienia banku',
+      description:
+        'Gdy włączony jest tryb Nie przeszkadzać, iOS wycisza powiadomienia i automatyzacja nie zapisuje transakcji. Dodaj aplikacje banków i Portfel do wyjątków, żeby BankStats działał także wtedy.',
+      note: 'To samo ustaw w innych trybach skupienia, z których korzystasz, na przykład w trybie Sen.',
+    },
+    focusSetup: {
+      eyebrow: 'USTAWIENIA IPHONE’A',
+      title: 'Dodaj banki do wyjątków',
+      description: 'Ustawiasz to raz. Wyjątki działają za każdym razem, gdy włączysz tryb Nie przeszkadzać.',
+      stepOne: '1. Otwórz Ustawienia, stuknij Skupienie, a potem Nie przeszkadzać.',
+      stepTwo: '2. W sekcji Włącz powiadomienia stuknij Aplikacje.',
+      stepThree: '3. Wybierz Pozwalaj na powiadomienia, stuknij Dodaj i zaznacz aplikacje swoich banków oraz Portfel.',
+    },
     pin: {
       eyebrow: 'ZABEZPIECZENIE',
       title: 'Chroń swoje finanse',
@@ -134,6 +151,8 @@ export const onboardingCopy = defineCopy({
     shortcutAdded: 'Shortcut added — continue',
     openingShortcut: 'Opening Shortcuts…',
     automationEnabled: "I've turned it on",
+    showFocusSetup: 'Show me how',
+    focusConfigured: "I've allowed them",
     openShortcuts: 'Open Shortcuts',
     goToApp: 'Go to the app',
     next: 'Next',
@@ -219,6 +238,21 @@ export const onboardingCopy = defineCopy({
         "iOS adds the shortcut's automation turned off. Until you turn it on, BankStats won't receive your bank notifications.",
       stepOne: '1. In the Shortcuts app, open Library and tap Automation.',
       stepTwo: '2. Turn on the switch next to the BankStats automation.',
+    },
+    focusIntro: {
+      eyebrow: 'DO NOT DISTURB',
+      title: 'Let your bank notifications through',
+      description:
+        "While Do Not Disturb is on, iOS silences notifications and the automation doesn't save transactions. Allow your bank apps and Wallet so BankStats keeps working then too.",
+      note: 'Do the same in any other Focus you use, such as Sleep.',
+    },
+    focusSetup: {
+      eyebrow: 'IPHONE SETTINGS',
+      title: 'Allow your banks',
+      description: 'You only do this once. The allowed apps apply every time you turn on Do Not Disturb.',
+      stepOne: '1. Open Settings, tap Focus, then Do Not Disturb.',
+      stepTwo: '2. Under Allow Notifications, tap Apps.',
+      stepThree: '3. Choose Allow Notifications From, tap Add and select your bank apps and Wallet.',
     },
     pin: {
       eyebrow: 'SECURITY',
