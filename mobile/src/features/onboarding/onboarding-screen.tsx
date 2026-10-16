@@ -83,7 +83,7 @@ export function OnboardingScreen(props: OnboardingFlowOptions) {
             />
           ) : null}
           {step === automationStep ? <AutomationStep /> : null}
-          {step === focusIntroStep ? <FocusIntroStep /> : null}
+          {step === focusIntroStep ? <FocusIntroStep isAnnouncement={props.flow === 'focus'} /> : null}
           {step === focusSetupStep ? <FocusSetupStep /> : null}
           {step === pinStep ? (
             <PinStep biometricName={onboarding.biometricName} onComplete={onboarding.protectWithPin} />

@@ -112,6 +112,12 @@ export const onboardingCopy = defineCopy({
         'Tryb Nie przeszkadzać może zakłócić przechwytywanie transakcji. Dodaj aplikacje banków i Portfel do wyjątków, aby ich powiadomienia nie były wyciszane, a potem sprawdź zapis na swoim telefonie.',
       note: 'To samo ustaw w innych trybach skupienia, z których korzystasz, na przykład w trybie Sen.',
     },
+    focusAnnouncement: {
+      eyebrow: 'NOWOŚĆ DLA BETA TESTERÓW',
+      title: 'Hej, beta testerzy!',
+      description:
+        'Dodałem nową funkcję. Gdy włączony jest tryb Nie przeszkadzać, iOS nie uruchamia automatyzacji i transakcje się nie zapisują. Dodaj aplikacje banków i Portfel do wyjątków. Na następnym ekranie pokazuję, jak to zrobić.',
+    },
     focusSetup: {
       eyebrow: 'USTAWIENIA IPHONE’A',
       title: 'Dodaj banki do wyjątków',
@@ -247,6 +253,12 @@ export const onboardingCopy = defineCopy({
       description:
         'Do Not Disturb may interfere with transaction capture. Allow your bank apps and Wallet so their notifications are not silenced, then check saving on your phone.',
       note: 'Do the same in any other Focus you use, such as Sleep.',
+    },
+    focusAnnouncement: {
+      eyebrow: 'NEW FOR BETA TESTERS',
+      title: 'Hey, beta testers!',
+      description:
+        "I've added something new. While Do Not Disturb is on, iOS doesn't run the automation and transactions aren't saved. Allow your bank apps and Wallet in it. The next screen shows how.",
     },
     focusSetup: {
       eyebrow: 'IPHONE SETTINGS',
