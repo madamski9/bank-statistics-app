@@ -98,6 +98,50 @@ describe('parseMbankPdfStatement', () => {
     expect(parseMbankPdfStatement(firstPage)).toEqual({ ok: false, problem: 'inconsistent' });
   });
 
+  test('refuses a missing interior page even when its operations net to zero', () => {
+    const firstPage = [
+      'mBank S.A.',
+      'Waluta PLN',
+      'Saldo początkowe: 100,00',
+      ...columnHeader,
+      '2025-01-18 2025-01-18 ZAKUP PRZY UŻYCIU KARTY',
+      'SKLEP TESTOWY /Gdansk DATA TRANSAKCJI: 2025-01-17',
+      '-10,00 90,00',
+      'Strona : 1 / 3',
+    ].join('\n');
+    const middlePage = [
+      ...columnHeader,
+      '2025-01-19 2025-01-19 PRZELEW WEWNĘTRZNY PRZYCHODZĄCY',
+      'JAN TESTOWY',
+      '50,00 140,00',
+      '2025-01-19 2025-01-19 PRZELEW WEWNĘTRZNY WYCHODZĄCY',
+      'JAN TESTOWY',
+      '-50,00 90,00',
+      'Strona : 2 / 3',
+    ].join('\n');
+    const lastPage = [
+      ...columnHeader,
+      '2025-01-20 2025-01-20 ZAKUP PRZY UŻYCIU KARTY',
+      'SKLEP TESTOWY /Gdansk DATA TRANSAKCJI: 2025-01-20',
+      '-20,00 70,00',
+      'Saldo końcowe: 70,00',
+      'Strona : 3 / 3',
+    ].join('\n');
+    const complete = parseMbankPdfStatement([firstPage, middlePage, lastPage].join('\n'));
+
+    expect(complete.ok ? complete.rows.length : 0).toBe(4);
+    expect(parseMbankPdfStatement([firstPage, lastPage].join('\n'))).toEqual({ ok: false, problem: 'inconsistent' });
+  });
+
+  test.each([
+    ['duplicate page', statement.replace('Strona : 2 / 3', 'Strona : 1 / 3')],
+    ['out-of-order page', statement.replace(/Strona : ([12]) \/ 3/g, (_, page: string) => `Strona : ${page === '1' ? '2' : '1'} / 3`)],
+    ['inconsistent final page total', statement.replace('Strona : 3 / 3', 'Strona : 3 / 4')],
+    ['missing final page marker', statement.replace('Strona : 3 / 3', '')],
+  ])('refuses a statement with %s', (_, text) => {
+    expect(parseMbankPdfStatement(text)).toEqual({ ok: false, problem: 'inconsistent' });
+  });
+
   test('accepts a matching zero closing balance', () => {
     const text = [
       'mBank S.A.',

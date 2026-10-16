@@ -18,8 +18,9 @@ const transactionDatePattern = new RegExp(`\\s*DATA TRANSAKCJI: (${datePattern})
 const phoneDetailPattern = /\s+Od: .*$/;
 const accountNumberPattern = /^[\d ]{16,}$/;
 const columnHeading = 'Opis operacji Kwota Saldo po';
+const pageMarkerPattern = /^Strona : (\d+) \/ (\d+)$/;
 
-const pageChromePatterns = [/^Strona : \d+ \/ \d+$/, /^Data$/, /^księgowania$/, /^operacji$/, new RegExp(`^${columnHeading}$`)];
+const pageChromePatterns = [pageMarkerPattern, /^Data$/, /^księgowania$/, /^operacji$/, new RegExp(`^${columnHeading}$`)];
 
 interface PendingOperation {
   operationDate: string;
@@ -70,6 +71,20 @@ function sharedDatesOf(line: string): string[] | null {
   }
 
   return dates;
+}
+
+function hasCompletePages(lines: string[]): boolean {
+  const pages = lines.flatMap((line) => {
+    const match = pageMarkerPattern.exec(line);
+
+    return match === null ? [] : [{ number: Number(match[1]), total: Number(match[2]) }];
+  });
+  const [first] = pages;
+
+  return first === undefined || (
+    pages.length === first.total &&
+    pages.every((page, index) => page.number === index + 1 && page.total === first.total)
+  );
 }
 
 function statementOf(lines: string[]): Statement | 'unrecognized' | 'inconsistent' {
@@ -251,13 +266,14 @@ export function parseMbankPdfStatement(text: string): StatementParseResult {
     return { ok: false, problem: 'empty' };
   }
 
-  const statement = statementOf(normalizedLines(text));
+  const lines = normalizedLines(text);
+  const statement = statementOf(lines);
 
   if (statement === 'unrecognized' || statement === 'inconsistent') {
     return { ok: false, problem: statement };
   }
 
-  if (!balances(statement)) {
+  if (!hasCompletePages(lines) || !balances(statement)) {
     return { ok: false, problem: 'inconsistent' };
   }
 
