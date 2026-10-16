@@ -11,6 +11,7 @@ describe('detectStatementBank', () => {
     expect(detectStatementBank('PKO Bank Polski SA, BIC: BPKOPLPW, www.pkobp.pl')).toBe('pko');
     expect(detectStatementBank('Erste Bank Polska S.A.')).toBe('erste');
     expect(detectStatementBank('Santander Bank Polska S.A. BIC WBKPPLPP')).toBe('erste');
+    expect(detectStatementBank('mBank S.A. Bankowość Detaliczna\nwww.mBank.pl\nmLinia: 801 300 800')).toBe('mbank');
   });
 
   test('ignores letter case and Polish diacritics', () => {
@@ -24,14 +25,14 @@ describe('detectStatementBank', () => {
   });
 
   test('refuses banks we do not offer and ambiguous text', () => {
-    expect(detectStatementBank('mBank S.A. wyciąg z rachunku')).toBeNull();
+    expect(detectStatementBank('Alior Bank S.A. wyciąg z rachunku')).toBeNull();
     expect(detectStatementBank('Bank Millennium i PKO BP')).toBeNull();
     expect(detectStatementBank('')).toBeNull();
   });
 });
 
 describe('readStatement', () => {
-  test('reads PDF statements only from Millennium', () => {
+  test('reads PDF statements only from Millennium and mBank', () => {
     expect(readStatement('PKO Bank Polski\nWyciąg', 'pdf')).toEqual({ ok: false, problem: 'unsupportedPdf' });
     expect(readStatement('ING Bank Śląski\nWyciąg', 'pdf')).toEqual({ ok: false, problem: 'unsupportedBank' });
     expect(readStatement(' ', 'pdf')).toEqual({ ok: false, problem: 'empty' });
@@ -51,6 +52,25 @@ describe('readStatement', () => {
       ok: true,
       bank: 'millennium',
       rows: [{ direction: 'expense', amountMinor: 1000, party: 'SKLEP' }],
+    });
+  });
+
+  test('passes an mBank PDF statement to its parser', () => {
+    const text = [
+      'mBank S.A. Bankowość Detaliczna',
+      'www.mBank.pl',
+      'Waluta PLN',
+      'Saldo początkowe: 100,00',
+      '2025-01-18 2025-01-18 ZAKUP PRZY UŻYCIU KARTY',
+      'SKLEP /Gdansk DATA TRANSAKCJI: 2025-01-17',
+      '-10,00 90,00',
+      'Saldo końcowe: 90,00',
+    ].join('\n');
+
+    expect(readStatement(text, 'pdf')).toMatchObject({
+      ok: true,
+      bank: 'mbank',
+      rows: [{ date: '2025-01-17', direction: 'expense', amountMinor: 1000, party: 'SKLEP' }],
     });
   });
 });

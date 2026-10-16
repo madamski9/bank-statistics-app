@@ -1,4 +1,4 @@
-export const statementBanks = ['millennium', 'pko', 'erste'] as const;
+export const statementBanks = ['millennium', 'pko', 'erste', 'mbank'] as const;
 
 export type StatementBank = (typeof statementBanks)[number];
 
@@ -12,6 +12,7 @@ const bankKeywords: Record<StatementBank, RegExp[]> = {
   ],
   pko: [/\bpko bp\b/, /\bpko bank polski\b/, /\bpkobp\b/, /\bipko\b/, /\bbpkoplpw/],
   erste: [/\berste bank\b/, /\berstebank\b/, /\berste\b/, /\bsantander bank polska\b/, /\bwbkpplpp/],
+  mbank: [/\bmbank\b/, /\bmlinia\b/, /\bbrexplpw/],
 };
 
 function searchableText(text: string): string {
