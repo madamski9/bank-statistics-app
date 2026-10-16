@@ -196,7 +196,7 @@ function balances(statement: Statement): boolean {
     }
   }
 
-  return statement.closingBalanceMinor === null || statement.closingBalanceMinor === balance;
+  return statement.closingBalanceMinor === balance;
 }
 
 function partyOf(operation: PendingOperation): string | undefined {

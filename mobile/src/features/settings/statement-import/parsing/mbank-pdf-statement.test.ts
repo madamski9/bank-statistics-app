@@ -92,6 +92,29 @@ describe('parseMbankPdfStatement', () => {
     expect(parseMbankPdfStatement(broken)).toEqual({ ok: false, problem: 'inconsistent' });
   });
 
+  test('refuses a statement truncated after a complete page of operations', () => {
+    const firstPage = statement.split('Strona : 1 / 3')[0];
+
+    expect(parseMbankPdfStatement(firstPage)).toEqual({ ok: false, problem: 'inconsistent' });
+  });
+
+  test('accepts a matching zero closing balance', () => {
+    const text = [
+      'mBank S.A.',
+      'Waluta PLN',
+      'Saldo początkowe: 100,00',
+      ...columnHeader,
+      '2025-01-18 2025-01-18 ZAKUP PRZY UŻYCIU KARTY',
+      'SKLEP TESTOWY /Gdansk DATA TRANSAKCJI: 2025-01-17',
+      '-100,00 0,00',
+      'Saldo końcowe: 0,00',
+    ].join('\n');
+    const result = parseMbankPdfStatement(text);
+
+    expect(result.ok).toBe(true);
+    expect(result.ok ? result.rows.map((row) => row.amountMinor) : []).toEqual([10_000]);
+  });
+
   test('refuses a statement whose closing balance disagrees', () => {
     const broken = statement.replace('Saldo końcowe: 1 151,02', 'Saldo końcowe: 1 152,02');
 
