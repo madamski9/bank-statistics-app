@@ -2,6 +2,339 @@
   "capturedAt": "2026-09-28T10:00:00Z",
   "examples": [
     {
+      "name": "mBank outgoing transfer captures its recipient and trims sentence punctuation",
+      "input": {
+        "title": "Przelew z konta",
+        "subtitle": "",
+        "body": "1,00 PLN do JAN .",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "mbank",
+          "direction": "expense",
+          "transactionType": "outgoingTransfer",
+          "amountMinor": 100,
+          "currency": "PLN",
+          "merchant": "JAN",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.mbank",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "mBank incoming transfer keeps the sender and address",
+      "input": {
+        "title": "Nowy przelew",
+        "subtitle": "",
+        "body": "5,00 PLN wpłynęło od KOWALSKI JAN UL\nTESTOWA 14",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "mbank",
+          "direction": "income",
+          "transactionType": "incomingTransfer",
+          "amountMinor": 500,
+          "currency": "PLN",
+          "merchant": "KOWALSKI JAN UL TESTOWA 14",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.mbank",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "mBank foreign currency transfer handles grouped amounts and whitespace",
+      "input": {
+        "title": "  PRZELEW Z KONTA ",
+        "subtitle": "",
+        "body": "1 234,50 EUR do FIRMA SP. Z O.O.",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "mbank",
+          "direction": "expense",
+          "transactionType": "outgoingTransfer",
+          "amountMinor": 123450,
+          "currency": "EUR",
+          "merchant": "FIRMA SP. Z O.O.",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.mbank",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "mBank incoming transfer overrides the legacy Shortcuts source app",
+      "input": {
+        "title": "Nowy przelew",
+        "subtitle": "",
+        "body": "125,00 PLN wpłynęło od JAN",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "mbank",
+          "direction": "income",
+          "transactionType": "incomingTransfer",
+          "amountMinor": 12500,
+          "currency": "PLN",
+          "merchant": "JAN",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.mbank",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "mBank card operation captures an in-app Apple Pay payment",
+      "input": {
+        "title": "Nowa operacja kartą",
+        "subtitle": "",
+        "body": "26,70 PLN w AUTOPAY MOBILITY WARSZAWA",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "mbank",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 2670,
+          "currency": "PLN",
+          "merchant": "AUTOPAY MOBILITY WARSZAWA",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.mbank",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "mBank card operation handles grouped foreign amounts and title case",
+      "input": {
+        "title": "  NOWA OPERACJA KARTĄ  ",
+        "subtitle": "",
+        "body": "1 234,50 EUR w TESTOWY\nSKLEP",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "mbank",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 123450,
+          "currency": "EUR",
+          "merchant": "TESTOWY SKLEP",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.mbank",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "mBank card operation overrides the legacy Shortcuts source app",
+      "input": {
+        "title": "Nowa operacja kartą",
+        "subtitle": "",
+        "body": "26,70 PLN w AUTOPAY MOBILITY WARSZAWA",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "mbank",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 2670,
+          "currency": "PLN",
+          "merchant": "AUTOPAY MOBILITY WARSZAWA",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.mbank",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "mBank card operation trims sentence punctuation after the merchant",
+      "input": {
+        "title": "Nowa operacja kartą",
+        "subtitle": "",
+        "body": "4,50 PLN w KAWIARNIA TEST .",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "mbank",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 450,
+          "currency": "PLN",
+          "merchant": "KAWIARNIA TEST",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.mbank",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "mBank card-shaped marketing with another title is ignored",
+      "input": {
+        "title": "Oferta",
+        "subtitle": "",
+        "body": "26,70 PLN w AUTOPAY MOBILITY WARSZAWA",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "ignored",
+        "reason": "notTransaction"
+      }
+    },
+    {
+      "name": "mBank card operation without a merchant is ignored",
+      "input": {
+        "title": "Nowa operacja kartą",
+        "subtitle": "",
+        "body": "26,70 PLN w ",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "ignored",
+        "reason": "notTransaction"
+      }
+    },
+    {
+      "name": "mBank zero amount card operation is ignored",
+      "input": {
+        "title": "Nowa operacja kartą",
+        "subtitle": "",
+        "body": "0,00 PLN w AUTOPAY MOBILITY WARSZAWA",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "ignored",
+        "reason": "notTransaction"
+      }
+    },
+    {
+      "name": "mBank negative card operation is not treated as spending",
+      "input": {
+        "title": "Nowa operacja kartą",
+        "subtitle": "",
+        "body": "-26,70 PLN w AUTOPAY MOBILITY WARSZAWA",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "ignored",
+        "reason": "notTransaction"
+      }
+    },
+    {
+      "name": "Wallet card payment for an mBank card is attributed to mBank",
+      "input": {
+        "title": "mBank",
+        "subtitle": "Żabka  Kraków, Małopolskie",
+        "body": "2,50 zł",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "mbank",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 250,
+          "currency": "PLN",
+          "merchant": "Żabka",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "com.apple.Passbook",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "mBank marketing push is ignored",
+      "input": {
+        "title": "mBank PL",
+        "subtitle": "",
+        "body": "Sprawdź ofertę konta i odbierz 100 PLN premii.",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "ignored",
+        "reason": "notTransaction"
+      }
+    },
+    {
+      "name": "mBank zero amount transfer is ignored",
+      "input": {
+        "title": "Przelew z konta",
+        "subtitle": "",
+        "body": "0,00 PLN do JAN .",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "ignored",
+        "reason": "notTransaction"
+      }
+    },
+    {
+      "name": "mBank outgoing transfer without recipient is ignored",
+      "input": {
+        "title": "Przelew z konta",
+        "subtitle": "",
+        "body": "1,00 PLN do ",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "ignored",
+        "reason": "notTransaction"
+      }
+    },
+    {
+      "name": "mBank incoming transfer without sender is ignored",
+      "input": {
+        "title": "Nowy przelew",
+        "subtitle": "",
+        "body": "5,00 PLN wpłynęło od ",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "ignored",
+        "reason": "notTransaction"
+      }
+    },
+    {
+      "name": "Transfer-shaped marketing body with another title is ignored",
+      "input": {
+        "title": "Oferta",
+        "subtitle": "",
+        "body": "1,00 PLN do JAN .",
+        "sourceApp": "pl.mbank"
+      },
+      "expected": {
+        "outcome": "ignored",
+        "reason": "notTransaction"
+      }
+    },
+    {
       "name": "ING BLIK payment names the account it was paid from",
       "input": {
         "title": "Moje ING. Twój Asystent",
@@ -156,6 +489,174 @@
       }
     },
     {
+      "name": "Wallet card payment from ZEN.COM keeps an unknown bank",
+      "input": {
+        "title": "ZEN.COM",
+        "subtitle": "Lidl  Gdańsk, Pomorskie",
+        "body": "5,08 zł",
+        "sourceApp": "com.apple.Passbook"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "unknown",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 508,
+          "currency": "PLN",
+          "merchant": "Lidl",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "com.apple.Passbook",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Wallet card payment from ZEN keeps an unknown bank",
+      "input": {
+        "title": "ZEN",
+        "subtitle": "Lidl  Gdańsk, Pomorskie",
+        "body": "5,08 zł",
+        "sourceApp": "com.apple.Passbook"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "unknown",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 508,
+          "currency": "PLN",
+          "merchant": "Lidl",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "com.apple.Passbook",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Wallet card payment from Revolut keeps an unknown bank",
+      "input": {
+        "title": "Revolut",
+        "subtitle": "Lidl  Gdańsk, Pomorskie",
+        "body": "5,08 zł",
+        "sourceApp": "com.apple.Passbook"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "unknown",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 508,
+          "currency": "PLN",
+          "merchant": "Lidl",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "com.apple.Passbook",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Wallet card payment from Unknown issuer keeps an unknown bank",
+      "input": {
+        "title": "Unknown issuer",
+        "subtitle": "Lidl  Gdańsk, Pomorskie",
+        "body": "5,08 zł",
+        "sourceApp": "com.apple.Passbook"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "unknown",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 508,
+          "currency": "PLN",
+          "merchant": "Lidl",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "com.apple.Passbook",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Wallet card payment from NotMillennium keeps an unknown bank",
+      "input": {
+        "title": "NotMillennium",
+        "subtitle": "Lidl  Gdańsk, Pomorskie",
+        "body": "5,08 zł",
+        "sourceApp": "com.apple.Passbook"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "unknown",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 508,
+          "currency": "PLN",
+          "merchant": "Lidl",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "com.apple.Passbook",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Wallet card payment from NotPKO keeps an unknown bank",
+      "input": {
+        "title": "NotPKO",
+        "subtitle": "Lidl  Gdańsk, Pomorskie",
+        "body": "5,08 zł",
+        "sourceApp": "com.apple.Passbook"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "unknown",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 508,
+          "currency": "PLN",
+          "merchant": "Lidl",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "com.apple.Passbook",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Wallet Millennium title matching ignores case",
+      "input": {
+        "title": "bank MILLENNIUM s.a.",
+        "subtitle": "Lidl  Gdańsk, Pomorskie",
+        "body": "5,08 zł",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "millennium",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 508,
+          "currency": "PLN",
+          "merchant": "Lidl",
+          "occurredAt": "2026-09-28T10:00:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.millenniumbank.bankmillennium",
+          "status": "pending"
+        }
+      }
+    },
+    {
       "name": "Wallet card payment names the merchant and drops the voivodeship",
       "input": {
         "title": "Bank Millennium S.A.",
@@ -214,7 +715,7 @@
       "expected": {
         "outcome": "record",
         "record": {
-          "bank": "millennium",
+          "bank": "unknown",
           "direction": "expense",
           "transactionType": "cardPayment",
           "amountMinor": 1250,

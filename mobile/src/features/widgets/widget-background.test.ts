@@ -8,7 +8,7 @@ import { runInNewContext } from 'node:vm';
 import { setCurrentLanguage } from '@/features/app-shell/localization/language';
 
 import { buildWidgetCalculator } from './build-calculator.cjs';
-import { snapshot, timeline, type WidgetBackgroundConfiguration } from './widget-background';
+import { paymentAlerts, snapshot, timeline, type WidgetBackgroundConfiguration } from './widget-background';
 
 const reference = new Date(2026, 8, 25, 12).getTime();
 const configuration: WidgetBackgroundConfiguration = {
@@ -189,5 +189,36 @@ describe('background widget snapshots', () => {
     expect(context.BankStatsWidgetCalculator.timeline(privateInput, records, reference)).toEqual(
       timeline(privateInput, records, reference),
     );
+  });
+
+  test('the native calculator words a shop limit alert for the payment just captured', () => {
+    const outfile = path.join(directory, 'alerts-calculator.js');
+    buildWidgetCalculator(outfile);
+    const context = {} as { BankStatsWidgetCalculator: { paymentAlerts: typeof paymentAlerts } };
+    runInNewContext(readFileSync(outfile, 'utf8'), context);
+    const shopLimited: WidgetBackgroundConfiguration = {
+      ...configuration,
+      language: 'pl',
+      alertRules: [{
+        id: 'zabka',
+        scope: { kind: 'merchant', key: 'żabka', name: 'Żabka' },
+        metric: 'expense',
+        condition: 'threshold',
+        period: { kind: 'month' },
+        targetMinor: 20_000,
+        thresholdShares: [0.5, 0.8, 0.9, 1],
+        isActive: true,
+        createdAt: new Date(reference).toISOString(),
+        tone: 'passive',
+      }],
+    };
+    const records = [record('earlier', 8_000), record('latest', 9_000)];
+    const input = JSON.parse(JSON.stringify(shopLimited));
+    const native = context.BankStatsWidgetCalculator.paymentAlerts(input, records, 'latest', reference);
+
+    expect(JSON.parse(JSON.stringify(native))).toEqual(paymentAlerts(shopLimited, records, 'latest', reference));
+    expect(native.map((message) => message.title)).toEqual(['80% limitu w Żabka']);
+    expect(paymentAlerts({ ...shopLimited, enabled: false }, records, 'latest', reference)).toEqual([]);
+    expect(paymentAlerts(shopLimited, records, 'missing', reference)).toEqual([]);
   });
 });

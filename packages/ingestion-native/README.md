@@ -26,13 +26,32 @@ telefonu`, `Data: 2026-09-28 13:14:57`, `Kwota: 30,00 PLN` — and is saved as a
 action serves both banks; the shared shortcut decides which apps trigger it (IKO, Millennium,
 Portfel). A Wallet push's title names the card's bank (`Bank Millennium S.A.`, `PKO BP`), so the
 automation maps it to the optional `Notification Title`: a title containing `PKO` records the card
-payment as `pko`, anything else — including an unmapped title — as `millennium`.
+payment as `pko`, and a title containing `Millennium` records it as `millennium`. Titles naming
+ING, mBank or Erste/Santander use their dedicated rules. Any other title, including a missing title,
+records the payment as `unknown` (displayed as “Unknown bank”), without guessing a supported bank.
 
 A push from Moje ING has no subtitle and reports a balance change — `2,00 PLN mniej na Twoim
 koncie - KONTO Mobi 18-26 - płatność BLIK` — and is saved as an `ing` record on the named account:
 `mniej` is an expense (a `blikPayment` when it ends with `płatność BLIK`, otherwise an
 `outgoingTransfer`), any other word is an `incomingTransfer`. A Wallet push titled
 `ING Bank Śląski S.A.` records the card payment as `ing`.
+
+A push from mBank PL uses the title `Przelew z konta` with body `1,00 PLN do JAN .`
+for an outgoing transfer, or `Nowy przelew` with body `5,00 PLN wpłynęło od KOWALSKI JAN`
+for an incoming transfer. The automation must pass `Notification Title` and `Notification Body`,
+with an empty subtitle. The sender or recipient is retained as the counterparty, and the capture
+time is used as the occurrence time because these pushes contain no transaction timestamp.
+A Wallet push whose title names mBank records the card payment as `mbank`, with
+`com.apple.Passbook` as its source app. mBank also sends its own card push, `Nowa operacja kartą` with
+body `26,70 PLN w AUTOPAY MOBILITY WARSZAWA`, which is saved as an `mbank` card payment. Card-on-file
+and online payments produce only this push, but an Apple Pay purchase produces both, so the outbox
+pairs them when it saves a card payment: a Wallet card payment and a bank card payment from the same
+bank, for the same amount and currency, captured at most ten minutes apart, are one purchase. The
+closest unpaired counterpart wins. A bank push arriving after the Wallet record is dropped with the
+reason `cardPaymentAlreadySaved`; a Wallet push arriving after the bank record keeps that record and
+its identifier and gives it Wallet's merchant name, so the shop is named the same way as other Wallet
+payments. Each record can be paired once, which keeps two identical purchases made minutes apart as
+two transactions. The pairing is checked by `sh conformance/card-payment-pairing/run.sh`.
 
 A Wallet push whose body carries an amount with no currency symbol is still captured, as a Review
 Item flagged `currency`: the transaction reaches the timeline but stays out of statistics until the

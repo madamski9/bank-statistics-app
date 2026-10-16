@@ -51,7 +51,7 @@ export function useOverviewInsights({
             countedRecords,
             rules,
             insightsNow,
-            new Set(recurringPayments.map((payment) => payment.key)),
+            recurringPayments,
           )
         : [],
     [countedRecords, insightsNow, recurringPayments, rules, showsCandidates],

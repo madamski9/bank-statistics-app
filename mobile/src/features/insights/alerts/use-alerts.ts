@@ -27,6 +27,7 @@ interface AlertsOptions {
   records: IngestionRecord[];
   categorizationRules: CategorizationRule[];
   isPremium?: boolean;
+  hasAggressiveTone?: boolean;
   storage?: AlertStorage;
   notifier?: AlertNotifier;
 }
@@ -35,6 +36,7 @@ export function useAlerts({
   records,
   categorizationRules,
   isPremium = false,
+  hasAggressiveTone = false,
   storage = secureAlertStorage,
   notifier = expoAlertNotifier,
 }: AlertsOptions): AlertsState {
@@ -79,6 +81,7 @@ export function useAlerts({
       rules: categorizationRules,
       sent: sent.current,
       notifier,
+      hasAggressiveTone,
     })
       .then(async (nextSent) => {
         if (nextSent === sent.current) {
@@ -96,7 +99,7 @@ export function useAlerts({
           setRunCount((current) => current + 1);
         }
       });
-  }, [categorizationRules, notifier, records, rules, runCount, storage]);
+  }, [categorizationRules, hasAggressiveTone, notifier, records, rules, runCount, storage]);
 
   const save = useCallback(
     async (rule: AlertRule) => {

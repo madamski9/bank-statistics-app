@@ -71,12 +71,14 @@ function ActiveSheet({
   if (editor !== null) {
     return (
       <AlertRuleSheet
+        canUseAggressiveTone={alertEditing.canUseAggressiveTone}
         isFirstRule={alertEditing.isFirstRule}
         isScopeLocked={editor.isScopeLocked === true}
         merchants={alertEditing.merchants}
         onCancel={alertEditing.close}
         onDelete={editor.rule === null ? undefined : alertEditing.remove}
         onRequestPermission={requestAlertPermission}
+        onRequireTonePremium={alertEditing.requireTonePremium}
         onSave={alertEditing.save}
         rule={editor.rule}
         scope={editor.scope}

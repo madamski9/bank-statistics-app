@@ -1,4 +1,5 @@
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,7 +15,7 @@ import { selectionChanged } from '@/haptics';
 
 import { alertsCopy } from '../alerts-copy';
 import { scopeLabel } from '../delivery/alert-message';
-import type { AlertMetric, AlertRule, AlertScope } from '../rules/alert-rule';
+import { alertTones, type AlertMetric, type AlertRule, type AlertScope } from '../rules/alert-rule';
 import { CheckToggle } from './components/check-toggle';
 import { FormField } from './components/form-field';
 import { LimitAmountInput } from './components/limit-amount-input';
@@ -29,6 +30,8 @@ interface AlertRuleSheetProps {
   rule: AlertRule | null;
   isFirstRule: boolean;
   isScopeLocked: boolean;
+  canUseAggressiveTone: boolean;
+  onRequireTonePremium: () => void;
   onCancel: () => void;
   onSave: (rule: AlertRule) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
@@ -37,7 +40,7 @@ interface AlertRuleSheetProps {
 
 const metrics: AlertMetric[] = ['expense', 'income', 'netFlow'];
 const periods: RepeatingPeriod[] = ['week', 'month', 'year'];
-const approachShares = [0.5, 0.8, 0.9, null] as const;
+const notificationChoices = [true, false] as const;
 
 export function AlertRuleSheet({
   scope,
@@ -45,6 +48,8 @@ export function AlertRuleSheet({
   rule,
   isFirstRule,
   isScopeLocked,
+  canUseAggressiveTone,
+  onRequireTonePremium,
   onCancel,
   onSave,
   onDelete,
@@ -114,18 +119,51 @@ export function AlertRuleSheet({
         ) : null}
 
         {form.missingIncome ? null : (
-          <FormField label={copy.warnWhen}>
+          <FormField label={copy.notificationsLabel}>
             <OptionChips
-              onSelect={form.setApproachShare}
-              options={approachShares.map((share) => ({
-                key: share === null ? 'none' : String(share),
-                value: share,
-                label: share === null ? copy.noWarning : `${Math.round(share * 100)}%`,
+              onSelect={form.setIsNotifying}
+              options={notificationChoices.map((value) => ({
+                key: String(value),
+                value,
+                label: value ? copy.notificationsOn : copy.notificationsOff,
               }))}
-              selected={form.approachShare}
+              selected={form.isNotifying}
             />
           </FormField>
         )}
+
+        {form.delivery !== null && form.isNotifying ? (
+          <FormField label={copy.toneLabel}>
+            <OptionChips
+              onSelect={(tone) => {
+                if (tone === 'aggressive' && !canUseAggressiveTone) {
+                  onRequireTonePremium();
+                  return;
+                }
+
+                if (tone === 'aggressive' && form.tone !== 'aggressive') {
+                  Alert.alert(copy.aggressiveWarningTitle, copy.aggressiveWarningBody, [
+                    { style: 'cancel', text: copy.cancel },
+                    { style: 'destructive', text: copy.aggressiveWarningConfirm, onPress: () => form.setTone(tone) },
+                  ]);
+                  return;
+                }
+
+                form.setTone(tone);
+              }}
+              options={alertTones.map((value) => ({
+                key: value,
+                value,
+                label:
+                  value === 'aggressive' && !canUseAggressiveTone ? copy.premiumTone(copy.tones[value]) : copy.tones[value],
+              }))}
+              selected={form.tone}
+            />
+            <Text maxFontSizeMultiplier={1.5} style={styles.note}>
+              {copy.deliveryHints[form.delivery]} {copy.toneHints[form.tone]}
+            </Text>
+          </FormField>
+        ) : null}
 
         {isFirstRule && rule === null ? (
           <Text maxFontSizeMultiplier={1.5} style={styles.note}>

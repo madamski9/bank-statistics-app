@@ -12,7 +12,7 @@ import { premiumCopy } from '../premium-copy';
 
 export function PremiumCodeForm() {
   const copy = useCopy(premiumCopy);
-  const redeem = useMutation(api.premiumCodes.redeem);
+  const redeem = useMutation(api.premiumCodes.redeemWithResult);
   const [isOpen, setIsOpen] = useState(false);
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +28,11 @@ export function PremiumCodeForm() {
     setIsRedeeming(true);
 
     try {
-      await redeem({ code });
+      const result = await redeem({ code });
+
+      if (result.status === 'rejected') {
+        setError(isPremiumCodeInvalid(result.error) ? copy.codeInvalid : copy.codeAlreadyPermanent);
+      }
     } catch (failure) {
       const data = failure instanceof ConvexError ? failure.data : null;
       setError(
@@ -38,6 +42,7 @@ export function PremiumCodeForm() {
             ? copy.codeAlreadyPermanent
             : copy.codeFailed,
       );
+    } finally {
       setIsRedeeming(false);
     }
   }, [canSubmit, code, copy, redeem]);

@@ -6,7 +6,7 @@ import { captureHealth } from './capture-health';
 const now = new Date('2026-09-30T12:00:00Z');
 const diagnostics: StorageDiagnostics = { cipherVersion: '4.10', databasePath: '/outbox' };
 
-function captured(bank: 'millennium' | 'pko', capturedAt: string): IngestionRecord {
+function captured(bank: 'millennium' | 'pko' | 'mbank', capturedAt: string): IngestionRecord {
   return {
     id: `${bank}-${capturedAt}`,
     bank,
@@ -22,13 +22,25 @@ function captured(bank: 'millennium' | 'pko', capturedAt: string): IngestionReco
   };
 }
 
-function stateOf(health: ReturnType<typeof captureHealth>, bank: 'millennium' | 'pko') {
+function stateOf(health: ReturnType<typeof captureHealth>, bank: 'millennium' | 'pko' | 'mbank') {
   const found = health.banks.find((entry) => entry.bank === bank);
 
   return [found?.state, found?.reason];
 }
 
 describe('capture health', () => {
+  test('tracks an enabled mBank automation and its captured transfers', () => {
+    const health = captureHealth({
+      records: [captured('mbank', '2026-09-29T10:00:00Z')],
+      diagnostics,
+      enabledBanks: ['mbank'],
+      now,
+    });
+
+    expect(stateOf(health, 'mbank')).toEqual(['working', null]);
+    expect(stateOf(health, 'millennium')).toEqual(['unconfigured', null]);
+  });
+
   test('reports a bank that captured recently as working', () => {
     const health = captureHealth({
       records: [captured('millennium', '2026-09-29T10:00:00Z')],

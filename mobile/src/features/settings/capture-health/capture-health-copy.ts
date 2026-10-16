@@ -4,7 +4,7 @@ export const captureHealthCopy = defineCopy({
   pl: {
     title: 'Przechwytywanie',
     close: 'Zamknij',
-    banks: { millennium: 'Millennium', pko: 'PKO BP', ing: 'ING' },
+    banks: { millennium: 'Millennium', pko: 'PKO BP', ing: 'ING', mbank: 'mBank' },
     states: {
       working: 'Działa',
       attention: 'Wymaga uwagi',
@@ -36,6 +36,7 @@ export const captureHealthCopy = defineCopy({
       parserRulesUnavailable: 'Brak reguł rozpoznawania powiadomień w tej wersji aplikacji',
       notTransaction: 'Powiadomienie nie było transakcją',
       cardPaymentAwaitingApplePay: 'Czekamy na powiadomienie Portfela z nazwą sklepu',
+      cardPaymentAlreadySaved: 'Płatność była już zapisana z powiadomienia Portfela',
       unknown: 'Nieznany błąd',
     },
     setUp: (bank: string) => `Skonfiguruj skrót dla ${bank}`,
@@ -51,7 +52,7 @@ export const captureHealthCopy = defineCopy({
   en: {
     title: 'Capture',
     close: 'Close',
-    banks: { millennium: 'Millennium', pko: 'PKO BP', ing: 'ING' },
+    banks: { millennium: 'Millennium', pko: 'PKO BP', ing: 'ING', mbank: 'mBank' },
     states: {
       working: 'Working',
       attention: 'Needs attention',
@@ -83,6 +84,7 @@ export const captureHealthCopy = defineCopy({
       parserRulesUnavailable: 'This app version is missing its notification rules',
       notTransaction: 'The notification was not a transaction',
       cardPaymentAwaitingApplePay: 'Waiting for the Wallet notification with the shop name',
+      cardPaymentAlreadySaved: 'The payment was already saved from the Wallet notification',
       unknown: 'Unknown error',
     },
     setUp: (bank: string) => `Set up the shortcut for ${bank}`,

@@ -130,6 +130,7 @@ describe('export file', () => {
       'general-pko',
       'general-erste',
       'general-ing',
+      'general-mbank',
     ]);
     expect(data.notes.length).toBeGreaterThan(0);
   });

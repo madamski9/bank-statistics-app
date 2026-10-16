@@ -107,6 +107,50 @@ describe('planSync', () => {
     expect(transactionCodec.fromChange(pushed)).toMatchObject({ bank: 'pko' });
   });
 
+  test('synchronizes an unknown captured bank without changing its attribution', () => {
+    const captured = manual({
+      id: 'capture-zen',
+      bank: 'unknown',
+      origin: 'capture',
+      transactionType: 'cardPayment',
+      accountId: undefined,
+      sourceApp: 'com.apple.Passbook',
+    });
+    const result = plan({ local: [captured], remote: [], ledger: {}, now });
+    const [pushed] = result.push;
+
+    if (pushed === undefined || pushed.deleted) {
+      throw new Error('Expected the captured payment to be pushed.');
+    }
+
+    expect(transactionCodec.isPushable(pushed)).toBe(true);
+    expect(pushed).toMatchObject({ bank: 'unknown', origin: 'capture' });
+    expect(transactionCodec.fromChange(pushed)).toEqual(captured);
+    expect(plan({ local: [], remote: [pushed], ledger: {}, now }).saveLocally).toEqual([captured]);
+  });
+
+  test('synchronizes mBank transfers and restores their bank and source on another device', () => {
+    const captured = manual({
+      id: 'capture-mbank',
+      bank: 'mbank',
+      origin: 'capture',
+      transactionType: 'outgoingTransfer',
+      merchant: 'JAN',
+      accountId: undefined,
+      sourceApp: 'pl.mbank',
+    });
+    const result = plan({ local: [captured], remote: [], ledger: {}, now });
+    const [pushed] = result.push;
+
+    if (pushed === undefined || pushed.deleted) {
+      throw new Error('Expected the captured transfer to be pushed.');
+    }
+
+    expect(transactionCodec.isPushable(pushed)).toBe(true);
+    expect(plan({ local: [], remote: [pushed], ledger: {}, now }).saveLocally).toEqual([captured]);
+    expect(transactionCodec.fromChange({ ...pushed, sourceApp: undefined })).toEqual(captured);
+  });
+
   test('does not upload synthetic captured transactions', () => {
     const synthetic = manual({
       id: 'capture-test',

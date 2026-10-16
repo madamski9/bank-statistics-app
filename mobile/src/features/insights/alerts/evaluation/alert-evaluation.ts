@@ -31,7 +31,7 @@ function isWithin(record: IngestionRecord, window: AlertWindow): boolean {
   return !Number.isNaN(occurred) && occurred >= window.startMs && occurred < window.endMs;
 }
 
-function matchesScope(
+export function matchesScope(
   record: IngestionRecord,
   scope: AlertScope,
   rules: CategorizationRule[],
