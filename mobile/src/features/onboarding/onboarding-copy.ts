@@ -80,7 +80,7 @@ export const onboardingCopy = defineCopy({
       description:
         'Na iPhonie Skróty przekazują powiadomienia o transakcjach do BankStats. To Ty tworzysz i zatwierdzasz automatyzację.',
       warning:
-        'Włącz powiadomienia banku i Portfela Apple. Gdy są wyłączone, aplikacja nie otrzyma tych transakcji automatycznie.',
+        'Włącz powiadomienia banku i Portfela Apple. Gdy są wyłączone albo działa tryb Nie przeszkadzać, aplikacja nie otrzyma tych transakcji automatycznie.',
       manualNote: 'Transakcje nadal możesz dodać ręcznie.',
     },
     banks: {
@@ -197,7 +197,7 @@ export const onboardingCopy = defineCopy({
       description:
         'On iPhone, Shortcuts passes transaction notifications to BankStats. You create and approve the automation yourself.',
       warning:
-        "Turn on notifications for your bank and Apple Wallet. When they're off, the app won't receive those transactions automatically.",
+        "Turn on notifications for your bank and Apple Wallet. When they're off or Do Not Disturb is on, the app won't receive those transactions automatically.",
       manualNote: 'You can still add transactions manually.',
     },
     banks: {

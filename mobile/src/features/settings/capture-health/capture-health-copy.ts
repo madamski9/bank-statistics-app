@@ -46,7 +46,7 @@ export const captureHealthCopy = defineCopy({
     selfTestPassed: 'Działa: reguły są wczytane, a zaszyfrowana baza przyjmuje zapis.',
     selfTestFailed: (reason: string) => `Nie działa: ${reason}`,
     footnote:
-      'Stan opieramy na dowodach z tego telefonu: przechwyconych transakcjach i ostatnich uruchomieniach automatyzacji. Brak wydatków nie jest błędem.',
+      'Stan opieramy na dowodach z tego telefonu: przechwyconych transakcjach i ostatnich uruchomieniach automatyzacji. Brak wydatków nie jest błędem. Gdy działa tryb Nie przeszkadzać, iOS nie uruchamia automatyzacji i transakcje nie są zapisywane.',
     iosOnly: 'Przechwytywanie powiadomień działa na razie tylko na iOS.',
   },
   en: {
@@ -94,7 +94,7 @@ export const captureHealthCopy = defineCopy({
     selfTestPassed: 'Working: the rules are loaded and the encrypted database accepts writes.',
     selfTestFailed: (reason: string) => `Not working: ${reason}`,
     footnote:
-      'The status relies on evidence from this phone: captured transactions and recent automation runs. No spending is not an error.',
+      'The status relies on evidence from this phone: captured transactions and recent automation runs. No spending is not an error. While Do Not Disturb is on, iOS does not run the automation and transactions are not saved.',
     iosOnly: 'Notification capture currently works on iOS only.',
   },
 });
