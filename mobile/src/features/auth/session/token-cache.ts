@@ -1,21 +1,8 @@
 import * as SecureStore from 'expo-secure-store';
 
-export const tokenCache = {
-  async getToken(key: string) {
-    try {
-      return await SecureStore.getItemAsync(key);
-    } catch {
-      return null;
-    }
-  },
-  async saveToken(key: string, value: string) {
-    try {
-      await SecureStore.setItemAsync(key, value);
-    } catch {}
-  },
-  async clearToken(key: string) {
-    try {
-      await SecureStore.deleteItemAsync(key);
-    } catch {}
-  },
-};
+import { createSessionTokenCache } from './session-token-cache';
+
+export const tokenCache = createSessionTokenCache(SecureStore, {
+  keychainService: 'bankstats.session',
+  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+});

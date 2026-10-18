@@ -19,6 +19,12 @@ export interface AlertRunContext {
   sent: string[];
   notifier: AlertNotifier;
   hasAggressiveTone?: boolean;
+  missedCaptures?: AlertPause;
+}
+
+export interface AlertPause {
+  sinceMs: number;
+  untilMs: number;
 }
 
 interface PendingAlert {
@@ -32,12 +38,44 @@ export function paymentSentKey(ruleId: string, recordId: string): string {
   return JSON.stringify(['payment', ruleId, recordId]);
 }
 
-function isFreshManualPayment(record: IngestionRecord, rule: AlertRule, reference: Date): boolean {
+function isMissedCapture(capturedMs: number, missedCaptures: AlertPause | undefined): boolean {
+  return missedCaptures !== undefined && capturedMs >= missedCaptures.sinceMs && capturedMs < missedCaptures.untilMs;
+}
+
+function capturedOrder(left: IngestionRecord, right: IngestionRecord): number {
+  const byTime = new Date(left.capturedAt).getTime() - new Date(right.capturedAt).getTime();
+
+  return Number.isNaN(byTime) || byTime === 0 ? left.id.localeCompare(right.id) : byTime;
+}
+
+function isMissedCaptureRecord(record: IngestionRecord, missedCaptures: AlertPause | undefined): boolean {
+  return record.origin !== 'manual' && isMissedCapture(new Date(record.capturedAt).getTime(), missedCaptures);
+}
+
+function ledgerWhenCaptured(
+  record: IngestionRecord,
+  records: IngestionRecord[],
+  missedCaptures: AlertPause | undefined,
+): IngestionRecord[] {
+  if (!isMissedCaptureRecord(record, missedCaptures)) {
+    return records;
+  }
+
+  return records.filter(
+    (candidate) => !isMissedCaptureRecord(candidate, missedCaptures) || capturedOrder(candidate, record) <= 0,
+  );
+}
+
+function isFreshUnannouncedPayment(
+  record: IngestionRecord,
+  rule: AlertRule,
+  { reference, missedCaptures }: AlertRunContext,
+): boolean {
   const capturedMs = new Date(record.capturedAt).getTime();
 
   return (
-    record.origin === 'manual' &&
     !Number.isNaN(capturedMs) &&
+    (record.origin === 'manual' || isMissedCapture(capturedMs, missedCaptures)) &&
     capturedMs >= new Date(rule.createdAt).getTime() &&
     reference.getTime() - capturedMs <= recentPaymentMs
   );
@@ -66,16 +104,22 @@ function thresholdAlerts(
 function paymentAlerts(
   rule: AlertRule,
   records: IngestionRecord[],
-  { reference, rules, sent, hasAggressiveTone }: AlertRunContext,
+  context: AlertRunContext,
 ): PendingAlert[] {
-  return records.flatMap((record) => {
+  const { reference, rules, sent, hasAggressiveTone, missedCaptures } = context;
+
+  return [...records].sort(capturedOrder).flatMap((record) => {
     const key = paymentSentKey(rule.id, record.id);
 
-    if (sent.includes(key) || !isFreshManualPayment(record, rule, reference)) {
+    if (sent.includes(key) || !isFreshUnannouncedPayment(record, rule, context)) {
       return [];
     }
 
-    const message = paymentAlertMessage(rule, record, records, { reference, rules, hasAggressiveTone });
+    const message = paymentAlertMessage(rule, record, ledgerWhenCaptured(record, records, missedCaptures), {
+      reference,
+      rules,
+      hasAggressiveTone,
+    });
 
     return message === null ? [] : [{ message, keys: [key] }];
   });

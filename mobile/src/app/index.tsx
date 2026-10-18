@@ -13,6 +13,7 @@ import { PrivacyBoundary } from '@/features/settings/privacy/privacy-shield';
 import { CloudSyncChoiceGate } from '@/features/data/sync/cloud-sync/cloud-sync-choice-gate';
 import { OwnedDeviceGate } from '@/features/data/sync/device-ownership/owned-device-gate';
 import { SignedOutSpendingWidget } from '@/features/widgets/use-spending-widget';
+import { AlertsPausedWhileSignedOut } from '@/features/insights/alerts/delivery/alerts-paused-while-signed-out';
 
 export { ScreenError as ErrorBoundary };
 
@@ -45,6 +46,7 @@ export default function Index() {
       <Show when="signed-out">
         <SignInScreen />
         <SignedOutSpendingWidget />
+        <AlertsPausedWhileSignedOut />
       </Show>
     </>
   );
