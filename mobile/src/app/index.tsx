@@ -1,6 +1,7 @@
 import { Show, useAuth } from '@clerk/expo';
 
 import { LoadingScreen } from '@/features/app-shell/brand/loading-screen';
+import { ScreenError } from '@/features/app-shell/errors/screen-error';
 
 import { AccountStandingGate } from '@/features/settings/account-data/account-standing/account-standing-gate';
 import { SignInScreen } from '@/features/auth/sign-in/sign-in-screen';
@@ -12,6 +13,8 @@ import { PrivacyBoundary } from '@/features/settings/privacy/privacy-shield';
 import { CloudSyncChoiceGate } from '@/features/data/sync/cloud-sync/cloud-sync-choice-gate';
 import { OwnedDeviceGate } from '@/features/data/sync/device-ownership/owned-device-gate';
 import { SignedOutSpendingWidget } from '@/features/widgets/use-spending-widget';
+
+export { ScreenError as ErrorBoundary };
 
 export default function Index() {
   const { isLoaded } = useAuth();
