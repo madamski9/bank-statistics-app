@@ -19,6 +19,12 @@ export interface AlertRunContext {
   sent: string[];
   notifier: AlertNotifier;
   hasAggressiveTone?: boolean;
+  missedCaptures?: AlertPause;
+}
+
+export interface AlertPause {
+  sinceMs: number;
+  untilMs: number;
 }
 
 interface PendingAlert {
@@ -32,12 +38,20 @@ export function paymentSentKey(ruleId: string, recordId: string): string {
   return JSON.stringify(['payment', ruleId, recordId]);
 }
 
-function isFreshManualPayment(record: IngestionRecord, rule: AlertRule, reference: Date): boolean {
+function isMissedCapture(capturedMs: number, missedCaptures: AlertPause | undefined): boolean {
+  return missedCaptures !== undefined && capturedMs >= missedCaptures.sinceMs && capturedMs < missedCaptures.untilMs;
+}
+
+function isFreshUnannouncedPayment(
+  record: IngestionRecord,
+  rule: AlertRule,
+  { reference, missedCaptures }: AlertRunContext,
+): boolean {
   const capturedMs = new Date(record.capturedAt).getTime();
 
   return (
-    record.origin === 'manual' &&
     !Number.isNaN(capturedMs) &&
+    (record.origin === 'manual' || isMissedCapture(capturedMs, missedCaptures)) &&
     capturedMs >= new Date(rule.createdAt).getTime() &&
     reference.getTime() - capturedMs <= recentPaymentMs
   );
@@ -66,12 +80,14 @@ function thresholdAlerts(
 function paymentAlerts(
   rule: AlertRule,
   records: IngestionRecord[],
-  { reference, rules, sent, hasAggressiveTone }: AlertRunContext,
+  context: AlertRunContext,
 ): PendingAlert[] {
+  const { reference, rules, sent, hasAggressiveTone } = context;
+
   return records.flatMap((record) => {
     const key = paymentSentKey(rule.id, record.id);
 
-    if (sent.includes(key) || !isFreshManualPayment(record, rule, reference)) {
+    if (sent.includes(key) || !isFreshUnannouncedPayment(record, rule, context)) {
       return [];
     }
 
