@@ -55,7 +55,7 @@ const signedUpdates = {
 const config: ExpoConfig = {
   name: 'BankStats',
   slug: 'bank-statistics-app',
-  version: '1.0.8',
+  version: '1.0.9',
   runtimeVersion: {
     policy: 'appVersion',
   },
