@@ -169,7 +169,19 @@ export const standing = query({
 export const list = query({
   args: { installationId: v.string() },
   handler: async (ctx, { installationId }) => {
-    const { ownerId, device: current } = await requireActiveDevice(ctx, installationId);
+    const identity = await ctx.auth.getUserIdentity();
+
+    if (identity === null || typeof identity.sid !== 'string' || identity.sid === '') {
+      return [];
+    }
+
+    const found = await findActiveDevice(ctx, installationId);
+
+    if (!('device' in found)) {
+      return [];
+    }
+
+    const { ownerId, device: current } = found;
     const devices = await activeDevices(ctx, ownerId).take(maximumActiveDevices);
 
     return devices

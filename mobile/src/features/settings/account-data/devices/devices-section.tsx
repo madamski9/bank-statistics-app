@@ -1,10 +1,11 @@
 import { api } from '@bankstats/convex/convex/_generated/api';
 import type { Id } from '@bankstats/convex/convex/_generated/dataModel';
-import { useMutation, useQuery } from 'convex/react';
+import { useConvexAuth, useMutation, useQuery } from 'convex/react';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { overviewColors, overviewSpacing } from '@/features/app-shell/theme/overview-theme';
+import { useCloudSyncEnabled } from '@/features/data/sync/cloud-sync/cloud-sync-preference';
 import { useInstallationId } from '@/features/data/sync/device-ownership/use-installation-id';
 import { useCopy } from '@/features/app-shell/localization/language';
 
@@ -13,8 +14,11 @@ import { devicePlatformName, lastSeenLabel } from './device-labels';
 
 export function DevicesSection() {
   const copy = useCopy(accountDataCopy);
+  const { isAuthenticated } = useConvexAuth();
+  const isCloudEnabled = useCloudSyncEnabled();
   const installationId = useInstallationId();
-  const devices = useQuery(api.devices.list, installationId === null ? 'skip' : { installationId });
+  const canListDevices = isCloudEnabled === true && isAuthenticated && installationId !== null;
+  const devices = useQuery(api.devices.list, canListDevices ? { installationId } : 'skip');
   const revoke = useMutation(api.devices.revoke);
   const [error, setError] = useState<string | null>(null);
   const [revokingId, setRevokingId] = useState<Id<'devices'> | null>(null);
@@ -45,10 +49,22 @@ export function DevicesSection() {
     );
   };
 
-  if (devices === undefined) {
+  if (isCloudEnabled === false) {
     return (
       <View style={styles.placeholder}>
-        {installationId === null ? null : <ActivityIndicator color={overviewColors.textSecondary} />}
+        <Text maxFontSizeMultiplier={1.5} style={styles.meta}>
+          {copy.devicesCloudOff}
+        </Text>
+      </View>
+    );
+  }
+
+  if (devices === undefined || devices.length === 0) {
+    return (
+      <View style={styles.placeholder}>
+        {canListDevices && devices === undefined ? (
+          <ActivityIndicator color={overviewColors.textSecondary} />
+        ) : null}
         <Text maxFontSizeMultiplier={1.5} style={styles.meta}>
           {copy.devicesOffline}
         </Text>
