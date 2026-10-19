@@ -1,4 +1,4 @@
-import { useAuth, useSession } from '@clerk/expo';
+import { useAuth } from '@clerk/expo';
 import * as SecureStore from 'expo-secure-store';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
@@ -6,11 +6,10 @@ import { Platform } from 'react-native';
 import { appEnvironment } from '@/app-environment';
 import { LoadingScreen } from '@/features/app-shell/brand/loading-screen';
 
-import { focusAnnouncementKey, shouldShowFocusAnnouncement } from './focus-announcement';
 import { finishOnboardingReplay, useOnboardingReplay } from './onboarding-replay';
 import { OnboardingScreen } from './onboarding-screen';
-import { sessionAnnouncementKey, shouldShowSessionAnnouncement } from './session-announcement';
-import { SessionAnnouncementScreen } from './session-announcement-screen';
+import { releaseNotesKey, shouldShowReleaseNotes } from './release-notes';
+import { ReleaseNotesScreen } from './release-notes-screen';
 import { banksKey } from './selected-banks';
 
 interface OnboardingGateProps {
@@ -20,8 +19,7 @@ interface OnboardingGateProps {
 interface OnboardingState {
   userId: string;
   completed: boolean;
-  hasSeenFocusAnnouncement: boolean;
-  hasSeenSessionAnnouncement: boolean;
+  hasSeenReleaseNotes: boolean;
 }
 
 function completedKey(userId: string): string {
@@ -30,7 +28,6 @@ function completedKey(userId: string): string {
 
 export function OnboardingGate({ children }: OnboardingGateProps) {
   const { userId } = useAuth();
-  const { session } = useSession();
   const [state, setState] = useState<OnboardingState | null>(null);
   const replay = useOnboardingReplay();
 
@@ -43,27 +40,20 @@ export function OnboardingGate({ children }: OnboardingGateProps) {
 
     void Promise.all([
       SecureStore.getItemAsync(completedKey(userId)),
-      SecureStore.getItemAsync(focusAnnouncementKey(userId)).catch(() => null),
-      SecureStore.getItemAsync(sessionAnnouncementKey(userId)).catch(() => null),
+      SecureStore.getItemAsync(releaseNotesKey(userId)).catch(() => null),
     ])
-      .then(([completed, focusAnnouncement, sessionAnnouncement]) => {
+      .then(([completed, releaseNotes]) => {
         if (isActive) {
           setState({
             userId,
             completed: completed === 'true',
-            hasSeenFocusAnnouncement: focusAnnouncement === 'true',
-            hasSeenSessionAnnouncement: sessionAnnouncement === 'true',
+            hasSeenReleaseNotes: releaseNotes === 'true',
           });
         }
       })
       .catch(() => {
         if (isActive) {
-          setState({
-            userId,
-            completed: false,
-            hasSeenFocusAnnouncement: false,
-            hasSeenSessionAnnouncement: false,
-          });
+          setState({ userId, completed: false, hasSeenReleaseNotes: false });
         }
       });
 
@@ -83,104 +73,53 @@ export function OnboardingGate({ children }: OnboardingGateProps) {
         JSON.stringify(selectedBanks),
       );
       await SecureStore.setItemAsync(completedKey(userId), 'true');
-      await SecureStore.setItemAsync(focusAnnouncementKey(userId), 'true');
-      setState((current) => ({
-        userId,
-        completed: true,
-        hasSeenFocusAnnouncement: true,
-        hasSeenSessionAnnouncement: current?.hasSeenSessionAnnouncement ?? false,
-      }));
+      await SecureStore.setItemAsync(releaseNotesKey(userId), 'true');
+      setState({ userId, completed: true, hasSeenReleaseNotes: true });
       finishOnboardingReplay();
     },
     [userId],
   );
 
-  const dismissFocusAnnouncement = useCallback(async () => {
+  const dismissReleaseNotes = useCallback(async () => {
     if (userId == null) {
       return;
     }
 
-    setState((current) => ({
-      userId,
-      completed: true,
-      hasSeenFocusAnnouncement: true,
-      hasSeenSessionAnnouncement: current?.hasSeenSessionAnnouncement ?? false,
-    }));
-    await SecureStore.setItemAsync(focusAnnouncementKey(userId), 'true').catch(() => undefined);
-  }, [userId]);
-
-  const dismissSessionAnnouncement = useCallback(async () => {
-    if (userId == null) {
-      return;
-    }
-
-    setState((current) => ({
-      userId,
-      completed: true,
-      hasSeenFocusAnnouncement: current?.hasSeenFocusAnnouncement ?? true,
-      hasSeenSessionAnnouncement: true,
-    }));
-    await SecureStore.setItemAsync(sessionAnnouncementKey(userId), 'true').catch(() => undefined);
+    setState({ userId, completed: true, hasSeenReleaseNotes: true });
+    await SecureStore.setItemAsync(releaseNotesKey(userId), 'true').catch(() => undefined);
   }, [userId]);
 
   if (userId == null || state == null || state.userId !== userId) {
     return <LoadingScreen />;
   }
 
-  if (replay === 'session') {
+  if (replay === 'releaseNotes') {
     return (
-      <SessionAnnouncementScreen
-        onLater={finishOnboardingReplay}
+      <ReleaseNotesScreen
+        onClose={finishOnboardingReplay}
         onSigningOut={async () => finishOnboardingReplay()}
       />
     );
   }
 
-  if (replay === 'focus') {
-    return (
-      <OnboardingScreen
-        flow="focus"
-        onCancel={finishOnboardingReplay}
-        onComplete={async () => finishOnboardingReplay()}
-      />
-    );
-  }
-
   if (state.completed && replay === 'none') {
-    const showsFocusAnnouncement = shouldShowFocusAnnouncement({
+    const showsReleaseNotes = shouldShowReleaseNotes({
       hasCompletedOnboarding: state.completed,
-      hasSeenAnnouncement: state.hasSeenFocusAnnouncement,
+      hasSeenReleaseNotes: state.hasSeenReleaseNotes,
       lane: appEnvironment.lane,
       platform: Platform.OS,
     });
 
-    const showsSessionAnnouncement = shouldShowSessionAnnouncement({
-      hasCompletedOnboarding: state.completed,
-      hasSeenAnnouncement: state.hasSeenSessionAnnouncement,
-      lane: appEnvironment.lane,
-      session,
-    });
-
-    if (!showsFocusAnnouncement && showsSessionAnnouncement) {
+    if (showsReleaseNotes) {
       return (
-        <SessionAnnouncementScreen
-          onLater={() => void dismissSessionAnnouncement()}
-          onSigningOut={dismissSessionAnnouncement}
+        <ReleaseNotesScreen
+          onClose={() => void dismissReleaseNotes()}
+          onSigningOut={dismissReleaseNotes}
         />
       );
     }
 
-    if (!showsFocusAnnouncement) {
-      return children;
-    }
-
-    return (
-      <OnboardingScreen
-        flow="focus"
-        onCancel={() => void dismissFocusAnnouncement()}
-        onComplete={dismissFocusAnnouncement}
-      />
-    );
+    return children;
   }
 
   return (
