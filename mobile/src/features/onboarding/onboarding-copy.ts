@@ -113,18 +113,23 @@ export const onboardingCopy = defineCopy({
       note: 'To samo ustaw w innych trybach skupienia, z których korzystasz, na przykład w trybie Sen.',
     },
     releaseNotes: {
+      version: 'Wersja 1.0.9',
       eyebrow: 'NOWOŚĆ DLA BETA TESTERÓW',
       title: 'Hej, beta testerzy!',
       description:
         'W wersji 1.0.9 możesz ustawić ton powiadomień o limitach: pasywny, lekko agresywny albo bardzo agresywny, z wulgaryzmami.',
       stepOne: '1. W zakładce Sklepy stuknij przycisk limitów.',
       stepTwo: '2. Ustaw limit, zostaw włączone Powiadomienia i wybierz ton, na przykład Bardzo agresywny.',
-      signOutFixEyebrow: 'POPRAWKA W WERSJI 1.0.9',
-      signOutFixTitle: 'Koniec z wylogowywaniem',
-      signOutFixDescription:
-        'Naprawiłem błąd, przez który aplikacja czasem wylogowywała bez powodu. Wyloguj się i zaloguj ponownie, a potem nie powinno się to już zdarzać.',
-      signOutFixStepOne: '1. W profilu stuknij Wyloguj się.',
-      signOutFixStepTwo: '2. Zaloguj się ponownie na to samo konto.',
+    },
+    sessionAnnouncement: {
+      eyebrow: 'NOWOŚĆ DLA BETA TESTERÓW',
+      title: 'Koniec z wylogowywaniem',
+      description:
+        'Aplikacja nie będzie już sama Cię wylogowywać. Żeby ta zmiana zadziałała, wyloguj się i zaloguj ponownie. Wystarczy zrobić to raz, potem zostaniesz zalogowany, dopóki sam się nie wylogujesz.',
+      note: 'Transakcje i ustawienia zostają na telefonie. Po zalogowaniu wszystko będzie na swoim miejscu.',
+      signOut: 'Wyloguj się teraz',
+      later: 'Później',
+      signOutFailed: 'Nie udało się wylogować. Spróbuj ponownie.',
     },
     focusSetup: {
       eyebrow: 'USTAWIENIA IPHONE’A',
@@ -266,18 +271,23 @@ export const onboardingCopy = defineCopy({
       note: 'Do the same in any other Focus you use, such as Sleep.',
     },
     releaseNotes: {
+      version: 'Version 1.0.9',
       eyebrow: 'NEW FOR BETA TESTERS',
       title: 'Hey, beta testers!',
       description:
         'In version 1.0.9 you can choose the tone of limit alerts: Calm, Snarky or Brutal, which swears.',
       stepOne: '1. On the Shops tab, tap the limits button.',
       stepTwo: '2. Set a limit, keep Notifications on and choose a tone, such as Brutal.',
-      signOutFixEyebrow: 'FIXED IN VERSION 1.0.9',
-      signOutFixTitle: 'No more random sign-outs',
-      signOutFixDescription:
-        "I've fixed a bug that sometimes signed you out for no reason. Sign out and sign in again once, and it shouldn't happen anymore.",
-      signOutFixStepOne: '1. In your profile, tap Sign out.',
-      signOutFixStepTwo: '2. Sign in again to the same account.',
+    },
+    sessionAnnouncement: {
+      eyebrow: 'NEW FOR BETA TESTERS',
+      title: 'No more surprise sign-outs',
+      description:
+        "The app won't sign you out on its own anymore. To switch this on, sign out and sign in again. You only need to do it once, then you stay signed in until you sign out yourself.",
+      note: 'Your transactions and settings stay on this phone. Everything will be where you left it after you sign in.',
+      signOut: 'Sign out now',
+      later: 'Later',
+      signOutFailed: 'Could not sign out. Please try again.',
     },
     focusSetup: {
       eyebrow: 'IPHONE SETTINGS',

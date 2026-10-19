@@ -39,22 +39,6 @@ export function AlertToneNotesStep() {
   );
 }
 
-export function SignOutFixNotesStep() {
-  const copy = useCopy(onboardingCopy).releaseNotes;
-
-  return (
-    <View style={stepStyles.stepContent}>
-      <SectionHeading
-        eyebrow={copy.signOutFixEyebrow}
-        title={copy.signOutFixTitle}
-        description={copy.signOutFixDescription}
-      />
-      <InstructionCard number={1} title={copy.signOutFixStepOne} />
-      <InstructionCard number={2} title={copy.signOutFixStepTwo} />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   stepScreenshot: {
     width: '100%',
