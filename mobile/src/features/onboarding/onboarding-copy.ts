@@ -118,6 +118,16 @@ export const onboardingCopy = defineCopy({
       description:
         'Dodałem nową funkcję. Gdy włączony jest tryb Nie przeszkadzać, iOS nie uruchamia automatyzacji i transakcje się nie zapisują. Dodaj aplikacje banków i Portfel do wyjątków. Na następnym ekranie pokazuję, jak to zrobić.',
     },
+    sessionAnnouncement: {
+      eyebrow: 'NOWOŚĆ DLA BETA TESTERÓW',
+      title: 'Koniec z wylogowywaniem',
+      description:
+        'Aplikacja nie będzie już sama Cię wylogowywać. Żeby ta zmiana zadziałała, wyloguj się i zaloguj ponownie. Wystarczy zrobić to raz, potem zostaniesz zalogowany, dopóki sam się nie wylogujesz.',
+      note: 'Transakcje i ustawienia zostają na telefonie. Po zalogowaniu wszystko będzie na swoim miejscu.',
+      signOut: 'Wyloguj się teraz',
+      later: 'Później',
+      signOutFailed: 'Nie udało się wylogować. Spróbuj ponownie.',
+    },
     focusSetup: {
       eyebrow: 'USTAWIENIA IPHONE’A',
       title: 'Dodaj banki do wyjątków',
@@ -259,6 +269,16 @@ export const onboardingCopy = defineCopy({
       title: 'Hey, beta testers!',
       description:
         "I've added something new. While Do Not Disturb is on, iOS doesn't run the automation and transactions aren't saved. Allow your bank apps and Wallet in it. The next screen shows how.",
+    },
+    sessionAnnouncement: {
+      eyebrow: 'NEW FOR BETA TESTERS',
+      title: 'No more surprise sign-outs',
+      description:
+        "The app won't sign you out on its own anymore. To switch this on, sign out and sign in again. You only need to do it once, then you stay signed in until you sign out yourself.",
+      note: 'Your transactions and settings stay on this phone. Everything will be where you left it after you sign in.',
+      signOut: 'Sign out now',
+      later: 'Later',
+      signOutFailed: 'Could not sign out. Please try again.',
     },
     focusSetup: {
       eyebrow: 'IPHONE SETTINGS',

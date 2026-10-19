@@ -1,4 +1,4 @@
-import { useAuth } from '@clerk/expo';
+import { useAuth, useSession } from '@clerk/expo';
 import * as SecureStore from 'expo-secure-store';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
@@ -9,6 +9,8 @@ import { LoadingScreen } from '@/features/app-shell/brand/loading-screen';
 import { focusAnnouncementKey, shouldShowFocusAnnouncement } from './focus-announcement';
 import { finishOnboardingReplay, useOnboardingReplay } from './onboarding-replay';
 import { OnboardingScreen } from './onboarding-screen';
+import { sessionAnnouncementKey, shouldShowSessionAnnouncement } from './session-announcement';
+import { SessionAnnouncementScreen } from './session-announcement-screen';
 import { banksKey } from './selected-banks';
 
 interface OnboardingGateProps {
@@ -19,6 +21,7 @@ interface OnboardingState {
   userId: string;
   completed: boolean;
   hasSeenFocusAnnouncement: boolean;
+  hasSeenSessionAnnouncement: boolean;
 }
 
 function completedKey(userId: string): string {
@@ -27,6 +30,7 @@ function completedKey(userId: string): string {
 
 export function OnboardingGate({ children }: OnboardingGateProps) {
   const { userId } = useAuth();
+  const { session } = useSession();
   const [state, setState] = useState<OnboardingState | null>(null);
   const replay = useOnboardingReplay();
 
@@ -40,19 +44,26 @@ export function OnboardingGate({ children }: OnboardingGateProps) {
     void Promise.all([
       SecureStore.getItemAsync(completedKey(userId)),
       SecureStore.getItemAsync(focusAnnouncementKey(userId)).catch(() => null),
+      SecureStore.getItemAsync(sessionAnnouncementKey(userId)).catch(() => null),
     ])
-      .then(([completed, focusAnnouncement]) => {
+      .then(([completed, focusAnnouncement, sessionAnnouncement]) => {
         if (isActive) {
           setState({
             userId,
             completed: completed === 'true',
             hasSeenFocusAnnouncement: focusAnnouncement === 'true',
+            hasSeenSessionAnnouncement: sessionAnnouncement === 'true',
           });
         }
       })
       .catch(() => {
         if (isActive) {
-          setState({ userId, completed: false, hasSeenFocusAnnouncement: false });
+          setState({
+            userId,
+            completed: false,
+            hasSeenFocusAnnouncement: false,
+            hasSeenSessionAnnouncement: false,
+          });
         }
       });
 
@@ -73,7 +84,12 @@ export function OnboardingGate({ children }: OnboardingGateProps) {
       );
       await SecureStore.setItemAsync(completedKey(userId), 'true');
       await SecureStore.setItemAsync(focusAnnouncementKey(userId), 'true');
-      setState({ userId, completed: true, hasSeenFocusAnnouncement: true });
+      setState((current) => ({
+        userId,
+        completed: true,
+        hasSeenFocusAnnouncement: true,
+        hasSeenSessionAnnouncement: current?.hasSeenSessionAnnouncement ?? false,
+      }));
       finishOnboardingReplay();
     },
     [userId],
@@ -84,12 +100,40 @@ export function OnboardingGate({ children }: OnboardingGateProps) {
       return;
     }
 
-    setState({ userId, completed: true, hasSeenFocusAnnouncement: true });
+    setState((current) => ({
+      userId,
+      completed: true,
+      hasSeenFocusAnnouncement: true,
+      hasSeenSessionAnnouncement: current?.hasSeenSessionAnnouncement ?? false,
+    }));
     await SecureStore.setItemAsync(focusAnnouncementKey(userId), 'true').catch(() => undefined);
+  }, [userId]);
+
+  const dismissSessionAnnouncement = useCallback(async () => {
+    if (userId == null) {
+      return;
+    }
+
+    setState((current) => ({
+      userId,
+      completed: true,
+      hasSeenFocusAnnouncement: current?.hasSeenFocusAnnouncement ?? true,
+      hasSeenSessionAnnouncement: true,
+    }));
+    await SecureStore.setItemAsync(sessionAnnouncementKey(userId), 'true').catch(() => undefined);
   }, [userId]);
 
   if (userId == null || state == null || state.userId !== userId) {
     return <LoadingScreen />;
+  }
+
+  if (replay === 'session') {
+    return (
+      <SessionAnnouncementScreen
+        onLater={finishOnboardingReplay}
+        onSigningOut={async () => finishOnboardingReplay()}
+      />
+    );
   }
 
   if (replay === 'focus') {
@@ -109,6 +153,22 @@ export function OnboardingGate({ children }: OnboardingGateProps) {
       lane: appEnvironment.lane,
       platform: Platform.OS,
     });
+
+    const showsSessionAnnouncement = shouldShowSessionAnnouncement({
+      hasCompletedOnboarding: state.completed,
+      hasSeenAnnouncement: state.hasSeenSessionAnnouncement,
+      lane: appEnvironment.lane,
+      session,
+    });
+
+    if (!showsFocusAnnouncement && showsSessionAnnouncement) {
+      return (
+        <SessionAnnouncementScreen
+          onLater={() => void dismissSessionAnnouncement()}
+          onSigningOut={dismissSessionAnnouncement}
+        />
+      );
+    }
 
     if (!showsFocusAnnouncement) {
       return children;
