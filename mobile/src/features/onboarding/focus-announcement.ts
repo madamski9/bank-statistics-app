@@ -6,7 +6,7 @@ export interface FocusAnnouncementContext {
 }
 
 export function focusAnnouncementKey(userId: string): string {
-  return `bankstats.focus-announcement.v1.${userId}`;
+  return `bankstats.focus-announcement.v2.${userId}`;
 }
 
 export function shouldShowFocusAnnouncement(context: FocusAnnouncementContext): boolean {
