@@ -24,6 +24,7 @@ export interface BubbleDescriptor {
 interface BubbleFieldProps {
   bubbles: BubbleDescriptor[];
   variant: string;
+  isLoading: boolean;
   onSelect: (key: BubbleKey, origin: BubbleOrigin) => void;
 }
 
@@ -32,10 +33,13 @@ interface BubbleSlotProps {
   variant: string;
   order: number;
   diameter: number;
+  isLoading: boolean;
   left: number;
   top: number;
   onSelect: (key: BubbleKey, origin: BubbleOrigin) => void;
 }
+
+function ignoreSelect() {}
 
 const easeOut = Easing.bezier(0.23, 1, 0.32, 1);
 const swapStagger = 70;
@@ -45,7 +49,7 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-function BubbleSlot({ bubble, variant, order, diameter, left, top, onSelect }: BubbleSlotProps) {
+function BubbleSlot({ bubble, variant, order, diameter, isLoading, left, top, onSelect }: BubbleSlotProps) {
   const [displayedVariant, setDisplayedVariant] = useState(variant);
   const [held, setHeld] = useState(bubble);
   const veil = useSharedValue(0);
@@ -90,6 +94,7 @@ function BubbleSlot({ bubble, variant, order, diameter, left, top, onSelect }: B
         bubbleKey={shown.key}
         caption={shown.caption}
         driftSeed={order}
+        isLoading={isLoading}
         label={shown.label}
         onSelect={onSelect}
         size={diameter}
@@ -118,7 +123,7 @@ function BubbleSlot({ bubble, variant, order, diameter, left, top, onSelect }: B
  * The resting cluster: expenses large, income medium, net flow small, in the arrangement from
  * the sketch. Sizes come from the layout tokens, never from the amounts.
  */
-export function BubbleField({ bubbles, variant, onSelect }: BubbleFieldProps) {
+export function BubbleField({ bubbles, variant, isLoading, onSelect }: BubbleFieldProps) {
   const [field, setField] = useState({ width: 0, height: 0 });
 
   const handleLayout = (event: LayoutChangeEvent) => {
@@ -137,20 +142,19 @@ export function BubbleField({ bubbles, variant, onSelect }: BubbleFieldProps) {
         ? bubbles.map((bubble, index) => {
             const placement = bubbleLayout[bubble.key];
             const diameter = reference * placement.diameter;
+            const left = clamp(field.width * placement.centerX - diameter / 2, 0, Math.max(field.width - diameter, 0));
+            const top = clamp(field.height * placement.centerY - diameter / 2, 0, Math.max(field.height - diameter, 0));
 
             return (
               <BubbleSlot
                 bubble={bubble}
                 diameter={diameter}
+                isLoading={isLoading}
                 key={bubble.key}
-                left={clamp(field.width * placement.centerX - diameter / 2, 0, Math.max(field.width - diameter, 0))}
-                onSelect={onSelect}
+                left={left}
+                onSelect={isLoading ? ignoreSelect : onSelect}
                 order={index}
-                top={clamp(
-                  field.height * placement.centerY - diameter / 2,
-                  0,
-                  Math.max(field.height - diameter, 0),
-                )}
+                top={top}
                 variant={variant}
               />
             );

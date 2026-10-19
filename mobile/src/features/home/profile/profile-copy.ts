@@ -27,6 +27,8 @@ export const profileCopy = defineCopy({
     privacy: 'Prywatność i blokada',
     replayOnboarding: 'Pokaż onboarding (test)',
     replayReleaseNotes: 'Pokaż nowości dla beta testerów (test)',
+    previewPremiumLoading: (isOn: boolean): string =>
+      isOn ? 'Zakończ ładowanie premium (test)' : 'Pokaż ładowanie premium (test)',
     language: 'Język',
     languageHint: 'Zmienia język aplikacji',
     signOut: 'Wyloguj się',
@@ -57,6 +59,8 @@ export const profileCopy = defineCopy({
     privacy: 'Privacy and lock',
     replayOnboarding: 'Show onboarding (test)',
     replayReleaseNotes: 'Show the beta tester release notes (test)',
+    previewPremiumLoading: (isOn: boolean): string =>
+      isOn ? 'Stop the premium loading preview (test)' : 'Preview premium loading (test)',
     language: 'Language',
     languageHint: 'Changes the app language',
     signOut: 'Sign out',
