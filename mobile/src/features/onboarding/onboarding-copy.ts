@@ -120,6 +120,9 @@ export const onboardingCopy = defineCopy({
         'W wersji 1.0.9 możesz ustawić ton powiadomień o limitach: pasywny, lekko agresywny albo bardzo agresywny, z wulgaryzmami.',
       stepOne: '1. W zakładce Sklepy stuknij przycisk limitów.',
       stepTwo: '2. Ustaw limit, zostaw włączone Powiadomienia i wybierz ton, na przykład Bardzo agresywny.',
+      signOutFixTitle: 'Koniec z wylogowywaniem',
+      signOutFixDescription:
+        'Naprawiłem błąd, przez który aplikacja czasem wylogowywała bez powodu. Wyloguj się i zaloguj ponownie, a potem nie powinno się to już zdarzać.',
     },
     focusSetup: {
       eyebrow: 'USTAWIENIA IPHONE’A',
@@ -268,6 +271,9 @@ export const onboardingCopy = defineCopy({
         'In version 1.0.9 you can choose the tone of limit alerts: Calm, Snarky or Brutal, which swears.',
       stepOne: '1. On the Shops tab, tap the limits button.',
       stepTwo: '2. Set a limit, keep Notifications on and choose a tone, such as Brutal.',
+      signOutFixTitle: 'No more random sign-outs',
+      signOutFixDescription:
+        "I've fixed a bug that sometimes signed you out for no reason. Sign out and sign in again once, and it shouldn't happen anymore.",
     },
     focusSetup: {
       eyebrow: 'IPHONE SETTINGS',
