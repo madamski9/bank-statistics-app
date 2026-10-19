@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { SymbolView } from 'expo-symbols';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useCopy } from '@/features/app-shell/localization/language';
@@ -8,6 +9,7 @@ import { InstructionCard } from '../components/instruction-card';
 import { SectionHeading } from '../components/section-heading';
 import { stepStyles } from '../components/step-styles';
 import { onboardingCopy } from '../onboarding-copy';
+import { onboardingColors } from '../onboarding-motion';
 
 export function FocusSetupStep() {
   const copy = useCopy(onboardingCopy).focusSetup;
@@ -19,6 +21,19 @@ export function FocusSetupStep() {
         title={copy.title}
         description={copy.description}
       />
+      <View style={styles.walletCard}>
+        <SymbolView
+          name={{ ios: 'wallet.pass.fill', android: 'wallet', web: 'wallet' }}
+          size={22}
+          tintColor={overviewColors.caution}
+        />
+        <View style={styles.walletText}>
+          <Text maxFontSizeMultiplier={1.5} style={styles.walletTitle}>{copy.walletTitle}</Text>
+          <Text maxFontSizeMultiplier={1.5} style={styles.walletDescription}>
+            {copy.walletDescription}
+          </Text>
+        </View>
+      </View>
       <InstructionCard number={1} title={copy.stepOne} />
       <InstructionCard number={2} title={copy.stepTwo}>
         <Image
@@ -42,6 +57,26 @@ export function FocusSetupStep() {
 }
 
 const styles = StyleSheet.create({
+  walletCard: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 16,
+    borderRadius: 18,
+    backgroundColor: onboardingColors.cautionMuted,
+    borderWidth: 1,
+    borderColor: overviewColors.caution,
+  },
+  walletText: { flex: 1, gap: 4 },
+  walletTitle: {
+    color: overviewColors.textPrimary,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  walletDescription: {
+    color: overviewColors.textPrimary,
+    fontSize: 14,
+    lineHeight: 21,
+  },
   stepScreenshot: {
     width: '100%',
     marginTop: 4,

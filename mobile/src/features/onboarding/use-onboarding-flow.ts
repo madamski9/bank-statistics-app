@@ -23,7 +23,7 @@ import type { OnboardingPlan } from './steps/plans-step';
 const shortcutsAppUrl = 'shortcuts://';
 
 export interface OnboardingFlowOptions {
-  flow: 'full' | 'shortcuts' | 'focus';
+  flow: 'full' | 'shortcuts';
   onCancel: () => void;
   onComplete: (selectedBanks: string[]) => Promise<void>;
 }
@@ -32,22 +32,17 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
   const copy = useCopy(onboardingCopy);
   const { biometric, changePin, updateSettings } = usePrivacy();
   const isShortcutsFlow = flow === 'shortcuts';
-  const isFocusFlow = flow === 'focus';
-  const flowStart = isShortcutsFlow ? banksStep : isFocusFlow ? focusIntroStep : 0;
+  const flowStart = isShortcutsFlow ? banksStep : 0;
   const [step, setStep] = useState(flowStart);
   const [transitionDirection, setTransitionDirection] = useState<'forward' | 'backward'>('forward');
   const [error, setError] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<OnboardingPlan>('free');
   const [isFinishing, setIsFinishing] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
-  const resumeAtBanks = useCallback(() => {
-    if (!isFocusFlow) {
-      setStep(banksStep);
-    }
-  }, [isFocusFlow]);
+  const resumeAtBanks = useCallback(() => setStep(banksStep), []);
   const shortcut = useShortcutSetup({ isShortcutsFlow, onError: setError, onResume: resumeAtBanks });
   const { leave: leaveShortcutSetup, openShortcut, selectedBanks } = shortcut;
-  const flowLength = isShortcutsFlow || isFocusFlow ? focusSetupStep - flowStart + 1 : stepCount;
+  const flowLength = isShortcutsFlow ? focusSetupStep - flowStart + 1 : stepCount;
   const flowPosition = Math.min(step - flowStart + 1, flowLength);
 
   const changeStep = useCallback(
@@ -95,12 +90,10 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
   const goBack = useCallback(() => {
     if (isShortcutsFlow && step === banksStep) {
       void leaveTo(null);
-    } else if (isFocusFlow && step === focusIntroStep) {
-      onCancel();
     } else {
       changeStep(step - 1);
     }
-  }, [changeStep, isFocusFlow, isShortcutsFlow, leaveTo, onCancel, step]);
+  }, [changeStep, isShortcutsFlow, leaveTo, step]);
 
   const isBusy = isFinishing || shortcut.isOpeningShortcut || shortcut.isSavingProgress;
   const isPrimaryDisabled = isBusy || (step === banksStep && selectedBanks.length === 0);
@@ -126,7 +119,7 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
   const primaryAction =
     step === banksStep
       ? shortcut.hasOpenedShortcut ? () => leaveTo(automationStep) : openShortcut
-      : step === stepCount || ((isShortcutsFlow || isFocusFlow) && step === focusSetupStep)
+      : step === stepCount || (isShortcutsFlow && step === focusSetupStep)
         ? finish
         : step === plansStep && selectedPlan === 'premium'
           ? () =>

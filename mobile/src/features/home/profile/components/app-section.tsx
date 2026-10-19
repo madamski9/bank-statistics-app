@@ -1,8 +1,7 @@
 import { languageNames, useCopy, useLanguage } from '@/features/app-shell/localization/language';
 import {
-  replayFocusAnnouncement,
   replayOnboarding,
-  replaySessionAnnouncement,
+  replayReleaseNotes,
   replayShortcutsSetup,
 } from '@/features/onboarding/onboarding-replay';
 import {
@@ -99,17 +98,9 @@ export function AppSection({
       {__DEV__ ? (
         <ProfileActionRow
           hasChevron={false}
-          label={copy.replayFocusAnnouncement}
-          onPress={replayFocusAnnouncement}
-          symbol={{ ios: 'moon', android: 'bedtime', web: 'bedtime' }}
-        />
-      ) : null}
-      {__DEV__ ? (
-        <ProfileActionRow
-          hasChevron={false}
-          label={copy.replaySessionAnnouncement}
-          onPress={replaySessionAnnouncement}
-          symbol={{ ios: 'person.badge.key', android: 'key', web: 'key' }}
+          label={copy.replayReleaseNotes}
+          onPress={replayReleaseNotes}
+          symbol={{ ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' }}
         />
       ) : null}
       {__DEV__ ? (

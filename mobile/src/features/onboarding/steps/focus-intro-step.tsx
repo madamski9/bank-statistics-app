@@ -7,23 +7,18 @@ import { stepStyles } from '../components/step-styles';
 import { FocusIllustration } from '../illustrations/focus-illustration';
 import { onboardingCopy } from '../onboarding-copy';
 
-interface FocusIntroStepProps {
-  isAnnouncement?: boolean;
-}
-
-export function FocusIntroStep({ isAnnouncement = false }: FocusIntroStepProps) {
-  const copy = useCopy(onboardingCopy);
-  const heading = isAnnouncement ? copy.focusAnnouncement : copy.focusIntro;
+export function FocusIntroStep() {
+  const copy = useCopy(onboardingCopy).focusIntro;
 
   return (
     <View style={stepStyles.stepContent}>
       <FocusIllustration />
       <SectionHeading
-        eyebrow={heading.eyebrow}
-        title={heading.title}
-        description={heading.description}
+        eyebrow={copy.eyebrow}
+        title={copy.title}
+        description={copy.description}
       />
-      <Text style={stepStyles.smallNote}>{copy.focusIntro.note}</Text>
+      <Text style={stepStyles.smallNote}>{copy.note}</Text>
     </View>
   );
 }
