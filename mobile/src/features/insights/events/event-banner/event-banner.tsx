@@ -7,12 +7,13 @@ import type { EventSummary } from '../event-summary';
 import { eventsCopy } from '../events-copy';
 import { eventNameError, type SpendingEvent } from '../spending-event';
 import { RunningEventBanner } from './components/running-event-banner';
-import { StartEventButton } from './components/start-event-button';
+import { StartEventButton, StartEventButtonSkeleton } from './components/start-event-button';
 
 interface EventBannerProps {
   runningEvent: EventSummary | null;
   isEventFocused: boolean;
   canStartEvent: boolean;
+  isLoading: boolean;
   onRequirePremium: () => void;
   onToggleEventFocus: () => void;
   onStartEvent: (name: string) => Promise<SpendingEvent>;
@@ -23,6 +24,7 @@ export function EventBanner({
   runningEvent,
   isEventFocused,
   canStartEvent,
+  isLoading,
   onRequirePremium,
   onToggleEventFocus,
   onStartEvent,
@@ -30,6 +32,10 @@ export function EventBanner({
 }: EventBannerProps) {
   const copy = useCopy(eventsCopy);
   const [isPrompting, setIsPrompting] = useState(false);
+
+  if (isLoading) {
+    return <StartEventButtonSkeleton />;
+  }
 
   return (
     <>

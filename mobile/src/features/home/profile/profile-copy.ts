@@ -28,6 +28,8 @@ export const profileCopy = defineCopy({
     replayOnboarding: 'Pokaż onboarding (test)',
     replayFocusAnnouncement: 'Pokaż nowość dla beta testerów (test)',
     replaySessionAnnouncement: 'Pokaż ekran ponownego logowania (test)',
+    previewPremiumLoading: (isOn: boolean): string =>
+      isOn ? 'Zakończ ładowanie premium (test)' : 'Pokaż ładowanie premium (test)',
     language: 'Język',
     languageHint: 'Zmienia język aplikacji',
     signOut: 'Wyloguj się',
@@ -59,6 +61,8 @@ export const profileCopy = defineCopy({
     replayOnboarding: 'Show onboarding (test)',
     replayFocusAnnouncement: 'Show the beta tester announcement (test)',
     replaySessionAnnouncement: 'Show the sign-in-again announcement (test)',
+    previewPremiumLoading: (isOn: boolean): string =>
+      isOn ? 'Stop the premium loading preview (test)' : 'Preview premium loading (test)',
     language: 'Language',
     languageHint: 'Changes the app language',
     signOut: 'Sign out',

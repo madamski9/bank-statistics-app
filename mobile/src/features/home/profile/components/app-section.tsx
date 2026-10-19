@@ -5,6 +5,10 @@ import {
   replaySessionAnnouncement,
   replayShortcutsSetup,
 } from '@/features/onboarding/onboarding-replay';
+import {
+  setPreviewPremiumLoading,
+  usePreviewPremiumLoading,
+} from '@/features/settings/premium/premium-preview';
 
 import { profileCopy } from '../profile-copy';
 import { ProfileActionRow, ProfileSection } from './profile-rows';
@@ -30,6 +34,7 @@ export function AppSection({
 }: AppSectionActions) {
   const copy = useCopy(profileCopy);
   const language = useLanguage();
+  const isPreviewingPremiumLoading = usePreviewPremiumLoading();
 
   return (
     <ProfileSection label={copy.appSection}>
@@ -105,6 +110,14 @@ export function AppSection({
           label={copy.replaySessionAnnouncement}
           onPress={replaySessionAnnouncement}
           symbol={{ ios: 'person.badge.key', android: 'key', web: 'key' }}
+        />
+      ) : null}
+      {__DEV__ ? (
+        <ProfileActionRow
+          hasChevron={false}
+          label={copy.previewPremiumLoading(isPreviewingPremiumLoading)}
+          onPress={() => setPreviewPremiumLoading(!isPreviewingPremiumLoading)}
+          symbol={{ ios: 'rectangle.dashed', android: 'hourglass_empty', web: 'hourglass_empty' }}
         />
       ) : null}
     </ProfileSection>

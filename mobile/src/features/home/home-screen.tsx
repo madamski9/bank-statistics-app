@@ -113,6 +113,7 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
             hasData={ledger.records.length > 0}
             isLoading={ledger.isLoading}
             isReportLocked={!isPremium}
+            isPremiumLoading={premium === undefined}
             lockedPeriods={periodLocks}
             onChangePeriod={changePeriod}
             onOpenForecast={() => openSheet('forecast')}
