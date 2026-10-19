@@ -11,25 +11,24 @@ import { OnboardingFooter } from './components/onboarding-footer';
 import { OnboardingProgress } from './components/onboarding-progress';
 import { OnboardingTopBar } from './components/onboarding-top-bar';
 import { onboardingCopy } from './onboarding-copy';
-import { SessionAnnouncementContent, useSignOutNow } from './session-announcement-screen';
 import { AlertToneNotesStep } from './steps/release-notes-step';
+import { SignInAgainStep, useSignOutNow } from './steps/sign-in-again-step';
+
+const pageCount = 2;
 
 interface ReleaseNotesScreenProps {
-  includesSignInAgain: boolean;
   onClose: () => void;
-  onLater: () => void;
   onSigningOut: () => Promise<void>;
 }
 
-export function ReleaseNotesScreen({ includesSignInAgain, onClose, onLater, onSigningOut }: ReleaseNotesScreenProps) {
+export function ReleaseNotesScreen({ onClose, onSigningOut }: ReleaseNotesScreenProps) {
   const copy = useCopy(onboardingCopy);
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const [page, setPage] = useState(1);
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
   const { error, isSigningOut, signOutNow } = useSignOutNow(onSigningOut);
-  const pageCount = includesSignInAgain ? 2 : 1;
-  const isSignInAgainPage = includesSignInAgain && page === 2;
+  const isSignInAgainPage = page === pageCount;
 
   const changePage = (next: number) => {
     setDirection(next > page ? 'forward' : 'backward');
@@ -39,9 +38,7 @@ export function ReleaseNotesScreen({ includesSignInAgain, onClose, onLater, onSi
 
   const primary = isSignInAgainPage
     ? { label: copy.sessionAnnouncement.signOut, isBusy: isSigningOut, isDisabled: isSigningOut, onPress: () => void signOutNow() }
-    : page < pageCount
-      ? { label: copy.next, isBusy: false, isDisabled: false, onPress: () => changePage(page + 1) }
-      : { label: copy.done, isBusy: false, isDisabled: false, onPress: onClose };
+    : { label: copy.next, isBusy: false, isDisabled: false, onPress: () => changePage(page + 1) };
 
   return (
     <View style={styles.screen}>
@@ -52,9 +49,9 @@ export function ReleaseNotesScreen({ includesSignInAgain, onClose, onLater, onSi
         isBusy={isSigningOut}
         onBack={() => (page > 1 ? changePage(page - 1) : onClose())}
         onSkip={onClose}
-        stepLabel={pageCount > 1 ? `${page} / ${pageCount}` : copy.releaseNotes.version}
+        stepLabel={`${page} / ${pageCount}`}
       />
-      {pageCount > 1 ? <OnboardingProgress length={pageCount} position={page} /> : null}
+      <OnboardingProgress length={pageCount} position={page} />
       <ScrollView
         contentContainerStyle={[styles.content, { paddingLeft: Math.max(insets.left, 20), paddingRight: Math.max(insets.right, 20) }]}
         ref={scrollRef}
@@ -68,7 +65,7 @@ export function ReleaseNotesScreen({ includesSignInAgain, onClose, onLater, onSi
           key={page}
           style={styles.page}
         >
-          {isSignInAgainPage ? <SessionAnnouncementContent /> : <AlertToneNotesStep />}
+          {isSignInAgainPage ? <SignInAgainStep /> : <AlertToneNotesStep />}
         </AnimatedReveal>
       </ScrollView>
       <OnboardingFooter
@@ -76,7 +73,7 @@ export function ReleaseNotesScreen({ includesSignInAgain, onClose, onLater, onSi
         primary={primary}
         secondaryActions={
           isSignInAgainPage
-            ? [{ key: 'later', label: copy.sessionAnnouncement.later, disabled: isSigningOut, onPress: onLater }]
+            ? [{ key: 'later', label: copy.sessionAnnouncement.later, disabled: isSigningOut, onPress: onClose }]
             : []
         }
       />

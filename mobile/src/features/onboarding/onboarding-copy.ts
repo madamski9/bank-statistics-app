@@ -113,7 +113,6 @@ export const onboardingCopy = defineCopy({
       note: 'To samo ustaw w innych trybach skupienia, z których korzystasz, na przykład w trybie Sen.',
     },
     releaseNotes: {
-      version: 'Wersja 1.0.9',
       eyebrow: 'NOWOŚĆ DLA BETA TESTERÓW',
       title: 'Hej, beta testerzy!',
       description:
@@ -271,7 +270,6 @@ export const onboardingCopy = defineCopy({
       note: 'Do the same in any other Focus you use, such as Sleep.',
     },
     releaseNotes: {
-      version: 'Version 1.0.9',
       eyebrow: 'NEW FOR BETA TESTERS',
       title: 'Hey, beta testers!',
       description:
