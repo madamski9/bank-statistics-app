@@ -109,14 +109,14 @@ export const onboardingCopy = defineCopy({
       eyebrow: 'TRYB NIE PRZESZKADZAĆ',
       title: 'Przepuść powiadomienia banku',
       description:
-        'Tryb Nie przeszkadzać może zakłócić przechwytywanie transakcji. Dodaj aplikacje banków i Portfel do wyjątków, aby ich powiadomienia nie były wyciszane, a potem sprawdź zapis na swoim telefonie.',
+        'Tryb Nie przeszkadzać może zakłócić przechwytywanie transakcji. Dodaj do wyjątków przede wszystkim Portfel, a także aplikacje banków, aby ich powiadomienia nie były wyciszane. Potem sprawdź zapis na swoim telefonie.',
       note: 'To samo ustaw w innych trybach skupienia, z których korzystasz, na przykład w trybie Sen.',
     },
     focusAnnouncement: {
       eyebrow: 'NOWOŚĆ DLA BETA TESTERÓW',
       title: 'Hej, beta testerzy!',
       description:
-        'Dodałem nową funkcję. Gdy włączony jest tryb Nie przeszkadzać, iOS nie uruchamia automatyzacji i transakcje się nie zapisują. Dodaj aplikacje banków i Portfel do wyjątków. Na następnym ekranie pokazuję, jak to zrobić.',
+        'Dodałem nową funkcję. Gdy włączony jest tryb Nie przeszkadzać, iOS nie uruchamia automatyzacji i transakcje się nie zapisują. Dodaj do wyjątków przede wszystkim Portfel, a także aplikacje banków. Na następnym ekranie pokazuję, jak to zrobić.',
     },
     focusSetup: {
       eyebrow: 'USTAWIENIA IPHONE’A',
@@ -124,7 +124,10 @@ export const onboardingCopy = defineCopy({
       description: 'Po dodaniu wyjątków sprawdź, czy transakcje zapisują się także przy włączonym trybie Nie przeszkadzać.',
       stepOne: '1. Otwórz Ustawienia, stuknij Skupienie, a potem Nie przeszkadzać.',
       stepTwo: '2. W sekcji Włącz powiadomienia stuknij Aplikacje.',
-      stepThree: '3. Wybierz Pozwalaj na powiadomienia, stuknij Dodaj i zaznacz aplikacje swoich banków oraz Portfel.',
+      stepThree: '3. Wybierz Pozwalaj na powiadomienia, stuknij Dodaj i zaznacz Portfel oraz aplikacje swoich banków.',
+      walletTitle: 'Najważniejszy jest Portfel',
+      walletDescription:
+        'Płatności kartą zapisujemy z powiadomień Portfela, bo tylko one mają nazwę sklepu. Bez Portfela na liście wyjątków te transakcje nie zapiszą się przy włączonym trybie Nie przeszkadzać.',
       verification:
         'Po prawdziwej transakcji sprawdź zapis w profilu, w sekcji Przechwytywanie. Jeśli jej brakuje, wyłącz tryb skupienia i sprawdź kolejne powiadomienie. Pominięte transakcje dodaj ręcznie.',
     },
@@ -251,14 +254,14 @@ export const onboardingCopy = defineCopy({
       eyebrow: 'DO NOT DISTURB',
       title: 'Let your bank notifications through',
       description:
-        'Do Not Disturb may interfere with transaction capture. Allow your bank apps and Wallet so their notifications are not silenced, then check saving on your phone.',
+        'Do Not Disturb may interfere with transaction capture. Allow Wallet above all, along with your bank apps, so their notifications are not silenced. Then check saving on your phone.',
       note: 'Do the same in any other Focus you use, such as Sleep.',
     },
     focusAnnouncement: {
       eyebrow: 'NEW FOR BETA TESTERS',
       title: 'Hey, beta testers!',
       description:
-        "I've added something new. While Do Not Disturb is on, iOS doesn't run the automation and transactions aren't saved. Allow your bank apps and Wallet in it. The next screen shows how.",
+        "I've added something new. While Do Not Disturb is on, iOS doesn't run the automation and transactions aren't saved. Allow Wallet above all, along with your bank apps. The next screen shows how.",
     },
     focusSetup: {
       eyebrow: 'IPHONE SETTINGS',
@@ -266,7 +269,10 @@ export const onboardingCopy = defineCopy({
       description: 'After allowing the apps, check whether transactions also save while Do Not Disturb is on.',
       stepOne: '1. Open Settings, tap Focus, then Do Not Disturb.',
       stepTwo: '2. Under Allow Notifications, tap Apps.',
-      stepThree: '3. Choose Allow Notifications From, tap Add and select your bank apps and Wallet.',
+      stepThree: '3. Choose Allow Notifications From, tap Add and select Wallet and your bank apps.',
+      walletTitle: 'Wallet matters most',
+      walletDescription:
+        "Card payments are saved from Wallet notifications, because only they include the shop name. If Wallet isn't allowed, those transactions won't save while Do Not Disturb is on.",
       verification:
         'After a real transaction, check saving under Capture in your profile. If it is missing, turn off Focus and check the next notification. Add missed transactions manually.',
     },
