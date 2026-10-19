@@ -112,16 +112,14 @@ export const onboardingCopy = defineCopy({
         'Tryb Nie przeszkadzać może zakłócić przechwytywanie transakcji. Dodaj do wyjątków przede wszystkim Portfel, a także aplikacje banków, aby ich powiadomienia nie były wyciszane. Potem sprawdź zapis na swoim telefonie.',
       note: 'To samo ustaw w innych trybach skupienia, z których korzystasz, na przykład w trybie Sen.',
     },
-    focusAnnouncement: {
+    releaseNotes: {
+      version: 'Wersja 1.0.9',
       eyebrow: 'NOWOŚĆ DLA BETA TESTERÓW',
       title: 'Hej, beta testerzy!',
       description:
-        'Dodałem nową funkcję. Gdy włączony jest tryb Nie przeszkadzać, iOS nie uruchamia automatyzacji i transakcje się nie zapisują. Dodaj do wyjątków przede wszystkim Portfel, a także aplikacje banków. Na następnym ekranie pokazuję, jak to zrobić.',
-      releaseTitle: 'Co nowego w wersji 1.0.9',
-      releaseDescription:
-        'Możesz ustawić ton powiadomień o limitach: pasywny, lekko agresywny albo bardzo agresywny, z wulgaryzmami.',
-      releaseStepOne: '1. W zakładce Sklepy stuknij przycisk limitów.',
-      releaseStepTwo: '2. Ustaw limit, zostaw włączone Powiadomienia i wybierz ton, na przykład Bardzo agresywny.',
+        'W wersji 1.0.9 możesz ustawić ton powiadomień o limitach: pasywny, lekko agresywny albo bardzo agresywny, z wulgaryzmami.',
+      stepOne: '1. W zakładce Sklepy stuknij przycisk limitów.',
+      stepTwo: '2. Ustaw limit, zostaw włączone Powiadomienia i wybierz ton, na przykład Bardzo agresywny.',
     },
     focusSetup: {
       eyebrow: 'USTAWIENIA IPHONE’A',
@@ -262,16 +260,14 @@ export const onboardingCopy = defineCopy({
         'Do Not Disturb may interfere with transaction capture. Allow Wallet above all, along with your bank apps, so their notifications are not silenced. Then check saving on your phone.',
       note: 'Do the same in any other Focus you use, such as Sleep.',
     },
-    focusAnnouncement: {
+    releaseNotes: {
+      version: 'Version 1.0.9',
       eyebrow: 'NEW FOR BETA TESTERS',
       title: 'Hey, beta testers!',
       description:
-        "I've added something new. While Do Not Disturb is on, iOS doesn't run the automation and transactions aren't saved. Allow Wallet above all, along with your bank apps. The next screen shows how.",
-      releaseTitle: "What's new in 1.0.9",
-      releaseDescription:
-        'You can now choose the tone of limit alerts: Calm, Snarky or Brutal, which swears.',
-      releaseStepOne: '1. On the Shops tab, tap the limits button.',
-      releaseStepTwo: '2. Set a limit, keep Notifications on and choose a tone, such as Brutal.',
+        'In version 1.0.9 you can choose the tone of limit alerts: Calm, Snarky or Brutal, which swears.',
+      stepOne: '1. On the Shops tab, tap the limits button.',
+      stepTwo: '2. Set a limit, keep Notifications on and choose a tone, such as Brutal.',
     },
     focusSetup: {
       eyebrow: 'IPHONE SETTINGS',

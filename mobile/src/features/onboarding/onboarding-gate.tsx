@@ -6,9 +6,10 @@ import { Platform } from 'react-native';
 import { appEnvironment } from '@/app-environment';
 import { LoadingScreen } from '@/features/app-shell/brand/loading-screen';
 
-import { focusAnnouncementKey, shouldShowFocusAnnouncement } from './focus-announcement';
 import { finishOnboardingReplay, useOnboardingReplay } from './onboarding-replay';
 import { OnboardingScreen } from './onboarding-screen';
+import { releaseNotesKey, shouldShowReleaseNotes } from './release-notes';
+import { ReleaseNotesScreen } from './release-notes-screen';
 import { banksKey } from './selected-banks';
 
 interface OnboardingGateProps {
@@ -18,7 +19,7 @@ interface OnboardingGateProps {
 interface OnboardingState {
   userId: string;
   completed: boolean;
-  hasSeenFocusAnnouncement: boolean;
+  hasSeenReleaseNotes: boolean;
 }
 
 function completedKey(userId: string): string {
@@ -39,20 +40,20 @@ export function OnboardingGate({ children }: OnboardingGateProps) {
 
     void Promise.all([
       SecureStore.getItemAsync(completedKey(userId)),
-      SecureStore.getItemAsync(focusAnnouncementKey(userId)).catch(() => null),
+      SecureStore.getItemAsync(releaseNotesKey(userId)).catch(() => null),
     ])
-      .then(([completed, focusAnnouncement]) => {
+      .then(([completed, releaseNotes]) => {
         if (isActive) {
           setState({
             userId,
             completed: completed === 'true',
-            hasSeenFocusAnnouncement: focusAnnouncement === 'true',
+            hasSeenReleaseNotes: releaseNotes === 'true',
           });
         }
       })
       .catch(() => {
         if (isActive) {
-          setState({ userId, completed: false, hasSeenFocusAnnouncement: false });
+          setState({ userId, completed: false, hasSeenReleaseNotes: false });
         }
       });
 
@@ -72,55 +73,43 @@ export function OnboardingGate({ children }: OnboardingGateProps) {
         JSON.stringify(selectedBanks),
       );
       await SecureStore.setItemAsync(completedKey(userId), 'true');
-      await SecureStore.setItemAsync(focusAnnouncementKey(userId), 'true');
-      setState({ userId, completed: true, hasSeenFocusAnnouncement: true });
+      await SecureStore.setItemAsync(releaseNotesKey(userId), 'true');
+      setState({ userId, completed: true, hasSeenReleaseNotes: true });
       finishOnboardingReplay();
     },
     [userId],
   );
 
-  const dismissFocusAnnouncement = useCallback(async () => {
+  const dismissReleaseNotes = useCallback(async () => {
     if (userId == null) {
       return;
     }
 
-    setState({ userId, completed: true, hasSeenFocusAnnouncement: true });
-    await SecureStore.setItemAsync(focusAnnouncementKey(userId), 'true').catch(() => undefined);
+    setState({ userId, completed: true, hasSeenReleaseNotes: true });
+    await SecureStore.setItemAsync(releaseNotesKey(userId), 'true').catch(() => undefined);
   }, [userId]);
 
   if (userId == null || state == null || state.userId !== userId) {
     return <LoadingScreen />;
   }
 
-  if (replay === 'focus') {
-    return (
-      <OnboardingScreen
-        flow="focus"
-        onCancel={finishOnboardingReplay}
-        onComplete={async () => finishOnboardingReplay()}
-      />
-    );
+  if (replay === 'releaseNotes') {
+    return <ReleaseNotesScreen onClose={finishOnboardingReplay} />;
   }
 
   if (state.completed && replay === 'none') {
-    const showsFocusAnnouncement = shouldShowFocusAnnouncement({
+    const showsReleaseNotes = shouldShowReleaseNotes({
       hasCompletedOnboarding: state.completed,
-      hasSeenAnnouncement: state.hasSeenFocusAnnouncement,
+      hasSeenReleaseNotes: state.hasSeenReleaseNotes,
       lane: appEnvironment.lane,
       platform: Platform.OS,
     });
 
-    if (!showsFocusAnnouncement) {
+    if (!showsReleaseNotes) {
       return children;
     }
 
-    return (
-      <OnboardingScreen
-        flow="focus"
-        onCancel={() => void dismissFocusAnnouncement()}
-        onComplete={dismissFocusAnnouncement}
-      />
-    );
+    return <ReleaseNotesScreen onClose={() => void dismissReleaseNotes()} />;
   }
 
   return (
