@@ -80,7 +80,7 @@ public final class BankStatsIngestionModule: Module {
 
     AsyncFunction("restoreNotification") { (id: String, input: TransactionInput) -> [String: Any] in
       try EncryptedOutbox.shared.restoreNotification(id: id) { notification in
-        var corrected = input
+        let corrected = input
         corrected.id = notification.id
         corrected.capturedAt = ISO8601DateFormatter().string(from: notification.capturedAt)
         corrected.origin = NormalizedRecordOrigin.manual

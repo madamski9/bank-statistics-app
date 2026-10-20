@@ -142,6 +142,12 @@ struct NotificationInbox {
           try check(sqlite3_step(statement), accepted: SQLITE_DONE)
         }
         result = stored.map { .record($0) } ?? .ignored(reasonCode: IgnoredReason.cardPaymentAlreadySaved)
+      } else if isDismissible(notification, trace: inspected) {
+        try statement("DELETE FROM notification_inbox WHERE id = ?") { statement in
+          try bind(notification.id, to: 1, in: statement)
+          try check(sqlite3_step(statement), accepted: SQLITE_DONE)
+        }
+        result = .ignored(reasonCode: inspected.reasonCode ?? IgnoredReason.notTransaction)
       } else {
         let reasonCode = inspected.reasonCode ?? IgnoredReason.notTransaction
         let awaitingWallet = reasonCode == IgnoredReason.cardPaymentAwaitingApplePay
@@ -164,6 +170,13 @@ struct NotificationInbox {
       try? saveDiagnostic(id: notification.id, trace: trace, failureReason: (error as? IngestionError)?.reasonCode ?? "unknown")
       throw error
     }
+  }
+
+  private func isDismissible(_ notification: CapturedNotification, trace: NotificationParsingTrace) -> Bool {
+    if trace.isIgnoredByRule {
+      return trace.reasonCode != IgnoredReason.cardPaymentAwaitingApplePay
+    }
+    return !NotificationAdmission.accepts(title: notification.title, subtitle: notification.subtitle, body: notification.body)
   }
 
   func notification(id: String) throws -> CapturedNotification? {
