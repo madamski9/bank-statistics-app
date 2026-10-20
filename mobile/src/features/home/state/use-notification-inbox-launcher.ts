@@ -17,7 +17,6 @@ export function useNotificationInboxLauncher(onOpen: () => void, canOpen: boolea
     let isActive = true;
     const receive = (response: Notifications.NotificationResponse | null) => {
       if (opensNotificationInbox(response)) {
-        Notifications.clearLastNotificationResponse();
         setIsRequested(true);
       }
     };
@@ -37,6 +36,7 @@ export function useNotificationInboxLauncher(onOpen: () => void, canOpen: boolea
 
   if (isRequested && isUnlocked && canOpen) {
     setIsRequested(false);
+    Notifications.clearLastNotificationResponse();
     onOpen();
   }
 }
