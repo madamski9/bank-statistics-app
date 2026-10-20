@@ -11,6 +11,10 @@ struct NotificationParsingTrace: Codable, Sendable {
   let attempts: [NotificationParsingAttempt]
   var record: NormalizedRecord?
   let reasonCode: String?
+
+  var isIgnoredByRule: Bool {
+    record == nil && attempts.last.map { $0.reasonCode == reasonCode } == true
+  }
 }
 
 enum RuleBundleError: Error {

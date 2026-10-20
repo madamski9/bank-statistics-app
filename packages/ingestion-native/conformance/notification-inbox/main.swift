@@ -94,6 +94,14 @@ let cases = [
   AdmissionCase("Mamy dla Ciebie 100 PLN premii", accepted: false),
   AdmissionCase("100 PLN premii za otwarcie konta", accepted: false),
   AdmissionCase("Oceń naszą aplikację", accepted: false),
+  AdmissionCase("0,50 PLN w SKLEP", title: "Nowa operacja kartą"),
+  AdmissionCase("Zapłacono 1\u{00a0}000,00 zł"),
+  AdmissionCase("Zwrot 0,00 PLN, obciążenie 12,34 PLN"),
+  AdmissionCase("0,00 zł", title: "Bank Millennium S.A.", subtitle: "Apple", accepted: false),
+  AdmissionCase("0", subtitle: "Sklep", accepted: false),
+  AdmissionCase("0,00 PLN w AUTOPAY MOBILITY WARSZAWA", title: "Nowa operacja kartą", accepted: false),
+  AdmissionCase("0,00 PLN do JAN .", title: "Przelew z konta", accepted: false),
+  AdmissionCase("Kwota: PLN 0.00", accepted: false),
 ]
 
 var checks = 0
@@ -334,6 +342,59 @@ if case .ignored(let reason) = awaiting {
 }
 check(try captureCount("notification_inbox") == 1, "Known Wallet deferral must retain raw text for future rules")
 check(try outbox.diagnostics()["pendingNotificationCount"] == "0", "Expected Wallet deferral must not create a recognition warning")
+
+try outbox.clear()
+let negativeCard = try NotificationCapture.capture(
+  title: "Nowa operacja kartą", subtitle: "", body: "-26,70 PLN w AUTOPAY MOBILITY WARSZAWA", sourceApp: "pl.mbank"
+)
+if case .notTransaction = negativeCard {
+  check(try captureCount("notification_inbox") == 0, "Explicitly ignored notification must leave the inbox")
+  check(try outbox.diagnostics()["lastAttemptOutcome"] == "ignored", "Explicit ignore must be logged as ignored")
+} else {
+  fatalError("Explicitly ignored notification must not await recognition")
+}
+let zeroCard = try NotificationCapture.capture(
+  title: "Nowa operacja kartą", subtitle: "", body: "0,00 PLN w AUTOPAY MOBILITY WARSZAWA", sourceApp: "pl.mbank"
+)
+if case .notTransaction = zeroCard {
+  check(try outbox.diagnostics()["lastAttemptOutcome"] == "ignored", "Zero amount must be logged as ignored")
+} else {
+  fatalError("Zero amount card operation must not await recognition")
+}
+let zeroWallet = try NotificationCapture.capture(
+  title: "Bank Millennium S.A.", subtitle: "Apple", body: "0,00 zł", sourceApp: "pl.millenniumbank.bankmillennium"
+)
+if case .notTransaction = zeroWallet {} else {
+  fatalError("Zero amount Wallet verification must not await recognition")
+}
+_ = try capture("0,00 PLN do JAN .", title: "Przelew z konta")
+check(try captureCount("notification_inbox") == 0, "Zero amount notifications must never be queued")
+check(try outbox.diagnostics()["pendingNotificationCount"] == "0", "Ignored notifications must not create a recognition warning")
+let stillUnknown = try NotificationCapture.capture(title: "", subtitle: "", body: "Nowy format operacji: 19,99 PLN", sourceApp: "pl.mbank")
+if case .queued = stillUnknown {
+  check(try outbox.diagnostics()["pendingNotificationCount"] == "1", "Unrecognized formats must still await recognition")
+} else {
+  fatalError("Unrecognized formats must still be queued")
+}
+try outbox.clear()
+
+let legacyHandle = try captureDatabase()
+let legacyInbox = NotificationInbox(database: legacyHandle)
+let legacyEntries = [
+  CapturedNotification(title: "Nowa operacja kartą", subtitle: "", body: "-26,70 PLN w AUTOPAY MOBILITY WARSZAWA", sourceApp: "pl.mbank"),
+  CapturedNotification(title: "Bank Millennium S.A.", subtitle: "Apple", body: "0,00 zł", sourceApp: "pl.millenniumbank.bankmillennium"),
+  CapturedNotification(title: "", subtitle: "", body: "Nowy format operacji: 19,99 PLN", sourceApp: "pl.mbank"),
+]
+for entry in legacyEntries {
+  try legacyInbox.enqueue(entry)
+}
+try execute(legacyHandle, "UPDATE notification_inbox SET rules_version = \(bundle.version - 1), requires_recognition = 1, diagnostic = '{}'")
+check(sqlite3_close(legacyHandle) == SQLITE_OK, "Legacy inbox setup must close")
+check(try outbox.diagnostics()["pendingNotificationCount"] == "3", "Legacy entries must start as pending")
+_ = try outbox.records()
+check(try captureCount("notification_inbox") == 1, "Retry after a rules change must clean up ignored legacy entries")
+check(try outbox.diagnostics()["pendingNotificationCount"] == "1", "Retry must keep unrecognized legacy entries pending")
+try outbox.clear()
 
 try outbox.writeDocument(key: "test", value: "test")
 _ = try capture("Nieznana operacja 30 PLN")

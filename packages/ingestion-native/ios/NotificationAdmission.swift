@@ -22,12 +22,28 @@ enum NotificationAdmission {
       return false
     }
 
-    if [title, subtitle, body].contains(where: { matches(money, in: $0) }) {
-      return true
+    let amounts = [title, subtitle, body].flatMap(moneyAmounts)
+    if !amounts.isEmpty {
+      return amounts.contains(where: isNonZero)
     }
 
+    let walletBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
     return !subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-      && matches(walletAmount, in: body.trimmingCharacters(in: .whitespacesAndNewlines))
+      && matches(walletAmount, in: walletBody)
+      && isNonZero(walletBody)
+  }
+
+  private static func moneyAmounts(in value: String) -> [String] {
+    money.matches(in: value, range: NSRange(value.startIndex..<value.endIndex, in: value)).compactMap { match in
+      ["amountBefore", "amountAfter"].lazy
+        .compactMap { Range(match.range(withName: $0), in: value) }
+        .first
+        .map { String(value[$0]) }
+    }
+  }
+
+  private static func isNonZero(_ amount: String) -> Bool {
+    amount.contains { ("1"..."9").contains($0) }
   }
 
   private static func matches(_ expression: NSRegularExpression, in value: String) -> Bool {
