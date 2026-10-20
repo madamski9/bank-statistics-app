@@ -120,6 +120,23 @@ export const onboardingCopy = defineCopy({
       stepOne: '1. W zakładce Sklepy stuknij przycisk limitów.',
       stepTwo: '2. Ustaw limit, zostaw włączone Powiadomienia i wybierz ton, na przykład Bardzo agresywny.',
     },
+    notificationRecoveryNotes: {
+      eyebrow: 'NOWOŚĆ DLA BETA TESTERÓW',
+      title: 'Odzyskaj brakującą transakcję',
+      description:
+        'Powiadomienia z kwotą, których jeszcze nie rozpoznajemy, zachowujemy bezpiecznie na telefonie. Możesz je sprawdzić i zamienić w transakcję.',
+      inboxTitle: 'Zajrzyj do nierozpoznanych powiadomień',
+      inboxDescription:
+        'Otwórz Profil → Przechwytywanie → Powiadomienia do rozpoznania. Zobaczysz treść wiadomości i powód, dla którego nie powstała transakcja.',
+      recoveryTitle: 'Ponów rozpoznawanie lub uzupełnij dane',
+      recoveryDescription:
+        'Spróbuj ponownie albo wpisz brakujące dane i zapisz transakcję ręcznie. Oryginalną wiadomość usuniemy po zapisaniu transakcji.',
+      reportTitle: 'Pomóż nam poprawić rozpoznawanie',
+      reportDescription:
+        'Wybierz „Zgłoś błąd”, usuń dane osobowe z próbki i sprawdź podgląd. Do dewelopera trafi tylko próbka, którą zatwierdzisz.',
+      note:
+        'Oryginały pozostają zaszyfrowane na telefonie i wygasają po 30 dniach. Na tej liście pojawią się tylko wiadomości, które dotarły ze Skrótów — automatyzacja nadal musi być włączona.',
+    },
     sessionAnnouncement: {
       eyebrow: 'NOWOŚĆ DLA BETA TESTERÓW',
       title: 'Koniec z wylogowywaniem',
@@ -276,6 +293,23 @@ export const onboardingCopy = defineCopy({
         'In version 1.0.9 you can choose the tone of limit alerts: Calm, Snarky or Brutal, which swears.',
       stepOne: '1. On the Shops tab, tap the limits button.',
       stepTwo: '2. Set a limit, keep Notifications on and choose a tone, such as Brutal.',
+    },
+    notificationRecoveryNotes: {
+      eyebrow: 'NEW FOR BETA TESTERS',
+      title: 'Recover a missing transaction',
+      description:
+        'Notifications with an amount that we cannot recognize yet are saved securely on your phone. You can inspect them and turn them into transactions.',
+      inboxTitle: 'Open unrecognized notifications',
+      inboxDescription:
+        'Go to Profile → Capture → Notifications awaiting recognition. You will see the original message and why it did not become a transaction.',
+      recoveryTitle: 'Retry recognition or complete the details',
+      recoveryDescription:
+        'Try again, or fill in the missing details and save a manual transaction. The original message is removed after the transaction is saved.',
+      reportTitle: 'Help us improve recognition',
+      reportDescription:
+        'Choose “Report a problem”, remove personal details from the sample and check the preview. Only the sample you approve will reach the developer.',
+      note:
+        'Originals stay encrypted on your phone and expire after 30 days. This list only contains messages received from Shortcuts, so your automation must still be enabled.',
     },
     sessionAnnouncement: {
       eyebrow: 'NEW FOR BETA TESTERS',

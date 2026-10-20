@@ -15,6 +15,7 @@ interface SheetRowProps {
   isSelected?: boolean;
   onPress?: () => void;
   accessibilityHint?: string;
+  labelLines?: number;
 }
 
 export function SheetRow({
@@ -26,11 +27,12 @@ export function SheetRow({
   isSelected,
   onPress,
   accessibilityHint,
+  labelLines = 2,
 }: SheetRowProps) {
   const content = (
     <>
       <View style={sheetRowStyles.rowCopy}>
-        <AmountText maxFontSizeMultiplier={1.4} numberOfLines={2} style={sheetRowStyles.rowLabel}>
+        <AmountText maxFontSizeMultiplier={1.4} numberOfLines={labelLines} style={sheetRowStyles.rowLabel}>
           {label}
         </AmountText>
         {detail !== undefined ? (

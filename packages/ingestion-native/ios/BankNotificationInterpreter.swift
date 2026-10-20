@@ -1,5 +1,18 @@
 import Foundation
 
+struct NotificationParsingAttempt: Codable, Sendable {
+  let ruleId: String
+  let reasonCode: String
+  let groups: [String: String]
+}
+
+struct NotificationParsingTrace: Codable, Sendable {
+  let parserVersion: Int
+  let attempts: [NotificationParsingAttempt]
+  var record: NormalizedRecord?
+  let reasonCode: String?
+}
+
 enum RuleBundleError: Error {
   case unsupportedSchema(Int)
   case unknownFragment(String)
@@ -86,6 +99,19 @@ struct BankNotificationInterpreter: @unchecked Sendable {
     sourceApp: String,
     capturedAt: Date
   ) -> NormalizationOutcome {
+    let trace = inspect(title: title, subtitle: subtitle, body: body, sourceApp: sourceApp, capturedAt: capturedAt)
+    return trace.record.map { .record($0) } ?? .ignored(reasonCode: trace.reasonCode ?? bundle.fallbackIgnoreReason)
+  }
+
+  func inspect(
+    title: String,
+    subtitle: String,
+    body: String,
+    sourceApp: String,
+    capturedAt: Date
+  ) -> NotificationParsingTrace {
+    var attempts: [NotificationParsingAttempt] = []
+
     for rule in bundle.rules {
       let fields: Fields = [
         .title: Self.collapseWhitespace(title, mode: rule.whitespace),
@@ -93,7 +119,8 @@ struct BankNotificationInterpreter: @unchecked Sendable {
         .body: Self.collapseWhitespace(body, mode: rule.whitespace),
       ]
 
-      if !meetsRequirements(rule, fields: fields) {
+      guard meetsRequirements(rule, fields: fields) else {
+        attempts.append(NotificationParsingAttempt(ruleId: rule.id, reasonCode: "requirementsMismatch", groups: [:]))
         continue
       }
 
@@ -102,19 +129,33 @@ struct BankNotificationInterpreter: @unchecked Sendable {
         caseInsensitive: rule.match.caseInsensitive,
         in: fields[rule.match.field] ?? ""
       ) else {
+        attempts.append(NotificationParsingAttempt(ruleId: rule.id, reasonCode: "patternMismatch", groups: [:]))
         continue
       }
 
       if let reason = rule.ignore {
-        return .ignored(reasonCode: reason)
+        attempts.append(NotificationParsingAttempt(ruleId: rule.id, reasonCode: reason, groups: groups))
+        return NotificationParsingTrace(parserVersion: version, attempts: attempts, record: nil, reasonCode: reason)
       }
 
       if let record = record(rule, groups: groups, fields: fields, sourceApp: sourceApp, capturedAt: capturedAt) {
-        return .record(record)
+        attempts.append(NotificationParsingAttempt(ruleId: rule.id, reasonCode: "recognized", groups: groups))
+        return NotificationParsingTrace(parserVersion: version, attempts: attempts, record: record, reasonCode: nil)
       }
+
+      let reason: String
+      if let template = rule.record,
+        let amount = NotificationAmount.minorUnits(groups[template.amountGroup] ?? ""), amount > 0 {
+        reason = template.occurredAt == nil ? "invalidRecord" : "invalidOccurrenceDate"
+      } else {
+        reason = "invalidAmount"
+      }
+      attempts.append(NotificationParsingAttempt(ruleId: rule.id, reasonCode: reason, groups: groups))
     }
 
-    return .ignored(reasonCode: bundle.fallbackIgnoreReason)
+    return NotificationParsingTrace(
+      parserVersion: version, attempts: attempts, record: nil, reasonCode: bundle.fallbackIgnoreReason
+    )
   }
 
   private func meetsRequirements(_ rule: NotificationRule, fields: Fields) -> Bool {

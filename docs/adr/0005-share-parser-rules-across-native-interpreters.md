@@ -1,3 +1,3 @@
 # Share parser rules across native interpreters
 
-Notification ingestion must work when the React Native runtime is unavailable, so Swift and Kotlin implement thin interpreters for one shared, versioned set of bank rules and test examples. This duplicates a small amount of platform code but avoids storing raw notification text until the main application launches.
+Notification ingestion must work when the React Native runtime is unavailable, so Swift and Kotlin implement thin interpreters for one shared, versioned set of bank rules and test examples. On iOS, admitted monetary notifications are committed to an encrypted local inbox before interpretation. Successful interpretation removes the raw text atomically with saving the normalized record; uncertain notifications remain eligible for future rule versions for at most 30 days. Native interpretation still runs immediately without waiting for the main application to launch.

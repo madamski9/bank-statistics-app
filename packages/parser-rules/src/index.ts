@@ -14,3 +14,10 @@ export {
 export type { RuleBundle } from './rule-bundle';
 
 export const bundledRules = rules as RuleBundle;
+
+export {
+  diagnosticSampleProblem,
+  diagnosticSamplePreview,
+  diagnosticSampleTextLimit,
+  type DiagnosticNotification,
+} from './diagnostic-sample';

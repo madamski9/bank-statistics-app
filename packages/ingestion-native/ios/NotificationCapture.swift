@@ -5,6 +5,7 @@ public enum NotificationCaptureResult: Sendable {
   case notTransaction
   case awaitingApplePay
   case alreadySaved
+  case queued
 }
 
 public enum NotificationCapture {
@@ -26,6 +27,9 @@ public enum NotificationCapture {
         IngestionAttemptLog.record { $0.recordSuccess() }
         let label = record.merchant ?? record.transactionType ?? "transaction"
         return .saved(label: label, amountMinor: record.amountMinor)
+      case .pending(let reasonCode):
+        IngestionAttemptLog.record { $0.recordPending(reasonCode) }
+        return .queued
       case .ignored(let reasonCode):
         IngestionAttemptLog.record { $0.recordIgnored(reasonCode) }
         switch reasonCode {

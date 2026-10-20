@@ -12,21 +12,81 @@ final class EncryptedOutbox: @unchecked Sendable {
     subtitle: String,
     body: String,
     sourceApp: String
-  ) throws -> NormalizationOutcome {
-    let outcome = try BankNotificationNormalizer().normalize(
-      title: title,
-      subtitle: subtitle,
-      body: body,
-      sourceApp: sourceApp
-    )
-    guard case .record(let record) = outcome else {
-      return outcome
+  ) throws -> NotificationIngestionOutcome {
+    guard NotificationAdmission.accepts(title: title, subtitle: subtitle, body: body) else {
+      return .ignored(reasonCode: IgnoredReason.notTransaction)
     }
-    guard let stored = try persistPairingCardPayments(record) else {
-      return .ignored(reasonCode: IgnoredReason.cardPaymentAlreadySaved)
+
+    let notification = CapturedNotification(title: title, subtitle: subtitle, body: body, sourceApp: sourceApp)
+    let outcome = try serialized {
+      let database = try openDatabase()
+      defer { sqlite3_close(database) }
+      let inbox = NotificationInbox(database: database)
+      try inbox.enqueue(notification)
+
+      let interpreter: BankNotificationInterpreter
+      do {
+        interpreter = try BankNotificationInterpreter.bundled()
+      } catch {
+        let reason = (error as? IngestionError)?.reasonCode ?? "unknown"
+        try? inbox.saveDiagnostic(id: notification.id, trace: nil, failureReason: reason)
+        return NotificationIngestionOutcome.pending(reasonCode: reason)
+      }
+      do {
+        return try inbox.process(notification, interpreter: interpreter) { record in
+          try persistPairingCardPayments(record, database: database)
+        }
+      } catch {
+        return NotificationIngestionOutcome.pending(reasonCode: (error as? IngestionError)?.reasonCode ?? "unknown")
+      }
     }
-    SpendingWidgetUpdater.shared.refresh(capturedRecordId: stored.id)
-    return .record(stored)
+
+    if case .record(let record) = outcome {
+      SpendingWidgetUpdater.shared.refresh(capturedRecordId: record.id)
+    }
+    return outcome
+  }
+
+  func notificationDiagnostics(offset: Int) throws -> [[String: Any]] {
+    try serialized {
+      let database = try openDatabase()
+      defer { sqlite3_close(database) }
+      return try NotificationInbox(database: database).diagnostics(offset: offset)
+    }
+  }
+
+  func retryNotification(id: String) throws -> NotificationIngestionOutcome {
+    let result = try serialized {
+      let database = try openDatabase()
+      defer { sqlite3_close(database) }
+      let inbox = NotificationInbox(database: database)
+      guard let notification = try inbox.notification(id: id) else {
+        throw IngestionError.notificationUnavailable
+      }
+      return try inbox.process(notification, interpreter: BankNotificationInterpreter.bundled()) { record in
+        try persistPairingCardPayments(record, database: database)
+      }
+    }
+    SpendingWidgetUpdater.shared.refresh()
+    return result
+  }
+
+  func restoreNotification(
+    id: String,
+    build: (CapturedNotification) throws -> NormalizedRecord
+  ) throws -> NormalizedRecord {
+    let result = try serialized {
+      let database = try openDatabase()
+      defer { sqlite3_close(database) }
+      return try NotificationInbox(database: database).restore(id: id) { notification in
+        var record = try build(notification)
+        record.id = notification.id
+        try write(record, database: database)
+        return record
+      }
+    }
+    SpendingWidgetUpdater.shared.refresh()
+    return result
   }
 
   func save(_ record: NormalizedRecord) throws {
@@ -62,34 +122,42 @@ final class EncryptedOutbox: @unchecked Sendable {
     }
   }
 
-  private func persistPairingCardPayments(_ record: NormalizedRecord) throws -> NormalizedRecord? {
-    try serialized {
-      let database = try openDatabase()
-      defer { sqlite3_close(database) }
-      try execute("BEGIN IMMEDIATE", database: database)
+  private func persistPairingCardPayments(
+    _ record: NormalizedRecord,
+    database: OpaquePointer
+  ) throws -> NormalizedRecord? {
+    let pairing = CardPaymentPairing(paired: try pairedIdentifiers(database))
 
+    switch pairing.resolve(record, existing: try recordsCaptured(around: record, database: database)) {
+    case .insert:
+      try write(record, database: database)
+      return record
+    case .keepExisting(let id):
+      try rememberPairing(id, database: database)
+      return nil
+    case .replace(let merged):
+      try write(merged, database: database)
+      try rememberPairing(merged.id, database: database)
+      return merged
+    }
+  }
+
+  private func retryPendingNotifications(database: OpaquePointer) {
+    guard let interpreter = try? BankNotificationInterpreter.bundled() else {
+      return
+    }
+    let inbox = NotificationInbox(database: database)
+    guard let pending = try? inbox.pending(rulesVersion: interpreter.version) else {
+      return
+    }
+
+    for notification in pending {
       do {
-        let pairing = CardPaymentPairing(paired: try pairedIdentifiers(database))
-        let stored: NormalizedRecord?
-
-        switch pairing.resolve(record, existing: try recordsCaptured(around: record, database: database)) {
-        case .insert:
-          try write(record, database: database)
-          stored = record
-        case .keepExisting(let id):
-          try rememberPairing(id, database: database)
-          stored = nil
-        case .replace(let merged):
-          try write(merged, database: database)
-          try rememberPairing(merged.id, database: database)
-          stored = merged
+        _ = try inbox.process(notification, interpreter: interpreter) { record in
+          try persistPairingCardPayments(record, database: database)
         }
-
-        try execute("COMMIT", database: database)
-        return stored
       } catch {
-        try? execute("ROLLBACK", database: database)
-        throw error
+        continue
       }
     }
   }
@@ -187,6 +255,7 @@ final class EncryptedOutbox: @unchecked Sendable {
       let configuration = try IngestionConfiguration.current()
       let database = try openDatabase(configuration: configuration)
       defer { sqlite3_close(database) }
+      try NotificationInbox(database: database).clear()
       try execute("DELETE FROM outbox", database: database)
       try execute("DELETE FROM card_payment_pairs", database: database)
       try execute("DELETE FROM documents", database: database)
@@ -277,6 +346,7 @@ final class EncryptedOutbox: @unchecked Sendable {
     try serialized {
       let database = try openDatabase()
       defer { sqlite3_close(database) }
+      retryPendingNotifications(database: database)
       let sql = "SELECT payload FROM outbox ORDER BY captured_at DESC"
       var statement: OpaquePointer?
       try check(sqlite3_prepare_v2(database, sql, -1, &statement, nil), database)
@@ -309,6 +379,9 @@ final class EncryptedOutbox: @unchecked Sendable {
       var values: [String: String] = [
         "cipherVersion": try scalar("PRAGMA cipher_version", database: database),
         "databasePath": configuration.databaseURL.path,
+        "pendingNotificationCount": try scalar(
+          "SELECT COUNT(*) FROM notification_inbox WHERE requires_recognition = 1", database: database
+        ),
       ]
       values.merge(IngestionAttemptLog(configuration: configuration).snapshot()) { _, new in new }
       return values
@@ -376,6 +449,8 @@ final class EncryptedOutbox: @unchecked Sendable {
       try check(sqlite3_busy_timeout(database, 5_000), database)
       try execute("PRAGMA cipher_memory_security = ON", database: database)
       try execute("PRAGMA journal_mode = WAL", database: database)
+      try execute("PRAGMA synchronous = FULL", database: database)
+      try execute("PRAGMA secure_delete = ON", database: database)
       try execute(
         "CREATE TABLE IF NOT EXISTS outbox (id TEXT PRIMARY KEY, payload BLOB NOT NULL, captured_at TEXT NOT NULL)",
         database: database
@@ -388,6 +463,9 @@ final class EncryptedOutbox: @unchecked Sendable {
         "CREATE TABLE IF NOT EXISTS card_payment_pairs (record_id TEXT PRIMARY KEY)",
         database: database
       )
+      let inbox = NotificationInbox(database: database)
+      try inbox.prepare()
+      try inbox.expire()
       return database
     } catch {
       sqlite3_close(database)

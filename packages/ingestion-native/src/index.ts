@@ -50,10 +50,27 @@ export interface StorageDiagnostics {
   cipherVersion: string;
   databasePath: string;
   lastAttemptAt?: string;
-  lastAttemptOutcome?: 'success' | 'ignored' | 'failure';
+  lastAttemptOutcome?: 'success' | 'ignored' | 'failure' | 'pending';
+  pendingNotificationCount?: string;
   lastAttemptFailureReason?: string;
   lastFailureAt?: string;
   lastFailureReason?: string;
+}
+
+export interface NotificationDiagnostic {
+  id: string;
+  title: string;
+  subtitle: string;
+  body: string;
+  sourceApp: string;
+  capturedAt: string;
+  diagnosticJson?: string;
+  rulesVersion?: number;
+}
+
+export interface NotificationRetryResult {
+  status: 'saved' | 'ignored' | 'pending';
+  reasonCode?: string;
 }
 
 interface BankStatsIngestionNativeModule {
@@ -70,6 +87,9 @@ interface BankStatsIngestionNativeModule {
   writeDocument?(key: string, value: string): Promise<void>;
   deleteDocument?(key: string): Promise<void>;
   storageDiagnostics(): Promise<StorageDiagnostics>;
+  listNotificationDiagnostics?(offset: number): Promise<NotificationDiagnostic[]>;
+  retryNotification?(id: string): Promise<NotificationRetryResult>;
+  restoreNotification?(id: string, record: IngestionRecord): Promise<IngestionRecord>;
 }
 
 const nativeModule = requireOptionalNativeModule<BankStatsIngestionNativeModule>(
@@ -200,4 +220,32 @@ export function configureSpendingWidget(configuration: string): boolean {
 
   nativeModule.configureSpendingWidget(configuration);
   return true;
+}
+
+export function supportsNotificationDiagnostics(): boolean {
+  return Platform.OS === 'ios' && typeof nativeModule?.listNotificationDiagnostics === 'function';
+}
+
+export function listNotificationDiagnostics(offset = 0): Promise<NotificationDiagnostic[]> {
+  const module = requireNativeModule();
+  if (module.listNotificationDiagnostics === undefined) {
+    return Promise.reject(new Error('Notification diagnostics require a newer iOS build'));
+  }
+  return module.listNotificationDiagnostics(offset);
+}
+
+export function retryNotification(id: string): Promise<NotificationRetryResult> {
+  const module = requireNativeModule();
+  if (module.retryNotification === undefined) {
+    return Promise.reject(new Error('Notification recovery requires a newer iOS build'));
+  }
+  return module.retryNotification(id);
+}
+
+export function restoreNotification(id: string, record: IngestionRecord): Promise<IngestionRecord> {
+  const module = requireNativeModule();
+  if (module.restoreNotification === undefined) {
+    return Promise.reject(new Error('Notification recovery requires a newer iOS build'));
+  }
+  return module.restoreNotification(id, record);
 }

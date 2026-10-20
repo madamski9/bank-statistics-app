@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { shouldShowReleaseNotes } from './release-notes';
+import { releaseNotesKey, releaseNotesPages, shouldShowReleaseNotes } from './release-notes';
 
 const betaTester = {
   hasCompletedOnboarding: true,
@@ -20,5 +20,18 @@ describe('shouldShowReleaseNotes', () => {
     expect(shouldShowReleaseNotes({ ...betaTester, hasCompletedOnboarding: false })).toBe(false);
     expect(shouldShowReleaseNotes({ ...betaTester, lane: 'production' })).toBe(false);
     expect(shouldShowReleaseNotes({ ...betaTester, platform: 'android' })).toBe(false);
+  });
+});
+
+describe('notification recovery release notes', () => {
+  test('notifies existing testers independently of the previous release and account', () => {
+    expect(releaseNotesKey('tester')).not.toBe('bankstats.release-notes.1.0.9.tester');
+    expect(releaseNotesKey('tester')).not.toBe(releaseNotesKey('another-tester'));
+  });
+
+  test('shows recovery before an optional sign-out and keeps sign-in guidance second', () => {
+    expect(releaseNotesPages[0]).toBe('notificationRecovery');
+    expect(releaseNotesPages[1]).toBe('signInAgain');
+    expect(releaseNotesPages).toContain('alertTone');
   });
 });

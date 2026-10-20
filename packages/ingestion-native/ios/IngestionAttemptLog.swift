@@ -36,6 +36,12 @@ struct IngestionAttemptLog {
     defaults?.set(reasonCode, forKey: Key.lastFailureReason)
   }
 
+  func recordPending(_ reasonCode: String, at date: Date = Date()) {
+    defaults?.set(ISO8601DateFormatter().string(from: date), forKey: Key.attemptedAt)
+    defaults?.set("pending", forKey: Key.outcome)
+    defaults?.set(reasonCode, forKey: Key.failureReason)
+  }
+
   /// The automation recognized the notification but deliberately did not persist it (e.g. a
   /// Millennium card-payment push deferred to the matching Apple Pay Wallet transaction). Distinct
   /// from `failure` so the diagnostics screen doesn't read a working automation as broken.

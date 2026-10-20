@@ -29,6 +29,49 @@ function stateOf(health: ReturnType<typeof captureHealth>, bank: 'millennium' | 
 }
 
 describe('capture health', () => {
+  test('shows durable pending notifications without claiming a transaction was saved', () => {
+    const health = captureHealth({
+      records: [],
+      diagnostics: {
+        ...diagnostics,
+        lastAttemptAt: '2026-09-29T10:00:00Z',
+        lastAttemptOutcome: 'pending',
+        pendingNotificationCount: '2',
+      },
+      enabledBanks: ['mbank'],
+      now,
+    });
+
+    expect(health.pendingNotificationCount).toBe(2);
+    expect(health.needsAttention).toBe(true);
+    expect(stateOf(health, 'mbank')).toEqual(['attention', 'pendingNotification']);
+  });
+
+  test('does not attribute a pending notification to every enabled bank', () => {
+    const health = captureHealth({
+      records: [],
+      diagnostics: { ...diagnostics, pendingNotificationCount: '1' },
+      enabledBanks: ['mbank', 'pko'],
+      now,
+    });
+
+    expect(health.needsAttention).toBe(true);
+    expect(stateOf(health, 'mbank')).toEqual(['unverified', 'neverRan']);
+    expect(stateOf(health, 'pko')).toEqual(['unverified', 'neverRan']);
+  });
+
+  test('clears the warning when the inbox was processed or expired', () => {
+    const health = captureHealth({
+      records: [captured('mbank', '2026-09-29T10:00:00Z')],
+      diagnostics: { ...diagnostics, lastAttemptOutcome: 'pending', pendingNotificationCount: '0' },
+      enabledBanks: ['mbank'],
+      now,
+    });
+
+    expect(health.needsAttention).toBe(false);
+    expect(stateOf(health, 'mbank')).toEqual(['working', null]);
+  });
+
   test('tracks an enabled mBank automation and its captured transfers', () => {
     const health = captureHealth({
       records: [captured('mbank', '2026-09-29T10:00:00Z')],

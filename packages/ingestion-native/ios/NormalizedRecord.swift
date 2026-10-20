@@ -13,7 +13,7 @@ enum ReviewReason {
 }
 
 struct NormalizedRecord: Codable, Equatable, Sendable {
-  let id: String
+  var id: String
   let bank: String
   let direction: String
   let transactionType: String?

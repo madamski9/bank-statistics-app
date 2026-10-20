@@ -1,4 +1,5 @@
 import ExpoModulesCore
+import Foundation
 
 public final class BankStatsIngestionModule: Module {
   public func definition() -> ModuleDefinition {
@@ -56,6 +57,33 @@ public final class BankStatsIngestionModule: Module {
 
     AsyncFunction("listRecords") { () -> [[String: Any]] in
       try EncryptedOutbox.shared.records().map(\.dictionary)
+    }
+
+    AsyncFunction("listNotificationDiagnostics") { (offset: Int) -> [[String: Any]] in
+      try EncryptedOutbox.shared.notificationDiagnostics(offset: offset)
+    }
+
+    AsyncFunction("retryNotification") { (id: String) -> [String: String] in
+      switch try EncryptedOutbox.shared.retryNotification(id: id) {
+      case .record:
+        return ["status": "saved"]
+      case .ignored(let reason):
+        return ["status": "ignored", "reasonCode": reason]
+      case .pending(let reason):
+        return ["status": "pending", "reasonCode": reason]
+      }
+    }
+
+    AsyncFunction("restoreNotification") { (id: String, input: TransactionInput) -> [String: Any] in
+      try EncryptedOutbox.shared.restoreNotification(id: id) { notification in
+        var corrected = input
+        corrected.id = notification.id
+        corrected.capturedAt = ISO8601DateFormatter().string(from: notification.capturedAt)
+        corrected.origin = NormalizedRecordOrigin.manual
+        corrected.bank = NormalizedRecordOrigin.manual
+        corrected.sourceApp = NormalizedRecordOrigin.manual
+        return try corrected.normalized()
+      }.dictionary
     }
 
     AsyncFunction("readDocument") { (key: String) -> String? in

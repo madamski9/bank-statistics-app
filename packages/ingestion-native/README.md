@@ -2,15 +2,36 @@
 
 The Expo native module that owns transaction ingestion outside the React Native runtime. Its one
 iOS App Intent, `Capture Bank Notification` (`IngestMillenniumNotificationIntent`), is fed by a single Shortcuts automation that
-triggers on a notification from **either** Millennium **or** Portfel (Wallet) and normalizes
-whichever text arrives:
+triggers on a notification from the selected banks or Portfel (Wallet). On iOS, a lightweight
+admission filter first looks for an amount with an ISO currency code or supported currency symbol.
+It accepts symbols before or after the amount, decimal commas or points, and grouped thousands.
+Wallet-shaped notifications with a merchant subtitle and a bare amount retain their existing
+currency-review path. Explicit promotional calls to action are rejected even if they contain money;
+merchant subtitles are not scanned for promotional language. This is a heuristic, not a guarantee
+that every advertisement can be identified.
+
+Admitted notifications are committed to the encrypted `notification_inbox` table before loading
+or running the transaction parser. Recognition and removal of raw text are committed atomically
+with the normalized record and card-payment pairing. A failed operation rolls back, retaining the
+original payload and capture time. Each inbox entry supplies a stable transaction identifier.
+Unrecognized formats are retained on this phone for at most 30 days and retried after the bundled
+rule version changes. Interrupted processing and storage failures remain eligible on the next
+record read. Record reads process up to 50 eligible entries at a time. Expiry runs whenever the
+database is opened; if the app is not running, cleanup happens on its next database access.
+Raw payloads are never exposed through the synchronization API. Capture health shows the pending
+count, and clearing local data clears the inbox. The admission and SQLCipher lifecycle checks run
+with `sh conformance/notification-inbox/run.sh` (Swift and SQLCipher development files required).
+
+After durable enqueue, the existing bank rules still decide whether a transaction can be created:
 
 - A Millennium transfer push (incoming/outgoing) is saved as before.
-- Any other bank push, such as an advertisement or a request to rate the app, is read and ignored
-  with the reason `notTransaction`: nothing is saved and Shortcuts does not report an error.
+- A push without a monetary amount, such as a request to rate the app, and recognized promotional
+  messages are ignored with `notTransaction`. Unknown monetary formats remain pending, never
+  affecting statistics until a rule can recognize them.
 - Millennium's own card-payment push (e.g. "Płatność kartą debetową: Kwota: ...") never names the
-  merchant, so it is recognized and deliberately dropped — not saved, not treated as an error —
-  rather than stored twice once Wallet's own push for the same purchase arrives.
+  merchant, so it stays in the encrypted inbox awaiting recognition rather than creating a
+  poorer-detail transaction. This expected deferral keeps its ignored outcome and does not raise
+  the unknown-format warning. Wallet's own push can still create the transaction for that purchase.
 - Wallet's push for a Millennium card is what actually supplies the merchant name, and is saved as
   the `cardPayment` record. It arrives as separate notification fields — subtitle
   `Lidl  Gdańsk, Pomorskie`, body `5,08 zł` — and the automation maps both to the intent's
@@ -69,6 +90,25 @@ Categories, Events), exposed as `readEncryptedDocument`, `writeEncryptedDocument
 for both notification shapes, stored records, storage diagnostics, and writes — `saveIngestionRecord`
 (insert or replace by identifier, used for manual transactions, corrections and review decisions)
 and `deleteIngestionRecord` — to the mobile application.
+
+The Capture settings open an iOS-only unrecognized-notifications inbox. Its paginated native API
+returns full local notification fields and a diagnostic JSON snapshot with parser version, each
+attempted rule, extracted groups, validation failures, and any normalized record whose storage
+failed. Snapshots share the raw entry's encryption and expiry. Existing inbox databases migrate
+without discarding queued notifications. `retryNotification` forces recognition with current rules;
+`restoreNotification` saves a user-confirmed manual transaction with the original inbox identifier
+and capture timestamp and deletes the raw entry in one transaction. Storage failures roll back
+both operations, and a stale second restore cannot insert another transaction.
+
+Reporting a problem is a separate, explicit action. The app prepares an editable sample by masking
+recognized names and common email, phone and account identifiers. This is partial redaction: users
+must inspect all fields and remove remaining personal details, actual amounts and dates before
+confirming. Editing any field clears confirmation. Both preview and server compute the sample's
+JSON from the edited sample, never from the original trace. Convex stores only the confirmed sample
+in `diagnosticSamples`, with authenticated ownership, idempotent submission identifiers, a limit of
+ten samples per rolling 24 hours, and 90-day expiry. Expired samples are purged daily and account
+deletion also removes them. Reports can be inspected by developers in the Convex dashboard; there
+is no public listing endpoint. They do not create transactions or enable transaction synchronization.
 
 On Android the same API is implemented in Kotlin in [`android/`](android). Its
 `BankNotificationInterpreter` applies the same rule bundle, which Gradle adds to the module's

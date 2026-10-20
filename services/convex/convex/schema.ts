@@ -123,6 +123,20 @@ export default defineSchema({
   financialAccounts: syncedTable(financialAccountFields),
   categories: syncedTable(categoryFields),
   events: syncedTable(eventFields),
+  diagnosticSamples: defineTable({
+    ownerId: v.string(),
+    clientId: v.string(),
+    notification: v.object({ title: v.string(), subtitle: v.string(), body: v.string(), sourceApp: v.string() }),
+    clientParserVersion: v.number(),
+    parserVersion: v.number(),
+    reasonCode: v.string(),
+    resultJson: v.string(),
+    submittedAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index('by_owner_client', ['ownerId', 'clientId'])
+    .index('by_owner_submitted', ['ownerId', 'submittedAt'])
+    .index('by_expiry', ['expiresAt']),
   exchangeRates: defineTable({
     currency: v.string(),
     requestedDate: v.string(),
