@@ -30,6 +30,11 @@ function record(overrides: Partial<IngestionRecord> = {}): IngestionRecord {
 }
 
 describe('exportedTransactions', () => {
+  test('exports a user-assigned bank name without the private notification title', () => {
+    const [exported] = exportedTransactions([record({ bank: 'unknown', bankName: 'Trade Republic', notificationTitle: 'Tytuł z Wallet' })], []);
+    expect(exported.bank).toBe('Trade Republic');
+    expect(exported).not.toHaveProperty('notificationTitle');
+  });
   test('describes each transaction with its account, category and review state', () => {
     const [exported] = exportedTransactions(
       [

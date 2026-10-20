@@ -94,6 +94,40 @@ final class EncryptedOutbox: @unchecked Sendable {
     SpendingWidgetUpdater.shared.refresh()
   }
 
+  func saveAndRememberBank(_ record: NormalizedRecord) throws -> NormalizedRecord {
+    let saved = try serialized {
+      let database = try openDatabase()
+      defer { sqlite3_close(database) }
+      try execute("BEGIN IMMEDIATE", database: database)
+      do {
+        guard let original = try storedRecord(id: record.id, database: database),
+          original.bank == "unknown", record.bank == "unknown",
+          original.origin != NormalizedRecordOrigin.manual, record.origin != NormalizedRecordOrigin.manual,
+          original.sourceApp == record.sourceApp, let name = record.bankName else {
+          throw IngestionError.invalidRecord
+        }
+        let banks = NotificationBankStore(database: database)
+        try banks.remember(for: original, name: name)
+        var corrected = record
+        corrected.notificationTitle = original.notificationTitle
+        corrected = try banks.applying(to: corrected)
+        try write(corrected, database: database)
+        for existing in try storedRecords(database: database)
+          where existing.id != corrected.id && banks.matchesSource(existing, original) {
+          let updated = try banks.applying(to: existing)
+          if updated != existing { try write(updated, database: database) }
+        }
+        try execute("COMMIT", database: database)
+        return corrected
+      } catch {
+        try? execute("ROLLBACK", database: database)
+        throw error
+      }
+    }
+    SpendingWidgetUpdater.shared.refresh()
+    return saved
+  }
+
   func delete(id: String) throws -> Int {
     let deletedCount = try serialized {
       let database = try openDatabase()
@@ -126,6 +160,7 @@ final class EncryptedOutbox: @unchecked Sendable {
     _ record: NormalizedRecord,
     database: OpaquePointer
   ) throws -> NormalizedRecord? {
+    let record = try NotificationBankStore(database: database).applying(to: record)
     let pairing = CardPaymentPairing(paired: try pairedIdentifiers(database))
 
     switch pairing.resolve(record, existing: try recordsCaptured(around: record, database: database)) {
@@ -163,6 +198,12 @@ final class EncryptedOutbox: @unchecked Sendable {
   }
 
   private func write(_ record: NormalizedRecord, database: OpaquePointer) throws {
+    var record = record
+    if record.bank == "unknown", record.origin != NormalizedRecordOrigin.manual, record.notificationTitle == nil {
+      if let original = try storedRecord(id: record.id, database: database), original.sourceApp == record.sourceApp {
+        record.notificationTitle = original.notificationTitle
+      }
+    }
     let sql = "INSERT OR REPLACE INTO outbox (id, payload, captured_at) VALUES (?, ?, ?)"
     var statement: OpaquePointer?
     try check(sqlite3_prepare_v2(database, sql, -1, &statement, nil), database)
@@ -175,6 +216,18 @@ final class EncryptedOutbox: @unchecked Sendable {
     try check(payloadStatus, database)
     try check(sqlite3_bind_text(statement, 3, record.capturedAt, -1, transient), database)
     try check(sqlite3_step(statement), database, accepted: [SQLITE_DONE])
+  }
+
+  private func storedRecord(id: String, database: OpaquePointer) throws -> NormalizedRecord? {
+    var statement: OpaquePointer?
+    try check(sqlite3_prepare_v2(database, "SELECT payload FROM outbox WHERE id = ?", -1, &statement, nil), database)
+    defer { sqlite3_finalize(statement) }
+    try check(sqlite3_bind_text(statement, 1, id, -1, transient), database)
+    let status = sqlite3_step(statement)
+    if status == SQLITE_DONE { return nil }
+    try check(status, database, accepted: [SQLITE_ROW])
+    guard let bytes = sqlite3_column_blob(statement, 0) else { return nil }
+    return try JSONDecoder().decode(NormalizedRecord.self, from: Data(bytes: bytes, count: Int(sqlite3_column_bytes(statement, 0))))
   }
 
   private func recordsCaptured(
@@ -259,6 +312,7 @@ final class EncryptedOutbox: @unchecked Sendable {
       try execute("DELETE FROM outbox", database: database)
       try execute("DELETE FROM card_payment_pairs", database: database)
       try execute("DELETE FROM documents", database: database)
+      try execute("DELETE FROM notification_banks", database: database)
       IngestionAttemptLog(configuration: configuration).reset()
     }
   }
@@ -347,28 +401,32 @@ final class EncryptedOutbox: @unchecked Sendable {
       let database = try openDatabase()
       defer { sqlite3_close(database) }
       retryPendingNotifications(database: database)
-      let sql = "SELECT payload FROM outbox ORDER BY captured_at DESC"
-      var statement: OpaquePointer?
-      try check(sqlite3_prepare_v2(database, sql, -1, &statement, nil), database)
-      defer { sqlite3_finalize(statement) }
-      var records: [NormalizedRecord] = []
-
-      var status = sqlite3_step(statement)
-
-      while status == SQLITE_ROW {
-        let length = Int(sqlite3_column_bytes(statement, 0))
-        guard let bytes = sqlite3_column_blob(statement, 0) else {
-          status = sqlite3_step(statement)
-          continue
-        }
-        let data = Data(bytes: bytes, count: length)
-        records.append(try JSONDecoder().decode(NormalizedRecord.self, from: data))
-        status = sqlite3_step(statement)
-      }
-
-      try check(status, database, accepted: [SQLITE_DONE])
-      return records
+      return try storedRecords(database: database)
     }
+  }
+
+  private func storedRecords(database: OpaquePointer) throws -> [NormalizedRecord] {
+    let sql = "SELECT payload FROM outbox ORDER BY captured_at DESC"
+    var statement: OpaquePointer?
+    try check(sqlite3_prepare_v2(database, sql, -1, &statement, nil), database)
+    defer { sqlite3_finalize(statement) }
+    var records: [NormalizedRecord] = []
+
+    var status = sqlite3_step(statement)
+
+    while status == SQLITE_ROW {
+      let length = Int(sqlite3_column_bytes(statement, 0))
+      guard let bytes = sqlite3_column_blob(statement, 0) else {
+        status = sqlite3_step(statement)
+        continue
+      }
+      let data = Data(bytes: bytes, count: length)
+      records.append(try JSONDecoder().decode(NormalizedRecord.self, from: data))
+      status = sqlite3_step(statement)
+    }
+
+    try check(status, database, accepted: [SQLITE_DONE])
+    return records
   }
 
   func diagnostics() throws -> [String: String] {
@@ -468,6 +526,7 @@ final class EncryptedOutbox: @unchecked Sendable {
       let inbox = NotificationInbox(database: database)
       try inbox.prepare()
       try inbox.expire()
+      try NotificationBankStore(database: database).prepare()
       return database
     } catch {
       sqlite3_close(database)

@@ -83,6 +83,37 @@ describe('draftError', () => {
 describe('recordFromDraft', () => {
   const now = new Date(2026, 8, 21, 9, 30);
 
+  test('suggests the unknown Wallet title and saves the chosen bank without changing capture metadata', () => {
+    const unknown = { ...captured, bank: 'unknown' as const, notificationTitle: 'Trade Republic' };
+    const draft = draftFromRecord(unknown);
+    expect(draft.bankName).toBe('Trade Republic');
+    const saved = recordFromDraft({ ...draft, bankName: '  Mój bank  ' }, { record: unknown, now });
+    expect(saved).toMatchObject({
+      id: captured.id,
+      bank: 'unknown',
+      bankName: 'Mój bank',
+      notificationTitle: 'Trade Republic',
+      origin: 'capture',
+      sourceApp: captured.sourceApp,
+      amountMinor: captured.amountMinor,
+    });
+    expect(draftFromRecord({ ...saved, bankName: 'Zapisany bank' }).bankName).toBe('Zapisany bank');
+  });
+
+  test('does not offer a learned bank for supported banks, manual entries or legacy captures without a title', () => {
+    expect(draftFromRecord(captured).bankName).toBeUndefined();
+    expect(draftFromRecord({ ...captured, bank: 'unknown' }).bankName).toBeUndefined();
+    expect(draftFromRecord({ ...captured, bank: 'unknown', notificationTitle: '  ' }).bankName).toBeUndefined();
+    expect(draftFromRecord({ ...captured, bank: 'unknown', origin: 'manual', notificationTitle: 'Trade Republic' }).bankName).toBeUndefined();
+  });
+
+  test('validates a bank name before saving', () => {
+    const draft = draftFromRecord(captured);
+    expect(draftError({ ...draft, bankName: '  ' })).toBe('Nazwa banku musi mieć od 1 do 60 znaków.');
+    expect(draftError({ ...draft, bankName: 'x'.repeat(61) })).toBe('Nazwa banku musi mieć od 1 do 60 znaków.');
+    expect(draftError({ ...draft, bankName: 'Trade Republic' })).toBeNull();
+  });
+
   test('builds a manual transaction that counts as posted', () => {
     const draft = {
       ...emptyDraft(now),

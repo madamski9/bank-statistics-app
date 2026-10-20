@@ -44,6 +44,8 @@ export interface IngestionRecord {
   exchangeRate?: string;
   exchangeRateDate?: string;
   exchangeRateTable?: string;
+  notificationTitle?: string;
+  bankName?: string;
 }
 
 export interface StorageDiagnostics {
@@ -80,6 +82,7 @@ interface BankStatsIngestionNativeModule {
   deleteSyntheticRecords?(): Promise<number>;
   clearRecords?(): Promise<void>;
   saveRecord?(record: IngestionRecord): Promise<IngestionRecord>;
+  saveRecordAndRememberBank?(record: IngestionRecord): Promise<IngestionRecord>;
   deleteRecord?(id: string): Promise<number>;
   listRecords(): Promise<IngestionRecord[]>;
   extractPdfText?(uri: string): Promise<string>;
@@ -168,6 +171,14 @@ export function deleteIngestionRecord(id: string): Promise<number> {
   }
 
   return module.deleteRecord(id);
+}
+
+export function saveIngestionRecordAndRememberBank(record: IngestionRecord): Promise<IngestionRecord> {
+  const module = requireNativeModule();
+  if (module.saveRecordAndRememberBank === undefined) {
+    return Promise.reject(new Error('Remembering a notification bank requires a newer iOS build'));
+  }
+  return module.saveRecordAndRememberBank(record);
 }
 
 export function extractPdfText(uri: string): Promise<string> {

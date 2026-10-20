@@ -33,6 +33,7 @@ swiftc -O -I "$BUILD_DIR" -L "$SQLCIPHER_LIB" -Xcc -DSQLITE_HAS_CODEC \
   "$PACKAGE_DIR/ios/BankNotificationRules.swift" \
   "$PACKAGE_DIR/ios/BankNotificationInterpreter.swift" \
   "$PACKAGE_DIR/ios/NotificationInbox.swift" \
+  "$PACKAGE_DIR/ios/NotificationBankStore.swift" \
   "$PACKAGE_DIR/ios/CardPaymentPairing.swift" \
   "$PACKAGE_DIR/ios/SyntheticSample.swift" \
   "$PACKAGE_DIR/ios/EncryptedOutbox.swift" \

@@ -26,6 +26,7 @@ describe('shouldShowReleaseNotes', () => {
 describe('notification recovery release notes', () => {
   test('notifies existing testers independently of the previous release and account', () => {
     expect(releaseNotesKey('tester')).not.toBe('bankstats.release-notes.1.0.9.tester');
+    expect(releaseNotesKey('tester')).not.toBe('bankstats.release-notes.notification-recovery.v1.tester');
     expect(releaseNotesKey('tester')).not.toBe(releaseNotesKey('another-tester'));
   });
 

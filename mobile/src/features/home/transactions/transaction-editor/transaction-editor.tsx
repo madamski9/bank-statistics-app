@@ -133,6 +133,22 @@ export function TransactionEditor({
           )}
         </EditorCard>
 
+        {draft.bankName !== undefined && record !== null ? (
+          <>
+            <EditorCard>
+              <EditorReadOnlyField label={copy.notificationTitle} value={record.notificationTitle ?? ''} />
+              <EditorSeparator />
+              <EditorField
+                label={copy.bankName}
+                onChangeText={(bankName) => update({ bankName })}
+                placeholder={copy.bankNamePlaceholder}
+                value={draft.bankName}
+              />
+            </EditorCard>
+            <Text maxFontSizeMultiplier={1.5} style={styles.bankHelp}>{copy.rememberBankHelp}</Text>
+          </>
+        ) : null}
+
         {isManual ? (
           <AccountPicker
             accounts={accounts}
@@ -234,6 +250,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: overviewColors.negative,
+  },
+  bankHelp: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: overviewColors.textSecondary,
   },
   deleteButton: {
     minHeight: 54,

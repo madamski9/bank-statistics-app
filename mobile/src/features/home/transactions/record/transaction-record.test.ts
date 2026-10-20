@@ -64,6 +64,13 @@ describe('transactionBadge', () => {
 });
 
 describe('transactionContext', () => {
+  test('shows the Wallet title until a bank name is confirmed, then uses the chosen name', () => {
+    const captured = record({ bank: 'unknown', notificationTitle: 'Trade Republic' });
+    expect(transactionContext(captured)).toBe('Nieznany bank · Trade Republic');
+    expect(transactionContext({ ...captured, bankName: 'Mój bank' })).toBe('Mój bank');
+    expect(transactionContext({ ...captured, bankName: 'Mój bank', accountName: 'Karta' })).toBe('Mój bank · Karta');
+    expect(transactionContext(record({ bankName: 'Błędna nazwa', notificationTitle: 'Trade Republic' }))).toBe('Millennium');
+  });
   test('names an unknown captured bank without attributing it to Millennium', () => {
     expect(transactionContext(record({ bank: 'unknown' }))).toBe('Nieznany bank');
   });

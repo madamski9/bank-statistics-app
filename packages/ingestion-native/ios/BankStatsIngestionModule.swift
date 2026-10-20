@@ -51,6 +51,10 @@ public final class BankStatsIngestionModule: Module {
       try EncryptedOutbox.shared.delete(id: id)
     }
 
+    AsyncFunction("saveRecordAndRememberBank") { (input: TransactionInput) -> [String: Any] in
+      try EncryptedOutbox.shared.saveAndRememberBank(input.normalized()).dictionary
+    }
+
     AsyncFunction("extractPdfText") { (uri: String) -> String in
       try StatementPdfText.extract(from: uri)
     }

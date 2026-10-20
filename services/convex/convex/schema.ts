@@ -6,6 +6,7 @@ export const devicePlatform = v.union(v.literal('ios'), v.literal('android'), v.
 export const transactionFields = {
   clientId: v.string(),
   bank: v.string(),
+  bankName: v.optional(v.string()),
   origin: v.union(v.literal('capture'), v.literal('manual')),
   direction: v.union(v.literal('expense'), v.literal('income')),
   transactionType: v.optional(

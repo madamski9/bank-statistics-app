@@ -27,6 +27,7 @@ export function changeFromRecord(record: IngestionRecord): TransactionChange {
   return withoutUndefined({
     clientId: record.id,
     bank: record.origin === 'manual' ? 'manual' : record.bank,
+    bankName: record.bankName,
     origin: record.origin === 'manual' ? 'manual' : 'capture',
     direction: record.direction,
     transactionType: record.transactionType,
@@ -56,6 +57,7 @@ function recordFromChange(change: TransactionChange): IngestionRecord {
   return withoutUndefined({
     id: change.clientId,
     bank: isCaptureBank(change.bank) ? change.bank : 'manual',
+    bankName: change.bankName,
     direction: change.direction,
     transactionType: change.transactionType,
     amountMinor: change.amountMinor,

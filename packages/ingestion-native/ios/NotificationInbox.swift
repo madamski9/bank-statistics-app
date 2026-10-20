@@ -128,6 +128,9 @@ struct NotificationInbox {
       )
       if inspected.record != nil {
         inspected.record?.id = notification.id
+        if inspected.record?.bank == "unknown" {
+          inspected.record?.notificationTitle = notification.title
+        }
       }
       trace = inspected
       let result: NotificationIngestionOutcome

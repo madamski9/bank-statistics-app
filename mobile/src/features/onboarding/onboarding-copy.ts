@@ -134,6 +134,9 @@ export const onboardingCopy = defineCopy({
       reportTitle: 'Pomóż nam poprawić rozpoznawanie',
       reportDescription:
         'Wybierz „Zgłoś błąd”, usuń dane osobowe z próbki i sprawdź podgląd. Do dewelopera trafi tylko próbka, którą zatwierdzisz.',
+      bankTitle: 'Nazwij bank z Portfela',
+      bankDescription:
+        'Przy nieznanym banku pokażemy tytuł powiadomienia, na przykład Trade Republic. W edycji transakcji wpisz nazwę banku. Zapamiętamy ją na tym telefonie dla wcześniejszych i kolejnych płatności z takim samym tytułem.',
       note:
         'Oryginały pozostają zaszyfrowane na telefonie i wygasają po 30 dniach. Na tej liście pojawią się tylko wiadomości, które dotarły ze Skrótów — automatyzacja nadal musi być włączona.',
     },
@@ -308,6 +311,9 @@ export const onboardingCopy = defineCopy({
       reportTitle: 'Help us improve recognition',
       reportDescription:
         'Choose “Report a problem”, remove personal details from the sample and check the preview. Only the sample you approve will reach the developer.',
+      bankTitle: 'Name a bank from Wallet',
+      bankDescription:
+        'For an unknown bank, we show the notification title, such as Trade Republic. Enter the bank name when editing the transaction. This phone remembers it for previous and future payments with the same title.',
       note:
         'Originals stay encrypted on your phone and expire after 30 days. This list only contains messages received from Shortcuts, so your automation must still be enabled.',
     },

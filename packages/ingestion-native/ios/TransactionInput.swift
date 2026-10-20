@@ -22,6 +22,8 @@ struct TransactionInput: Record {
   @Field var exchangeRate: String?
   @Field var exchangeRateDate: String?
   @Field var exchangeRateTable: String?
+  @Field var notificationTitle: String?
+  @Field var bankName: String?
 
   func normalized() throws -> NormalizedRecord {
     guard amountMinor > 0,
@@ -53,7 +55,9 @@ struct TransactionInput: Record {
       reportingAmountMinor: reportingAmountMinor,
       exchangeRate: exchangeRate,
       exchangeRateDate: exchangeRateDate,
-      exchangeRateTable: exchangeRateTable
+      exchangeRateTable: exchangeRateTable,
+      notificationTitle: notificationTitle,
+      bankName: bankName
     )
   }
 }

@@ -4,6 +4,7 @@ import SQLCipher
 enum IngestionError: Error {
   case database(String)
   case notificationUnavailable
+  case invalidRecord
 
   var reasonCode: String { "database" }
 }
@@ -427,6 +428,81 @@ for index in 0..<51 {
 }
 check(try outbox.notificationDiagnostics(offset: 0).count == 50, "Inbox must bound its first page")
 check(try outbox.notificationDiagnostics(offset: 50).count == 1, "Inbox must expose remaining entries on the next page")
+try outbox.clear()
+func wallet(_ title: String, sourceApp: String = "com.apple.Passbook") throws -> NormalizedRecord {
+  let result = try outbox.ingest(title: title, subtitle: "SKLEP TESTOWY", body: "19,99 PLN", sourceApp: sourceApp)
+  guard case .record(let record) = result else { fatalError("Wallet capture must create a transaction") }
+  return record
+}
+
+let tradeRepublic = try wallet("Trade Republic")
+let secondTradeRepublic = try wallet("Trade Republic")
+let otherBank = try wallet("Inny Bank")
+let otherApp = try wallet("Trade Republic", sourceApp: "other.wallet")
+let supportedBank = try wallet("mBank")
+check(tradeRepublic.bank == "unknown", "Generic Wallet recognition must keep the bank unassigned")
+check(tradeRepublic.notificationTitle == "Trade Republic", "Successful capture must retain the original notification title")
+check(tradeRepublic.bankName == nil, "A notification title must not silently become a confirmed bank name")
+check(try captureCount("notification_inbox") == 0, "Successful capture must still release the full raw notification")
+var namedTradeRepublic = tradeRepublic
+namedTradeRepublic.bankName = "  Trade Republic Bank  "
+let named = try outbox.saveAndRememberBank(namedTradeRepublic)
+check(named.bankName == "Trade Republic Bank", "User-entered bank names must be trimmed")
+check(named.id == tradeRepublic.id && named.amountMinor == tradeRepublic.amountMinor, "Assigning a bank must preserve transaction facts")
+let assigned = try outbox.records()
+check(assigned.first { $0.id == secondTradeRepublic.id }?.bankName == "Trade Republic Bank", "Learning must also label previous transactions from the same source")
+check(assigned.first { $0.id == otherBank.id }?.bankName == nil, "Another bank in the same Wallet must remain unassigned")
+check(assigned.first { $0.id == otherApp.id }?.bankName == nil, "An identical title from a different app must remain unassigned")
+check(assigned.first { $0.id == supportedBank.id }?.bankName == nil, "Learning must leave supported bank recognition unchanged")
+check(try captureCount("notification_banks") == 1, "The mapping must persist in the encrypted database")
+check(try wallet("  TRADE   REPUBLIC  ").bankName == "Trade Republic Bank", "Future capture must learn despite casing and whitespace differences")
+check(try wallet("Trade Republic Premium").bankName == nil, "Learning must use the full title rather than substring matching")
+var remoteUpdate = named
+remoteUpdate.notificationTitle = nil
+remoteUpdate.category = "groceries"
+try outbox.save(remoteUpdate)
+check(try outbox.records().first { $0.id == named.id }?.notificationTitle == "Trade Republic", "Cloud updates without the private title must preserve its local value")
+check(try outbox.records().first { $0.id == named.id }?.category == "groceries", "Keeping the title must not discard a remote update")
+
+let renameFailure = try captureDatabase()
+try execute(renameFailure, "CREATE TRIGGER fail_bank_name BEFORE INSERT ON outbox BEGIN SELECT RAISE(ABORT, 'simulated bank rename failure'); END")
+check(sqlite3_close(renameFailure) == SQLITE_OK, "Bank rename failure setup must close")
+var renamed = named
+renamed.bankName = "Nowa nazwa"
+do {
+  _ = try outbox.saveAndRememberBank(renamed)
+  fatalError("Bank assignment failure must surface")
+} catch {
+  check(try outbox.records().first { $0.id == named.id }?.bankName == "Trade Republic Bank", "Failed renaming must roll back the transaction")
+}
+let renameCleanup = try captureDatabase()
+try execute(renameCleanup, "DROP TRIGGER fail_bank_name")
+check(sqlite3_close(renameCleanup) == SQLITE_OK, "Bank rename failure cleanup must close")
+check(try wallet("Trade Republic").bankName == "Trade Republic Bank", "Failed renaming must roll back the learned rule too")
+let renamedRecord = try outbox.saveAndRememberBank(renamed)
+check(renamedRecord.bankName == "Nowa nazwa", "The user must be able to correct a learned bank name")
+check(try outbox.records().first { $0.id == secondTradeRepublic.id }?.bankName == "Nowa nazwa", "Correcting a bank must update earlier matching transactions")
+check(try wallet("Trade Republic").bankName == "Nowa nazwa", "Corrected bank names must apply to future captures")
+let emptyTitle = try wallet("")
+var invalidAssignment = emptyTitle
+invalidAssignment.bankName = "Nie przypisuj do całego Wallet"
+do {
+  _ = try outbox.saveAndRememberBank(invalidAssignment)
+  fatalError("An empty notification title must never train a Wallet-wide bank rule")
+} catch {
+  check(try captureCount("notification_banks") == 1, "Invalid assignment must not add a mapping")
+}
+var tooLongName = named
+tooLongName.bankName = String(repeating: "a", count: 61)
+do {
+  _ = try outbox.saveAndRememberBank(tooLongName)
+  fatalError("Oversized bank names must fail")
+} catch {
+  check(try captureCount("notification_banks") == 1, "Invalid bank name must not change mappings")
+}
+try outbox.clear()
+check(try captureCount("notification_banks") == 0, "Clearing local data must clear bank mappings")
+check(try wallet("Trade Republic").bankName == nil, "Cleared mappings must no longer label captures")
 try outbox.clear()
 print("\(checks) notification admission and encrypted inbox checks pass")
 

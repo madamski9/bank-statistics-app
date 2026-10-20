@@ -12,6 +12,7 @@ export function NotificationRecoveryNotesStep() {
   const instructions = [
     { title: copy.inboxTitle, description: copy.inboxDescription },
     { title: copy.recoveryTitle, description: copy.recoveryDescription },
+    { title: copy.bankTitle, description: copy.bankDescription },
     { title: copy.reportTitle, description: copy.reportDescription },
   ];
 
