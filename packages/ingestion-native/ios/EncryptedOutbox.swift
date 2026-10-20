@@ -421,6 +421,7 @@ final class EncryptedOutbox: @unchecked Sendable {
 
   private func serialized<Result>(_ work: () throws -> Result) throws -> Result {
     try queue.sync {
+      #if os(iOS)
       let finished = DispatchSemaphore(value: 0)
       ProcessInfo.processInfo.performExpiringActivity(withReason: "Saving encrypted BankStats data") { expired in
         if !expired {
@@ -428,6 +429,7 @@ final class EncryptedOutbox: @unchecked Sendable {
         }
       }
       defer { finished.signal() }
+      #endif
       return try work()
     }
   }

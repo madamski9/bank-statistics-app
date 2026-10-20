@@ -37,12 +37,6 @@ extension BankNotificationInterpreter {
   }
 }
 
-#if os(Linux)
-extension ProcessInfo {
-  func performExpiringActivity(withReason reason: String, using activity: @escaping (Bool) -> Void) {}
-}
-#endif
-
 struct AdmissionCase {
   let title: String
   let subtitle: String
