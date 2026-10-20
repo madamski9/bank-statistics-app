@@ -22,6 +22,7 @@ import {
 
 interface CaptureHealthScreenProps extends Omit<NotificationInboxScreenProps, 'onBack'> {
   records: IngestionRecord[];
+  inboxRequest?: number | null;
   onClose: () => void;
 }
 
@@ -44,9 +45,17 @@ export function CaptureHealthScreen({
   accounts,
   onCreateAccount,
   onRecordsChanged,
+  inboxRequest = null,
 }: CaptureHealthScreenProps) {
   const copy = useCopy(captureHealthCopy);
-  const [inboxOpen, setInboxOpen] = useState(false);
+  const [inboxOpen, setInboxOpen] = useState(inboxRequest !== null);
+  const [handledInboxRequest, setHandledInboxRequest] = useState(inboxRequest);
+  if (inboxRequest !== handledInboxRequest) {
+    setHandledInboxRequest(inboxRequest);
+    if (inboxRequest !== null) {
+      setInboxOpen(true);
+    }
+  }
   const { health, selfTest, runSelfTest, refresh } = useCaptureHealth(records);
   const now = new Date();
   const failureLabel = (code: string | null) =>

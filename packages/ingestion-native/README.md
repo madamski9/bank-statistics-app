@@ -19,7 +19,9 @@ rule version changes. Interrupted processing and storage failures remain eligibl
 record read. Record reads process up to 50 eligible entries at a time. Expiry runs whenever the
 database is opened; if the app is not running, cleanup happens on its next database access.
 Raw payloads are never exposed through the synchronization API. Capture health shows the pending
-count, and clearing local data clears the inbox. The admission and SQLCipher lifecycle checks run
+count, and clearing local data clears the inbox. When the Shortcut queues a notification, the App
+Intent posts a local alert in the app language, without the original text; tapping it opens the
+inbox. Repeated alerts replace one another, and none appears without notification permission. The admission and SQLCipher lifecycle checks run
 with `sh conformance/notification-inbox/run.sh` (Swift and SQLCipher development files required).
 
 After durable enqueue, the existing bank rules still decide whether a transaction can be created:
