@@ -6,7 +6,7 @@ export interface ReleaseNotesContext {
 }
 
 export function releaseNotesKey(userId: string): string {
-  return `bankstats.release-notes.1.0.9.${userId}`;
+  return `bankstats.release-notes.notification-recovery.v2.${userId}`;
 }
 
 export function shouldShowReleaseNotes(context: ReleaseNotesContext): boolean {

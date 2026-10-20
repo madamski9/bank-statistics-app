@@ -95,10 +95,7 @@ export function OnboardingGate({ children }: OnboardingGateProps) {
 
   if (replay === 'releaseNotes') {
     return (
-      <ReleaseNotesScreen
-        onClose={finishOnboardingReplay}
-        onSigningOut={async () => finishOnboardingReplay()}
-      />
+      <ReleaseNotesScreen onClose={finishOnboardingReplay} />
     );
   }
 
@@ -112,10 +109,7 @@ export function OnboardingGate({ children }: OnboardingGateProps) {
 
     if (showsReleaseNotes) {
       return (
-        <ReleaseNotesScreen
-          onClose={() => void dismissReleaseNotes()}
-          onSigningOut={dismissReleaseNotes}
-        />
+        <ReleaseNotesScreen onClose={() => void dismissReleaseNotes()} />
       );
     }
 

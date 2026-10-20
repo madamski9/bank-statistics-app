@@ -80,7 +80,8 @@ function sourceParty(
 function accountLabel(record: IngestionRecord): string {
   const copy = currentCopy(spendingOverviewCopy);
 
-  return `${copy.banks[record.bank]} · ${record.accountName ?? copy.mainAccount}`;
+  const bank = record.bank === 'unknown' ? record.bankName ?? record.notificationTitle?.trim() ?? copy.banks.unknown : copy.banks[record.bank];
+  return `${bank} · ${record.accountName ?? copy.mainAccount}`;
 }
 
 function groupSources(

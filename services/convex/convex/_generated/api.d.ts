@@ -11,6 +11,7 @@
 import type * as account from "../account.js";
 import type * as changeRules from "../changeRules.js";
 import type * as crons from "../crons.js";
+import type * as diagnosticSamples from "../diagnosticSamples.js";
 import type * as devices from "../devices.js";
 import type * as exchangeRates from "../exchangeRates.js";
 import type * as http from "../http.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   changeRules: typeof changeRules;
   crons: typeof crons;
   devices: typeof devices;
+  diagnosticSamples: typeof diagnosticSamples;
   exchangeRates: typeof exchangeRates;
   http: typeof http;
   migrations: typeof migrations;

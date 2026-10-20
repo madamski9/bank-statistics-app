@@ -42,3 +42,7 @@ jobs:
       - run: sh packages/parser-rules/conformance/swift/run.sh
 
       - run: sh packages/ingestion-native/conformance/card-payment-pairing/run.sh
+
+      - run: brew install sqlcipher
+
+      - run: sh packages/ingestion-native/conformance/notification-inbox/run.sh

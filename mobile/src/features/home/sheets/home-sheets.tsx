@@ -154,7 +154,8 @@ function ActiveSheet({
         />
       );
     case 'captureHealth':
-      return <CaptureHealthScreen onClose={closeSheet} records={ledger.records} />;
+      return <CaptureHealthScreen accounts={ledger.financialAccounts.accounts} onClose={closeSheet}
+        onCreateAccount={ledger.financialAccounts.create} onRecordsChanged={ledger.refresh} records={ledger.records} />;
     case 'ignoredPayments':
       return (
         <IgnoredPaymentsScreen

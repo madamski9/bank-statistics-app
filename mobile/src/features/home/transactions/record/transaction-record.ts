@@ -74,7 +74,9 @@ export function transactionKindLabel(record: IngestionRecord): string {
 }
 
 export function transactionContext(record: IngestionRecord): string {
-  const bank = currentCopy(transactionsCopy).banks[record.bank];
+  const bank = record.bank === 'unknown'
+    ? record.bankName ?? [currentCopy(transactionsCopy).banks.unknown, record.notificationTitle?.trim()].filter(Boolean).join(' · ')
+    : currentCopy(transactionsCopy).banks[record.bank];
 
   return record.accountName === undefined ? bank : `${bank} · ${record.accountName}`;
 }

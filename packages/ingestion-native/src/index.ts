@@ -44,16 +44,35 @@ export interface IngestionRecord {
   exchangeRate?: string;
   exchangeRateDate?: string;
   exchangeRateTable?: string;
+  notificationTitle?: string;
+  bankName?: string;
 }
 
 export interface StorageDiagnostics {
   cipherVersion: string;
   databasePath: string;
   lastAttemptAt?: string;
-  lastAttemptOutcome?: 'success' | 'ignored' | 'failure';
+  lastAttemptOutcome?: 'success' | 'ignored' | 'failure' | 'pending';
+  pendingNotificationCount?: string;
   lastAttemptFailureReason?: string;
   lastFailureAt?: string;
   lastFailureReason?: string;
+}
+
+export interface NotificationDiagnostic {
+  id: string;
+  title: string;
+  subtitle: string;
+  body: string;
+  sourceApp: string;
+  capturedAt: string;
+  diagnosticJson?: string;
+  rulesVersion?: number;
+}
+
+export interface NotificationRetryResult {
+  status: 'saved' | 'ignored' | 'pending';
+  reasonCode?: string;
 }
 
 interface BankStatsIngestionNativeModule {
@@ -63,6 +82,7 @@ interface BankStatsIngestionNativeModule {
   deleteSyntheticRecords?(): Promise<number>;
   clearRecords?(): Promise<void>;
   saveRecord?(record: IngestionRecord): Promise<IngestionRecord>;
+  saveRecordAndRememberBank?(record: IngestionRecord): Promise<IngestionRecord>;
   deleteRecord?(id: string): Promise<number>;
   listRecords(): Promise<IngestionRecord[]>;
   extractPdfText?(uri: string): Promise<string>;
@@ -70,6 +90,9 @@ interface BankStatsIngestionNativeModule {
   writeDocument?(key: string, value: string): Promise<void>;
   deleteDocument?(key: string): Promise<void>;
   storageDiagnostics(): Promise<StorageDiagnostics>;
+  listNotificationDiagnostics?(offset: number): Promise<NotificationDiagnostic[]>;
+  retryNotification?(id: string): Promise<NotificationRetryResult>;
+  restoreNotification?(id: string, record: IngestionRecord): Promise<IngestionRecord>;
 }
 
 const nativeModule = requireOptionalNativeModule<BankStatsIngestionNativeModule>(
@@ -150,6 +173,14 @@ export function deleteIngestionRecord(id: string): Promise<number> {
   return module.deleteRecord(id);
 }
 
+export function saveIngestionRecordAndRememberBank(record: IngestionRecord): Promise<IngestionRecord> {
+  const module = requireNativeModule();
+  if (module.saveRecordAndRememberBank === undefined) {
+    return Promise.reject(new Error('Remembering a notification bank requires a newer iOS build'));
+  }
+  return module.saveRecordAndRememberBank(record);
+}
+
 export function extractPdfText(uri: string): Promise<string> {
   const module = requireNativeModule();
 
@@ -200,4 +231,32 @@ export function configureSpendingWidget(configuration: string): boolean {
 
   nativeModule.configureSpendingWidget(configuration);
   return true;
+}
+
+export function supportsNotificationDiagnostics(): boolean {
+  return Platform.OS === 'ios' && typeof nativeModule?.listNotificationDiagnostics === 'function';
+}
+
+export function listNotificationDiagnostics(offset = 0): Promise<NotificationDiagnostic[]> {
+  const module = requireNativeModule();
+  if (module.listNotificationDiagnostics === undefined) {
+    return Promise.reject(new Error('Notification diagnostics require a newer iOS build'));
+  }
+  return module.listNotificationDiagnostics(offset);
+}
+
+export function retryNotification(id: string): Promise<NotificationRetryResult> {
+  const module = requireNativeModule();
+  if (module.retryNotification === undefined) {
+    return Promise.reject(new Error('Notification recovery requires a newer iOS build'));
+  }
+  return module.retryNotification(id);
+}
+
+export function restoreNotification(id: string, record: IngestionRecord): Promise<IngestionRecord> {
+  const module = requireNativeModule();
+  if (module.restoreNotification === undefined) {
+    return Promise.reject(new Error('Notification recovery requires a newer iOS build'));
+  }
+  return module.restoreNotification(id, record);
 }

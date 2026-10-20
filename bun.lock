@@ -15,6 +15,7 @@
         "@bankstats/app-config": "workspace:*",
         "@bankstats/convex": "workspace:*",
         "@bankstats/ingestion-native": "workspace:*",
+        "@bankstats/parser-rules": "workspace:*",
         "@clerk/expo": "^4.6.6",
         "@expo/ui": "~57.0.24",
         "convex": "^1.45.0",
@@ -95,6 +96,7 @@
       "name": "@bankstats/convex",
       "version": "0.0.0",
       "dependencies": {
+        "@bankstats/parser-rules": "workspace:*",
         "convex": "^1.45.0",
       },
       "devDependencies": {

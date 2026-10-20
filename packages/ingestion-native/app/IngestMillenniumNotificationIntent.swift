@@ -5,7 +5,7 @@ internal import BankStatsIngestion
 struct IngestMillenniumNotificationIntent: AppIntent {
   static let title: LocalizedStringResource = "Capture Bank Notification"
   static let description = IntentDescription(
-    "Normalizes a Millennium, PKO BP or ING notification locally and saves it in the encrypted BankStats outbox."
+    "Saves a bank notification locally in the encrypted BankStats inbox before recognizing its transaction."
   )
   static let supportedModes: IntentModes = .background
 
@@ -43,6 +43,8 @@ struct IngestMillenniumNotificationIntent: AppIntent {
       return .result(dialog: "Ignored - waiting for the matching Apple Pay transaction")
     case .alreadySaved:
       return .result(dialog: "Already saved from the matching Apple Pay transaction")
+    case .queued:
+      return .result(dialog: "Notification saved securely on this phone, awaiting recognition")
     }
   }
 }

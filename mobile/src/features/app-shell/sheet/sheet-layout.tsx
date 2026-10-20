@@ -12,16 +12,17 @@ interface SheetLayoutProps {
   leading?: ReactNode;
   footer?: ReactNode;
   children: ReactNode;
+  titleLines?: number;
 }
 
-export function SheetLayout({ title, closeLabel, onClose, leading, footer, children }: SheetLayoutProps) {
+export function SheetLayout({ title, closeLabel, onClose, leading, footer, children, titleLines = 1 }: SheetLayoutProps) {
   const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
         {leading}
-        <Text accessibilityRole="header" maxFontSizeMultiplier={1.35} numberOfLines={1} style={styles.title}>
+        <Text accessibilityRole="header" maxFontSizeMultiplier={1.35} numberOfLines={titleLines} style={styles.title}>
           {title}
         </Text>
         <Pressable

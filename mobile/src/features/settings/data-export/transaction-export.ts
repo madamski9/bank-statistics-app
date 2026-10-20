@@ -101,7 +101,7 @@ export function exportedTransactions(
         (record.accountId === undefined ? undefined : accountNames.get(record.accountId)) ??
         record.accountName ??
         null,
-      bank: record.bank,
+      bank: record.bankName ?? record.bank,
       origin: record.origin === 'manual' ? 'manual' : 'capture',
       status: record.status,
       transactionType: record.transactionType ?? null,

@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@bankstats/parser-rules": "workspace:*",
     "convex": "^1.45.0"
   },
   "devDependencies": {

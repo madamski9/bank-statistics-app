@@ -43,6 +43,21 @@ function synced(record: IngestionRecord, revision: number): SyncLedger {
 }
 
 describe('planSync', () => {
+  test('synchronizes the chosen bank name while keeping the notification title local', () => {
+    const captured = manual({
+      id: 'trade-republic', bank: 'unknown', origin: 'capture', accountId: undefined,
+      bankName: 'Trade Republic Bank', notificationTitle: 'Trade Republic',
+      sourceApp: 'com.apple.Passbook',
+    });
+    const result = plan({ local: [captured], remote: [], ledger: {}, now });
+    const [pushed] = result.push;
+    if (pushed === undefined || pushed.deleted) throw new Error('Expected a captured payment');
+    expect(pushed.bankName).toBe('Trade Republic Bank');
+    expect(pushed).not.toHaveProperty('notificationTitle');
+    expect(transactionCodec.fromChange(pushed)).toMatchObject({ bankName: 'Trade Republic Bank', bank: 'unknown' });
+    expect(fingerprint({ ...captured, notificationTitle: 'Inny tytuł' })).toBe(fingerprint(captured));
+    expect(fingerprint({ ...captured, bankName: 'Nowa nazwa' })).not.toBe(fingerprint(captured));
+  });
   test('pushes a manual transaction the cloud has never seen', () => {
     const lunch = manual();
 

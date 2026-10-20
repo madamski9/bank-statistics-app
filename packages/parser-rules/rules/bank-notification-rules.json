@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": 6,
+  "version": 7,
   "fragments": {
     "amount": "(?:[0-9]{1,3}(?:\\s[0-9]{3})+|[0-9]+)(?:[,.][0-9]{1,2})?"
   },
@@ -79,6 +79,23 @@
         },
         "status": "pending"
       }
+    },
+    {
+      "id": "mbank.negativeCardOperation",
+      "whitespace": "single",
+      "requires": {
+        "subtitle": "empty",
+        "title": {
+          "pattern": "^nowa operacja kartą$",
+          "caseInsensitive": true
+        }
+      },
+      "match": {
+        "field": "body",
+        "pattern": "^[−-]\\s*{{amount}}\\s*[A-Z]{3}\\s+w\\s",
+        "caseInsensitive": true
+      },
+      "ignore": "notTransaction"
     },
     {
       "id": "mbank.cardPayment",

@@ -1,6 +1,7 @@
 import {
   deleteIngestionRecord,
   saveIngestionRecord,
+  saveIngestionRecordAndRememberBank,
   type IngestionRecord,
 } from '@bankstats/ingestion-native';
 import { useCallback, useRef, useState } from 'react';
@@ -46,7 +47,12 @@ export function useTransactionWrites(onChanged: () => void | Promise<void>): Tra
   );
 
   const save = useCallback(
-    (record: IngestionRecord) => run(() => saveIngestionRecord(record)),
+    (record: IngestionRecord) => run(() =>
+      record.bank === 'unknown' && record.origin !== 'manual' &&
+      record.notificationTitle?.trim() && record.bankName?.trim()
+        ? saveIngestionRecordAndRememberBank(record)
+        : saveIngestionRecord(record),
+    ),
     [run],
   );
 
