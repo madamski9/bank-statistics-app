@@ -8,6 +8,17 @@ export function useHomeSheets() {
   const [activeSheet, setActiveSheet] = useState<HomeSheetKey | null>(null);
   const [premiumReason, setPremiumReason] = useState<PremiumReason | null>(null);
   const [premiumReturnSheet, setPremiumReturnSheet] = useState<HomeSheetKey | null>(null);
+  const [inboxRequest, setInboxRequest] = useState<number | null>(null);
+
+  const openSheet = useCallback((sheet: HomeSheetKey | null) => {
+    setInboxRequest(null);
+    setActiveSheet(sheet);
+  }, []);
+
+  const openNotificationInbox = useCallback(() => {
+    setInboxRequest((request) => (request ?? 0) + 1);
+    setActiveSheet('captureHealth');
+  }, []);
 
   const openPremium = useCallback(
     (reason: PremiumReason | null) => {
@@ -18,13 +29,15 @@ export function useHomeSheets() {
     [activeSheet],
   );
 
-  const closeSheet = useCallback(() => setActiveSheet(null), []);
-  const closePremium = useCallback(() => setActiveSheet(premiumReturnSheet), [premiumReturnSheet]);
+  const closeSheet = useCallback(() => openSheet(null), [openSheet]);
+  const closePremium = useCallback(() => openSheet(premiumReturnSheet), [openSheet, premiumReturnSheet]);
 
   return {
     activeSheet,
     premiumReason,
-    openSheet: setActiveSheet,
+    inboxRequest,
+    openSheet,
+    openNotificationInbox,
     closeSheet,
     openPremium,
     closePremium,

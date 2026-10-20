@@ -154,15 +154,13 @@ function ActiveSheet({
         />
       );
     case 'captureHealth':
-    case 'notificationInbox':
       return (
         <CaptureHealthScreen
           accounts={ledger.financialAccounts.accounts}
-          key={sheets.activeSheet}
+          inboxRequest={sheets.inboxRequest}
           onClose={closeSheet}
           onCreateAccount={ledger.financialAccounts.create}
           onRecordsChanged={ledger.refresh}
-          opensInbox={sheets.activeSheet === 'notificationInbox'}
           records={ledger.records}
         />
       );

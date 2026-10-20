@@ -24,6 +24,7 @@ import { useHomeLedger } from '@/features/home/state/use-home-ledger';
 import { useHomeSheets } from '@/features/home/state/use-home-sheets';
 import { useHomeWidget } from '@/features/home/state/use-home-widget';
 import { useMonthlySummaryLauncher } from '@/features/home/state/use-monthly-summary-launcher';
+import { canOpenNotificationInbox } from '@/features/home/state/notification-inbox-navigation';
 import { useNotificationInboxLauncher } from '@/features/home/state/use-notification-inbox-launcher';
 import { useOverviewInsights } from '@/features/home/state/use-overview-insights';
 import { useRunningEvent } from '@/features/home/state/use-running-event';
@@ -85,8 +86,10 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
     onOpenEvents: openEventsSheet,
     openPremium,
   });
-  const openNotificationInboxSheet = useCallback(() => openSheet('notificationInbox'), [openSheet]);
-  useNotificationInboxLauncher(openNotificationInboxSheet);
+  useNotificationInboxLauncher(
+    sheets.openNotificationInbox,
+    canOpenNotificationInbox(sheets.activeSheet, alertEditing.editor !== null),
+  );
   const monthlySummary = useMonthlySummaryLauncher({ premium, onOpen: openMonthlySummarySheet, openPremium });
   const categoryActions = useCategoryActions(ledger.categorization, isPremium, openPremium);
   const widget = useHomeWidget({ ledger, isPremium: premium?.isPremium, alertRules: alerts.rules, rules });
