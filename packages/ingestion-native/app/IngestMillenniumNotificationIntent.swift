@@ -44,6 +44,7 @@ struct IngestMillenniumNotificationIntent: AppIntent {
     case .alreadySaved:
       return .result(dialog: "Already saved from the matching Apple Pay transaction")
     case .queued:
+      await PendingNotificationAlert.announce()
       return .result(dialog: "Notification saved securely on this phone, awaiting recognition")
     }
   }

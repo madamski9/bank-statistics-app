@@ -9,5 +9,6 @@ export type HomeSheetKey =
   | 'monthlySummary'
   | 'forecast'
   | 'captureHealth'
+  | 'notificationInbox'
   | 'categories'
   | 'ignoredPayments';

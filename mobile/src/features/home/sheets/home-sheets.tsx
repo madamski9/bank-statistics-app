@@ -154,8 +154,18 @@ function ActiveSheet({
         />
       );
     case 'captureHealth':
-      return <CaptureHealthScreen accounts={ledger.financialAccounts.accounts} onClose={closeSheet}
-        onCreateAccount={ledger.financialAccounts.create} onRecordsChanged={ledger.refresh} records={ledger.records} />;
+    case 'notificationInbox':
+      return (
+        <CaptureHealthScreen
+          accounts={ledger.financialAccounts.accounts}
+          key={sheets.activeSheet}
+          onClose={closeSheet}
+          onCreateAccount={ledger.financialAccounts.create}
+          onRecordsChanged={ledger.refresh}
+          opensInbox={sheets.activeSheet === 'notificationInbox'}
+          records={ledger.records}
+        />
+      );
     case 'ignoredPayments':
       return (
         <IgnoredPaymentsScreen

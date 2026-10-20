@@ -127,7 +127,7 @@ export const onboardingCopy = defineCopy({
         'Powiadomienia z kwotą, których jeszcze nie rozpoznajemy, zachowujemy bezpiecznie na telefonie. Możesz je sprawdzić i zamienić w transakcję.',
       inboxTitle: 'Zajrzyj do nierozpoznanych powiadomień',
       inboxDescription:
-        'Otwórz Profil → Przechwytywanie → Powiadomienia do rozpoznania. Zobaczysz treść wiadomości i powód, dla którego nie powstała transakcja.',
+        'Gdy transakcja się nie zapisze, wyświetlimy powiadomienie — stuknij je albo otwórz Profil → Przechwytywanie → Powiadomienia do rozpoznania. Zobaczysz treść wiadomości i powód, dla którego nie powstała transakcja.',
       recoveryTitle: 'Ponów rozpoznawanie lub uzupełnij dane',
       recoveryDescription:
         'Spróbuj ponownie albo wpisz brakujące dane i zapisz transakcję ręcznie. Oryginalną wiadomość usuniemy po zapisaniu transakcji.',
@@ -304,7 +304,7 @@ export const onboardingCopy = defineCopy({
         'Notifications with an amount that we cannot recognize yet are saved securely on your phone. You can inspect them and turn them into transactions.',
       inboxTitle: 'Open unrecognized notifications',
       inboxDescription:
-        'Go to Profile → Capture → Notifications awaiting recognition. You will see the original message and why it did not become a transaction.',
+        'When a transaction is not saved, we show a notification. Tap it, or go to Profile → Capture → Notifications awaiting recognition. You will see the original message and why it did not become a transaction.',
       recoveryTitle: 'Retry recognition or complete the details',
       recoveryDescription:
         'Try again, or fill in the missing details and save a manual transaction. The original message is removed after the transaction is saved.',
