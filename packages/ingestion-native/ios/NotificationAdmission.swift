@@ -2,9 +2,9 @@ import Foundation
 
 enum NotificationAdmission {
   private static let amount = #"(?:[0-9]{1,3}(?:[.,][0-9]{3})+(?:[.,][0-9]{1,2})?|[0-9]{1,3}(?:\h[0-9]{3})+(?:[.,][0-9]{1,2})?|[0-9]+(?:[.,][0-9]{1,2})?)"#
-  private static let currency = (Locale.commonISOCurrencyCodes + ["zł", "zl", "€", "$", "£", "¥", "₣"])
+  private static let currency = (Locale.commonISOCurrencyCodes + ["zł", "zl"])
     .map(NSRegularExpression.escapedPattern(for:))
-    .joined(separator: "|")
+    .joined(separator: "|") + #"|\p{Sc}"#
   private static let money = try! NSRegularExpression(
     pattern: #"(?<![\p{L}\p{N}.,])(?:[+−-]\h*)?(?:(?<currencyBefore>"# + currency
       + #")\h*(?:[+−-]\h*)?(?<amountAfter>"# + amount + #")|(?<amountBefore>"# + amount

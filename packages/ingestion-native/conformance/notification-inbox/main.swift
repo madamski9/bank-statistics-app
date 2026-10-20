@@ -102,6 +102,10 @@ let cases = [
   AdmissionCase("0,00 PLN w AUTOPAY MOBILITY WARSZAWA", title: "Nowa operacja kartą", accepted: false),
   AdmissionCase("0,00 PLN do JAN .", title: "Przelew z konta", accepted: false),
   AdmissionCase("Kwota: PLN 0.00", accepted: false),
+  AdmissionCase("₺150,00", title: "Revolut", subtitle: "Migros"),
+  AdmissionCase("150,00 ₹", title: "Revolut", subtitle: "Taj"),
+  AdmissionCase("Paid ₽ 1 200,00"),
+  AdmissionCase("₪0,00", title: "Revolut", subtitle: "Apple", accepted: false),
 ]
 
 var checks = 0
@@ -375,6 +379,15 @@ if case .queued = stillUnknown {
   check(try outbox.diagnostics()["pendingNotificationCount"] == "1", "Unrecognized formats must still await recognition")
 } else {
   fatalError("Unrecognized formats must still be queued")
+}
+let foreignWallet = try NotificationCapture.capture(
+  title: "Revolut", subtitle: "Migros", body: "₺150,00", sourceApp: "com.revolut.revolut"
+)
+if case .saved(_, let amountMinor) = foreignWallet {
+  check(amountMinor == 15000, "Wallet payment in any currency symbol must keep its amount")
+  check(try outbox.records().contains { $0.bank == "unknown" && $0.review == ReviewReason.currency }, "Unmapped currency symbol must be saved for currency review")
+} else {
+  fatalError("Wallet payment with a currency symbol must not be rejected before parsing")
 }
 try outbox.clear()
 
