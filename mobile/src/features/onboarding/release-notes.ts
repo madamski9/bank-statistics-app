@@ -5,8 +5,6 @@ export interface ReleaseNotesContext {
   platform: string;
 }
 
-export const releaseNotesPages = ['notificationRecovery', 'signInAgain', 'alertTone'] as const;
-
 export function releaseNotesKey(userId: string): string {
   return `bankstats.release-notes.notification-recovery.v2.${userId}`;
 }

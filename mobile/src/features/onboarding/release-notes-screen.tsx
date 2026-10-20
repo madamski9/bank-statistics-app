@@ -1,5 +1,4 @@
 import { StatusBar } from 'expo-status-bar';
-import { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -8,50 +7,17 @@ import { AnimatedReveal } from '@/features/app-shell/motion/animated-reveal';
 import { overviewColors, overviewSpacing } from '@/features/app-shell/theme/overview-theme';
 
 import { OnboardingFooter } from './components/onboarding-footer';
-import { OnboardingProgress } from './components/onboarding-progress';
 import { OnboardingTopBar } from './components/onboarding-top-bar';
 import { onboardingCopy } from './onboarding-copy';
-import { releaseNotesPages } from './release-notes';
 import { NotificationRecoveryNotesStep } from './steps/notification-recovery-notes-step';
-import { AlertToneNotesStep } from './steps/release-notes-step';
-import { SignInAgainStep, useSignOutNow } from './steps/sign-in-again-step';
-
-const pageCount = releaseNotesPages.length;
 
 interface ReleaseNotesScreenProps {
   onClose: () => void;
-  onSigningOut: () => Promise<void>;
 }
 
-export function ReleaseNotesScreen({ onClose, onSigningOut }: ReleaseNotesScreenProps) {
+export function ReleaseNotesScreen({ onClose }: ReleaseNotesScreenProps) {
   const copy = useCopy(onboardingCopy);
   const insets = useSafeAreaInsets();
-  const scrollRef = useRef<ScrollView>(null);
-  const [page, setPage] = useState(1);
-  const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
-  const { error, isSigningOut, signOutNow } = useSignOutNow(onSigningOut);
-  const currentPage = releaseNotesPages[page - 1];
-  const isSignInAgainPage = currentPage === 'signInAgain';
-
-  const changePage = (next: number) => {
-    setDirection(next > page ? 'forward' : 'backward');
-    setPage(next);
-    scrollRef.current?.scrollTo({ y: 0, animated: false });
-  };
-
-  const primary = isSignInAgainPage
-    ? {
-        label: copy.sessionAnnouncement.signOut,
-        isBusy: isSigningOut,
-        isDisabled: isSigningOut,
-        onPress: () => void signOutNow(),
-      }
-    : {
-        label: page === pageCount ? copy.done : copy.next,
-        isBusy: false,
-        isDisabled: false,
-        onPress: () => (page === pageCount ? onClose() : changePage(page + 1)),
-      };
 
   return (
     <View style={styles.screen}>
@@ -59,52 +25,27 @@ export function ReleaseNotesScreen({ onClose, onSigningOut }: ReleaseNotesScreen
       <OnboardingTopBar
         canGoBack
         canSkip={false}
-        isBusy={isSigningOut}
-        onBack={() => (page > 1 ? changePage(page - 1) : onClose())}
+        isBusy={false}
+        onBack={onClose}
         onSkip={onClose}
-        stepLabel={`${page} / ${pageCount}`}
+        stepLabel=""
       />
-      <OnboardingProgress length={pageCount} position={page} />
       <ScrollView
         contentContainerStyle={[
           styles.content,
           { paddingLeft: Math.max(insets.left, 20), paddingRight: Math.max(insets.right, 20) },
         ]}
-        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         style={styles.scroll}
       >
-        <AnimatedReveal
-          direction={direction === 'forward' ? 'right' : 'left'}
-          distance={18}
-          duration={320}
-          key={page}
-          style={styles.page}
-        >
-          {currentPage === 'notificationRecovery' ? (
-            <NotificationRecoveryNotesStep />
-          ) : isSignInAgainPage ? (
-            <SignInAgainStep />
-          ) : (
-            <AlertToneNotesStep />
-          )}
+        <AnimatedReveal direction="right" distance={18} duration={320} style={styles.page}>
+          <NotificationRecoveryNotesStep />
         </AnimatedReveal>
       </ScrollView>
       <OnboardingFooter
-        error={isSignInAgainPage ? error : null}
-        primary={primary}
-        secondaryActions={
-          isSignInAgainPage
-            ? [
-                {
-                  key: 'later',
-                  label: copy.sessionAnnouncement.later,
-                  disabled: isSigningOut,
-                  onPress: () => changePage(page + 1),
-                },
-              ]
-            : []
-        }
+        error={null}
+        primary={{ label: copy.done, isBusy: false, isDisabled: false, onPress: onClose }}
+        secondaryActions={[]}
       />
     </View>
   );
