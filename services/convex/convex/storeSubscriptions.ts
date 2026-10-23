@@ -24,7 +24,7 @@ async function syncOwner(ctx: ActionCtx, ownerId: string): Promise<StoreSubscrip
   }
 
   const customer = await fetchRevenueCatCustomer(ownerId, secretKey);
-  const subscription = storeSubscriptionFrom(customer, Date.now());
+  const subscription = storeSubscriptionFrom(customer, Date.now(), process.env.REVENUECAT_ACCEPTS_SANDBOX === 'true');
   await ctx.runMutation(internal.storeSubscriptions.apply, { ownerId, subscription });
 
   return subscription;

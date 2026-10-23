@@ -33,6 +33,7 @@ interface CustomerOptions {
   cancelledAt?: number;
   billingIssueAt?: number;
   refundedAt?: number;
+  isSandbox?: boolean;
 }
 
 function customer(options: CustomerOptions = {}): RevenueCatCustomer {
@@ -58,6 +59,7 @@ function customer(options: CustomerOptions = {}): RevenueCatCustomer {
           unsubscribe_detected_at: options.cancelledAt === undefined ? null : iso(options.cancelledAt),
           billing_issues_detected_at: options.billingIssueAt === undefined ? null : iso(options.billingIssueAt),
           refunded_at: options.refundedAt === undefined ? null : iso(options.refundedAt),
+          is_sandbox: options.isSandbox ?? false,
         },
       },
       management_url: 'https://apps.apple.com/account/subscriptions',
@@ -102,6 +104,7 @@ beforeEach(() => {
   jest.useFakeTimers({ now });
   process.env.REVENUECAT_SECRET_API_KEY = 'sk_test';
   process.env.REVENUECAT_WEBHOOK_AUTHORIZATION = webhookAuthorization;
+  delete process.env.REVENUECAT_ACCEPTS_SANDBOX;
 });
 
 afterEach(() => {
@@ -112,7 +115,7 @@ afterEach(() => {
 
 describe('store subscription snapshot', () => {
   test('grants access during a trial that renews', () => {
-    expect(storeSubscriptionFrom(customer({ periodType: 'trial' }), now)).toMatchObject({
+    expect(storeSubscriptionFrom(customer({ periodType: 'trial' }), now, false)).toMatchObject({
       isActive: true,
       isTrial: true,
       willRenew: true,
@@ -121,7 +124,7 @@ describe('store subscription snapshot', () => {
   });
 
   test('keeps a cancelled subscription active until it expires without renewing', () => {
-    expect(storeSubscriptionFrom(customer({ cancelledAt: now - dayMs }), now)).toMatchObject({
+    expect(storeSubscriptionFrom(customer({ cancelledAt: now - dayMs }), now, false)).toMatchObject({
       isActive: true,
       willRenew: false,
     });
@@ -131,13 +134,14 @@ describe('store subscription snapshot', () => {
     const snapshot = storeSubscriptionFrom(
       customer({ expiresAt: now - dayMs, graceUntil: now + 15 * dayMs, billingIssueAt: now - dayMs }),
       now,
+      false,
     );
 
     expect(snapshot).toMatchObject({ isActive: true, hasBillingIssue: true, accessUntil: now + 15 * dayMs });
   });
 
   test('ends access once the subscription and its grace period have expired', () => {
-    expect(storeSubscriptionFrom(customer({ expiresAt: now - dayMs }), now)).toEqual({
+    expect(storeSubscriptionFrom(customer({ expiresAt: now - dayMs }), now, false)).toEqual({
       isActive: false,
       willRenew: false,
       isTrial: false,
@@ -146,12 +150,19 @@ describe('store subscription snapshot', () => {
     });
   });
 
+  test('ignores sandbox purchases unless the deployment accepts them', () => {
+    const sandbox = customer({ isSandbox: true });
+
+    expect(storeSubscriptionFrom(sandbox, now, false).isActive).toBe(false);
+    expect(storeSubscriptionFrom(sandbox, now, true).isActive).toBe(true);
+  });
+
   test('reports no access for a customer who never subscribed', () => {
-    expect(storeSubscriptionFrom(neverSubscribed, now).isActive).toBe(false);
+    expect(storeSubscriptionFrom(neverSubscribed, now, false).isActive).toBe(false);
   });
 
   test('treats an entitlement without an expiry as lasting access', () => {
-    expect(storeSubscriptionFrom(customer({ expiresAt: null }), now)).toMatchObject({
+    expect(storeSubscriptionFrom(customer({ expiresAt: null }), now, false)).toMatchObject({
       isActive: true,
       willRenew: false,
       accessUntil: undefined,
@@ -242,8 +253,8 @@ describe('RevenueCat webhook', () => {
 
   test('ignores a snapshot older than the one already stored', async () => {
     const backend = convexTest(schema, modules);
-    const expired = storeSubscriptionFrom(customer({ checkedAt: now + 62 * dayMs, expiresAt: now + 61 * dayMs }), now);
-    const active = storeSubscriptionFrom(customer({ checkedAt: now }), now);
+    const expired = storeSubscriptionFrom(customer({ checkedAt: now + 62 * dayMs, expiresAt: now + 61 * dayMs }), now, false);
+    const active = storeSubscriptionFrom(customer({ checkedAt: now }), now, false);
 
     await backend.mutation(internal.storeSubscriptions.apply, { ownerId: alice.subject, subscription: expired });
     await backend.mutation(internal.storeSubscriptions.apply, { ownerId: alice.subject, subscription: active });
@@ -277,6 +288,19 @@ describe('RevenueCat webhook', () => {
 
     expect((await status(backend)).isPremium).toBe(true);
     expect((await status(backend, bob)).isPremium).toBe(false);
+  });
+
+  test('keeps sandbox purchases free of Premium on a deployment that does not accept them', async () => {
+    const backend = convexTest(schema, modules);
+    revenueCatServing({ user_alice: customer({ isSandbox: true }) });
+
+    await webhook(backend, { type: 'INITIAL_PURCHASE', app_user_id: 'user_alice' });
+    expect((await status(backend)).isPremium).toBe(false);
+
+    process.env.REVENUECAT_ACCEPTS_SANDBOX = 'true';
+    revenueCatServing({ user_alice: customer({ isSandbox: true, checkedAt: now + 1000 }) });
+    await webhook(backend, { type: 'RENEWAL', app_user_id: 'user_alice' });
+    expect((await status(backend)).isPremium).toBe(true);
   });
 
   test('acknowledges the dashboard test event without creating profiles', async () => {

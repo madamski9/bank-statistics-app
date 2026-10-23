@@ -34,6 +34,7 @@ interface RevenueCatSubscription {
   unsubscribe_detected_at?: string | null;
   billing_issues_detected_at?: string | null;
   refunded_at?: string | null;
+  is_sandbox?: boolean;
 }
 
 export interface RevenueCatCustomer {
@@ -61,7 +62,11 @@ function latestOf(times: (number | undefined)[]): number | undefined {
   return known.length === 0 ? undefined : Math.max(...known);
 }
 
-export function storeSubscriptionFrom(customer: RevenueCatCustomer, now: number): StoreSubscription {
+export function storeSubscriptionFrom(
+  customer: RevenueCatCustomer,
+  now: number,
+  acceptsSandbox: boolean,
+): StoreSubscription {
   const checkedAt = customer.request_date_ms ?? now;
   const entitlement = customer.subscriber?.entitlements?.[premiumEntitlementId];
   const inactive = { isActive: false, willRenew: false, isTrial: false, hasBillingIssue: false, checkedAt };
@@ -74,6 +79,10 @@ export function storeSubscriptionFrom(customer: RevenueCatCustomer, now: number)
     entitlement.product_identifier === undefined
       ? undefined
       : customer.subscriber?.subscriptions?.[entitlement.product_identifier];
+  if (subscription?.is_sandbox === true && !acceptsSandbox) {
+    return inactive;
+  }
+
   const isLifetime = entitlement.expires_date === null;
   const accessUntil = isLifetime
     ? undefined
