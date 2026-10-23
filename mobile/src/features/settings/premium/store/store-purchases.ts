@@ -9,7 +9,7 @@ import Purchases, {
 
 import { appEnvironment } from '@/app-environment';
 
-import { trialDays, type StoreOfferingId } from './trial-offer';
+import { advertisedTrialDays, trialDays, type IntroEligibility, type StoreOfferingId } from './trial-offer';
 
 const premiumEntitlementId = 'bank_stats_premium';
 
@@ -72,16 +72,48 @@ function freeTrialDays(product: PurchasesStoreProduct): number | null {
     : null;
 }
 
-function planOf(period: PremiumPlanPeriod, storePackage: PurchasesPackage | null, offersTrial: boolean): PremiumPlan[] {
+async function introEligibility(productIds: string[]): Promise<Record<string, IntroEligibility>> {
+  if (Platform.OS !== 'ios' || productIds.length === 0) {
+    return {};
+  }
+
+  try {
+    const statuses = await Purchases.checkTrialOrIntroductoryPriceEligibility(productIds);
+
+    return Object.fromEntries(
+      Object.entries(statuses).map(([productId, eligibility]) => [
+        productId,
+        eligibility.status === Purchases.INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE
+          ? 'eligible'
+          : eligibility.status === Purchases.INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_INELIGIBLE
+            ? 'ineligible'
+            : 'unknown',
+      ]),
+    );
+  } catch {
+    return {};
+  }
+}
+
+function planOf(
+  period: PremiumPlanPeriod,
+  storePackage: PurchasesPackage | null,
+  offersTrial: boolean,
+  eligibility: Record<string, IntroEligibility>,
+): PremiumPlan[] {
   if (storePackage === null) {
     return [];
   }
 
+  const product = storePackage.product;
+
   return [
     {
       period,
-      price: storePackage.product.priceString,
-      trialDays: offersTrial ? freeTrialDays(storePackage.product) : null,
+      price: product.priceString,
+      trialDays: offersTrial
+        ? advertisedTrialDays(freeTrialDays(product), Platform.OS, eligibility[product.identifier] ?? 'unknown')
+        : null,
       storePackage,
     },
   ];
@@ -96,8 +128,15 @@ export async function loadPremiumPlans(offeringId: StoreOfferingId): Promise<Pre
   }
 
   const offersTrial = offering.identifier === 'trial';
+  const packages = [offering.monthly, offering.annual].filter(
+    (storePackage): storePackage is PurchasesPackage => storePackage !== null,
+  );
+  const eligibility = offersTrial ? await introEligibility(packages.map((storePackage) => storePackage.product.identifier)) : {};
 
-  return [...planOf('monthly', offering.monthly, offersTrial), ...planOf('annual', offering.annual, offersTrial)];
+  return [
+    ...planOf('monthly', offering.monthly, offersTrial, eligibility),
+    ...planOf('annual', offering.annual, offersTrial, eligibility),
+  ];
 }
 
 export async function purchasePremiumPlan(plan: PremiumPlan): Promise<CustomerInfo> {

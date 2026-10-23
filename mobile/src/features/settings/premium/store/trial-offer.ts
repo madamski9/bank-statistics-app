@@ -20,3 +20,17 @@ export function storeOfferingFor({ capturedTransactionCount, reason }: TrialElig
 export function trialDays(unit: string, count: number): number | null {
   return unit in daysPerUnit && count > 0 ? daysPerUnit[unit as TrialPeriodUnit] * count : null;
 }
+
+export type IntroEligibility = 'eligible' | 'ineligible' | 'unknown';
+
+export function advertisedTrialDays(
+  storeTrialDays: number | null,
+  platform: string,
+  eligibility: IntroEligibility,
+): number | null {
+  if (storeTrialDays === null) {
+    return null;
+  }
+
+  return platform !== 'ios' || eligibility === 'eligible' ? storeTrialDays : null;
+}
