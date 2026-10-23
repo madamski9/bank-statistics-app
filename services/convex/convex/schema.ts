@@ -1,6 +1,8 @@
 import { defineSchema, defineTable } from 'convex/server';
 import { v, type PropertyValidators } from 'convex/values';
 
+import { storeSubscriptionFields } from './revenueCat';
+
 export const devicePlatform = v.union(v.literal('ios'), v.literal('android'), v.literal('web'));
 
 export const transactionFields = {
@@ -113,6 +115,8 @@ export default defineSchema({
     isPremium: v.boolean(),
     premiumSince: v.optional(v.number()),
     premiumUntil: v.optional(v.number()),
+    storeSubscription: v.optional(storeSubscriptionFields),
+    storeSubscriptionRecheck: v.optional(v.id('_scheduled_functions')),
   }).index('by_owner', ['ownerId']),
   premiumCodes: defineTable({
     code: v.string(),

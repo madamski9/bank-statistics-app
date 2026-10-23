@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Linking, type ScrollView } from 'react-native';
 
 import { useCopy } from '@/features/app-shell/localization/language';
+import { usePremiumOffer } from '@/features/settings/premium/store/use-premium-offer';
 import { biometricLabels } from '@/features/settings/privacy/app-lock/biometrics';
 import { usePrivacy } from '@/features/settings/privacy/privacy-provider';
 
@@ -38,6 +39,10 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
   const [error, setError] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<OnboardingPlan>('free');
   const [isFinishing, setIsFinishing] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const premiumOffer = usePremiumOffer('trial');
+  const premiumPlans = premiumOffer.state.kind === 'ready' ? premiumOffer.state.plans : [];
+  const selectedPremiumPlan = premiumPlans.find((plan) => plan.period === selectedPlan);
   const scrollRef = useRef<ScrollView>(null);
   const resumeAtBanks = useCallback(() => setStep(banksStep), []);
   const shortcut = useShortcutSetup({ isShortcutsFlow, onError: setError, onResume: resumeAtBanks });
@@ -87,6 +92,34 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
     setError(null);
   }, []);
 
+  const buyPremium = useCallback(async () => {
+    if (premiumOffer.state.kind === 'unavailable') {
+      setError(copy.premiumSoon);
+      return;
+    }
+
+    if (premiumOffer.state.kind === 'failed') {
+      setError(copy.plansFailed);
+      premiumOffer.reload();
+      return;
+    }
+
+    if (selectedPremiumPlan === undefined) {
+      return;
+    }
+
+    setError(null);
+    setIsPurchasing(true);
+    const outcome = await premiumOffer.purchase(selectedPremiumPlan);
+    setIsPurchasing(false);
+
+    if (outcome === 'purchased') {
+      changeStep(plansStep + 1);
+    } else if (outcome === 'failed') {
+      setError(copy.purchaseFailed);
+    }
+  }, [changeStep, copy, premiumOffer, selectedPremiumPlan]);
+
   const goBack = useCallback(() => {
     if (isShortcutsFlow && step === banksStep) {
       void leaveTo(null);
@@ -95,14 +128,21 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
     }
   }, [changeStep, isShortcutsFlow, leaveTo, step]);
 
-  const isBusy = isFinishing || shortcut.isOpeningShortcut || shortcut.isSavingProgress;
+  const isBusy =
+    isFinishing ||
+    isPurchasing ||
+    shortcut.isOpeningShortcut ||
+    shortcut.isSavingProgress ||
+    (step === plansStep && selectedPlan !== 'free' && premiumOffer.state.kind === 'loading');
   const isPrimaryDisabled = isBusy || (step === banksStep && selectedBanks.length === 0);
 
   const primaryLabel =
     step === plansStep
       ? selectedPlan === 'free'
         ? copy.continueFree
-        : copy.goToPayment
+        : selectedPremiumPlan?.trialDays != null
+          ? copy.startTrial(selectedPremiumPlan.trialDays)
+          : copy.goToPayment
       : step === shortcutsIntroStep
         ? copy.goToSetup
         : step === banksStep
@@ -121,9 +161,8 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
       ? shortcut.hasOpenedShortcut ? () => leaveTo(automationStep) : openShortcut
       : step === stepCount || (isShortcutsFlow && step === focusSetupStep)
         ? finish
-        : step === plansStep && selectedPlan === 'premium'
-          ? () =>
-              setError(copy.premiumSoon)
+        : step === plansStep && selectedPlan !== 'free'
+          ? buyPremium
           : () => changeStep(step + 1);
 
   const primary =
@@ -171,6 +210,8 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
     transitionDirection,
     error,
     selectedPlan,
+    premiumPlans,
+    sellsPremium: premiumOffer.state.kind !== 'unavailable',
     scrollRef,
     flowPosition,
     flowLength,

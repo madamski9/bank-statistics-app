@@ -6,7 +6,7 @@ import { useCopy } from '@/features/app-shell/localization/language';
 import { overviewColors } from '@/features/app-shell/theme/overview-theme';
 
 import { premiumCopy } from '../premium-copy';
-import { formatPremiumDate } from '../premium-date';
+import { premiumStanding, premiumStandingText } from '../premium-standing';
 import type { PremiumStatus } from '../use-premium';
 
 interface PremiumCardProps {
@@ -34,13 +34,7 @@ export function PremiumCard({ status, onPress }: PremiumCardProps) {
   }
 
   const isPremium = status.isPremium;
-  const subtitle = isPremium
-    ? status.premiumUntil !== null
-      ? copy.activeUntil(formatPremiumDate(status.premiumUntil))
-      : status.premiumSince === null
-        ? copy.thanks
-        : copy.activeSince(formatPremiumDate(status.premiumSince))
-    : copy.pitch;
+  const subtitle = premiumStandingText(premiumStanding(status), copy);
 
   return (
     <Pressable

@@ -1,12 +1,17 @@
 import { SymbolView } from 'expo-symbols';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useCopy } from '@/features/app-shell/localization/language';
 import { overviewColors, overviewSpacing } from '@/features/app-shell/theme/overview-theme';
 
 import { premiumCopy } from '../premium-copy';
-import { formatPremiumDate } from '../premium-date';
+import { premiumStanding, premiumStandingDetail } from '../premium-standing';
 import type { PremiumStatus } from '../use-premium';
+
+const storeSubscriptionsUrl =
+  Platform.OS === 'android'
+    ? 'https://play.google.com/store/account/subscriptions'
+    : 'https://apps.apple.com/account/subscriptions';
 
 export function PremiumHero({ status }: { status: PremiumStatus | undefined }) {
   const copy = useCopy(premiumCopy);
@@ -25,14 +30,20 @@ export function PremiumHero({ status }: { status: PremiumStatus | undefined }) {
         {isPremium ? copy.youHavePremium : 'BankStats Premium'}
       </Text>
       <Text maxFontSizeMultiplier={1.5} style={styles.tagline}>
-        {isPremium
-          ? status.premiumUntil !== null
-            ? copy.activeUntilLong(formatPremiumDate(status.premiumUntil))
-            : status.premiumSince === null
-              ? copy.thanksLong
-              : copy.activeSinceLong(formatPremiumDate(status.premiumSince))
-          : copy.tagline}
+        {status === undefined ? copy.tagline : premiumStandingDetail(premiumStanding(status), copy)}
       </Text>
+      {isPremium && status.subscription !== null ? (
+        <Pressable
+          accessibilityRole="link"
+          hitSlop={8}
+          onPress={() => void Linking.openURL(status.subscription?.managementUrl ?? storeSubscriptionsUrl)}
+          style={({ pressed }) => [styles.manage, pressed ? styles.pressed : null]}
+        >
+          <Text maxFontSizeMultiplier={1.4} style={styles.manageLabel}>
+            {copy.manageSubscription}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -58,6 +69,18 @@ const styles = StyleSheet.create({
     letterSpacing: -0.8,
     textAlign: 'center',
     color: overviewColors.textPrimary,
+  },
+  manage: {
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  manageLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: overviewColors.textPrimary,
+  },
+  pressed: {
+    opacity: 0.7,
   },
   tagline: {
     maxWidth: 320,

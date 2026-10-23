@@ -97,7 +97,14 @@ function ActiveSheet({
         />
       );
     case 'premium':
-      return <PremiumScreen onClose={sheets.closePremium} reason={sheets.premiumReason} status={premium} />;
+      return (
+        <PremiumScreen
+          capturedTransactionCount={ledger.records.filter((record) => record.origin !== 'manual').length}
+          onClose={sheets.closePremium}
+          reason={sheets.premiumReason}
+          status={premium}
+        />
+      );
     case 'language':
       return <LanguageScreen onClose={closeSheet} />;
     case 'privacy':

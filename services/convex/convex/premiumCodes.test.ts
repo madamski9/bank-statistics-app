@@ -110,6 +110,7 @@ describe('premium codes', () => {
     expect(await backend.withIdentity(alice).query(api.profiles.current, {})).toMatchObject({
       isPremium: true,
       premiumUntil: null,
+      subscription: null,
     });
   });
 
@@ -179,6 +180,7 @@ describe('premium codes', () => {
       isPremium: false,
       premiumSince: null,
       premiumUntil: null,
+      subscription: null,
     });
   });
 

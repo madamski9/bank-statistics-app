@@ -1,8 +1,9 @@
 import { SymbolView } from 'expo-symbols';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { useCopy } from '@/features/app-shell/localization/language';
 import { overviewColors } from '@/features/app-shell/theme/overview-theme';
+import type { PremiumPlan, PremiumPlanPeriod } from '@/features/settings/premium/store/store-purchases';
 
 import { SectionHeading } from '../components/section-heading';
 import { SelectionCard } from '../components/selection-card';
@@ -11,21 +12,31 @@ import { OnboardingIcon } from '../illustrations/onboarding-icon';
 import { onboardingCopy } from '../onboarding-copy';
 import { onboardingColors } from '../onboarding-motion';
 
-export type OnboardingPlan = 'free' | 'premium';
+export type OnboardingPlan = 'free' | PremiumPlanPeriod;
+
+const storeName = Platform.OS === 'android' ? 'Google Play' : 'App Store';
 
 interface PlansStepProps {
   onSelect: (plan: OnboardingPlan) => void;
   selectedPlan: OnboardingPlan;
+  premiumPlans: PremiumPlan[];
+  sellsPremium: boolean;
 }
 
-export function PlansStep({ onSelect, selectedPlan }: PlansStepProps) {
+export function PlansStep({ onSelect, selectedPlan, premiumPlans, sellsPremium }: PlansStepProps) {
   const copy = useCopy(onboardingCopy).plans;
+  const annual = premiumPlans.find((plan) => plan.period === 'annual');
+  const monthly = premiumPlans.find((plan) => plan.period === 'monthly');
+  const trialDays = premiumPlans.find((plan) => plan.trialDays !== null)?.trialDays ?? null;
+  const annualPrice = annual === undefined ? copy.yearlyPrice : copy.yearlyPriceOf(annual.price);
+  const monthlyPrice = monthly === undefined ? copy.monthlyPrice : copy.monthlyPriceOf(monthly.price);
+
   return (
     <View style={stepStyles.stepContent}>
       <SectionHeading
         eyebrow={copy.eyebrow}
         title={copy.title}
-        description={copy.description}
+        description={sellsPremium ? copy.sellingDescription : copy.description}
       />
       <SelectionCard
         selected={selectedPlan === 'free'}
@@ -45,41 +56,76 @@ export function PlansStep({ onSelect, selectedPlan }: PlansStepProps) {
         </View>
         <Text style={styles.planDetail}>{copy.freeDetail}</Text>
       </SelectionCard>
-      <SelectionCard
-        selected={selectedPlan === 'premium'}
+      <View style={styles.premiumHeading}>
+        <Text style={styles.premiumName}>Premium</Text>
+        {sellsPremium && trialDays === null ? null : (
+          <Text style={styles.badge}>{trialDays === null ? copy.comingSoon : copy.trialBadge(trialDays)}</Text>
+        )}
+      </View>
+      <PremiumPlanCard
         delay={180}
-        accessibilityLabel={copy.premiumLabel}
-        accessibilityRole="radio"
-        accessibilityState={{ checked: selectedPlan === 'premium' }}
-        onPress={() => onSelect('premium')}
-        style={[
-          styles.planCard,
-          styles.premiumCard,
-        ]}
-      >
-        <View style={styles.planHeading}>
-          <Text style={styles.premiumName}>Premium</Text>
-          <View style={styles.planHeadingRight}>
-            <Text style={styles.comingSoon}>{copy.comingSoon}</Text>
-            <PlanCheck isSelected={selectedPlan === 'premium'} />
-          </View>
-        </View>
-        <Text style={styles.premiumPrice}>{copy.monthlyPrice}</Text>
-        <View style={styles.yearlyPriceRow}>
-          <Text style={styles.planDetail}>{copy.or}</Text>
-          <Text style={styles.oldYearlyPrice}>{copy.oldYearlyPrice}</Text>
-          <Text style={styles.newYearlyPrice}>{copy.yearlyPrice}</Text>
-        </View>
-        <View style={styles.premiumDivider} />
+        detail={trialDays === null ? null : copy.afterTrial(trialDays, annualPrice)}
+        isSelected={selectedPlan === 'annual'}
+        name={copy.premiumYearlyName}
+        onSelect={() => onSelect('annual')}
+        price={annualPrice}
+        previousPrice={annual === undefined ? copy.oldYearlyPrice : null}
+      />
+      <PremiumPlanCard
+        delay={220}
+        detail={trialDays === null ? null : copy.afterTrial(trialDays, monthlyPrice)}
+        isSelected={selectedPlan === 'monthly'}
+        name={copy.premiumMonthlyName}
+        onSelect={() => onSelect('monthly')}
+        price={monthlyPrice}
+        previousPrice={null}
+      />
+      <View style={styles.benefits}>
         {[copy.unlimitedLimits, copy.moreStatistics].map((benefit) => (
           <View key={benefit} style={styles.benefitRow}>
             <OnboardingIcon name="check" size={16} />
             <Text style={styles.premiumBenefit}>{benefit}</Text>
           </View>
         ))}
-      </SelectionCard>
-      <Text style={stepStyles.smallNote}>{copy.note}</Text>
+      </View>
+      <Text style={stepStyles.smallNote}>{sellsPremium ? copy.storeNote(storeName) : copy.note}</Text>
     </View>
+  );
+}
+
+interface PremiumPlanCardProps {
+  name: string;
+  price: string;
+  previousPrice: string | null;
+  detail: string | null;
+  isSelected: boolean;
+  delay: number;
+  onSelect: () => void;
+}
+
+function PremiumPlanCard({ name, price, previousPrice, detail, isSelected, delay, onSelect }: PremiumPlanCardProps) {
+  const copy = useCopy(onboardingCopy).plans;
+
+  return (
+    <SelectionCard
+      selected={isSelected}
+      delay={delay}
+      accessibilityLabel={copy.premiumPlanLabel(name, detail ?? price)}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: isSelected }}
+      onPress={onSelect}
+      style={[styles.planCard, styles.premiumCard]}
+    >
+      <View style={styles.planHeading}>
+        <Text style={styles.planName}>{name}</Text>
+        <PlanCheck isSelected={isSelected} />
+      </View>
+      <View style={styles.priceRow}>
+        {previousPrice === null ? null : <Text style={styles.oldPrice}>{previousPrice}</Text>}
+        <Text style={styles.premiumPrice}>{price}</Text>
+      </View>
+      {detail === null ? null : <Text style={styles.planDetail}>{detail}</Text>}
+    </SelectionCard>
   );
 }
 
@@ -155,33 +201,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  premiumHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 6,
+  },
   premiumName: {
     color: onboardingColors.accentText,
     fontSize: 18,
     fontWeight: '700',
   },
-  premiumPrice: {
-    color: overviewColors.textPrimary,
-    fontSize: 26,
-    fontWeight: '700',
-  },
-  yearlyPriceRow: {
+  priceRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
     flexWrap: 'wrap',
-    gap: 7,
+    gap: 8,
   },
-  oldYearlyPrice: {
+  premiumPrice: {
+    color: overviewColors.textPrimary,
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  oldPrice: {
     color: overviewColors.textSecondary,
     fontSize: 14,
     textDecorationLine: 'line-through',
   },
-  newYearlyPrice: {
-    color: overviewColors.textPrimary,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  comingSoon: {
+  badge: {
     color: onboardingColors.accentText,
     paddingHorizontal: 8,
     paddingVertical: 5,
@@ -192,10 +240,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
   },
-  premiumDivider: {
-    height: 1,
-    marginVertical: 5,
-    backgroundColor: overviewColors.hairline,
+  benefits: {
+    gap: 8,
   },
   benefitRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   premiumBenefit: {

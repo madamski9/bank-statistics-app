@@ -11,8 +11,8 @@
 import type * as account from "../account.js";
 import type * as changeRules from "../changeRules.js";
 import type * as crons from "../crons.js";
-import type * as diagnosticSamples from "../diagnosticSamples.js";
 import type * as devices from "../devices.js";
+import type * as diagnosticSamples from "../diagnosticSamples.js";
 import type * as exchangeRates from "../exchangeRates.js";
 import type * as http from "../http.js";
 import type * as migrations from "../migrations.js";
@@ -21,7 +21,9 @@ import type * as owners from "../owners.js";
 import type * as premiumCodeErrors from "../premiumCodeErrors.js";
 import type * as premiumCodes from "../premiumCodes.js";
 import type * as profiles from "../profiles.js";
+import type * as revenueCat from "../revenueCat.js";
 import type * as sessionToken from "../sessionToken.js";
+import type * as storeSubscriptions from "../storeSubscriptions.js";
 import type * as sync from "../sync.js";
 import type * as webhookSignature from "../webhookSignature.js";
 
@@ -45,7 +47,9 @@ declare const fullApi: ApiFromModules<{
   premiumCodeErrors: typeof premiumCodeErrors;
   premiumCodes: typeof premiumCodes;
   profiles: typeof profiles;
+  revenueCat: typeof revenueCat;
   sessionToken: typeof sessionToken;
+  storeSubscriptions: typeof storeSubscriptions;
   sync: typeof sync;
   webhookSignature: typeof webhookSignature;
 }>;
