@@ -72,7 +72,12 @@ export function OnboardingScreen(props: OnboardingFlowOptions) {
           {step === 0 ? <WelcomeStep /> : null}
           {step === 1 ? <LimitsStep /> : null}
           {step === plansStep ? (
-            <PlansStep onSelect={onboarding.selectPlan} selectedPlan={onboarding.selectedPlan} />
+            <PlansStep
+              onSelect={onboarding.selectPlan}
+              premiumPlans={onboarding.premiumPlans}
+              selectedPlan={onboarding.selectedPlan}
+              sellsPremium={onboarding.sellsPremium}
+            />
           ) : null}
           {step === shortcutsIntroStep ? <ShortcutsStep /> : null}
           {step === banksStep ? (

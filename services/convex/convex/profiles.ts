@@ -15,11 +15,22 @@ export const current = query({
   handler: async (ctx) => {
     const ownerId = await requireOwnerId(ctx.auth);
     const profile = await findProfile(ctx, ownerId);
+    const storeSubscription = profile?.storeSubscription?.isActive === true ? profile.storeSubscription : null;
 
     return {
-      isPremium: profile?.isPremium ?? false,
+      isPremium: profile?.isPremium === true || storeSubscription !== null,
       premiumSince: profile?.premiumSince ?? null,
       premiumUntil: profile?.premiumUntil ?? null,
+      subscription:
+        storeSubscription === null
+          ? null
+          : {
+              accessUntil: storeSubscription.accessUntil ?? null,
+              willRenew: storeSubscription.willRenew,
+              isTrial: storeSubscription.isTrial,
+              hasBillingIssue: storeSubscription.hasBillingIssue,
+              managementUrl: storeSubscription.managementUrl ?? null,
+            },
     };
   },
 });

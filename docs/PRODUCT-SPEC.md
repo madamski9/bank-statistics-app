@@ -247,7 +247,7 @@ BankStats earns revenue through an optional Premium subscription. The free produ
 ### Onboarding and configuration
 
 - Onboarding presents the promise, explains notification-derived coverage and limitations, states that parsing is local and data is not sold, establishes a Clerk session, gathers platform and bank choices, guides permissions or Shortcuts setup, runs a control test, and opens Overview.
-- Subscription offers do not interrupt initial onboarding.
+- Onboarding includes one plan step where the user picks the free product, Premium yearly or Premium monthly. Choosing Premium there is an intentional Premium choice, so it offers the 14-day trial. The free product stays selected by default and the step never blocks onboarding.
 - A Capture Configuration can be working, require attention, or remain unconfigured.
 - Capture health uses concrete evidence such as permissions, a completed control test, and recent successful collector execution. Lack of spending alone is not treated as failure.
 - Settings expose enabled Supported Banks, last successful capture, a repeatable control test, privacy controls, device management, export, subscription management, and account deletion.
@@ -281,7 +281,7 @@ BankStats earns revenue through an optional Premium subscription. The free produ
 - Clerk provides custom minimalist Sign in with Apple, Google sign-in, and email-code authentication.
 - RevenueCat manages App Store and Google Play purchases and maps them to the stable Clerk-backed internal identity.
 - Convex mirrors the current entitlement and enforces server-side Premium limits.
-- The planned price is 9.99 PLN monthly or 99.99 PLN yearly. Purchases remain unavailable until RevenueCat integration is complete.
+- The price is 9.99 PLN monthly or 99.99 PLN yearly. Purchases are unavailable in a build without a RevenueCat key for its store. `docs/REVENUECAT-SETUP.md` lists the products, offerings and keys.
 - The product offers a 14-day trial only after at least 15 real Transactions have been captured or the user intentionally chooses a Premium feature.
 - There is no lifetime purchase in the initial release.
 - The free product includes capture for enabled Supported Banks, manual changes, review and corrections, spending charts and statistics for up to one month, one active Alert Rule, one basic widget, multi-device sync, and CSV/JSON export. Stored transactions remain available for synchronization and export.

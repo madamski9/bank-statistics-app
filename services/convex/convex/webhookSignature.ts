@@ -24,7 +24,7 @@ function base64FromBytes(bytes: Uint8Array): string {
   return btoa(String.fromCharCode(...bytes));
 }
 
-function isSameText(left: string, right: string): boolean {
+export function isSameText(left: string, right: string): boolean {
   if (left.length !== right.length) {
     return false;
   }
