@@ -125,26 +125,6 @@ export const onboardingCopy = defineCopy({
         'Tryb Nie przeszkadzać może zakłócić przechwytywanie transakcji. Dodaj do wyjątków przede wszystkim Portfel, a także aplikacje banków, aby ich powiadomienia nie były wyciszane. Potem sprawdź zapis na swoim telefonie.',
       note: 'To samo ustaw w innych trybach skupienia, z których korzystasz, na przykład w trybie Sen.',
     },
-    notificationRecoveryNotes: {
-      eyebrow: 'NOWOŚĆ DLA BETA TESTERÓW',
-      title: 'Odzyskaj brakującą transakcję',
-      description:
-        'Powiadomienia z kwotą, których jeszcze nie rozpoznajemy, zachowujemy bezpiecznie na telefonie. Możesz je sprawdzić i zamienić w transakcję.',
-      inboxTitle: 'Zajrzyj do nierozpoznanych powiadomień',
-      inboxDescription:
-        'Gdy transakcja się nie zapisze, wyświetlimy powiadomienie — stuknij je albo otwórz Profil → Przechwytywanie → Powiadomienia do rozpoznania. Zobaczysz treść wiadomości i powód, dla którego nie powstała transakcja.',
-      recoveryTitle: 'Ponów rozpoznawanie lub uzupełnij dane',
-      recoveryDescription:
-        'Spróbuj ponownie albo wpisz brakujące dane i zapisz transakcję ręcznie. Oryginalną wiadomość usuniemy po zapisaniu transakcji.',
-      reportTitle: 'Pomóż nam poprawić rozpoznawanie',
-      reportDescription:
-        'Wybierz „Zgłoś błąd”, usuń dane osobowe z próbki i sprawdź podgląd. Do dewelopera trafi tylko próbka, którą zatwierdzisz.',
-      bankTitle: 'Nazwij bank z Portfela',
-      bankDescription:
-        'Przy nieznanym banku pokażemy tytuł powiadomienia, na przykład Trade Republic. W edycji transakcji wpisz nazwę banku. Zapamiętamy ją na tym telefonie dla wcześniejszych i kolejnych płatności z takim samym tytułem.',
-      note:
-        'Oryginały pozostają zaszyfrowane na telefonie i wygasają po 30 dniach. Na tej liście pojawią się tylko wiadomości, które dotarły ze Skrótów — automatyzacja nadal musi być włączona.',
-    },
     focusSetup: {
       eyebrow: 'USTAWIENIA IPHONE’A',
       title: 'Dodaj banki do wyjątków',
@@ -295,26 +275,6 @@ export const onboardingCopy = defineCopy({
       description:
         'Do Not Disturb may interfere with transaction capture. Allow Wallet above all, along with your bank apps, so their notifications are not silenced. Then check saving on your phone.',
       note: 'Do the same in any other Focus you use, such as Sleep.',
-    },
-    notificationRecoveryNotes: {
-      eyebrow: 'NEW FOR BETA TESTERS',
-      title: 'Recover a missing transaction',
-      description:
-        'Notifications with an amount that we cannot recognize yet are saved securely on your phone. You can inspect them and turn them into transactions.',
-      inboxTitle: 'Open unrecognized notifications',
-      inboxDescription:
-        'When a transaction is not saved, we show a notification. Tap it, or go to Profile → Capture → Notifications awaiting recognition. You will see the original message and why it did not become a transaction.',
-      recoveryTitle: 'Retry recognition or complete the details',
-      recoveryDescription:
-        'Try again, or fill in the missing details and save a manual transaction. The original message is removed after the transaction is saved.',
-      reportTitle: 'Help us improve recognition',
-      reportDescription:
-        'Choose “Report a problem”, remove personal details from the sample and check the preview. Only the sample you approve will reach the developer.',
-      bankTitle: 'Name a bank from Wallet',
-      bankDescription:
-        'For an unknown bank, we show the notification title, such as Trade Republic. Enter the bank name when editing the transaction. This phone remembers it for previous and future payments with the same title.',
-      note:
-        'Originals stay encrypted on your phone and expire after 30 days. This list only contains messages received from Shortcuts, so your automation must still be enabled.',
     },
     focusSetup: {
       eyebrow: 'IPHONE SETTINGS',

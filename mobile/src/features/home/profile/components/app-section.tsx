@@ -1,7 +1,6 @@
 import { languageNames, useCopy, useLanguage } from '@/features/app-shell/localization/language';
 import {
   replayOnboarding,
-  replayReleaseNotes,
   replayShortcutsSetup,
 } from '@/features/onboarding/onboarding-replay';
 import {
@@ -93,14 +92,6 @@ export function AppSection({
           label={copy.replayOnboarding}
           onPress={replayOnboarding}
           symbol={{ ios: 'arrow.counterclockwise', android: 'replay', web: 'replay' }}
-        />
-      ) : null}
-      {__DEV__ ? (
-        <ProfileActionRow
-          hasChevron={false}
-          label={copy.replayReleaseNotes}
-          onPress={replayReleaseNotes}
-          symbol={{ ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' }}
         />
       ) : null}
       {__DEV__ ? (
