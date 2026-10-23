@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-export type OnboardingReplay = 'none' | 'full' | 'shortcuts' | 'releaseNotes';
+export type OnboardingReplay = 'none' | 'full' | 'shortcuts';
 
 let onboardingReplay: OnboardingReplay = 'none';
 const listeners = new Set<() => void>();
@@ -24,10 +24,6 @@ export function replayOnboarding(): void {
 
 export function replayShortcutsSetup(): void {
   setOnboardingReplay('shortcuts');
-}
-
-export function replayReleaseNotes(): void {
-  setOnboardingReplay('releaseNotes');
 }
 
 export function finishOnboardingReplay(): void {
