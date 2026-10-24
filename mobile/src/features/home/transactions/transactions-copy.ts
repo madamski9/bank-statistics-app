@@ -1,4 +1,5 @@
 import { defineCopy } from '@/features/app-shell/localization/language';
+import { englishPlural, polishPlural } from '@/features/app-shell/localization/plural';
 
 export const transactionsCopy = defineCopy({
   pl: {
@@ -89,6 +90,9 @@ export const transactionsCopy = defineCopy({
     rowHint: 'Otwiera szczegóły transakcji',
     addHint: 'Otwiera formularz ręcznej transakcji',
     add: 'Dodaj transakcję',
+    merchantHistoryTitle: 'Wydatki w tym sklepie',
+    merchantHistorySummary: (total: string, count: number) =>
+      `${total} łącznie · ${count} ${polishPlural(count, 'płatność', 'płatności', 'płatności')}`,
   },
   en: {
     notificationTitle: 'Notification title',
@@ -177,5 +181,8 @@ export const transactionsCopy = defineCopy({
     rowHint: 'Opens the transaction details',
     addHint: 'Opens the manual transaction form',
     add: 'Add transaction',
+    merchantHistoryTitle: 'Spending at this shop',
+    merchantHistorySummary: (total: string, count: number) =>
+      `${total} in total · ${count} ${englishPlural(count, 'payment', 'payments')}`,
   },
 });

@@ -1,5 +1,5 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -21,7 +21,9 @@ import { transactionsCopy } from '../transactions-copy';
 import { DetailHeader } from './components/detail-header';
 import { DetailRowsCard } from './components/detail-rows-card';
 import { IgnorePaymentButton } from './components/ignore-payment-button';
+import { MerchantHistoryChart } from './components/merchant-history-chart';
 import { TransactionHero } from './components/transaction-hero';
+import { merchantSpendHistory } from './merchant-spend-history';
 import { useDetailRows } from './use-detail-rows';
 
 interface TransactionDetailProps {
@@ -60,6 +62,11 @@ export function TransactionDetail({
   const [ignoreChoice, setIgnoreChoice] = useState<IgnoreChoiceTarget | null>(null);
   const prompt = record.review === undefined ? null : reviewPrompt(record.review);
   const details = useDetailRows(record, rules, events);
+  const [openedAtMs] = useState(() => Date.now());
+  const spendHistory = useMemo(
+    () => merchantSpendHistory(record, history, rules, openedAtMs),
+    [history, openedAtMs, record, rules],
+  );
 
   return (
     <View style={styles.screen}>
@@ -78,6 +85,13 @@ export function TransactionDetail({
         ) : null}
 
         <DetailRowsCard rows={details} />
+
+        {spendHistory !== null ? (
+          <MerchantHistoryChart
+            history={spendHistory}
+            key={`${record.id}-${spendHistory.highlightedKey ?? 'none'}`}
+          />
+        ) : null}
 
         {writeError !== null ? (
           <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={1.5} style={styles.error}>
