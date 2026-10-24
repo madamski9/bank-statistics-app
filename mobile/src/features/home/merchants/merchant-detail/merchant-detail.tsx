@@ -14,7 +14,7 @@ import { DailySpendChart } from './components/daily-spend-chart';
 import { GroupLimitCard, SetLimitButton } from './components/group-limit-card';
 import { MerchantHeader } from './components/merchant-header';
 import { MerchantHistory } from './components/merchant-history';
-import { bucketSizeFor, bucketSpending, chartWindow, earliestOccurredMs } from './merchant-summary';
+import { spendBuckets } from './merchant-summary';
 import { useDetailSheetMotion } from './use-detail-sheet-motion';
 
 interface MerchantDetailProps {
@@ -40,12 +40,10 @@ export function MerchantDetail({
   const motion = useDetailSheetMotion(onClosed);
   const [selectedBucket, setSelectedBucket] = useState<string | null>(null);
 
-  const buckets = useMemo(() => {
-    const earliestMs = earliestOccurredMs(group.records);
-    const size = bucketSizeFor(period, earliestMs, spendWindow.endMs);
-
-    return bucketSpending(group.records, chartWindow(spendWindow, size, earliestMs), size);
-  }, [group.records, period, spendWindow]);
+  const buckets = useMemo(
+    () => spendBuckets(group.records, spendWindow, period),
+    [group.records, period, spendWindow],
+  );
 
   return (
     <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>

@@ -86,6 +86,25 @@ describe('merchantSpendHistory', () => {
     expect(history?.totalMinor).toBe(3150);
   });
 
+  test('does not highlight a bar for a payment the statistics leave out', () => {
+    const reversed = record('reversed', { status: 'reversed', occurredAt: new Date(2026, 8, 25).toISOString() });
+    const awaiting = record('awaiting', { currency: 'EUR', amountMinor: 900 });
+    const counted = [record('first'), record('second', { occurredAt: new Date(2026, 8, 22).toISOString() })];
+
+    expect(merchantSpendHistory(reversed, [reversed, ...counted], [], endMs)?.highlightedKey).toBeNull();
+    expect(merchantSpendHistory(awaiting, [awaiting, ...counted], [], endMs)?.highlightedKey).toBeNull();
+  });
+
+  test('includes payments dated after the sheet opened and highlights their own bar', () => {
+    const later = record('later', { occurredAt: new Date(2026, 9, 2, 9, 0).toISOString(), amountMinor: 4000 });
+    const history = merchantSpendHistory(later, [record('earlier'), later], [], endMs);
+    const highlighted = history?.buckets.find((bucket) => bucket.key === history.highlightedKey);
+
+    expect(history?.totalMinor).toBe(5000);
+    expect(highlighted?.startMs).toBe(new Date(2026, 9, 2).getTime());
+    expect(highlighted?.totalMinor).toBe(4000);
+  });
+
   test('stays hidden without a shop or with a single payment', () => {
     const transfer = record('transfer', { transactionType: 'outgoingTransfer', merchant: 'JAN KOWALSKI' });
     const income = record('income', { direction: 'income', transactionType: 'incomingTransfer' });

@@ -2,14 +2,7 @@ import type { IngestionRecord } from '@bankstats/ingestion-native';
 
 import type { CategorizationRule } from '@/features/data/classification/categorization-rule';
 import { classifyTransaction } from '@/features/data/classification/classify-transaction';
-import { groupSpending } from '@/features/data/classification/spending-groups';
-import {
-  bucketSizeFor,
-  bucketSpending,
-  chartWindow,
-  earliestOccurredMs,
-  type SpendBucket,
-} from '@/features/home/merchants/merchant-detail/merchant-summary';
+import { spendBuckets, type SpendBucket } from '@/features/home/merchants/merchant-detail/merchant-summary';
 
 import { statisticalRecords } from '../record/transaction-record';
 
@@ -22,14 +15,17 @@ export interface MerchantSpendHistory {
   count: number;
 }
 
-function bucketKeyAt(buckets: SpendBucket[], occurredMs: number): string | null {
-  if (Number.isNaN(occurredMs)) {
-    return null;
-  }
+function occurredMs(record: IngestionRecord): number {
+  return new Date(record.occurredAt).getTime();
+}
 
-  const containing = buckets.filter((bucket) => bucket.startMs <= occurredMs).at(-1);
+function bucketKeyAt(buckets: SpendBucket[], timeMs: number): string | null {
+  const index = buckets.findIndex(
+    (bucket, position) =>
+      bucket.startMs <= timeMs && (position === buckets.length - 1 || timeMs < buckets[position + 1].startMs),
+  );
 
-  return containing?.key ?? null;
+  return index === -1 ? null : buckets[index].key;
 }
 
 export function merchantSpendHistory(
@@ -39,30 +35,36 @@ export function merchantSpendHistory(
   endMs: number,
 ): MerchantSpendHistory | null {
   const classified = classifyTransaction(record, rules);
+  const { merchantKey } = classified;
 
-  if (record.direction !== 'expense' || classified.partyKind !== 'merchant' || classified.merchantKey === undefined) {
+  if (record.direction !== 'expense' || classified.partyKind !== 'merchant' || merchantKey === undefined) {
     return null;
   }
 
-  const spendWindow = { startMs: null, endMs };
-  const group = groupSpending(statisticalRecords(history), { window: spendWindow, rules, dimension: 'merchant' }).find(
-    (candidate) => candidate.key === classified.merchantKey,
-  );
+  const payments = statisticalRecords(history).filter((candidate) => {
+    if (candidate.direction !== 'expense' || Number.isNaN(occurredMs(candidate))) {
+      return false;
+    }
 
-  if (group === undefined || group.count < 2) {
+    const candidateClass = candidate.id === record.id ? classified : classifyTransaction(candidate, rules);
+
+    return candidateClass.partyKind === 'merchant' && candidateClass.merchantKey === merchantKey;
+  });
+
+  if (payments.length < 2) {
     return null;
   }
 
-  const earliestMs = earliestOccurredMs(group.records);
-  const size = bucketSizeFor('all', earliestMs, endMs);
-  const buckets = bucketSpending(group.records, chartWindow(spendWindow, size, earliestMs), size);
+  const latestMs = Math.max(...payments.map(occurredMs));
+  const buckets = spendBuckets(payments, { startMs: null, endMs: Math.max(endMs, latestMs + 1) }, 'all');
+  const opened = payments.find((candidate) => candidate.id === record.id);
 
   return {
-    merchantName: group.name,
+    merchantName: classified.merchantName ?? '',
     buckets,
-    highlightedKey: bucketKeyAt(buckets, new Date(record.occurredAt).getTime()),
-    currency: group.currency,
-    totalMinor: group.totalMinor,
-    count: group.count,
+    highlightedKey: opened === undefined ? null : bucketKeyAt(buckets, occurredMs(opened)),
+    currency: payments[0].currency,
+    totalMinor: payments.reduce((sum, payment) => sum + payment.amountMinor, 0),
+    count: payments.length,
   };
 }

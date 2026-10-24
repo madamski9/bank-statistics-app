@@ -89,7 +89,7 @@ export function TransactionDetail({
         {spendHistory !== null ? (
           <MerchantHistoryChart
             history={spendHistory}
-            key={`${record.id}-${spendHistory.highlightedKey ?? 'none'}`}
+            key={record.id}
           />
         ) : null}
 
