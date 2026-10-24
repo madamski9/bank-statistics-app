@@ -1,13 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { useCopy } from '@/features/app-shell/localization/language';
+import { languageLocales, useCopy, useLanguage } from '@/features/app-shell/localization/language';
 import { overviewColors } from '@/features/app-shell/theme/overview-theme';
 import { selectionChanged } from '@/haptics';
 
 import { alertsCopy } from '../../alerts-copy';
+import { scopeLabel } from '../../delivery/alert-message';
 import type { AlertScope } from '../../rules/alert-rule';
-import type { CategoryScopeOption } from '../../rules/category-options';
+import { categoryScopeOptions } from '../../rules/category-options';
 import { FormLabel } from './form-field';
 import { OptionChips } from './option-chips';
 
@@ -24,7 +25,7 @@ const visibleMerchantRows = 3;
 interface ScopePickerProps {
   initialScope: AlertScope;
   merchants: MerchantScope[];
-  categories: CategoryScopeOption[];
+  includesCustomCategories: boolean;
   selectedScope: AlertScope;
   onSelect: (scope: AlertScope) => void;
 }
@@ -36,17 +37,29 @@ interface ScopeListItem {
   isSelected: boolean;
 }
 
-function matchesSearch(label: string, search: string): boolean {
-  return label.toLocaleLowerCase('pl').includes(search.trim().toLocaleLowerCase('pl'));
+function matchesSearch(label: string, search: string, locale: string): boolean {
+  return label.toLocaleLowerCase(locale).includes(search.trim().toLocaleLowerCase(locale));
 }
 
-export function ScopePicker({ initialScope, merchants, categories, selectedScope, onSelect }: ScopePickerProps) {
+export function ScopePicker({
+  initialScope,
+  merchants,
+  includesCustomCategories,
+  selectedScope,
+  onSelect,
+}: ScopePickerProps) {
   const copy = useCopy(alertsCopy);
+  const language = useLanguage();
+  const locale = languageLocales[language];
   const [listKind, setListKind] = useState<ScopeListKind>(
     initialScope.kind === 'category' ? 'category' : 'merchant',
   );
   const [search, setSearch] = useState('');
   const listRef = useRef<ScrollView>(null);
+  const categories = useMemo(
+    () => categoryScopeOptions(includesCustomCategories, initialScope, language),
+    [includesCustomCategories, initialScope, language],
+  );
   const availableMerchants =
     initialScope.kind === 'merchant'
       ? [initialScope, ...merchants.filter((merchant) => merchant.key !== initialScope.key)]
@@ -65,7 +78,13 @@ export function ScopePicker({ initialScope, merchants, categories, selectedScope
           scope: category.scope,
           isSelected: selectedScope.kind === 'category' && selectedScope.id === category.scope.id,
         }));
-  const visibleItems = items.filter((item) => matchesSearch(item.label, search));
+  const visibleItems = items.filter((item) => matchesSearch(item.label, search, locale));
+  const isSelectedElsewhere = selectedScope.kind !== 'all' && selectedScope.kind !== listKind;
+
+  const changeList = (next: ScopeListKind) => {
+    setListKind(next);
+    setSearch('');
+  };
 
   useEffect(() => {
     listRef.current?.flashScrollIndicators();
@@ -75,7 +94,7 @@ export function ScopePicker({ initialScope, merchants, categories, selectedScope
     <View style={styles.merchantSection}>
       <FormLabel>{copy.scopeSection}</FormLabel>
       <OptionChips
-        onSelect={setListKind}
+        onSelect={changeList}
         options={scopeListKinds.map((value) => ({ key: value, value, label: copy.scopeLists[value] }))}
         selected={listKind}
       />
@@ -83,12 +102,17 @@ export function ScopePicker({ initialScope, merchants, categories, selectedScope
         accessibilityLabel={listKind === 'merchant' ? copy.searchShop : copy.searchCategory}
         autoCapitalize="none"
         onChangeText={setSearch}
-        placeholder={listKind === 'merchant' ? copy.searchPlaceholder : copy.searchCategoryPlaceholder}
+        placeholder={listKind === 'merchant' ? copy.searchPlaceholder : copy.searchCategory}
         placeholderTextColor={overviewColors.textDisabled}
         selectionColor={overviewColors.textPrimary}
         style={styles.merchantSearch}
         value={search}
       />
+      {isSelectedElsewhere ? (
+        <Text maxFontSizeMultiplier={1.5} numberOfLines={2} style={styles.note}>
+          {copy.selectedScope(scopeLabel(selectedScope))}
+        </Text>
+      ) : null}
       <ScopeOption
         isSelected={selectedScope.kind === 'all'}
         label={copy.allSpendingOption}

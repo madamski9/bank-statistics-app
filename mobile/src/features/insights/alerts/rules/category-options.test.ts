@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { setCustomCategories, uncategorizedLabel } from '@/features/data/classification/categories';
+import { setCustomCategories } from '@/features/data/classification/categories';
 
 import { categoryScopeOptions } from './category-options';
 
@@ -46,10 +46,10 @@ describe('categoryScopeOptions', () => {
     });
   });
 
-  test('labels the category of a limit whose custom category was deleted as uncategorized', () => {
+  test('labels the category of a limit whose custom category was deleted as deleted, not uncategorized', () => {
     const [first] = categoryScopeOptions(true, { kind: 'category', id: 'category-gone' });
 
     expect(first.scope.id).toBe('category-gone');
-    expect(first.label).toBe(uncategorizedLabel());
+    expect(first.label).toBe('Usunięta kategoria');
   });
 });

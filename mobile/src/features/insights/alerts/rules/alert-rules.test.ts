@@ -42,26 +42,15 @@ describe('upsertAlertRule', () => {
     expect(stored[0].targetMinor).toBe(30_000);
   });
 
-  test('a new limit for a category replaces the limit that category already had', () => {
+  test('saving a limit never removes a limit for another rule', () => {
     const groceries = { kind: 'category', id: 'groceries' } as const;
     const stored = upsertAlertRule(
-      [rule('old', { scope: groceries }), rule('lidl')],
-      rule('new', { scope: groceries, targetMinor: 30_000 }),
+      [rule('income', { metric: 'income', scope: groceries })],
+      rule('expense', { scope: groceries }),
       { isPremium: true },
     );
 
-    expect(stored.map((entry) => entry.id)).toEqual(['lidl', 'new']);
-    expect(stored.find((entry) => entry.id === 'new')?.targetMinor).toBe(30_000);
-  });
-
-  test('moving a limit to a category that already has one leaves a single limit for it', () => {
-    const stored = upsertAlertRule(
-      [rule('groceries', { scope: { kind: 'category', id: 'groceries' } }), rule('total', { scope: { kind: 'all' } })],
-      rule('total', { scope: { kind: 'category', id: 'groceries' } }),
-      { isPremium: true },
-    );
-
-    expect(stored.map((entry) => entry.id)).toEqual(['total']);
+    expect(stored.map((entry) => entry.id)).toEqual(['income', 'expense']);
   });
 
   test('limits for different categories live side by side', () => {

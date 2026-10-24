@@ -16,7 +16,7 @@ import { selectionChanged } from '@/haptics';
 import { alertsCopy } from '../alerts-copy';
 import { scopeLabel } from '../delivery/alert-message';
 import { alertTones, type AlertMetric, type AlertRule, type AlertScope } from '../rules/alert-rule';
-import type { CategoryScopeOption } from '../rules/category-options';
+import { conflictingRule } from '../rules/group-limit';
 import { CheckToggle } from './components/check-toggle';
 import { FormField } from './components/form-field';
 import { LimitAmountInput } from './components/limit-amount-input';
@@ -28,7 +28,9 @@ import { useAlertRuleForm, type RepeatingPeriod } from './use-alert-rule-form';
 interface AlertRuleSheetProps {
   scope: AlertScope;
   merchants: Extract<AlertScope, { kind: 'merchant' }>[];
-  categories: CategoryScopeOption[];
+  includesCustomCategories: boolean;
+  existingRules: AlertRule[];
+  onOpenRule: (rule: AlertRule) => void;
   rule: AlertRule | null;
   isFirstRule: boolean;
   isScopeLocked: boolean;
@@ -47,7 +49,9 @@ const notificationChoices = [true, false] as const;
 export function AlertRuleSheet({
   scope,
   merchants,
-  categories,
+  includesCustomCategories,
+  existingRules,
+  onOpenRule,
   rule,
   isFirstRule,
   isScopeLocked,
@@ -61,6 +65,20 @@ export function AlertRuleSheet({
   const copy = useCopy(alertsCopy);
   const insets = useSafeAreaInsets();
   const form = useAlertRuleForm({ scope, rule, onSave, onRequestPermission });
+
+  const selectScope = (next: AlertScope) => {
+    const existing = conflictingRule(existingRules, next, rule?.id ?? null);
+
+    if (existing === null) {
+      form.setSelectedScope(next);
+      return;
+    }
+
+    Alert.alert(copy.existingLimitTitle, copy.existingLimitBody(scopeLabel(next)), [
+      { style: 'cancel', text: copy.cancel },
+      { text: copy.openExistingLimit, onPress: () => onOpenRule(existing) },
+    ]);
+  };
 
   return (
     <KeyboardAvoidingView
@@ -80,10 +98,10 @@ export function AlertRuleSheet({
       >
         {!isScopeLocked && scope.kind !== 'counterparty' ? (
           <ScopePicker
-            categories={categories}
+            includesCustomCategories={includesCustomCategories}
             initialScope={scope}
             merchants={merchants}
-            onSelect={form.setSelectedScope}
+            onSelect={selectScope}
             selectedScope={form.selectedScope}
           />
         ) : (
