@@ -42,6 +42,38 @@ describe('upsertAlertRule', () => {
     expect(stored[0].targetMinor).toBe(30_000);
   });
 
+  test('a new limit for a category replaces the limit that category already had', () => {
+    const groceries = { kind: 'category', id: 'groceries' } as const;
+    const stored = upsertAlertRule(
+      [rule('old', { scope: groceries }), rule('lidl')],
+      rule('new', { scope: groceries, targetMinor: 30_000 }),
+      { isPremium: true },
+    );
+
+    expect(stored.map((entry) => entry.id)).toEqual(['lidl', 'new']);
+    expect(stored.find((entry) => entry.id === 'new')?.targetMinor).toBe(30_000);
+  });
+
+  test('moving a limit to a category that already has one leaves a single limit for it', () => {
+    const stored = upsertAlertRule(
+      [rule('groceries', { scope: { kind: 'category', id: 'groceries' } }), rule('total', { scope: { kind: 'all' } })],
+      rule('total', { scope: { kind: 'category', id: 'groceries' } }),
+      { isPremium: true },
+    );
+
+    expect(stored.map((entry) => entry.id)).toEqual(['total']);
+  });
+
+  test('limits for different categories live side by side', () => {
+    const stored = upsertAlertRule(
+      [rule('groceries', { scope: { kind: 'category', id: 'groceries' } })],
+      rule('transport', { scope: { kind: 'category', id: 'transport' } }),
+      { isPremium: true },
+    );
+
+    expect(stored).toHaveLength(2);
+  });
+
   test('switching a rule off leaves the others alone', () => {
     const stored = upsertAlertRule(
       [rule('lidl'), rule('żabka', { isActive: false })],

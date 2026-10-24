@@ -6,6 +6,7 @@ import { LanguageScreen } from '@/features/app-shell/localization/language-scree
 import { AlertsScreen } from '@/features/insights/alerts/alerts-screen/alerts-screen';
 import { requestAlertPermission } from '@/features/insights/alerts/delivery/expo-alert-notifier';
 import { AlertRuleSheet } from '@/features/insights/alerts/rule-sheet/alert-rule-sheet';
+import { categoryScopeOptions } from '@/features/insights/alerts/rules/category-options';
 import { EventsScreen } from '@/features/insights/events/events-screen/events-screen';
 import { ForecastScreen } from '@/features/insights/forecast/forecast-screen';
 import { MonthlySummaryScreen } from '@/features/insights/monthly-summary/summary-screen/monthly-summary-screen';
@@ -72,6 +73,7 @@ function ActiveSheet({
     return (
       <AlertRuleSheet
         canUseAggressiveTone={alertEditing.canUseAggressiveTone}
+        categories={categoryScopeOptions(hasPremiumAccess, editor.scope)}
         isFirstRule={alertEditing.isFirstRule}
         isScopeLocked={editor.isScopeLocked === true}
         merchants={alertEditing.merchants}

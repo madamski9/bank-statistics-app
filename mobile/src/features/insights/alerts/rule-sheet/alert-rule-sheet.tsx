@@ -16,6 +16,7 @@ import { selectionChanged } from '@/haptics';
 import { alertsCopy } from '../alerts-copy';
 import { scopeLabel } from '../delivery/alert-message';
 import { alertTones, type AlertMetric, type AlertRule, type AlertScope } from '../rules/alert-rule';
+import type { CategoryScopeOption } from '../rules/category-options';
 import { CheckToggle } from './components/check-toggle';
 import { FormField } from './components/form-field';
 import { LimitAmountInput } from './components/limit-amount-input';
@@ -27,6 +28,7 @@ import { useAlertRuleForm, type RepeatingPeriod } from './use-alert-rule-form';
 interface AlertRuleSheetProps {
   scope: AlertScope;
   merchants: Extract<AlertScope, { kind: 'merchant' }>[];
+  categories: CategoryScopeOption[];
   rule: AlertRule | null;
   isFirstRule: boolean;
   isScopeLocked: boolean;
@@ -45,6 +47,7 @@ const notificationChoices = [true, false] as const;
 export function AlertRuleSheet({
   scope,
   merchants,
+  categories,
   rule,
   isFirstRule,
   isScopeLocked,
@@ -75,8 +78,9 @@ export function AlertRuleSheet({
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
         keyboardShouldPersistTaps="handled"
       >
-        {!isScopeLocked && (scope.kind === 'all' || scope.kind === 'merchant') ? (
+        {!isScopeLocked && scope.kind !== 'counterparty' ? (
           <ScopePicker
+            categories={categories}
             initialScope={scope}
             merchants={merchants}
             onSelect={form.setSelectedScope}
