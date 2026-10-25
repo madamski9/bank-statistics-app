@@ -15,6 +15,8 @@ export interface MerchantSpendHistory {
   count: number;
 }
 
+export type BucketChoice = { key: string | null } | null;
+
 function occurredMs(record: IngestionRecord): number {
   return new Date(record.occurredAt).getTime();
 }
@@ -67,4 +69,16 @@ export function merchantSpendHistory(
     totalMinor: payments.reduce((sum, payment) => sum + payment.amountMinor, 0),
     count: payments.length,
   };
+}
+
+export function shownBucketKey(history: MerchantSpendHistory, choice: BucketChoice): string | null {
+  if (choice === null) {
+    return history.highlightedKey;
+  }
+
+  if (choice.key === null || history.buckets.some((bucket) => bucket.key === choice.key)) {
+    return choice.key;
+  }
+
+  return history.highlightedKey;
 }

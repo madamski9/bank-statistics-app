@@ -8,12 +8,12 @@ import { AmountText } from '@/features/settings/privacy/amounts/amount-text';
 import { useAmountFormatting } from '@/features/settings/privacy/amounts/use-private-amounts';
 
 import { transactionsCopy } from '../../transactions-copy';
-import type { MerchantSpendHistory } from '../merchant-spend-history';
+import { shownBucketKey, type BucketChoice, type MerchantSpendHistory } from '../merchant-spend-history';
 
 export function MerchantHistoryChart({ history }: { history: MerchantSpendHistory }) {
   const copy = useCopy(transactionsCopy);
   const { formatAmount } = useAmountFormatting();
-  const [selectedKey, setSelectedKey] = useState<string | null>(history.highlightedKey);
+  const [choice, setChoice] = useState<BucketChoice>(null);
   const summary = copy.merchantHistorySummary(formatAmount(history.totalMinor, history.currency), history.count);
 
   return (
@@ -29,8 +29,8 @@ export function MerchantHistoryChart({ history }: { history: MerchantSpendHistor
       <DailySpendChart
         buckets={history.buckets}
         currency={history.currency}
-        onSelect={setSelectedKey}
-        selectedKey={selectedKey}
+        onSelect={(key) => setChoice({ key })}
+        selectedKey={shownBucketKey(history, choice)}
       />
     </View>
   );

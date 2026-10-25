@@ -1,7 +1,7 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { describe, expect, test } from 'bun:test';
 
-import { merchantSpendHistory } from './merchant-spend-history';
+import { merchantSpendHistory, shownBucketKey } from './merchant-spend-history';
 
 const endMs = new Date(2026, 8, 30, 12, 0).getTime();
 
@@ -113,5 +113,42 @@ describe('merchantSpendHistory', () => {
     expect(merchantSpendHistory(transfer, [transfer, record('again', { transactionType: 'outgoingTransfer', merchant: 'JAN KOWALSKI' })], [], endMs)).toBeNull();
     expect(merchantSpendHistory(income, [income, record('income-2', { direction: 'income', transactionType: 'incomingTransfer' })], [], endMs)).toBeNull();
     expect(merchantSpendHistory(only, [only, record('other-shop', { merchant: 'Lidl' })], [], endMs)).toBeNull();
+  });
+
+  test('moves the highlight to the opened payment once it is converted, until a bar is chosen', () => {
+    const opened = record('opened', {
+      currency: 'EUR',
+      amountMinor: 500,
+      occurredAt: new Date(2026, 8, 25, 18, 30).toISOString(),
+    });
+    const counted = [
+      record('first', { amountMinor: 9000 }),
+      record('second', { occurredAt: new Date(2026, 8, 22).toISOString() }),
+    ];
+    const awaiting = merchantSpendHistory(opened, [opened, ...counted], [], endMs);
+    const converted = merchantSpendHistory(opened, [{ ...opened, reportingAmountMinor: 2150 }, ...counted], [], endMs);
+
+    if (awaiting === null || converted === null) {
+      throw new Error('expected a history');
+    }
+
+    const openedDay = converted.buckets.find((bucket) => bucket.startMs === new Date(2026, 8, 25).getTime());
+    const chosenDay = converted.buckets.find((bucket) => bucket.startMs === new Date(2026, 8, 22).getTime());
+
+    expect(shownBucketKey(awaiting, null)).toBeNull();
+    expect(shownBucketKey(converted, null)).toBe(openedDay?.key ?? 'missing');
+    expect(shownBucketKey(converted, { key: chosenDay?.key ?? 'missing' })).toBe(chosenDay?.key ?? 'missing');
+    expect(shownBucketKey(converted, { key: null })).toBeNull();
+  });
+
+  test('falls back to the opened payment when the chosen bar no longer exists', () => {
+    const opened = record('opened', { occurredAt: new Date(2026, 8, 25, 18, 30).toISOString() });
+    const history = merchantSpendHistory(opened, [record('earlier'), opened], [], endMs);
+
+    if (history === null) {
+      throw new Error('expected a history');
+    }
+
+    expect(shownBucketKey(history, { key: 'gone' })).toBe(history.highlightedKey);
   });
 });
