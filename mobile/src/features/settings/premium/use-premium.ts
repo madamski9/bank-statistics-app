@@ -1,7 +1,9 @@
 import { api } from '@bankstats/convex/convex/_generated/api';
 import { useConvexAuth, useQuery } from 'convex/react';
+import { useMemo } from 'react';
 
 import { usePreviewPremiumLoading, usePreviewWithoutPremium } from './premium-preview';
+import { premiumStatusFrom } from './premium-status';
 
 export interface StoreSubscriptionStatus {
   accessUntil: number | null;
@@ -24,7 +26,8 @@ export function usePremium(): PremiumStatus | undefined {
   const { isAuthenticated } = useConvexAuth();
   const isPreviewingWithoutPremium = usePreviewWithoutPremium();
   const isPreviewingLoading = usePreviewPremiumLoading();
-  const status = useQuery(api.profiles.current, isAuthenticated ? {} : 'skip');
+  const profile = useQuery(api.profiles.current, isAuthenticated ? {} : 'skip');
+  const status = useMemo(() => (profile === undefined ? undefined : premiumStatusFrom(profile)), [profile]);
 
   if (isPreviewingLoading) {
     return undefined;
