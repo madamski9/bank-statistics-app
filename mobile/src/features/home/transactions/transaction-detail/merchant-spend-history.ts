@@ -16,9 +16,9 @@ export interface MerchantSpendHistory {
   count: number;
 }
 
-export type ChartPeriod = Extract<SpendingPeriod, 'week' | 'month' | 'quarter'>;
+export type ChartPeriod = Extract<SpendingPeriod, 'week' | 'month'>;
 
-export const chartPeriods: readonly ChartPeriod[] = ['week', 'month', 'quarter'];
+export const chartPeriods: readonly ChartPeriod[] = ['week', 'month'];
 
 export type BucketChoice = { key: string | null } | null;
 

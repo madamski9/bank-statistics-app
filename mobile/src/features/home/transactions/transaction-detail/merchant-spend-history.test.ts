@@ -59,28 +59,25 @@ describe('merchantSpendHistory', () => {
     const payments = [
       opened,
       record('this-month', { occurredAt: new Date(2026, 8, 10).toISOString(), amountMinor: 2000 }),
-      record('this-quarter', { occurredAt: new Date(2026, 6, 15).toISOString(), amountMinor: 4000 }),
       record('years-ago', { occurredAt: new Date(2023, 0, 10).toISOString(), amountMinor: 8000 }),
     ];
     const week = merchantSpendHistory(opened, payments, [], endMs, 'week');
     const month = merchantSpendHistory(opened, payments, [], endMs, 'month');
-    const quarter = merchantSpendHistory(opened, payments, [], endMs, 'quarter');
 
     expect(week?.buckets.length).toBe(8);
     expect(month?.buckets.length).toBe(31);
-    expect(quarter?.buckets.length).toBe(91);
     expect((week?.buckets[1].startMs ?? 0) - (week?.buckets[0].startMs ?? 0)).toBe(86_400_000);
-    expect([week?.totalMinor, month?.totalMinor, quarter?.totalMinor]).toEqual([1000, 3000, 7000]);
-    expect([week?.count, month?.count, quarter?.count]).toEqual([1, 2, 3]);
-    expect(quarter?.buckets.reduce((sum, bucket) => sum + bucket.totalMinor, 0)).toBe(7000);
+    expect([week?.totalMinor, month?.totalMinor]).toEqual([1000, 3000]);
+    expect([week?.count, month?.count]).toEqual([1, 2]);
+    expect(month?.buckets.reduce((sum, bucket) => sum + bucket.totalMinor, 0)).toBe(3000);
   });
 
   test('does not highlight an opened payment older than the chosen range', () => {
-    const opened = record('opened', { occurredAt: new Date(2026, 6, 15).toISOString() });
+    const opened = record('opened', { occurredAt: new Date(2026, 8, 10).toISOString() });
     const payments = [opened, record('recent', { occurredAt: new Date(2026, 8, 28).toISOString() })];
 
-    expect(merchantSpendHistory(opened, payments, [], endMs, 'month')?.highlightedKey).toBeNull();
-    expect(merchantSpendHistory(opened, payments, [], endMs, 'quarter')?.highlightedKey).not.toBeNull();
+    expect(merchantSpendHistory(opened, payments, [], endMs, 'week')?.highlightedKey).toBeNull();
+    expect(merchantSpendHistory(opened, payments, [], endMs, 'month')?.highlightedKey).not.toBeNull();
   });
 
   test('keeps the chart for a shop with no payments in the chosen range', () => {
