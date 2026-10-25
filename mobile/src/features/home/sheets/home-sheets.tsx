@@ -72,6 +72,10 @@ function ActiveSheet({
     return (
       <AlertRuleSheet
         canUseAggressiveTone={alertEditing.canUseAggressiveTone}
+        existingRules={alertEditing.rules}
+        includesCustomCategories={hasPremiumAccess}
+        key={editor.rule?.id ?? 'new'}
+        onOpenRule={alertEditing.editRule}
         isFirstRule={alertEditing.isFirstRule}
         isScopeLocked={editor.isScopeLocked === true}
         merchants={alertEditing.merchants}

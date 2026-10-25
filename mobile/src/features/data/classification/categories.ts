@@ -1,4 +1,4 @@
-import { currentCopy, defineCopy } from '@/features/app-shell/localization/language';
+import { currentCopy, defineCopy, type Language } from '@/features/app-shell/localization/language';
 import { merchantKey } from '@/features/home/merchants/naming/merchant-name';
 
 export interface CategoryOption {
@@ -98,8 +98,8 @@ export function builtInCategoryLabels(): string[] {
   return categoryIds.map((id) => labels[id]);
 }
 
-export function categoryOptions(): CategoryOption[] {
-  const { labels } = currentCopy(categoryCopy);
+export function categoryOptions(language?: Language): CategoryOption[] {
+  const { labels } = currentCopy(categoryCopy, language);
   const custom = [...registeredCustomCategories]
     .sort((left, right) => left.name.localeCompare(right.name, 'pl'))
     .map((category) => ({ id: category.id, label: category.name }));
