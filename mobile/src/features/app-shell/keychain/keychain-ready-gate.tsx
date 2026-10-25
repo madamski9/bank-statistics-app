@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 import { LoadingScreen } from '@/features/app-shell/brand/loading-screen';
 
 import { waitForUnlockedKeychain, type KeychainProbe } from './keychain-readiness';
-import { keychainRetry } from './keychain-retry';
+import { keychainRetry, markKeychainUnavailable } from './keychain-retry';
 
 const probeKey = 'bankstats.keychain.probe.v1';
 const probeOptions = { keychainAccessible: SecureStore.WHEN_UNLOCKED };
@@ -14,6 +14,7 @@ const secureStoreProbe: KeychainProbe = {
   read: () => SecureStore.getItemAsync(probeKey, probeOptions),
   write: (value) => SecureStore.setItemAsync(probeKey, value, probeOptions),
   ...keychainRetry,
+  canWaitForUnlock: () => true,
 };
 
 interface KeychainReadyGateProps {
@@ -30,7 +31,11 @@ export function KeychainReadyGate({ children }: KeychainReadyGateProps) {
 
     let isActive = true;
 
-    void waitForUnlockedKeychain(secureStoreProbe).then(() => {
+    void waitForUnlockedKeychain(secureStoreProbe).then((isUnlocked) => {
+      if (!isUnlocked) {
+        markKeychainUnavailable();
+      }
+
       if (isActive) {
         setIsReady(true);
       }

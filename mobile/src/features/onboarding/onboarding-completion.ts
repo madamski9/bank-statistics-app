@@ -1,5 +1,6 @@
 import type { SecureStoreOptions } from 'expo-secure-store';
 
+import type { KeychainRead } from '@/features/app-shell/keychain/keychain-readiness';
 import type { KeychainStore } from '@/features/auth/session/session-token-cache';
 
 function completionKey(userId: string): string {
@@ -30,7 +31,11 @@ export function createOnboardingCompletion(
     },
     async complete(userId: string): Promise<void> {
       await store.setItemAsync(completionKey(userId), 'true', readableWhileLocked);
-      await store.setItemAsync(legacyCompletionKey(userId), 'true');
+      await store.setItemAsync(legacyCompletionKey(userId), 'true').catch(() => undefined);
     },
   };
+}
+
+export function completedAfterRead(read: KeychainRead<boolean>, keychainLocksWithPhone: boolean): boolean {
+  return read.status === 'read' ? read.value : keychainLocksWithPhone;
 }

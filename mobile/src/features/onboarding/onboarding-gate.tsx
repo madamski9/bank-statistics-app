@@ -1,12 +1,13 @@
 import { useAuth } from '@clerk/expo';
 import * as SecureStore from 'expo-secure-store';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Platform } from 'react-native';
 
 import { LoadingScreen } from '@/features/app-shell/brand/loading-screen';
 import { readWhenUnlocked } from '@/features/app-shell/keychain/keychain-readiness';
 import { keychainRetry } from '@/features/app-shell/keychain/keychain-retry';
 
-import { createOnboardingCompletion } from './onboarding-completion';
+import { completedAfterRead, createOnboardingCompletion } from './onboarding-completion';
 import { finishOnboardingReplay, useOnboardingReplay } from './onboarding-replay';
 import { OnboardingScreen } from './onboarding-screen';
 import { banksKey } from './selected-banks';
@@ -36,9 +37,13 @@ export function OnboardingGate({ children }: OnboardingGateProps) {
 
     let isActive = true;
 
-    void readWhenUnlocked(() => onboardingCompletion.isCompleted(userId), keychainRetry).then((result) => {
+    void readWhenUnlocked(
+      () => onboardingCompletion.isCompleted(userId),
+      keychainRetry,
+      () => !isActive,
+    ).then((result) => {
       if (isActive) {
-        setState({ userId, completed: result.status === 'unavailable' || result.value });
+        setState({ userId, completed: completedAfterRead(result, Platform.OS === 'ios') });
       }
     });
 

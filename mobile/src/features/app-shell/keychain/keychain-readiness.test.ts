@@ -25,6 +25,7 @@ function probeOf(phone: Phone, onWait: (phone: Phone) => void = () => undefined)
       refuseWhileLocked();
       phone.stored = value;
     },
+    canWaitForUnlock: () => true,
     isAppActive: () => phone.isAppActive,
     wait: async () => {
       phone.waits += 1;
@@ -37,8 +38,7 @@ describe('keychain readiness', () => {
   test('continues at once when the keychain can be read', async () => {
     const phone: Phone = { isLocked: false, isAppActive: true, stored: 'unlocked', waits: 0 };
 
-    await waitForUnlockedKeychain(probeOf(phone));
-
+    expect(await waitForUnlockedKeychain(probeOf(phone))).toBe(true);
     expect(phone.waits).toBe(0);
   });
 
@@ -67,8 +67,7 @@ describe('keychain readiness', () => {
   test('stops waiting when the keychain keeps failing while the app is in use', async () => {
     const phone: Phone = { isLocked: true, isAppActive: true, stored: 'unlocked', waits: 0 };
 
-    await waitForUnlockedKeychain(probeOf(phone));
-
+    expect(await waitForUnlockedKeychain(probeOf(phone))).toBe(false);
     expect(phone.waits).toBe(4);
   });
 });
@@ -86,7 +85,7 @@ describe('reading once the keychain unlocks', () => {
 
         return 'true';
       },
-      { isAppActive: () => false, wait: async () => undefined },
+      { canWaitForUnlock: () => true, isAppActive: () => false, wait: async () => undefined },
     );
 
     expect(result).toEqual({ status: 'read', value: 'true' });
@@ -104,6 +103,7 @@ describe('reading once the keychain unlocks', () => {
         return null;
       },
       {
+        canWaitForUnlock: () => true,
         isAppActive: () => false,
         wait: async () => {
           waits += 1;
@@ -121,10 +121,39 @@ describe('reading once the keychain unlocks', () => {
         attempts += 1;
         throw new Error('User interaction is not allowed.');
       },
-      { isAppActive: () => true, wait: async () => undefined },
+      { canWaitForUnlock: () => true, isAppActive: () => true, wait: async () => undefined },
     );
 
     expect(result).toEqual({ status: 'unavailable' });
     expect(attempts).toBe(5);
+  });
+
+  test('does not wait on a keychain that cannot be unlocked by the user', async () => {
+    let attempts = 0;
+    const result = await readWhenUnlocked(
+      async () => {
+        attempts += 1;
+        throw new Error('Could not decrypt the value.');
+      },
+      { canWaitForUnlock: () => false, isAppActive: () => false, wait: async () => undefined },
+    );
+
+    expect(result).toEqual({ status: 'unavailable' });
+    expect(attempts).toBe(1);
+  });
+
+  test('stops retrying once the reader is no longer needed', async () => {
+    let attempts = 0;
+    const result = await readWhenUnlocked(
+      async () => {
+        attempts += 1;
+        throw new Error('User interaction is not allowed.');
+      },
+      { canWaitForUnlock: () => true, isAppActive: () => false, wait: async () => undefined },
+      () => attempts >= 3,
+    );
+
+    expect(result).toEqual({ status: 'unavailable' });
+    expect(attempts).toBe(3);
   });
 });

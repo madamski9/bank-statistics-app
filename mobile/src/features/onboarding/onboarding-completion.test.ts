@@ -1,7 +1,7 @@
 import type { SecureStoreOptions } from 'expo-secure-store';
 import { describe, expect, test } from 'bun:test';
 
-import { createOnboardingCompletion } from './onboarding-completion';
+import { completedAfterRead, createOnboardingCompletion } from './onboarding-completion';
 
 const readableWhileLocked: SecureStoreOptions = { keychainAccessible: 3 };
 
@@ -86,5 +86,30 @@ describe('onboarding completion', () => {
     await completion.complete('user_1');
 
     expect(await completion.isCompleted('user_2')).toBe(false);
+  });
+
+  test('a completed onboarding survives a failed write of the legacy flag', async () => {
+    const { phone, store } = phoneKeychain();
+    const completion = createOnboardingCompletion(store, readableWhileLocked);
+
+    phone.isLocked = true;
+    await completion.complete('user_1');
+
+    expect(await completion.isCompleted('user_1')).toBe(true);
+  });
+});
+
+describe('completedAfterRead', () => {
+  test('follows the stored flag when it could be read', () => {
+    expect(completedAfterRead({ status: 'read', value: true }, true)).toBe(true);
+    expect(completedAfterRead({ status: 'read', value: false }, true)).toBe(false);
+  });
+
+  test('opens the app on an iPhone whose keychain stays locked', () => {
+    expect(completedAfterRead({ status: 'unavailable' }, true)).toBe(true);
+  });
+
+  test('keeps onboarding where an unreadable keychain cannot be a locked phone', () => {
+    expect(completedAfterRead({ status: 'unavailable' }, false)).toBe(false);
   });
 });

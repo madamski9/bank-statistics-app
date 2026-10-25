@@ -2,6 +2,7 @@ const probeValue = 'unlocked';
 const failuresBeforeGivingUpWhileActive = 5;
 
 export interface KeychainRetry {
+  canWaitForUnlock: () => boolean;
   isAppActive: () => boolean;
   wait: () => Promise<void>;
 }
@@ -16,6 +17,7 @@ export type KeychainRead<Value> = { status: 'read'; value: Value } | { status: '
 export async function readWhenUnlocked<Value>(
   read: () => Promise<Value>,
   retry: KeychainRetry,
+  isCancelled: () => boolean = () => false,
 ): Promise<KeychainRead<Value>> {
   let failuresWhileActive = 0;
 
@@ -23,6 +25,10 @@ export async function readWhenUnlocked<Value>(
     try {
       return { status: 'read', value: await read() };
     } catch {
+      if (!retry.canWaitForUnlock() || isCancelled()) {
+        return { status: 'unavailable' };
+      }
+
       if (retry.isAppActive()) {
         failuresWhileActive += 1;
       }
@@ -36,10 +42,12 @@ export async function readWhenUnlocked<Value>(
   }
 }
 
-export async function waitForUnlockedKeychain(probe: KeychainProbe): Promise<void> {
-  await readWhenUnlocked(async () => {
+export async function waitForUnlockedKeychain(probe: KeychainProbe): Promise<boolean> {
+  const result = await readWhenUnlocked(async () => {
     if ((await probe.read()) !== probeValue) {
       await probe.write(probeValue);
     }
   }, probe);
+
+  return result.status === 'read';
 }
