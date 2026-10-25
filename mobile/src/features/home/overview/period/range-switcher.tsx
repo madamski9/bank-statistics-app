@@ -13,15 +13,17 @@ interface RangeSwitcherProps {
   period: SpendingPeriod;
   onChange: (period: SpendingPeriod) => void;
   lockedPeriods?: ReadonlySet<SpendingPeriod>;
+  periods?: readonly SpendingPeriod[];
 }
 
 /** The five ranges from the issue: week, month, three months, year, all-time. */
-export function RangeSwitcher({ period, onChange, lockedPeriods }: RangeSwitcherProps) {
+export function RangeSwitcher({ period, onChange, lockedPeriods, periods }: RangeSwitcherProps) {
   const copy = useCopy(spendingOverviewCopy);
+  const options = periodOptions().filter((option) => periods === undefined || periods.includes(option.value));
 
   return (
     <View accessibilityRole="tablist" style={styles.row}>
-      {periodOptions().map((option) => {
+      {options.map((option) => {
         const isSelected = option.value === period;
         const isLocked = lockedPeriods?.has(option.value) === true;
 

@@ -23,7 +23,7 @@ import { DetailRowsCard } from './components/detail-rows-card';
 import { IgnorePaymentButton } from './components/ignore-payment-button';
 import { MerchantHistoryChart } from './components/merchant-history-chart';
 import { TransactionHero } from './components/transaction-hero';
-import { merchantSpendHistory } from './merchant-spend-history';
+import { merchantSpendHistory, type ChartPeriod } from './merchant-spend-history';
 import { useDetailRows } from './use-detail-rows';
 
 interface TransactionDetailProps {
@@ -63,9 +63,10 @@ export function TransactionDetail({
   const prompt = record.review === undefined ? null : reviewPrompt(record.review);
   const details = useDetailRows(record, rules, events);
   const [openedAtMs] = useState(() => Date.now());
+  const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('month');
   const spendHistory = useMemo(
-    () => merchantSpendHistory(record, history, rules, openedAtMs),
-    [history, openedAtMs, record, rules],
+    () => merchantSpendHistory(record, history, rules, openedAtMs, chartPeriod),
+    [chartPeriod, history, openedAtMs, record, rules],
   );
 
   return (
@@ -90,6 +91,8 @@ export function TransactionDetail({
           <MerchantHistoryChart
             history={spendHistory}
             key={record.id}
+            onChangePeriod={setChartPeriod}
+            period={chartPeriod}
           />
         ) : null}
 

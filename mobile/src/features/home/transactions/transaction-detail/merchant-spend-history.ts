@@ -3,6 +3,7 @@ import type { IngestionRecord } from '@bankstats/ingestion-native';
 import type { CategorizationRule } from '@/features/data/classification/categorization-rule';
 import { classifyTransaction } from '@/features/data/classification/classify-transaction';
 import { spendBuckets, type SpendBucket } from '@/features/home/merchants/merchant-detail/merchant-summary';
+import { periodWindow, type PeriodWindow, type SpendingPeriod } from '@/features/home/overview/period/periods';
 
 import { statisticalRecords } from '../record/transaction-record';
 
@@ -15,10 +16,21 @@ export interface MerchantSpendHistory {
   count: number;
 }
 
+export type ChartPeriod = Extract<SpendingPeriod, 'week' | 'month'>;
+
+export const chartPeriods: readonly ChartPeriod[] = ['week', 'month'];
+
 export type BucketChoice = { key: string | null } | null;
 
 function occurredMs(record: IngestionRecord): number {
   return new Date(record.occurredAt).getTime();
+}
+
+function chartWindowEndingAt(period: ChartPeriod, endMs: number): PeriodWindow {
+  const window = periodWindow(period, new Date(endMs));
+  const start = new Date(window.startMs ?? endMs);
+
+  return { startMs: new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime(), endMs };
 }
 
 function bucketKeyAt(buckets: SpendBucket[], timeMs: number): string | null {
@@ -35,6 +47,7 @@ export function merchantSpendHistory(
   history: IngestionRecord[],
   rules: CategorizationRule[],
   endMs: number,
+  period: ChartPeriod,
 ): MerchantSpendHistory | null {
   const classified = classifyTransaction(record, rules);
   const { merchantKey } = classified;
@@ -58,16 +71,18 @@ export function merchantSpendHistory(
   }
 
   const latestMs = Math.max(...payments.map(occurredMs));
-  const buckets = spendBuckets(payments, { startMs: null, endMs: Math.max(endMs, latestMs + 1) }, 'all');
-  const opened = payments.find((candidate) => candidate.id === record.id);
+  const window = chartWindowEndingAt(period, Math.max(endMs, latestMs + 1));
+  const inWindow = payments.filter((payment) => occurredMs(payment) >= (window.startMs ?? 0));
+  const buckets = spendBuckets(payments, window, period);
+  const opened = inWindow.find((candidate) => candidate.id === record.id);
 
   return {
     merchantName: classified.merchantName ?? '',
     buckets,
     highlightedKey: opened === undefined ? null : bucketKeyAt(buckets, occurredMs(opened)),
     currency: payments[0].currency,
-    totalMinor: payments.reduce((sum, payment) => sum + payment.amountMinor, 0),
-    count: payments.length,
+    totalMinor: inWindow.reduce((sum, payment) => sum + payment.amountMinor, 0),
+    count: inWindow.length,
   };
 }
 

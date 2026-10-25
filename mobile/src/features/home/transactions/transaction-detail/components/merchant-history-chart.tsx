@@ -4,13 +4,31 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useCopy } from '@/features/app-shell/localization/language';
 import { overviewColors } from '@/features/app-shell/theme/overview-theme';
 import { DailySpendChart } from '@/features/home/merchants/merchant-detail/components/daily-spend-chart';
+import { periodLabel } from '@/features/home/overview/period/periods';
+import { RangeSwitcher } from '@/features/home/overview/period/range-switcher';
 import { AmountText } from '@/features/settings/privacy/amounts/amount-text';
 import { useAmountFormatting } from '@/features/settings/privacy/amounts/use-private-amounts';
 
 import { transactionsCopy } from '../../transactions-copy';
-import { shownBucketKey, type BucketChoice, type MerchantSpendHistory } from '../merchant-spend-history';
+import {
+  chartPeriods,
+  shownBucketKey,
+  type BucketChoice,
+  type ChartPeriod,
+  type MerchantSpendHistory,
+} from '../merchant-spend-history';
 
-export function MerchantHistoryChart({ history }: { history: MerchantSpendHistory }) {
+interface MerchantHistoryChartProps {
+  history: MerchantSpendHistory;
+  period: ChartPeriod;
+  onChangePeriod: (period: ChartPeriod) => void;
+}
+
+function isChartPeriod(period: string): period is ChartPeriod {
+  return chartPeriods.some((candidate) => candidate === period);
+}
+
+export function MerchantHistoryChart({ history, period, onChangePeriod }: MerchantHistoryChartProps) {
   const copy = useCopy(transactionsCopy);
   const { formatAmount } = useAmountFormatting();
   const [choice, setChoice] = useState<BucketChoice>(null);
@@ -18,7 +36,7 @@ export function MerchantHistoryChart({ history }: { history: MerchantSpendHistor
 
   return (
     <View style={styles.section}>
-      <View accessible accessibilityLabel={`${copy.merchantHistoryTitle}, ${history.merchantName}. ${summary}`}>
+      <View accessible accessibilityLabel={`${copy.merchantHistoryTitle}, ${history.merchantName}, ${periodLabel(period)}. ${summary}`}>
         <Text maxFontSizeMultiplier={1.4} style={styles.title}>
           {copy.merchantHistoryTitle}
         </Text>
@@ -26,6 +44,15 @@ export function MerchantHistoryChart({ history }: { history: MerchantSpendHistor
           {summary}
         </AmountText>
       </View>
+      <RangeSwitcher
+        onChange={(next) => {
+          if (isChartPeriod(next)) {
+            onChangePeriod(next);
+          }
+        }}
+        period={period}
+        periods={chartPeriods}
+      />
       <DailySpendChart
         buckets={history.buckets}
         currency={history.currency}

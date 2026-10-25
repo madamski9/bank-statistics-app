@@ -37,6 +37,7 @@ describe('merchantSpendHistory', () => {
       ],
       [],
       endMs,
+      'month',
     );
 
     expect(history?.count).toBe(2);
@@ -46,27 +47,53 @@ describe('merchantSpendHistory', () => {
 
   test('highlights the bucket that holds the opened transaction', () => {
     const opened = record('opened', { occurredAt: new Date(2026, 8, 25, 18, 30).toISOString() });
-    const history = merchantSpendHistory(opened, [record('earlier'), opened], [], endMs);
+    const history = merchantSpendHistory(opened, [record('earlier'), opened], [], endMs, 'month');
     const highlighted = history?.buckets.find((bucket) => bucket.key === history.highlightedKey);
 
     expect(highlighted?.startMs).toBe(new Date(2026, 8, 25).getTime());
     expect(highlighted?.totalMinor).toBe(1000);
   });
 
-  test('uses wider buckets for a long history so the bars stay readable', () => {
-    const opened = record('opened');
-    const short = merchantSpendHistory(opened, [opened, record('week-ago', { occurredAt: new Date(2026, 8, 13).toISOString() })], [], endMs);
-    const long = merchantSpendHistory(
+  test('draws a bar for every day of the chosen range and counts only its payments', () => {
+    const opened = record('opened', { occurredAt: new Date(2026, 8, 28, 10, 0).toISOString(), amountMinor: 1000 });
+    const payments = [
       opened,
-      [opened, record('years-ago', { occurredAt: new Date(2023, 0, 10).toISOString() })],
+      record('this-month', { occurredAt: new Date(2026, 8, 10).toISOString(), amountMinor: 2000 }),
+      record('years-ago', { occurredAt: new Date(2023, 0, 10).toISOString(), amountMinor: 8000 }),
+    ];
+    const week = merchantSpendHistory(opened, payments, [], endMs, 'week');
+    const month = merchantSpendHistory(opened, payments, [], endMs, 'month');
+
+    expect(week?.buckets.length).toBe(8);
+    expect(month?.buckets.length).toBe(31);
+    expect((week?.buckets[1].startMs ?? 0) - (week?.buckets[0].startMs ?? 0)).toBe(86_400_000);
+    expect([week?.totalMinor, month?.totalMinor]).toEqual([1000, 3000]);
+    expect([week?.count, month?.count]).toEqual([1, 2]);
+    expect(month?.buckets.reduce((sum, bucket) => sum + bucket.totalMinor, 0)).toBe(3000);
+  });
+
+  test('does not highlight an opened payment older than the chosen range', () => {
+    const opened = record('opened', { occurredAt: new Date(2026, 8, 10).toISOString() });
+    const payments = [opened, record('recent', { occurredAt: new Date(2026, 8, 28).toISOString() })];
+
+    expect(merchantSpendHistory(opened, payments, [], endMs, 'week')?.highlightedKey).toBeNull();
+    expect(merchantSpendHistory(opened, payments, [], endMs, 'month')?.highlightedKey).not.toBeNull();
+  });
+
+  test('keeps the chart for a shop with no payments in the chosen range', () => {
+    const opened = record('opened', { occurredAt: new Date(2026, 0, 15).toISOString() });
+    const history = merchantSpendHistory(
+      opened,
+      [opened, record('older', { occurredAt: new Date(2025, 11, 1).toISOString() })],
       [],
       endMs,
+      'week',
     );
 
-    expect(short?.buckets.length).toBeGreaterThanOrEqual(14);
-    expect((short?.buckets[1].startMs ?? 0) - (short?.buckets[0].startMs ?? 0)).toBe(86_400_000);
-    expect(long?.buckets[0].startMs).toBe(new Date(2023, 0, 1).getTime());
-    expect(long?.buckets.length).toBeLessThan(60);
+    expect(history?.buckets.length).toBe(8);
+    expect(history?.totalMinor).toBe(0);
+    expect(history?.count).toBe(0);
+    expect(history?.highlightedKey).toBeNull();
   });
 
   test('counts foreign payments only once they are converted to PLN', () => {
@@ -80,6 +107,7 @@ describe('merchantSpendHistory', () => {
       ],
       [],
       endMs,
+      'month',
     );
 
     expect(history?.currency).toBe('PLN');
@@ -91,13 +119,13 @@ describe('merchantSpendHistory', () => {
     const awaiting = record('awaiting', { currency: 'EUR', amountMinor: 900 });
     const counted = [record('first'), record('second', { occurredAt: new Date(2026, 8, 22).toISOString() })];
 
-    expect(merchantSpendHistory(reversed, [reversed, ...counted], [], endMs)?.highlightedKey).toBeNull();
-    expect(merchantSpendHistory(awaiting, [awaiting, ...counted], [], endMs)?.highlightedKey).toBeNull();
+    expect(merchantSpendHistory(reversed, [reversed, ...counted], [], endMs, 'month')?.highlightedKey).toBeNull();
+    expect(merchantSpendHistory(awaiting, [awaiting, ...counted], [], endMs, 'month')?.highlightedKey).toBeNull();
   });
 
   test('includes payments dated after the sheet opened and highlights their own bar', () => {
     const later = record('later', { occurredAt: new Date(2026, 9, 2, 9, 0).toISOString(), amountMinor: 4000 });
-    const history = merchantSpendHistory(later, [record('earlier'), later], [], endMs);
+    const history = merchantSpendHistory(later, [record('earlier'), later], [], endMs, 'month');
     const highlighted = history?.buckets.find((bucket) => bucket.key === history.highlightedKey);
 
     expect(history?.totalMinor).toBe(5000);
@@ -110,9 +138,9 @@ describe('merchantSpendHistory', () => {
     const income = record('income', { direction: 'income', transactionType: 'incomingTransfer' });
     const only = record('only');
 
-    expect(merchantSpendHistory(transfer, [transfer, record('again', { transactionType: 'outgoingTransfer', merchant: 'JAN KOWALSKI' })], [], endMs)).toBeNull();
-    expect(merchantSpendHistory(income, [income, record('income-2', { direction: 'income', transactionType: 'incomingTransfer' })], [], endMs)).toBeNull();
-    expect(merchantSpendHistory(only, [only, record('other-shop', { merchant: 'Lidl' })], [], endMs)).toBeNull();
+    expect(merchantSpendHistory(transfer, [transfer, record('again', { transactionType: 'outgoingTransfer', merchant: 'JAN KOWALSKI' })], [], endMs, 'month')).toBeNull();
+    expect(merchantSpendHistory(income, [income, record('income-2', { direction: 'income', transactionType: 'incomingTransfer' })], [], endMs, 'month')).toBeNull();
+    expect(merchantSpendHistory(only, [only, record('other-shop', { merchant: 'Lidl' })], [], endMs, 'month')).toBeNull();
   });
 
   test('moves the highlight to the opened payment once it is converted, until a bar is chosen', () => {
@@ -125,8 +153,8 @@ describe('merchantSpendHistory', () => {
       record('first', { amountMinor: 9000 }),
       record('second', { occurredAt: new Date(2026, 8, 22).toISOString() }),
     ];
-    const awaiting = merchantSpendHistory(opened, [opened, ...counted], [], endMs);
-    const converted = merchantSpendHistory(opened, [{ ...opened, reportingAmountMinor: 2150 }, ...counted], [], endMs);
+    const awaiting = merchantSpendHistory(opened, [opened, ...counted], [], endMs, 'month');
+    const converted = merchantSpendHistory(opened, [{ ...opened, reportingAmountMinor: 2150 }, ...counted], [], endMs, 'month');
 
     if (awaiting === null || converted === null) {
       throw new Error('expected a history');
@@ -143,7 +171,7 @@ describe('merchantSpendHistory', () => {
 
   test('falls back to the opened payment when the chosen bar no longer exists', () => {
     const opened = record('opened', { occurredAt: new Date(2026, 8, 25, 18, 30).toISOString() });
-    const history = merchantSpendHistory(opened, [record('earlier'), opened], [], endMs);
+    const history = merchantSpendHistory(opened, [record('earlier'), opened], [], endMs, 'month');
 
     if (history === null) {
       throw new Error('expected a history');
