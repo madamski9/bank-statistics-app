@@ -11,12 +11,20 @@ import { onboardingCopy } from './onboarding-copy';
 import {
   automationStep,
   banksStep,
+  canSkipFrom,
+  flowSteps,
   focusIntroStep,
   focusSetupStep,
+  iosUpdateStep,
   pinStep,
   plansStep,
+  setsUpCapture,
   shortcutsIntroStep,
+  skipTarget,
+  stepAfter,
+  stepBefore,
   stepCount,
+  type OnboardingFlow,
 } from './onboarding-steps';
 import { useShortcutSetup } from './shortcut-setup/use-shortcut-setup';
 import type { OnboardingPlan } from './steps/plans-step';
@@ -24,7 +32,7 @@ import type { OnboardingPlan } from './steps/plans-step';
 const shortcutsAppUrl = 'shortcuts://';
 
 export interface OnboardingFlowOptions {
-  flow: 'full' | 'shortcuts';
+  flow: OnboardingFlow;
   onCancel: () => void;
   onComplete: (selectedBanks: string[]) => Promise<void>;
 }
@@ -33,8 +41,8 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
   const copy = useCopy(onboardingCopy);
   const { biometric, changePin, updateSettings } = usePrivacy();
   const isShortcutsFlow = flow === 'shortcuts';
-  const flowStart = isShortcutsFlow ? banksStep : 0;
-  const [step, setStep] = useState(flowStart);
+  const steps = flowSteps(flow);
+  const [step, setStep] = useState(steps[0]);
   const [transitionDirection, setTransitionDirection] = useState<'forward' | 'backward'>('forward');
   const [error, setError] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<OnboardingPlan>('free');
@@ -44,11 +52,16 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
   const premiumPlans = premiumOffer.state.kind === 'ready' ? premiumOffer.state.plans : [];
   const selectedPremiumPlan = premiumPlans.find((plan) => plan.period === selectedPlan);
   const scrollRef = useRef<ScrollView>(null);
-  const resumeAtBanks = useCallback(() => setStep(banksStep), []);
+  const capturesTransactions = setsUpCapture(flow);
+  const resumeAtBanks = useCallback(() => {
+    if (capturesTransactions) {
+      setStep(banksStep);
+    }
+  }, [capturesTransactions]);
   const shortcut = useShortcutSetup({ isShortcutsFlow, onError: setError, onResume: resumeAtBanks });
   const { leave: leaveShortcutSetup, openShortcut, selectedBanks } = shortcut;
-  const flowLength = isShortcutsFlow ? focusSetupStep - flowStart + 1 : stepCount;
-  const flowPosition = Math.min(step - flowStart + 1, flowLength);
+  const flowLength = steps.filter((candidate) => candidate !== stepCount).length;
+  const flowPosition = Math.min(steps.indexOf(step) + 1, flowLength);
 
   const changeStep = useCallback(
     (next: number) => {
@@ -71,12 +84,12 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
     setError(null);
 
     try {
-      await onComplete(selectedBanks);
+      await onComplete(capturesTransactions ? selectedBanks : []);
     } catch {
       setError(copy.finishFailed);
       setIsFinishing(false);
     }
-  }, [copy, onComplete, selectedBanks]);
+  }, [capturesTransactions, copy, onComplete, selectedBanks]);
 
   const protectWithPin = useCallback(
     async (pin: string) => {
@@ -114,19 +127,21 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
     setIsPurchasing(false);
 
     if (outcome === 'purchased') {
-      changeStep(plansStep + 1);
+      changeStep(stepAfter(flowSteps(flow), plansStep));
     } else if (outcome === 'failed') {
       setError(copy.purchaseFailed);
     }
-  }, [changeStep, copy, premiumOffer, selectedPremiumPlan]);
+  }, [changeStep, copy, flow, premiumOffer, selectedPremiumPlan]);
 
   const goBack = useCallback(() => {
     if (isShortcutsFlow && step === banksStep) {
       void leaveTo(null);
     } else {
-      changeStep(step - 1);
+      changeStep(stepBefore(flowSteps(flow), step));
     }
-  }, [changeStep, isShortcutsFlow, leaveTo, step]);
+  }, [changeStep, flow, isShortcutsFlow, leaveTo, step]);
+
+  const skip = useCallback(() => changeStep(skipTarget(flow)), [changeStep, flow]);
 
   const isBusy =
     isFinishing ||
@@ -137,7 +152,9 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
   const isPrimaryDisabled = isBusy || (step === banksStep && selectedBanks.length === 0);
 
   const primaryLabel =
-    step === plansStep
+    step === iosUpdateStep
+      ? copy.continueWithoutCapture
+      : step === plansStep
       ? selectedPlan === 'free'
         ? copy.continueFree
         : selectedPremiumPlan?.trialDays != null
@@ -163,7 +180,7 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
         ? finish
         : step === plansStep && selectedPlan !== 'free'
           ? buyPremium
-          : () => changeStep(step + 1);
+          : () => changeStep(stepAfter(steps, step));
 
   const primary =
     step === pinStep
@@ -215,6 +232,10 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
     scrollRef,
     flowPosition,
     flowLength,
+    capturesTransactions,
+    canGoBack: (isShortcutsFlow || steps.indexOf(step) > 0) && step < stepCount,
+    canSkip: !isShortcutsFlow && canSkipFrom(step),
+    skip,
     isBusy,
     isRestoring: shortcut.isRestoring,
     selectedBanks,

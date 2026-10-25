@@ -16,6 +16,7 @@ import {
   banksStep,
   focusIntroStep,
   focusSetupStep,
+  iosUpdateStep,
   pinStep,
   plansStep,
   shortcutsIntroStep,
@@ -26,6 +27,7 @@ import { BanksStep } from './steps/banks-step';
 import { CompletionStep } from './steps/completion-step';
 import { FocusIntroStep } from './steps/focus-intro-step';
 import { FocusSetupStep } from './steps/focus-setup-step';
+import { IosUpdateStep } from './steps/ios-update-step';
 import { LimitsStep } from './steps/limits-step';
 import { PinStep } from './steps/pin-step';
 import { PlansStep } from './steps/plans-step';
@@ -47,11 +49,11 @@ export function OnboardingScreen(props: OnboardingFlowOptions) {
     <View style={styles.screen}>
       <StatusBar style="light" />
       <OnboardingTopBar
-        canGoBack={step > 0 && step < stepCount}
-        canSkip={step < shortcutsIntroStep}
+        canGoBack={onboarding.canGoBack}
+        canSkip={onboarding.canSkip}
         isBusy={onboarding.isBusy}
         onBack={onboarding.goBack}
-        onSkip={() => onboarding.changeStep(shortcutsIntroStep)}
+        onSkip={onboarding.skip}
         stepLabel={step < stepCount ? `${onboarding.flowPosition} / ${onboarding.flowLength}` : copy.done}
       />
       <OnboardingProgress length={onboarding.flowLength} position={onboarding.flowPosition} />
@@ -69,6 +71,7 @@ export function OnboardingScreen(props: OnboardingFlowOptions) {
           key={step}
           style={styles.page}
         >
+          {step === iosUpdateStep ? <IosUpdateStep /> : null}
           {step === 0 ? <WelcomeStep /> : null}
           {step === 1 ? <LimitsStep /> : null}
           {step === plansStep ? (
@@ -93,7 +96,7 @@ export function OnboardingScreen(props: OnboardingFlowOptions) {
           {step === pinStep ? (
             <PinStep biometricName={onboarding.biometricName} onComplete={onboarding.protectWithPin} />
           ) : null}
-          {step === stepCount ? <CompletionStep /> : null}
+          {step === stepCount ? <CompletionStep capturesTransactions={onboarding.capturesTransactions} /> : null}
         </AnimatedReveal>
       </ScrollView>
 

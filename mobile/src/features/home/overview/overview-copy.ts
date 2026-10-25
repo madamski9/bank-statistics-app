@@ -12,6 +12,7 @@ export const overviewCopy = defineCopy({
     captureIosOnly: 'Przechwytywanie powiadomień działa na razie tylko na iOS.',
     noTransactions:
       'Nie przechwycono jeszcze żadnej transakcji. Skonfiguruj automatyzację powiadomień w aplikacji Skróty.',
+    noTransactionsWithoutCapture: 'Nie ma jeszcze żadnej transakcji. Dodaj transakcję ręcznie albo zaimportuj wyciąg.',
     forecast: 'Prognoza',
     forecastValue: (amount: string) => `~${amount}`,
     report: 'Raport miesięczny',
@@ -33,6 +34,7 @@ export const overviewCopy = defineCopy({
     captureIosOnly: 'Notification capture currently works on iOS only.',
     noTransactions:
       'No transactions captured yet. Set up the notification automation in the Shortcuts app.',
+    noTransactionsWithoutCapture: 'No transactions yet. Add a transaction manually or import a statement.',
     forecast: 'Forecast',
     forecastValue: (amount: string) => `~${amount}`,
     report: 'Monthly report',

@@ -8,7 +8,7 @@ import { onboardingColors } from '../onboarding-motion';
 
 interface FeatureRowProps {
   delay?: number;
-  symbol: 'chart.bar.fill' | 'lock.shield.fill' | 'bell.badge.fill' | 'calendar';
+  symbol: 'chart.bar.fill' | 'lock.shield.fill' | 'bell.badge.fill' | 'calendar' | 'iphone' | 'square.and.pencil';
   title: string;
   description: string;
 }

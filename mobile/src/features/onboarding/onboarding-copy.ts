@@ -20,6 +20,7 @@ export const onboardingCopy = defineCopy({
     focusConfigured: 'Wyjątki dodane',
     openShortcuts: 'Otwórz Skróty',
     goToApp: 'Przejdź do aplikacji',
+    continueWithoutCapture: 'Kontynuuj bez odczytywania',
     next: 'Dalej',
     premiumSoon:
       'Płatności Premium będą dostępne wkrótce. Wybierz plan bezpłatny, aby kontynuować.',
@@ -33,6 +34,17 @@ export const onboardingCopy = defineCopy({
     saving: 'Zapisywanie…',
     notNow: 'Nie teraz',
     setUpLater: 'Skonfiguruję później',
+    iosUpdate: {
+      eyebrow: 'WYMAGANY IOS 27',
+      title: 'BankStats działa w pełni na iOS 27',
+      description:
+        'Transakcje są odczytywane z powiadomień banku przez automatyzację w Skrótach, która wymaga iOS 27 lub nowszego.',
+      currentVersion: (version: string) => `Masz teraz iOS ${version}`,
+      updateHint: 'Zaktualizuj iPhone’a w Ustawienia → Ogólne → Uaktualnienia, aby korzystać z aplikacji.',
+      withoutCaptureTitle: 'Możesz zacząć już teraz',
+      withoutCaptureText:
+        'Bez aktualizacji transakcje nie będą odczytywane automatycznie, ale możesz dodawać je ręcznie i importować wyciągi.',
+    },
     welcome: {
       eyebrow: 'WITAJ W BANKSTATS',
       title: 'Zobacz, dokąd trafiają Twoje pieniądze',
@@ -152,6 +164,9 @@ export const onboardingCopy = defineCopy({
       noteTitle: 'Transakcje ze Skrótów',
       noteText:
         'Będą dodawane automatycznie po zapisaniu i włączeniu automatyzacji w aplikacji Skróty. Możesz też dodawać je ręcznie.',
+      manualNoteTitle: 'Transakcje dodajesz ręcznie',
+      manualNoteText:
+        'Dodawaj transakcje ręcznie albo importuj wyciągi. Po aktualizacji do iOS 27 skonfigurujesz automatyczne odczytywanie w Profilu.',
     },
   },
   en: {
@@ -173,6 +188,7 @@ export const onboardingCopy = defineCopy({
     focusConfigured: "I've allowed them",
     openShortcuts: 'Open Shortcuts',
     goToApp: 'Go to the app',
+    continueWithoutCapture: 'Continue without capture',
     next: 'Next',
     premiumSoon: 'Premium payments are coming soon. Choose the free plan to continue.',
     startTrial: (days: number) => `Try ${days} days free`,
@@ -185,6 +201,17 @@ export const onboardingCopy = defineCopy({
     saving: 'Saving…',
     notNow: 'Not now',
     setUpLater: "I'll set it up later",
+    iosUpdate: {
+      eyebrow: 'IOS 27 REQUIRED',
+      title: 'BankStats works fully on iOS 27',
+      description:
+        'Transactions are read from bank notifications by an automation in Shortcuts, which needs iOS 27 or later.',
+      currentVersion: (version: string) => `You have iOS ${version}`,
+      updateHint: 'Update your iPhone in Settings → General → Software Update to use the app.',
+      withoutCaptureTitle: 'You can start now',
+      withoutCaptureText:
+        "Without the update, transactions won't be captured automatically, but you can add them manually and import statements.",
+    },
     welcome: {
       eyebrow: 'WELCOME TO BANKSTATS',
       title: 'See where your money goes',
@@ -303,6 +330,9 @@ export const onboardingCopy = defineCopy({
       noteTitle: 'Transactions from Shortcuts',
       noteText:
         "They'll be added automatically once you save and turn on the automation in the Shortcuts app. You can also add them manually.",
+      manualNoteTitle: 'You add transactions yourself',
+      manualNoteText:
+        'Add transactions manually or import statements. After updating to iOS 27, you can set up automatic capture in Profile.',
     },
   },
 });

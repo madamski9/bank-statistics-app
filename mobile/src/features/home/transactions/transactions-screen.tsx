@@ -3,6 +3,7 @@ import { memo, useMemo } from 'react';
 import { Platform, SectionList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { needsIosUpdateForCapture } from '@/features/app-shell/capture-support/device-capture-support';
 import { useCopy } from '@/features/app-shell/localization/language';
 import { overviewColors, overviewSpacing } from '@/features/app-shell/theme/overview-theme';
 import type { CustomCategory } from '@/features/data/classification/categories';
@@ -63,7 +64,9 @@ function TransactionsScreenComponent({
         ? copy.captureIosOnly
         : isLoading
           ? copy.loading
-          : copy.empty;
+          : needsIosUpdateForCapture
+            ? copy.emptyWithoutCapture
+            : copy.empty;
 
   return (
     <View style={styles.screen}>
