@@ -1,9 +1,13 @@
 import { useAuth } from '@clerk/expo';
 import * as SecureStore from 'expo-secure-store';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Platform } from 'react-native';
 
 import { LoadingScreen } from '@/features/app-shell/brand/loading-screen';
+import { readWhenUnlocked } from '@/features/app-shell/keychain/keychain-readiness';
+import { keychainRetry } from '@/features/app-shell/keychain/keychain-retry';
 
+import { completedAfterRead, createOnboardingCompletion } from './onboarding-completion';
 import { finishOnboardingReplay, useOnboardingReplay } from './onboarding-replay';
 import { OnboardingScreen } from './onboarding-screen';
 import { banksKey } from './selected-banks';
@@ -17,9 +21,9 @@ interface OnboardingState {
   completed: boolean;
 }
 
-function completedKey(userId: string): string {
-  return `bankstats.onboarding.v1.${userId}`;
-}
+const onboardingCompletion = createOnboardingCompletion(SecureStore, {
+  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+});
 
 export function OnboardingGate({ children }: OnboardingGateProps) {
   const { userId } = useAuth();
@@ -33,17 +37,15 @@ export function OnboardingGate({ children }: OnboardingGateProps) {
 
     let isActive = true;
 
-    void SecureStore.getItemAsync(completedKey(userId))
-      .then((completed) => {
-        if (isActive) {
-          setState({ userId, completed: completed === 'true' });
-        }
-      })
-      .catch(() => {
-        if (isActive) {
-          setState({ userId, completed: false });
-        }
-      });
+    void readWhenUnlocked(
+      () => onboardingCompletion.isCompleted(userId),
+      keychainRetry,
+      () => !isActive,
+    ).then((result) => {
+      if (isActive) {
+        setState({ userId, completed: completedAfterRead(result, Platform.OS === 'ios') });
+      }
+    });
 
     return () => {
       isActive = false;
@@ -60,7 +62,7 @@ export function OnboardingGate({ children }: OnboardingGateProps) {
         banksKey(userId),
         JSON.stringify(selectedBanks),
       );
-      await SecureStore.setItemAsync(completedKey(userId), 'true');
+      await onboardingCompletion.complete(userId);
       setState({ userId, completed: true });
       finishOnboardingReplay();
     },

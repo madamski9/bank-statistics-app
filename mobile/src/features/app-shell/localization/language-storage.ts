@@ -1,17 +1,15 @@
 import * as SecureStore from 'expo-secure-store';
 
+import { readWhenUnlocked } from '../keychain/keychain-readiness';
+import { keychainRetry } from '../keychain/keychain-retry';
 import { isLanguage, type Language } from './language';
 
 const languageKey = 'bankstats.language.v1';
 
 export async function readStoredLanguage(): Promise<Language | null> {
-  try {
-    const stored = await SecureStore.getItemAsync(languageKey);
+  const stored = await readWhenUnlocked(() => SecureStore.getItemAsync(languageKey), keychainRetry);
 
-    return isLanguage(stored) ? stored : null;
-  } catch {
-    return null;
-  }
+  return stored.status === 'read' && isLanguage(stored.value) ? stored.value : null;
 }
 
 export async function storeLanguage(language: Language): Promise<void> {

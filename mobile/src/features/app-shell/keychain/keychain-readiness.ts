@@ -1,37 +1,53 @@
 const probeValue = 'unlocked';
 const failuresBeforeGivingUpWhileActive = 5;
 
-export interface KeychainProbe {
-  read: () => Promise<string | null>;
-  write: (value: string) => Promise<void>;
+export interface KeychainRetry {
+  canWaitForUnlock: () => boolean;
   isAppActive: () => boolean;
   wait: () => Promise<void>;
 }
 
-async function canUseKeychain(probe: KeychainProbe): Promise<boolean> {
-  try {
-    if ((await probe.read()) !== probeValue) {
-      await probe.write(probeValue);
-    }
+export interface KeychainProbe extends KeychainRetry {
+  read: () => Promise<string | null>;
+  write: (value: string) => Promise<void>;
+}
 
-    return true;
-  } catch {
-    return false;
+export type KeychainRead<Value> = { status: 'read'; value: Value } | { status: 'unavailable' };
+
+export async function readWhenUnlocked<Value>(
+  read: () => Promise<Value>,
+  retry: KeychainRetry,
+  isCancelled: () => boolean = () => false,
+): Promise<KeychainRead<Value>> {
+  let failuresWhileActive = 0;
+
+  for (;;) {
+    try {
+      return { status: 'read', value: await read() };
+    } catch {
+      if (!retry.canWaitForUnlock() || isCancelled()) {
+        return { status: 'unavailable' };
+      }
+
+      if (retry.isAppActive()) {
+        failuresWhileActive += 1;
+      }
+
+      if (failuresWhileActive >= failuresBeforeGivingUpWhileActive) {
+        return { status: 'unavailable' };
+      }
+
+      await retry.wait();
+    }
   }
 }
 
-export async function waitForUnlockedKeychain(probe: KeychainProbe): Promise<void> {
-  let failuresWhileActive = 0;
-
-  while (!(await canUseKeychain(probe))) {
-    if (probe.isAppActive()) {
-      failuresWhileActive += 1;
+export async function waitForUnlockedKeychain(probe: KeychainProbe): Promise<boolean> {
+  const result = await readWhenUnlocked(async () => {
+    if ((await probe.read()) !== probeValue) {
+      await probe.write(probeValue);
     }
+  }, probe);
 
-    if (failuresWhileActive >= failuresBeforeGivingUpWhileActive) {
-      return;
-    }
-
-    await probe.wait();
-  }
+  return result.status === 'read';
 }
