@@ -4,10 +4,12 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 
 import { LoadingScreen } from '@/features/app-shell/brand/loading-screen';
+import { needsIosUpdateForCapture } from '@/features/app-shell/capture-support/device-capture-support';
 import { readWhenUnlocked } from '@/features/app-shell/keychain/keychain-readiness';
 import { keychainRetry } from '@/features/app-shell/keychain/keychain-retry';
 
 import { completedAfterRead, createOnboardingCompletion } from './onboarding-completion';
+import { onboardingFlow } from './onboarding-flow';
 import { finishOnboardingReplay, useOnboardingReplay } from './onboarding-replay';
 import { OnboardingScreen } from './onboarding-screen';
 import { banksKey } from './selected-banks';
@@ -79,7 +81,7 @@ export function OnboardingGate({ children }: OnboardingGateProps) {
 
   return (
     <OnboardingScreen
-      flow={replay === 'shortcuts' ? 'shortcuts' : 'full'}
+      flow={onboardingFlow(replay, needsIosUpdateForCapture)}
       onCancel={finishOnboardingReplay}
       onComplete={finish}
     />

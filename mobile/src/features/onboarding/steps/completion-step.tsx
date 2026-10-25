@@ -8,7 +8,11 @@ import { stepStyles } from '../components/step-styles';
 import { CompletionIllustration } from '../illustrations/completion-illustration';
 import { onboardingCopy } from '../onboarding-copy';
 
-export function CompletionStep() {
+interface CompletionStepProps {
+  capturesTransactions: boolean;
+}
+
+export function CompletionStep({ capturesTransactions }: CompletionStepProps) {
   const copy = useCopy(onboardingCopy).completion;
   return (
     <View style={[stepStyles.stepContent, styles.completionContent]}>
@@ -29,10 +33,10 @@ export function CompletionStep() {
       </View>
       <AnimatedReveal delay={280} style={styles.completionNote}>
         <Text maxFontSizeMultiplier={1.4} style={styles.completionNoteTitle}>
-          {copy.noteTitle}
+          {capturesTransactions ? copy.noteTitle : copy.manualNoteTitle}
         </Text>
         <Text maxFontSizeMultiplier={1.5} style={styles.completionNoteText}>
-          {copy.noteText}
+          {capturesTransactions ? copy.noteText : copy.manualNoteText}
         </Text>
       </AnimatedReveal>
     </View>

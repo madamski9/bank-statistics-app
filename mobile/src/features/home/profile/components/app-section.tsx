@@ -1,3 +1,4 @@
+import { needsIosUpdateForCapture } from '@/features/app-shell/capture-support/device-capture-support';
 import { languageNames, useCopy, useLanguage } from '@/features/app-shell/localization/language';
 import {
   replayOnboarding,
@@ -54,18 +55,22 @@ export function AppSection({
         onPress={onOpenCategories}
         symbol={{ ios: 'tag', android: 'sell', web: 'sell' }}
       />
-      <ProfileActionRow
-        accessibilityHint={copy.captureHealthHint}
-        label={copy.captureHealth}
-        onPress={onOpenCaptureHealth}
-        symbol={{ ios: 'waveform.path.ecg', android: 'monitor_heart', web: 'monitor_heart' }}
-      />
-      <ProfileActionRow
-        accessibilityHint={copy.shortcutsSetupHint}
-        label={copy.shortcutsSetup}
-        onPress={replayShortcutsSetup}
-        symbol={{ ios: 'square.2.layers.3d', android: 'bolt', web: 'bolt' }}
-      />
+      {needsIosUpdateForCapture ? null : (
+        <ProfileActionRow
+          accessibilityHint={copy.captureHealthHint}
+          label={copy.captureHealth}
+          onPress={onOpenCaptureHealth}
+          symbol={{ ios: 'waveform.path.ecg', android: 'monitor_heart', web: 'monitor_heart' }}
+        />
+      )}
+      {needsIosUpdateForCapture ? null : (
+        <ProfileActionRow
+          accessibilityHint={copy.shortcutsSetupHint}
+          label={copy.shortcutsSetup}
+          onPress={replayShortcutsSetup}
+          symbol={{ ios: 'square.2.layers.3d', android: 'bolt', web: 'bolt' }}
+        />
+      )}
       <ProfileActionRow
         accessibilityHint={copy.dataHint}
         label={copy.data}

@@ -87,6 +87,7 @@ export const transactionsCopy = defineCopy({
     loading: 'Wczytywanie…',
     empty:
       'Nie przechwycono jeszcze żadnej transakcji. Skonfiguruj automatyzację powiadomień w aplikacji Skróty albo dodaj transakcję ręcznie.',
+    emptyWithoutCapture: 'Nie ma jeszcze żadnej transakcji. Dodaj transakcję ręcznie albo zaimportuj wyciąg.',
     rowHint: 'Otwiera szczegóły transakcji',
     addHint: 'Otwiera formularz ręcznej transakcji',
     add: 'Dodaj transakcję',
@@ -178,6 +179,7 @@ export const transactionsCopy = defineCopy({
     loading: 'Loading…',
     empty:
       'No transactions captured yet. Set up the notification automation in the Shortcuts app or add a transaction manually.',
+    emptyWithoutCapture: 'No transactions yet. Add a transaction manually or import a statement.',
     rowHint: 'Opens the transaction details',
     addHint: 'Opens the manual transaction form',
     add: 'Add transaction',
