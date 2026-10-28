@@ -64,6 +64,13 @@ struct Case {
 
 let bankPush = card("bank", from: bankApp, at: "2026-10-16T14:21:00Z")
 let walletPush = walletCard("wallet", at: "2026-10-16T14:20:30Z")
+let millenniumApp = "pl.millenniumbank.bankmillennium"
+let millenniumDebitPush = card(
+  "millenniumDebit", from: millenniumApp, at: "2026-10-28T12:28:30Z", amountMinor: 150099, bank: "millennium", merchant: nil
+)
+let millenniumWalletPush = card(
+  "millenniumWallet", from: millenniumApp, at: "2026-10-28T12:28:10Z", amountMinor: 150099, bank: "millennium", merchant: "Lidl"
+)
 
 let cases = [
   Case(
@@ -133,6 +140,30 @@ let cases = [
     "another bank's Wallet payment is not paired",
     record: bankPush,
     existing: [card("ing", from: wallet, at: "2026-10-16T14:20:30Z", bank: "ing")],
+    expected: .insert
+  ),
+  Case(
+    "Millennium debit push after the Wallet push keeps the Wallet record",
+    record: millenniumDebitPush,
+    existing: [millenniumWalletPush],
+    expected: .keepExisting(id: "millenniumWallet")
+  ),
+  Case(
+    "Wallet push after the Millennium debit push names the merchant on the existing record",
+    record: millenniumWalletPush,
+    existing: [millenniumDebitPush],
+    expected: .replace(merged(millenniumDebitPush, merchant: "Lidl"))
+  ),
+  Case(
+    "Millennium debit push without a Wallet push is saved",
+    record: millenniumDebitPush,
+    existing: [],
+    expected: .insert
+  ),
+  Case(
+    "two Millennium debit pushes for the same amount are two payments",
+    record: millenniumDebitPush,
+    existing: [card("earlier", from: millenniumApp, at: "2026-10-28T12:27:00Z", amountMinor: 150099, bank: "millennium", merchant: nil)],
     expected: .insert
   ),
   Case(

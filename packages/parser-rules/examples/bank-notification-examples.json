@@ -836,14 +836,50 @@
       }
     },
     {
-      "name": "Millennium card push without a merchant waits for the Wallet push",
+      "name": "Millennium debit card push is saved without a merchant",
       "input": {
         "title": "",
         "subtitle": "",
         "body": "Płatność kartą debetową: Kwota: -21,00 PLN, Karta:Mastercard 360 **** **** **** 6899, Data: 28/09/2026 12:01",
         "sourceApp": "pl.millenniumbank.bankmillennium"
       },
-      "expected": { "outcome": "ignored", "reason": "cardPaymentAwaitingApplePay" }
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "millennium",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 2100,
+          "currency": "PLN",
+          "occurredAt": "2026-09-28T10:01:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.millenniumbank.bankmillennium",
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "name": "Millennium debit card push with a thousands separator in winter time",
+      "input": {
+        "title": "",
+        "subtitle": "",
+        "body": "Płatność kartą debetową: Kwota: -1 500,99 PLN, Karta:Mastercard 360 **** **** **** 6899, Data: 28/10/2026 13:28",
+        "sourceApp": "pl.millenniumbank.bankmillennium"
+      },
+      "expected": {
+        "outcome": "record",
+        "record": {
+          "bank": "millennium",
+          "direction": "expense",
+          "transactionType": "cardPayment",
+          "amountMinor": 150099,
+          "currency": "PLN",
+          "occurredAt": "2026-10-28T12:28:00Z",
+          "capturedAt": "2026-09-28T10:00:00Z",
+          "sourceApp": "pl.millenniumbank.bankmillennium",
+          "status": "pending"
+        }
+      }
     },
     {
       "name": "Declined Millennium card payment never becomes a transaction",

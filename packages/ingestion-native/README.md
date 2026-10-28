@@ -30,10 +30,15 @@ After durable enqueue, the existing bank rules still decide whether a transactio
 - A push without a monetary amount, such as a request to rate the app, and recognized promotional
   messages are ignored with `notTransaction`. Unknown monetary formats remain pending, never
   affecting statistics until a rule can recognize them.
-- Millennium's own card-payment push (e.g. "Płatność kartą debetową: Kwota: ...") never names the
-  merchant, so it stays in the encrypted inbox awaiting recognition rather than creating a
-  poorer-detail transaction. This expected deferral keeps its ignored outcome and does not raise
-  the unknown-format warning. Wallet's own push can still create the transaction for that purchase.
+- Millennium's own debit card push (`Płatność kartą debetową: Kwota: -1 500,99 PLN, Karta:…,
+  Data: 28/10/2026 13:28`) never names the merchant but is saved as a `millennium` card payment
+  dated from its `Data`, because card-on-file, online and physical-card payments produce no Wallet
+  push. An Apple Pay purchase produces both pushes, and they are paired like mBank's: a Wallet push
+  arriving later names the merchant on the saved record, and a debit push arriving after the Wallet
+  record is dropped. Millennium records saved from Wallet keep the Millennium source app, so any
+  Millennium card payment with a merchant counts as the Wallet side of a pair. Other Millennium
+  pushes mentioning a payment, such as a declined card payment, stay in the encrypted inbox with
+  `cardPaymentAwaitingApplePay` and do not raise the unknown-format warning.
 - Wallet's push for a Millennium card is what actually supplies the merchant name, and is saved as
   the `cardPayment` record. It arrives as separate notification fields — subtitle
   `Lidl  Gdańsk, Pomorskie`, body `5,08 zł` — and the automation maps both to the intent's
