@@ -30,6 +30,7 @@ export const transactionsCopy = defineCopy({
     },
     toReview: 'Do sprawdzenia',
     reversed: 'Cofnięta',
+    awaitingWallet: 'Czeka na Portfel',
     kindOptions: {
       cardPayment: 'Karta lub Apple Pay',
       blikPayment: 'BLIK',
@@ -123,6 +124,7 @@ export const transactionsCopy = defineCopy({
     },
     toReview: 'To review',
     reversed: 'Reversed',
+    awaitingWallet: 'Awaiting Wallet',
     kindOptions: {
       cardPayment: 'Card or Apple Pay',
       blikPayment: 'BLIK',

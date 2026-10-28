@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 
 import {
   affectsStatistics,
+  awaitsWalletMerchant,
   blocksStatistics,
   transactionBadge,
   transactionContext,
@@ -51,15 +52,36 @@ describe('affectsStatistics', () => {
   });
 });
 
+const capturedAt = Date.parse('2026-09-20T10:15:00.000Z');
+
 describe('transactionBadge', () => {
   test('stays quiet for a normal transaction', () => {
-    expect(transactionBadge(record())).toBeNull();
-    expect(transactionBadge(record({ origin: 'manual', bank: 'manual' }))).toBeNull();
+    expect(transactionBadge(record(), capturedAt)).toBeNull();
+    expect(transactionBadge(record({ origin: 'manual', bank: 'manual' }), capturedAt)).toBeNull();
   });
 
   test('marks the exceptional states', () => {
-    expect(transactionBadge(record({ review: 'amount' }))?.label).toBe('Do sprawdzenia');
-    expect(transactionBadge(record({ status: 'reversed' }))?.label).toBe('Cofnięta');
+    expect(transactionBadge(record({ review: 'amount' }), capturedAt)?.label).toBe('Do sprawdzenia');
+    expect(transactionBadge(record({ status: 'reversed' }), capturedAt)?.label).toBe('Cofnięta');
+  });
+
+  test('marks a Millennium card payment without a shop while Wallet can still name it', () => {
+    const debitPush = record({ merchant: undefined });
+
+    expect(transactionBadge(debitPush, capturedAt + 60_000)).toEqual({ label: 'Czeka na Portfel', tone: 'neutral' });
+    expect(transactionBadge(debitPush, capturedAt + 10 * 60_000)).toBeNull();
+  });
+});
+
+describe('awaitsWalletMerchant', () => {
+  test('waits only for a captured Millennium card payment without a shop', () => {
+    const soon = capturedAt + 60_000;
+
+    expect(awaitsWalletMerchant(record({ merchant: undefined }), soon)).toBe(true);
+    expect(awaitsWalletMerchant(record(), soon)).toBe(false);
+    expect(awaitsWalletMerchant(record({ merchant: undefined, origin: 'manual' }), soon)).toBe(false);
+    expect(awaitsWalletMerchant(record({ merchant: undefined, bank: 'mbank' }), soon)).toBe(false);
+    expect(awaitsWalletMerchant(record({ merchant: undefined, transactionType: 'outgoingTransfer' }), soon)).toBe(false);
   });
 });
 

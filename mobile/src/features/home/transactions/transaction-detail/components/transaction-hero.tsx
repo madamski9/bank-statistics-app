@@ -7,6 +7,7 @@ import { AmountText } from '@/features/settings/privacy/amounts/amount-text';
 import { useAmountFormatting } from '@/features/settings/privacy/amounts/use-private-amounts';
 
 import { affectsStatistics, transactionBadge, transactionTitle } from '../../record/transaction-record';
+import { useWalletMerchantClock } from '../../record/use-wallet-merchant-clock';
 
 interface TransactionHeroProps {
   record: IngestionRecord;
@@ -16,7 +17,8 @@ interface TransactionHeroProps {
 export function TransactionHero({ record, rules }: TransactionHeroProps) {
   const { formatAmount } = useAmountFormatting();
   const isIncome = record.direction === 'income';
-  const badge = transactionBadge(record);
+  const now = useWalletMerchantClock(record);
+  const badge = transactionBadge(record, now);
   const amount = `${isIncome ? '+' : '−'}${formatAmount(record.amountMinor, record.currency)}`;
 
   return (
