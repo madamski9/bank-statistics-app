@@ -61,6 +61,8 @@ const matchingShare = 0.75;
 const graceDays = 5;
 const analysedCharges = 12;
 const subscriptionCategory = 'services';
+const everydayShoppingCategories = new Set(['groceries', 'eatingOut']);
+const interleavedShare = 0.5;
 
 const cadences: Record<Cadence, CadenceRule> = {
   weekly: { minimumDays: 5, maximumDays: 9, months: 0, days: 7, minimumCharges: 4 },
@@ -222,6 +224,35 @@ interface PartyGroup {
   records: IngestionRecord[];
 }
 
+function hasSameAmount(amounts: number[]): boolean {
+  return amounts.every((amount) => amount === amounts[0]);
+}
+
+function isVisitedBetweenCharges(charges: IngestionRecord[], partyRecords: IngestionRecord[]): boolean {
+  const chargeIds = new Set(charges.map((charge) => charge.id));
+  const otherVisits = partyRecords.filter((record) => !chargeIds.has(record.id)).map(occurredMs);
+  const intervals = charges.slice(1).map((charge, index) => [occurredMs(charges[index] ?? charge), occurredMs(charge)]);
+  const visited = intervals.filter(([startMs = 0, endMs = 0]) =>
+    otherVisits.some((visitMs) => visitMs > startMs && visitMs < endMs),
+  ).length;
+
+  return intervals.length > 0 && visited / intervals.length >= interleavedShare;
+}
+
+function looksLikeShopping(group: PartyGroup, charges: IngestionRecord[]): boolean {
+  if (group.category === subscriptionCategory) {
+    return false;
+  }
+
+  const amounts = charges.map((charge) => charge.amountMinor);
+
+  if (everydayShoppingCategories.has(group.category ?? '') && !hasSameAmount(amounts)) {
+    return true;
+  }
+
+  return isVisitedBetweenCharges(charges, group.records);
+}
+
 function groupExpensesByParty(
   records: IngestionRecord[],
   rules: CategorizationRule[],
@@ -328,7 +359,7 @@ function detectedPayment(
     return null;
   }
 
-  if (!hasSteadyAmount(charges.map((charge) => charge.amountMinor))) {
+  if (!hasSteadyAmount(charges.map((charge) => charge.amountMinor)) || looksLikeShopping(group, charges)) {
     return null;
   }
 

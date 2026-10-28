@@ -70,6 +70,53 @@ describe('recurring payments', () => {
     expect(detectRecurringPayments(records, [], now)).toEqual([]);
   });
 
+  test('ignores a similar basket bought about once a month at a grocery shop', () => {
+    const records = [
+      charge('Żabka', '2026-06-25T08:00:00Z', 1499),
+      charge('Żabka', '2026-07-25T08:00:00Z', 1529),
+      charge('Żabka', '2026-08-25T08:00:00Z', 1499),
+      charge('Żabka', '2026-09-24T08:00:00Z', 1607),
+    ];
+
+    expect(detectRecurringPayments(records, [], now)).toEqual([]);
+  });
+
+  test('ignores a monthly-looking amount at a shop visited in between', () => {
+    const records = [
+      charge('Rossmann', '2026-06-10T08:00:00Z', 3499),
+      charge('Rossmann', '2026-06-21T08:00:00Z', 1250),
+      charge('Rossmann', '2026-07-10T08:00:00Z', 3499),
+      charge('Rossmann', '2026-07-28T08:00:00Z', 8900),
+      charge('Rossmann', '2026-08-10T08:00:00Z', 3499),
+      charge('Rossmann', '2026-08-19T08:00:00Z', 610),
+      charge('Rossmann', '2026-09-10T08:00:00Z', 3499),
+    ];
+
+    expect(detectRecurringPayments(records, [], now)).toEqual([]);
+  });
+
+  test('keeps a fixed monthly plan at a food delivery app', () => {
+    const records = [
+      charge('Wolt', '2026-06-12T08:00:00Z', 2999),
+      charge('Wolt', '2026-07-12T08:00:00Z', 2999),
+      charge('Wolt', '2026-08-12T08:00:00Z', 2999),
+      charge('Wolt', '2026-09-12T08:00:00Z', 2999),
+    ];
+
+    expect(detectRecurringPayments(records, [], now).map((payment) => payment.name)).toEqual(['Wolt']);
+  });
+
+  test('keeps a monthly payment to a payee that is not paid in between', () => {
+    const records = [
+      charge('Siłownia Fit', '2026-06-01T08:00:00Z', 15900),
+      charge('Siłownia Fit', '2026-07-01T08:00:00Z', 15900),
+      charge('Siłownia Fit', '2026-08-01T08:00:00Z', 16900),
+      charge('Siłownia Fit', '2026-09-01T08:00:00Z', 16900),
+    ];
+
+    expect(detectRecurringPayments(records, [], now).map((payment) => payment.cadence)).toEqual(['monthly']);
+  });
+
   test('notices a price increase', () => {
     const records = [
       charge('Netflix', '2026-06-10T08:00:00Z', 4900),
