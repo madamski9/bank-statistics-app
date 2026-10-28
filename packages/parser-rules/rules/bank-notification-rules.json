@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": 7,
+  "version": 8,
   "fragments": {
     "amount": "(?:[0-9]{1,3}(?:\\s[0-9]{3})+|[0-9]+)(?:[,.][0-9]{1,2})?"
   },
@@ -335,6 +335,24 @@
         "amountGroup": "amount",
         "currencyGroups": ["currency"],
         "merchant": { "group": "merchant", "stripLocation": true },
+        "status": "pending"
+      }
+    },
+    {
+      "id": "millennium.debitCardPayment",
+      "whitespace": "keepDoubleSpace",
+      "match": {
+        "field": "body",
+        "pattern": "^płatność kartą debetową:\\s*kwota:\\s*[-−]?\\s*(?<amount>{{amount}})\\s*(?<currency>[A-Z]{3}),\\s*karta:.+?,\\s*data:\\s*(?<date>[0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{2}:[0-9]{2})$",
+        "caseInsensitive": true
+      },
+      "record": {
+        "bank": "millennium",
+        "direction": "expense",
+        "transactionType": "cardPayment",
+        "amountGroup": "amount",
+        "currencyGroups": ["currency"],
+        "occurredAt": { "group": "date", "formats": ["dd/MM/yyyy HH:mm"], "timeZone": "Europe/Warsaw" },
         "status": "pending"
       }
     },

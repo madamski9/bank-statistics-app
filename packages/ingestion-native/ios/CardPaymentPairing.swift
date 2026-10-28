@@ -69,7 +69,11 @@ struct CardPaymentPairing {
   }
 
   private static func isWallet(_ record: NormalizedRecord) -> Bool {
-    record.sourceApp == walletSourceApp
+    record.sourceApp == walletSourceApp || isMillenniumPaymentWithMerchant(record)
+  }
+
+  private static func isMillenniumPaymentWithMerchant(_ record: NormalizedRecord) -> Bool {
+    record.bank == "millennium" && record.merchant != nil
   }
 
   private static func date(_ value: String) -> Date? {
