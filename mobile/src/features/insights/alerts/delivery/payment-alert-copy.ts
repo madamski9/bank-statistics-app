@@ -113,6 +113,26 @@ export const paymentAlertCopy = defineCopy<Record<AlertTone, Record<PaymentAlert
           title: 'Ja pie***lę, znowu?! >:(',
           body: `Kolejne ${payment} w błoto w tym zaje**nym sklepie.`,
         }),
+        ({ payment }) => ({
+          title: 'Ty się, k**wa, nie uczysz?',
+          body: `Kolejne ${payment} wyje**ne w ten sklep.`,
+        }),
+        () => ({
+          title: 'Portfel ci, k**wa, płacze',
+          body: 'Weź się w garść, do ch*ja.',
+        }),
+        ({ payment }) => ({
+          title: 'Znowu? Ja pie***lę…',
+          body: `${payment} poszło się je**ć.`,
+        }),
+        () => ({
+          title: 'Co ty, k**wa, odpie***lasz?',
+          body: 'Wyjdź z tego sklepu natychmiast.',
+        }),
+        ({ payment }) => ({
+          title: 'Karta ci się, k**wa, grzeje',
+          body: `Kolejne ${payment} i dalej mało?`,
+        }),
       ],
       half: [
         () => ({
@@ -122,6 +142,22 @@ export const paymentAlertCopy = defineCopy<Record<AlertTone, Record<PaymentAlert
         () => ({
           title: 'Połowa limitu w pi**u',
           body: 'Brawo, k**wa, zwolnij.',
+        }),
+        () => ({
+          title: 'Połowa poszła w ch*j',
+          body: 'A okres się, k**wa, nie skończył.',
+        }),
+        () => ({
+          title: 'Pół limitu wyje**ne, brawo',
+          body: 'Klaszczę, k**wa, na stojąco.',
+        }),
+        () => ({
+          title: 'Hamuj, do ch*ja wafla!',
+          body: 'Połowa limitu już przepie***lona.',
+        }),
+        () => ({
+          title: 'Szastasz kasą jak po***b',
+          body: 'Połowa limitu poszła w pi**u.',
         }),
       ],
       most: [
@@ -133,6 +169,22 @@ export const paymentAlertCopy = defineCopy<Record<AlertTone, Record<PaymentAlert
           title: 'Ogarnij się, k**wa!',
           body: '80% limitu już poszło.',
         }),
+        () => ({
+          title: '80% w pi**u, gratulacje',
+          body: 'Jeszcze trochę i będziesz, k**wa, żebrać.',
+        }),
+        () => ({
+          title: 'Zostaw tę kartę, k**wa!',
+          body: '80% limitu już przepie***lone.',
+        }),
+        () => ({
+          title: 'Ty masz, k**wa, jakiś plan?',
+          body: 'Bo limit się kończy, geniuszu.',
+        }),
+        () => ({
+          title: 'Ja pie***lę, 80% limitu',
+          body: 'Schowaj, k**wa, ten portfel.',
+        }),
       ],
       last: [
         () => ({
@@ -142,6 +194,22 @@ export const paymentAlertCopy = defineCopy<Record<AlertTone, Record<PaymentAlert
         () => ({
           title: 'Do reszty cię popie***liło?',
           body: 'To ma być ostatnia płatność.',
+        }),
+        () => ({
+          title: 'Ani grosza więcej, k**wa!',
+          body: 'Ostatnia płatność i koniec, k**wa.',
+        }),
+        () => ({
+          title: 'Odłóż to, do ch*ja!',
+          body: 'Limit zaraz pęknie w pi**u.',
+        }),
+        () => ({
+          title: 'Zaraz ci kartę, k**wa, utnę',
+          body: 'Zostały ochłapy z limitu.',
+        }),
+        () => ({
+          title: 'Jeszcze raz i, k**wa, koniec',
+          body: 'Limit wisi na włosku, debilu.',
         }),
       ],
       over: [
@@ -156,6 +224,26 @@ export const paymentAlertCopy = defineCopy<Record<AlertTone, Record<PaymentAlert
         () => ({
           title: 'Wydaj, k**wa, wszystko!',
           body: 'Gratulacje, k**wa.',
+        }),
+        () => ({
+          title: 'No i ch*j, limit pękł',
+          body: 'Brawo, k**wa, geniuszu finansów.',
+        }),
+        () => ({
+          title: 'Limit spie***lony na amen',
+          body: 'Weź się, k**wa, ogarnij.',
+        }),
+        () => ({
+          title: 'Limit? Jaki, k**wa, limit?',
+          body: 'Ten, co go właśnie rozje**no.',
+        }),
+        () => ({
+          title: 'K**wa mać, znowu ponad!',
+          body: 'Komornik już ostrzy zęby.',
+        }),
+        () => ({
+          title: 'Pie***lony rekordzista',
+          body: 'Limit rozje**ny w drobny mak.',
         }),
       ],
     },
@@ -235,11 +323,27 @@ export const paymentAlertCopy = defineCopy<Record<AlertTone, Record<PaymentAlert
           title: `Oh for f***'s sake >:(`,
           body: `Another ${payment} down the drain.`,
         }),
+        ({ payment }) => ({
+          title: 'What the f*** was that?',
+          body: `Another ${payment} wasted.`,
+        }),
+        ({ payment }) => ({
+          title: 'Again? Holy sh*t.',
+          body: `${payment} more down the sh*tter.`,
+        }),
       ],
       half: [
         () => ({
           title: 'Half of it f***ing gone',
           body: 'Slow down, genius.',
+        }),
+        () => ({
+          title: 'Half gone, you absolute muppet',
+          body: 'Slow the f*** down.',
+        }),
+        () => ({
+          title: 'Holy sh*t, half already?',
+          body: 'Pace yourself, d*mmit.',
         }),
       ],
       most: [
@@ -247,11 +351,27 @@ export const paymentAlertCopy = defineCopy<Record<AlertTone, Record<PaymentAlert
           title: 'Get your sh*t together!',
           body: '80% already gone.',
         }),
+        () => ({
+          title: `80% gone, for f***'s sake`,
+          body: 'Put the d*mn card away.',
+        }),
+        () => ({
+          title: 'What the f*** is your plan?',
+          body: 'The limit is nearly gone.',
+        }),
       ],
       last: [
         () => ({
           title: 'DONE. Hear me?!',
           body: 'Last f***ing time.',
+        }),
+        () => ({
+          title: 'Not one f***ing more!',
+          body: 'Seriously, the last one.',
+        }),
+        () => ({
+          title: 'Card down. Right f***ing now',
+          body: 'The limit is on life support.',
         }),
       ],
       over: [
@@ -262,6 +382,14 @@ export const paymentAlertCopy = defineCopy<Record<AlertTone, Record<PaymentAlert
         () => ({
           title: 'Why the f*** go back there?!',
           body: 'Congrats, genius.',
+        }),
+        () => ({
+          title: 'Limit? What f***ing limit?',
+          body: 'The one you just wrecked.',
+        }),
+        () => ({
+          title: 'Well, sh*t. Over again.',
+          body: 'Congrats, financial genius.',
         }),
       ],
     },
@@ -352,6 +480,22 @@ export const foodPaymentAlertCopy = defineCopy<Record<AlertTone, Record<PaymentA
           title: 'K**wa, ile można żreć?!',
           body: `Znowu ${payment} na żarcie.`,
         }),
+        ({ payment }) => ({
+          title: 'Znowu, k**wa, wpie***lasz?',
+          body: `Kolejne ${payment} przeżarte.`,
+        }),
+        () => ({
+          title: 'Żołądek bez dna, k**wa',
+          body: 'Lodówka w domu się, k**wa, obraziła.',
+        }),
+        ({ payment }) => ({
+          title: 'Co tym razem, k**wa, żarcie?',
+          body: `${payment} na kolejne obżarstwo.`,
+        }),
+        () => ({
+          title: 'Ja pie***lę, znowu żarcie',
+          body: 'Gotować, k**wa, nie umiesz?',
+        }),
       ],
       half: [
         () => ({
@@ -361,6 +505,14 @@ export const foodPaymentAlertCopy = defineCopy<Record<AlertTone, Record<PaymentA
         () => ({
           title: 'No tak, wpie***laj dalej',
           body: 'Połowa limitu poszła na żarcie.',
+        }),
+        () => ({
+          title: 'Pół limitu w żołądku, k**wa',
+          body: 'Zwolnij z tym żarciem.',
+        }),
+        () => ({
+          title: 'Przestań, k**wa, żreć!',
+          body: 'Połowa limitu przepie***lona na jedzenie.',
         }),
       ],
       most: [
@@ -372,6 +524,14 @@ export const foodPaymentAlertCopy = defineCopy<Record<AlertTone, Record<PaymentA
           title: 'Ile ty żresz, k**wa?!',
           body: 'No żesz k**wa mać.',
         }),
+        () => ({
+          title: 'Żresz jak pie***lony smok',
+          body: '80% limitu na żarcie poszło.',
+        }),
+        () => ({
+          title: 'Odłóż ten kebab, k**wa!',
+          body: 'Limit na jedzenie ledwo dycha.',
+        }),
       ],
       last: [
         () => ({
@@ -381,6 +541,14 @@ export const foodPaymentAlertCopy = defineCopy<Record<AlertTone, Record<PaymentA
         () => ({
           title: 'Popie***liło cię z żarciem?',
           body: 'To ma być ostatnie żarcie.',
+        }),
+        () => ({
+          title: 'Lodówka zamknięta, k**wa!',
+          body: 'Od jutra, k**wa, ryż i woda.',
+        }),
+        () => ({
+          title: 'Jeszcze jeden kęs i ch*j',
+          body: 'Limit na jedzenie się kończy.',
         }),
       ],
       over: [
@@ -399,6 +567,18 @@ export const foodPaymentAlertCopy = defineCopy<Record<AlertTone, Record<PaymentA
         () => ({
           title: 'Po ch*j dalej żresz?!',
           body: 'No żesz k**wa mać.',
+        }),
+        () => ({
+          title: 'Limit przeżarty w ch*j',
+          body: 'Gratulacje, k**wa, smacznego.',
+        }),
+        () => ({
+          title: 'Zeżarte, k**wa, wszystko!',
+          body: 'Nawet okruszka nie zostało.',
+        }),
+        () => ({
+          title: 'Smacznego, do ch*ja!',
+          body: 'Limit na jedzenie rozje**ny.',
         }),
       ],
     },
@@ -478,11 +658,19 @@ export const foodPaymentAlertCopy = defineCopy<Record<AlertTone, Record<PaymentA
           title: 'How much can you f***ing eat?',
           body: 'Again?!',
         }),
+        () => ({
+          title: `Eating again? For f***'s sake`,
+          body: 'The fridge at home misses you.',
+        }),
       ],
       half: [
         () => ({
           title: 'Half of it eaten, fatso',
           body: 'Your belly grows faster than your savings.',
+        }),
+        () => ({
+          title: 'Half the food limit, sh*t',
+          body: 'Slow the f*** down.',
         }),
       ],
       most: [
@@ -490,11 +678,19 @@ export const foodPaymentAlertCopy = defineCopy<Record<AlertTone, Record<PaymentA
           title: 'Belt still closing?',
           body: 'Put the f***ing chips down.',
         }),
+        () => ({
+          title: 'Drop the d*mn kebab!',
+          body: '80% eaten already.',
+        }),
       ],
       last: [
         () => ({
           title: 'STOP, fatso!',
           body: 'Then water and carrots.',
+        }),
+        () => ({
+          title: 'Fridge closed. F***ing closed.',
+          body: 'Rice and water from now on.',
         }),
       ],
       over: [
@@ -505,6 +701,10 @@ export const foodPaymentAlertCopy = defineCopy<Record<AlertTone, Record<PaymentA
         () => ({
           title: 'Everything eaten, fatso!',
           body: 'Soon you will not fit through the door.',
+        }),
+        () => ({
+          title: 'Limit eaten, holy sh*t',
+          body: 'Bon appétit, genius.',
         }),
       ],
     },
