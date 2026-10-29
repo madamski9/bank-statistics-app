@@ -21,7 +21,7 @@ const laneIdentities: Record<string, LaneIdentity> = {
     signsUpdates: true,
   },
   production: {
-    bundleIdentifier: 'com.bankstats.app',
+    bundleIdentifier: 'com.bankstats.app.preview',
     scheme: 'bankstats',
     displayName: 'Bank Stats',
     signsUpdates: true,
