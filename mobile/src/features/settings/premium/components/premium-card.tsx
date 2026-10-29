@@ -1,11 +1,12 @@
 import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { SkeletonBar, SkeletonPulse } from '@/features/app-shell/loading/skeleton-pulse';
 import { useCopy } from '@/features/app-shell/localization/language';
 import { overviewColors } from '@/features/app-shell/theme/overview-theme';
 
 import { premiumCopy } from '../premium-copy';
-import { formatPremiumDate } from '../premium-date';
+import { premiumStanding, premiumStandingText } from '../premium-standing';
 import type { PremiumStatus } from '../use-premium';
 
 interface PremiumCardProps {
@@ -13,16 +14,27 @@ interface PremiumCardProps {
   onPress: () => void;
 }
 
+function PremiumCardSkeleton() {
+  return (
+    <SkeletonPulse style={styles.skeletonCard}>
+      <SkeletonBar height={42} width={42} />
+      <View style={styles.copy}>
+        <SkeletonBar height={15} width="60%" />
+        <SkeletonBar height={11} width="80%" />
+      </View>
+    </SkeletonPulse>
+  );
+}
+
 export function PremiumCard({ status, onPress }: PremiumCardProps) {
   const copy = useCopy(premiumCopy);
-  const isPremium = status?.isPremium === true;
-  const subtitle = isPremium
-    ? status.premiumUntil !== null
-      ? copy.activeUntil(formatPremiumDate(status.premiumUntil))
-      : status.premiumSince === null
-        ? copy.thanks
-        : copy.activeSince(formatPremiumDate(status.premiumSince))
-    : copy.pitch;
+
+  if (status === undefined) {
+    return <PremiumCardSkeleton />;
+  }
+
+  const isPremium = status.isPremium;
+  const subtitle = premiumStandingText(premiumStanding(status), copy);
 
   return (
     <Pressable
@@ -80,6 +92,18 @@ const styles = StyleSheet.create({
     backgroundColor: overviewColors.surface,
     experimental_backgroundImage:
       'linear-gradient(120deg, rgba(255, 92, 138, 0.22) 0%, rgba(143, 123, 255, 0.16) 55%, rgba(13, 13, 15, 0) 100%)',
+  },
+  skeletonCard: {
+    minHeight: 76,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: overviewColors.hairline,
+    backgroundColor: overviewColors.surface,
   },
   pressed: {
     opacity: 0.75,

@@ -54,6 +54,22 @@ async function signedIn(identity: typeof alice, installationId: string) {
 }
 
 describe('sync', () => {
+  test('preserves a user-assigned bank name and validates its length', async () => {
+    const { user } = await signedIn(alice, 'phone');
+    const transaction = lunch({
+      clientId: 'trade-republic', bank: 'unknown', origin: 'capture', accountId: undefined,
+      sourceApp: 'com.apple.Passbook', bankName: 'Trade Republic',
+    });
+    await user.mutation(api.sync.push, { installationId: 'phone', changes: { transactions: [transaction] } });
+    expect(await pulled(user, 'phone', 'transactions')).toEqual([
+      expect.objectContaining({ bank: 'unknown', bankName: 'Trade Republic' }),
+    ]);
+    for (const bankName of ['', 'x'.repeat(61)]) {
+      await expect(user.mutation(api.sync.push, {
+        installationId: 'phone', changes: { transactions: [{ ...transaction, bankName, revision: 2 }] },
+      })).rejects.toThrow('bank name');
+    }
+  });
   test('refuses every call without a signed-in user', async () => {
     const backend = convexTest(schema, modules);
 

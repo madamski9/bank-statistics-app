@@ -13,15 +13,17 @@ import { PurchaseFooter } from './components/purchase-footer';
 import type { PremiumReason } from './premium-access';
 import { premiumCopy } from './premium-copy';
 import { usePreviewWithoutPremium } from './premium-preview';
+import { storeOfferingFor } from './store/trial-offer';
 import type { PremiumStatus } from './use-premium';
 
 interface PremiumScreenProps {
   status: PremiumStatus | undefined;
   reason: PremiumReason | null;
+  capturedTransactionCount: number;
   onClose: () => void;
 }
 
-export function PremiumScreen({ status, reason, onClose }: PremiumScreenProps) {
+export function PremiumScreen({ status, reason, capturedTransactionCount, onClose }: PremiumScreenProps) {
   const copy = useCopy(premiumCopy);
   const isPremium = status?.isPremium === true;
   const isPreviewingWithoutPremium = usePreviewWithoutPremium();
@@ -60,7 +62,7 @@ export function PremiumScreen({ status, reason, onClose }: PremiumScreenProps) {
         ) : null}
       </ScrollView>
 
-      {isPremium ? null : <PurchaseFooter />}
+      {isPremium ? null : <PurchaseFooter offeringId={storeOfferingFor({ capturedTransactionCount, reason })} />}
     </KeyboardAvoidingView>
   );
 }

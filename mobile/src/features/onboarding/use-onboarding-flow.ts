@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Linking, type ScrollView } from 'react-native';
 
 import { useCopy } from '@/features/app-shell/localization/language';
+import { usePremiumOffer } from '@/features/settings/premium/store/use-premium-offer';
 import { biometricLabels } from '@/features/settings/privacy/app-lock/biometrics';
 import { usePrivacy } from '@/features/settings/privacy/privacy-provider';
 
@@ -10,10 +11,20 @@ import { onboardingCopy } from './onboarding-copy';
 import {
   automationStep,
   banksStep,
+  canSkipFrom,
+  flowSteps,
+  focusIntroStep,
+  focusSetupStep,
+  iosUpdateStep,
   pinStep,
   plansStep,
+  setsUpCapture,
   shortcutsIntroStep,
+  skipTarget,
+  stepAfter,
+  stepBefore,
   stepCount,
+  type OnboardingFlow,
 } from './onboarding-steps';
 import { useShortcutSetup } from './shortcut-setup/use-shortcut-setup';
 import type { OnboardingPlan } from './steps/plans-step';
@@ -21,7 +32,7 @@ import type { OnboardingPlan } from './steps/plans-step';
 const shortcutsAppUrl = 'shortcuts://';
 
 export interface OnboardingFlowOptions {
-  flow: 'full' | 'shortcuts';
+  flow: OnboardingFlow;
   onCancel: () => void;
   onComplete: (selectedBanks: string[]) => Promise<void>;
 }
@@ -30,18 +41,27 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
   const copy = useCopy(onboardingCopy);
   const { biometric, changePin, updateSettings } = usePrivacy();
   const isShortcutsFlow = flow === 'shortcuts';
-  const [step, setStep] = useState(isShortcutsFlow ? banksStep : 0);
+  const steps = flowSteps(flow);
+  const [step, setStep] = useState(steps[0]);
   const [transitionDirection, setTransitionDirection] = useState<'forward' | 'backward'>('forward');
   const [error, setError] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<OnboardingPlan>('free');
   const [isFinishing, setIsFinishing] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const premiumOffer = usePremiumOffer('trial');
+  const premiumPlans = premiumOffer.state.kind === 'ready' ? premiumOffer.state.plans : [];
+  const selectedPremiumPlan = premiumPlans.find((plan) => plan.period === selectedPlan);
   const scrollRef = useRef<ScrollView>(null);
-  const resumeAtBanks = useCallback(() => setStep(banksStep), []);
+  const capturesTransactions = setsUpCapture(flow);
+  const resumeAtBanks = useCallback(() => {
+    if (capturesTransactions) {
+      setStep(banksStep);
+    }
+  }, [capturesTransactions]);
   const shortcut = useShortcutSetup({ isShortcutsFlow, onError: setError, onResume: resumeAtBanks });
   const { leave: leaveShortcutSetup, openShortcut, selectedBanks } = shortcut;
-  const flowStart = isShortcutsFlow ? banksStep : 0;
-  const flowLength = isShortcutsFlow ? automationStep - banksStep + 1 : stepCount;
-  const flowPosition = Math.min(step - flowStart + 1, flowLength);
+  const flowLength = steps.filter((candidate) => candidate !== stepCount).length;
+  const flowPosition = Math.min(steps.indexOf(step) + 1, flowLength);
 
   const changeStep = useCallback(
     (next: number) => {
@@ -64,12 +84,12 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
     setError(null);
 
     try {
-      await onComplete(selectedBanks);
+      await onComplete(capturesTransactions ? selectedBanks : []);
     } catch {
       setError(copy.finishFailed);
       setIsFinishing(false);
     }
-  }, [copy, onComplete, selectedBanks]);
+  }, [capturesTransactions, copy, onComplete, selectedBanks]);
 
   const protectWithPin = useCallback(
     async (pin: string) => {
@@ -85,40 +105,82 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
     setError(null);
   }, []);
 
+  const buyPremium = useCallback(async () => {
+    if (premiumOffer.state.kind === 'unavailable') {
+      setError(copy.premiumSoon);
+      return;
+    }
+
+    if (premiumOffer.state.kind === 'failed') {
+      setError(copy.plansFailed);
+      premiumOffer.reload();
+      return;
+    }
+
+    if (selectedPremiumPlan === undefined) {
+      return;
+    }
+
+    setError(null);
+    setIsPurchasing(true);
+    const outcome = await premiumOffer.purchase(selectedPremiumPlan);
+    setIsPurchasing(false);
+
+    if (outcome === 'purchased') {
+      changeStep(stepAfter(flowSteps(flow), plansStep));
+    } else if (outcome === 'failed') {
+      setError(copy.purchaseFailed);
+    }
+  }, [changeStep, copy, flow, premiumOffer, selectedPremiumPlan]);
+
   const goBack = useCallback(() => {
     if (isShortcutsFlow && step === banksStep) {
       void leaveTo(null);
     } else {
-      changeStep(step - 1);
+      changeStep(stepBefore(flowSteps(flow), step));
     }
-  }, [changeStep, isShortcutsFlow, leaveTo, step]);
+  }, [changeStep, flow, isShortcutsFlow, leaveTo, step]);
 
-  const isBusy = isFinishing || shortcut.isOpeningShortcut || shortcut.isSavingProgress;
+  const skip = useCallback(() => changeStep(skipTarget(flow)), [changeStep, flow]);
+
+  const isBusy =
+    isFinishing ||
+    isPurchasing ||
+    shortcut.isOpeningShortcut ||
+    shortcut.isSavingProgress ||
+    (step === plansStep && selectedPlan !== 'free' && premiumOffer.state.kind === 'loading');
   const isPrimaryDisabled = isBusy || (step === banksStep && selectedBanks.length === 0);
 
   const primaryLabel =
-    step === plansStep
+    step === iosUpdateStep
+      ? copy.continueWithoutCapture
+      : step === plansStep
       ? selectedPlan === 'free'
         ? copy.continueFree
-        : copy.goToPayment
+        : selectedPremiumPlan?.trialDays != null
+          ? copy.startTrial(selectedPremiumPlan.trialDays)
+          : copy.goToPayment
       : step === shortcutsIntroStep
         ? copy.goToSetup
         : step === banksStep
           ? shortcut.hasOpenedShortcut ? copy.shortcutAdded : copy.addShortcut
           : step === automationStep
             ? copy.automationEnabled
-            : step === stepCount
-              ? copy.goToApp
-              : copy.next;
+            : step === focusIntroStep
+              ? copy.showFocusSetup
+              : step === focusSetupStep
+                ? copy.focusConfigured
+                : step === stepCount
+                  ? copy.goToApp
+                  : copy.next;
   const primaryAction =
     step === banksStep
       ? shortcut.hasOpenedShortcut ? () => leaveTo(automationStep) : openShortcut
-      : step === stepCount || (isShortcutsFlow && step === automationStep)
+      : step === stepCount || (isShortcutsFlow && step === focusSetupStep)
         ? finish
-        : step === plansStep && selectedPlan === 'premium'
-          ? () =>
-              setError(copy.premiumSoon)
-          : () => changeStep(step + 1);
+        : step === plansStep && selectedPlan !== 'free'
+          ? buyPremium
+          : () => changeStep(stepAfter(steps, step));
 
   const primary =
     step === pinStep
@@ -165,9 +227,15 @@ export function useOnboardingFlow({ flow, onCancel, onComplete }: OnboardingFlow
     transitionDirection,
     error,
     selectedPlan,
+    premiumPlans,
+    sellsPremium: premiumOffer.state.kind !== 'unavailable',
     scrollRef,
     flowPosition,
     flowLength,
+    capturesTransactions,
+    canGoBack: (isShortcutsFlow || steps.indexOf(step) > 0) && step < stepCount,
+    canSkip: !isShortcutsFlow && canSkipFrom(step),
+    skip,
     isBusy,
     isRestoring: shortcut.isRestoring,
     selectedBanks,

@@ -105,6 +105,7 @@ export function useAlertEditor({
 
   return {
     editor,
+    rules: alerts.rules,
     isFirstRule: alerts.rules.length === 0,
     canUseAggressiveTone: hasPremiumAccess,
     requireTonePremium,

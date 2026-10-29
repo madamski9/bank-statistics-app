@@ -189,6 +189,35 @@ describe('devices', () => {
 
     expect(await user.query(api.devices.standing, { installationId: 'laptop' })).toBe('unregistered');
     await expect(backend.query(api.devices.standing, { installationId: 'phone' })).rejects.toThrow();
-    await expect(backend.query(api.devices.list, { installationId: 'phone' })).rejects.toThrow();
+    expect(await backend.query(api.devices.list, { installationId: 'phone' })).toEqual([]);
+  });
+
+  test('lists no devices for an installation that never turned on cloud sync', async () => {
+    const backend = convexTest(schema, modules);
+    const user = backend.withIdentity(alice);
+
+    expect(await user.query(api.devices.list, { installationId: 'local-only-phone' })).toEqual([]);
+  });
+
+  test('lists no devices for a session that has not registered the installation yet', async () => {
+    const { backend } = await twoDevices();
+    const signedInAgain = backend.withIdentity({ ...alice, sid: 'sess_alice_phone_again' });
+
+    expect(await signedInAgain.query(api.devices.list, { installationId: 'phone' })).toEqual([]);
+  });
+
+  test('lists no devices for a revoked installation', async () => {
+    const { user, tablet } = await twoDevices();
+
+    await user.mutation(api.devices.revoke, { installationId: 'phone', deviceId: await tabletId(user) });
+
+    expect(await tablet.query(api.devices.list, { installationId: 'tablet' })).toEqual([]);
+  });
+
+  test('lists no devices for a token without a session', async () => {
+    const backend = convexTest(schema, modules);
+    const withoutSession = backend.withIdentity({ subject: 'user_alice', issuer: 'https://clerk.test' });
+
+    expect(await withoutSession.query(api.devices.list, { installationId: 'phone' })).toEqual([]);
   });
 });

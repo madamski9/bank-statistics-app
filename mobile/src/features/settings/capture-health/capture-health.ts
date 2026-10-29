@@ -6,7 +6,7 @@ export type CapturedBank = (typeof capturedBanks)[number];
 
 export type CaptureState = 'working' | 'attention' | 'unverified' | 'unconfigured';
 
-export type AttentionReason = 'neverRan' | 'recentFailure' | 'staleEvidence';
+export type AttentionReason = 'neverRan' | 'recentFailure' | 'staleEvidence' | 'pendingNotification';
 
 export interface BankCaptureHealth {
   bank: CapturedBank;
@@ -28,6 +28,7 @@ export interface CaptureHealth {
   banks: BankCaptureHealth[];
   automation: AutomationActivity;
   needsAttention: boolean;
+  pendingNotificationCount: number;
 }
 
 const dayMs = 86_400_000;
@@ -72,6 +73,8 @@ export function captureHealth({
   enabledBanks: readonly string[];
   now: Date;
 }): CaptureHealth {
+  const pendingCount = Number(diagnostics?.pendingNotificationCount ?? 0);
+  const pendingNotificationCount = Number.isSafeInteger(pendingCount) && pendingCount > 0 ? pendingCount : 0;
   const automation: AutomationActivity = {
     lastRunAt: diagnostics?.lastAttemptAt ?? null,
     lastOutcome: diagnostics?.lastAttemptOutcome ?? null,
@@ -95,6 +98,10 @@ export function captureHealth({
 
     if (!isEnabled && lastCaptureMs === null) {
       return { ...base, state: 'unconfigured', reason: null };
+    }
+
+    if (hasRecentAttempt && automation.lastOutcome === 'pending' && pendingNotificationCount > 0) {
+      return { ...base, state: 'attention', reason: 'pendingNotification' };
     }
 
     if (
@@ -122,5 +129,10 @@ export function captureHealth({
     };
   });
 
-  return { banks, automation, needsAttention: banks.some((bank) => bank.state === 'attention') };
+  return {
+    banks,
+    automation,
+    pendingNotificationCount,
+    needsAttention: pendingNotificationCount > 0 || banks.some((bank) => bank.state === 'attention'),
+  };
 }

@@ -1,7 +1,8 @@
 import { SymbolView } from 'expo-symbols';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { SettingsSwitch } from '@/features/app-shell/controls/settings-switch';
 import { overviewColors, overviewSpacing } from '@/features/app-shell/theme/overview-theme';
 
 export function SettingsSection({ label, children }: { label: string; children: ReactNode }) {
@@ -33,13 +34,7 @@ export function ToggleRow({ label, description, value, onChange }: ToggleRowProp
           {description}
         </Text>
       </View>
-      <Switch
-        accessibilityHint={description}
-        accessibilityLabel={label}
-        onValueChange={onChange}
-        trackColor={{ true: overviewColors.positive, false: overviewColors.surfacePressed }}
-        value={value}
-      />
+      <SettingsSwitch hint={description} label={label} onValueChange={onChange} value={value} />
     </View>
   );
 }

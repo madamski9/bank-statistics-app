@@ -21,6 +21,7 @@ interface RevisionedChange {
 
 interface TransactionChangeShape extends RevisionedChange {
   bank: string;
+  bankName?: string;
   origin: 'capture' | 'manual';
   amountMinor: number;
   currency: string;
@@ -73,6 +74,9 @@ export function revisionProblem(change: RevisionedChange): string | null {
 }
 
 export function transactionChangeProblem(change: TransactionChangeShape): string | null {
+  if (change.bankName !== undefined && (change.bankName.trim() === '' || [...change.bankName].length > 60)) {
+    return 'A bank name has between 1 and 60 characters.';
+  }
   if (change.origin === 'capture' && !captureBanks.has(change.bank)) {
     return 'Only enabled banks can synchronize captured transactions.';
   }

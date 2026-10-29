@@ -10,4 +10,10 @@ crons.daily(
   internal.sync.purgeExpiredTombstones,
 );
 
+crons.daily(
+  'forget expired diagnostic samples',
+  { hourUTC: 3, minuteUTC: 17 },
+  internal.diagnosticSamples.purgeExpired,
+);
+
 export default crons;

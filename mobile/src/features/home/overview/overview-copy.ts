@@ -11,7 +11,7 @@ export const overviewCopy = defineCopy({
     context: (period: string) => `Wydatki · ${period}`,
     noTransactions:
       'Nie przechwycono jeszcze żadnej transakcji. Skonfiguruj automatyzację powiadomień w aplikacji Skróty.',
-    noTransactionsAndroid: 'Brak transakcji. Możesz dodać transakcję ręcznie lub zaimportować wyciąg CSV.',
+    noTransactionsWithoutCapture: 'Nie ma jeszcze żadnej transakcji. Dodaj transakcję ręcznie albo zaimportuj wyciąg.',
     forecast: 'Prognoza',
     forecastValue: (amount: string) => `~${amount}`,
     report: 'Raport miesięczny',
@@ -32,7 +32,7 @@ export const overviewCopy = defineCopy({
     context: (period: string) => `Spending · ${period}`,
     noTransactions:
       'No transactions captured yet. Set up the notification automation in the Shortcuts app.',
-    noTransactionsAndroid: 'No transactions yet. You can add a transaction manually or import a CSV statement.',
+    noTransactionsWithoutCapture: 'No transactions yet. Add a transaction manually or import a statement.',
     forecast: 'Forecast',
     forecastValue: (amount: string) => `~${amount}`,
     report: 'Monthly report',

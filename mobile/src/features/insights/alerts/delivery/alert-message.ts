@@ -1,4 +1,4 @@
-import { categoryLabel } from '@/features/data/classification/categories';
+import { categoryLabel, isCustomCategoryId, knownCategory } from '@/features/data/classification/categories';
 import { currentCopy } from '@/features/app-shell/localization/language';
 import { formatAmount } from '@/features/app-shell/formatting/formatting';
 
@@ -11,13 +11,19 @@ export interface AlertMessage {
   body: string;
 }
 
+export function categoryScopeLabel(categoryId: string): string {
+  return isCustomCategoryId(categoryId) && knownCategory(categoryId) === undefined
+    ? currentCopy(alertsCopy).deletedCategory
+    : categoryLabel(categoryId);
+}
+
 function scopeName(scope: AlertScope): ScopeName {
   if (scope.kind === 'merchant' || scope.kind === 'counterparty') {
     return { kind: scope.kind, name: scope.name };
   }
 
   if (scope.kind === 'category') {
-    return { kind: 'category', name: categoryLabel(scope.id) };
+    return { kind: 'category', name: categoryScopeLabel(scope.id) };
   }
 
   return { kind: 'all', name: currentCopy(alertsCopy).allSpending };

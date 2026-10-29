@@ -1,11 +1,14 @@
 import { defineSchema, defineTable } from 'convex/server';
 import { v, type PropertyValidators } from 'convex/values';
 
+import { storeSubscriptionFields } from './revenueCat';
+
 export const devicePlatform = v.union(v.literal('ios'), v.literal('android'), v.literal('web'));
 
 export const transactionFields = {
   clientId: v.string(),
   bank: v.string(),
+  bankName: v.optional(v.string()),
   origin: v.union(v.literal('capture'), v.literal('manual')),
   direction: v.union(v.literal('expense'), v.literal('income')),
   transactionType: v.optional(
@@ -112,6 +115,8 @@ export default defineSchema({
     isPremium: v.boolean(),
     premiumSince: v.optional(v.number()),
     premiumUntil: v.optional(v.number()),
+    storeSubscription: v.optional(storeSubscriptionFields),
+    storeSubscriptionRecheck: v.optional(v.id('_scheduled_functions')),
   }).index('by_owner', ['ownerId']),
   premiumCodes: defineTable({
     code: v.string(),
@@ -123,6 +128,20 @@ export default defineSchema({
   financialAccounts: syncedTable(financialAccountFields),
   categories: syncedTable(categoryFields),
   events: syncedTable(eventFields),
+  diagnosticSamples: defineTable({
+    ownerId: v.string(),
+    clientId: v.string(),
+    notification: v.object({ title: v.string(), subtitle: v.string(), body: v.string(), sourceApp: v.string() }),
+    clientParserVersion: v.number(),
+    parserVersion: v.number(),
+    reasonCode: v.string(),
+    resultJson: v.string(),
+    submittedAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index('by_owner_client', ['ownerId', 'clientId'])
+    .index('by_owner_submitted', ['ownerId', 'submittedAt'])
+    .index('by_expiry', ['expiresAt']),
   exchangeRates: defineTable({
     currency: v.string(),
     requestedDate: v.string(),

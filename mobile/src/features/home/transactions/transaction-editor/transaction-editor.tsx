@@ -30,11 +30,12 @@ import { EditorHeader } from './components/editor-header';
 import { EventPicker } from './components/event-picker';
 import { KindChips } from './components/kind-chips';
 import { ReviewBanner } from './components/review-banner';
-import { kindForDirection } from './manual-transaction';
+import { kindForDirection, type TransactionDraft } from './manual-transaction';
 import { useTransactionDraft } from './use-transaction-draft';
 
 interface TransactionEditorProps {
   record: IngestionRecord | null;
+  initialDraft?: TransactionDraft;
   accounts: FinancialAccount[];
   onCreateAccount: (name: string) => Promise<FinancialAccount>;
   isWriting: boolean;
@@ -53,6 +54,7 @@ interface TransactionEditorProps {
 
 export function TransactionEditor({
   record,
+  initialDraft,
   accounts,
   onCreateAccount,
   isWriting,
@@ -81,7 +83,7 @@ export function TransactionEditor({
     selectCategory,
     toggleRememberCategory,
     submit,
-  } = useTransactionDraft({ record, accounts, onSubmit });
+  } = useTransactionDraft({ record, accounts, onSubmit, initialDraft });
   const prompt = record?.review === undefined ? null : reviewPrompt(record.review);
   const isManual = record === null || record.origin === 'manual';
   const title = record === null ? copy.newTransaction : prompt === null ? copy.editing : copy.toReview;
@@ -130,6 +132,22 @@ export function TransactionEditor({
             </>
           )}
         </EditorCard>
+
+        {draft.bankName !== undefined && record !== null ? (
+          <>
+            <EditorCard>
+              <EditorReadOnlyField label={copy.notificationTitle} value={record.notificationTitle ?? ''} />
+              <EditorSeparator />
+              <EditorField
+                label={copy.bankName}
+                onChangeText={(bankName) => update({ bankName })}
+                placeholder={copy.bankNamePlaceholder}
+                value={draft.bankName}
+              />
+            </EditorCard>
+            <Text maxFontSizeMultiplier={1.5} style={styles.bankHelp}>{copy.rememberBankHelp}</Text>
+          </>
+        ) : null}
 
         {isManual ? (
           <AccountPicker
@@ -232,6 +250,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: overviewColors.negative,
+  },
+  bankHelp: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: overviewColors.textSecondary,
   },
   deleteButton: {
     minHeight: 54,

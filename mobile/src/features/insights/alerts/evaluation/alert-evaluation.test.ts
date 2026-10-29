@@ -92,6 +92,12 @@ describe('alertProgress', () => {
     expect(alertProgress(categoryRule, records, { reference, rules: [] }).amountMinor).toBe(3000);
   });
 
+  test('a limit for a deleted custom category counts nothing', () => {
+    const deletedCategoryRule = rule({ scope: { kind: 'category', id: 'category-gone' } });
+
+    expect(alertProgress(deletedCategoryRule, [record()], { reference, rules: [] }).amountMinor).toBe(0);
+  });
+
   test('counts the person a counterparty rule watches', () => {
     const personRule = rule({ scope: { kind: 'counterparty', name: 'Jan Kowalski' } });
     const records = [

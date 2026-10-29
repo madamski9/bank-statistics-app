@@ -167,6 +167,17 @@ export function chartWindow(
   return { ...window, startMs: Math.min(earliestMs, window.endMs - minimumChartDays * dayMs) };
 }
 
+export function spendBuckets(
+  records: IngestionRecord[],
+  window: PeriodWindow,
+  period: SpendingPeriod,
+): SpendBucket[] {
+  const earliestMs = earliestOccurredMs(records);
+  const size = bucketSizeFor(period, earliestMs, window.endMs);
+
+  return bucketSpending(records, chartWindow(window, size, earliestMs), size);
+}
+
 export function formatDayMonth(ms: number): string {
   const date = new Date(ms);
   const calendar = currentCopy(calendarCopy);

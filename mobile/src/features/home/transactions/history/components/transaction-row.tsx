@@ -15,11 +15,13 @@ import { useAmountFormatting } from '@/features/settings/privacy/amounts/use-pri
 import { transactionKindSymbols } from '../../record/transaction-kind-symbols';
 import {
   affectsStatistics,
+  awaitsWalletMerchant,
   transactionBadge,
   transactionContext,
   transactionKind,
   transactionTitle,
 } from '../../record/transaction-record';
+import { useWalletMerchantClock } from '../../record/use-wallet-merchant-clock';
 import { transactionsCopy } from '../../transactions-copy';
 
 interface TransactionRowProps {
@@ -36,7 +38,9 @@ export function TransactionRow({ record, rules, event, onPress }: TransactionRow
   const occurredAt = new Date(record.occurredAt);
   const isIncome = record.direction === 'income';
   const isCounted = affectsStatistics(record);
-  const badge = transactionBadge(record);
+  const now = useWalletMerchantClock(record);
+  const badge = transactionBadge(record, now);
+  const isAwaitingMerchant = awaitsWalletMerchant(record, now);
   const label = transactionTitle(record, rules);
   const context = transactionContext(record);
   const amount = `${isIncome ? '+' : '−'}${formatAmount(record.amountMinor, record.currency)}`;
@@ -75,7 +79,11 @@ export function TransactionRow({ record, rules, event, onPress }: TransactionRow
       </View>
       <View style={styles.body}>
         <View style={styles.labelRow}>
-          <AmountText maxFontSizeMultiplier={1.6} numberOfLines={1} style={styles.label}>
+          <AmountText
+            maxFontSizeMultiplier={1.6}
+            numberOfLines={1}
+            style={[styles.label, isAwaitingMerchant ? styles.labelAwaiting : null]}
+          >
             {label}
           </AmountText>
           {badge !== null ? (
@@ -154,6 +162,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     color: overviewColors.textPrimary,
+  },
+  labelAwaiting: {
+    color: overviewColors.textSecondary,
   },
   badge: {
     paddingHorizontal: 7,

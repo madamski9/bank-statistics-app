@@ -10,6 +10,7 @@ enum IngestionError: LocalizedError {
   case parserRulesUnavailable
   case invalidRecord
   case unreadableStatement
+  case notificationUnavailable
 
   var errorDescription: String? {
     switch self {
@@ -29,6 +30,8 @@ enum IngestionError: LocalizedError {
       return "The transaction needs a positive amount, a direction and a three-letter currency"
     case .unreadableStatement:
       return "The statement PDF could not be opened"
+    case .notificationUnavailable:
+      return "This notification has already been processed or has expired"
     }
   }
 
@@ -50,6 +53,8 @@ enum IngestionError: LocalizedError {
       return "invalidRecord"
     case .unreadableStatement:
       return "unreadableStatement"
+    case .notificationUnavailable:
+      return "notificationUnavailable"
     }
   }
 }

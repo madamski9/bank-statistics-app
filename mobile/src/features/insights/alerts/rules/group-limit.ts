@@ -29,28 +29,32 @@ export function scopeForGroup(group: SpendingGroup): AlertScope {
   return { kind: 'category', id: group.key };
 }
 
+export function isSameScope(left: AlertScope, right: AlertScope): boolean {
+  if (left.kind === 'merchant' && right.kind === 'merchant') {
+    return left.key === right.key;
+  }
+
+  if (left.kind === 'counterparty' && right.kind === 'counterparty') {
+    return left.name === right.name;
+  }
+
+  if (left.kind === 'category' && right.kind === 'category') {
+    return left.id === right.id;
+  }
+
+  return left.kind === right.kind;
+}
+
 export function ruleForScope(rules: AlertRule[], scope: AlertScope): AlertRule | null {
-  return (
-    rules.find((rule) => {
-      if (rule.scope.kind !== scope.kind) {
-        return false;
-      }
+  return rules.find((rule) => isSameScope(rule.scope, scope)) ?? null;
+}
 
-      if (rule.scope.kind === 'merchant' && scope.kind === 'merchant') {
-        return rule.scope.key === scope.key;
-      }
+export function conflictingRule(rules: AlertRule[], scope: AlertScope, ruleId: string | null): AlertRule | null {
+  if (scope.kind === 'all') {
+    return null;
+  }
 
-      if (rule.scope.kind === 'counterparty' && scope.kind === 'counterparty') {
-        return rule.scope.name === scope.name;
-      }
-
-      if (rule.scope.kind === 'category' && scope.kind === 'category') {
-        return rule.scope.id === scope.id;
-      }
-
-      return true;
-    }) ?? null
-  );
+  return rules.find((rule) => rule.id !== ruleId && isSameScope(rule.scope, scope)) ?? null;
 }
 
 export function groupLimit(

@@ -1,5 +1,13 @@
+import { needsIosUpdateForCapture } from '@/features/app-shell/capture-support/device-capture-support';
 import { languageNames, useCopy, useLanguage } from '@/features/app-shell/localization/language';
-import { replayOnboarding, replayShortcutsSetup } from '@/features/onboarding/onboarding-replay';
+import {
+  replayOnboarding,
+  replayShortcutsSetup,
+} from '@/features/onboarding/onboarding-replay';
+import {
+  setPreviewPremiumLoading,
+  usePreviewPremiumLoading,
+} from '@/features/settings/premium/premium-preview';
 
 import { profileCopy } from '../profile-copy';
 import { ProfileActionRow, ProfileSection } from './profile-rows';
@@ -25,6 +33,7 @@ export function AppSection({
 }: AppSectionActions) {
   const copy = useCopy(profileCopy);
   const language = useLanguage();
+  const isPreviewingPremiumLoading = usePreviewPremiumLoading();
 
   return (
     <ProfileSection label={copy.appSection}>
@@ -46,18 +55,22 @@ export function AppSection({
         onPress={onOpenCategories}
         symbol={{ ios: 'tag', android: 'sell', web: 'sell' }}
       />
-      <ProfileActionRow
-        accessibilityHint={copy.captureHealthHint}
-        label={copy.captureHealth}
-        onPress={onOpenCaptureHealth}
-        symbol={{ ios: 'waveform.path.ecg', android: 'monitor_heart', web: 'monitor_heart' }}
-      />
-      <ProfileActionRow
-        accessibilityHint={copy.shortcutsSetupHint}
-        label={copy.shortcutsSetup}
-        onPress={replayShortcutsSetup}
-        symbol={{ ios: 'square.2.layers.3d', android: 'bolt', web: 'bolt' }}
-      />
+      {needsIosUpdateForCapture ? null : (
+        <ProfileActionRow
+          accessibilityHint={copy.captureHealthHint}
+          label={copy.captureHealth}
+          onPress={onOpenCaptureHealth}
+          symbol={{ ios: 'waveform.path.ecg', android: 'monitor_heart', web: 'monitor_heart' }}
+        />
+      )}
+      {needsIosUpdateForCapture ? null : (
+        <ProfileActionRow
+          accessibilityHint={copy.shortcutsSetupHint}
+          label={copy.shortcutsSetup}
+          onPress={replayShortcutsSetup}
+          symbol={{ ios: 'square.2.layers.3d', android: 'bolt', web: 'bolt' }}
+        />
+      )}
       <ProfileActionRow
         accessibilityHint={copy.dataHint}
         label={copy.data}
@@ -84,6 +97,14 @@ export function AppSection({
           label={copy.replayOnboarding}
           onPress={replayOnboarding}
           symbol={{ ios: 'arrow.counterclockwise', android: 'replay', web: 'replay' }}
+        />
+      ) : null}
+      {__DEV__ ? (
+        <ProfileActionRow
+          hasChevron={false}
+          label={copy.previewPremiumLoading(isPreviewingPremiumLoading)}
+          onPress={() => setPreviewPremiumLoading(!isPreviewingPremiumLoading)}
+          symbol={{ ios: 'rectangle.dashed', android: 'hourglass_empty', web: 'hourglass_empty' }}
         />
       ) : null}
     </ProfileSection>

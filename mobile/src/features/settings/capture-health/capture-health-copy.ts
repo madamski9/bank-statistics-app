@@ -14,6 +14,7 @@ export const captureHealthCopy = defineCopy({
     reasons: {
       neverRan: 'Nie ma jeszcze potwierdzenia działania dla tego banku. Sprawdź jego skrót.',
       recentFailure: 'Ostatnie uruchomienie automatyzacji zakończyło się błędem.',
+      pendingNotification: 'Powiadomienie jest bezpiecznie zapisane na telefonie i czeka na rozpoznanie.',
       staleEvidence: 'Od miesiąca nie ma nowego potwierdzenia działania. Brak wydatków sam w sobie nie oznacza błędu.',
     },
     lastCapture: (when: string) => `Ostatnia transakcja: ${when}`,
@@ -24,9 +25,12 @@ export const captureHealthCopy = defineCopy({
     outcomes: {
       success: 'Zapisano transakcję',
       ignored: 'Pominięto powiadomienie',
+      pending: 'Zapisano powiadomienie do rozpoznania',
       failure: 'Błąd',
     },
     lastFailure: 'Ostatni błąd',
+    pendingNotifications: 'Powiadomienia do rozpoznania',
+    pendingRetention: 'Zapisane tylko na tym telefonie, maksymalnie przez 30 dni. Sprawdzimy je ponownie po aktualizacji rozpoznawania.',
     failureReasons: {
       missingAppGroupConfiguration: 'Brak konfiguracji wspólnej pamięci aplikacji',
       unavailableAppGroupContainer: 'Wspólna pamięć aplikacji jest niedostępna',
@@ -46,7 +50,7 @@ export const captureHealthCopy = defineCopy({
     selfTestPassed: 'Działa: reguły są wczytane, a zaszyfrowana baza przyjmuje zapis.',
     selfTestFailed: (reason: string) => `Nie działa: ${reason}`,
     footnote:
-      'Stan opieramy na dowodach z tego telefonu: przechwyconych transakcjach i ostatnich uruchomieniach automatyzacji. Brak wydatków nie jest błędem.',
+      'Stan opieramy na dowodach z tego telefonu: przechwyconych transakcjach i ostatnich uruchomieniach automatyzacji. Brak wydatków nie jest błędem. Tryb Nie przeszkadzać lub inny tryb skupienia może zakłócić przechwytywanie. Jeśli po prawdziwym powiadomieniu brakuje zapisu, wyłącz tryb skupienia i sprawdź kolejne. Pominięte transakcje dodaj ręcznie.',
     iosOnly: 'Przechwytywanie powiadomień działa na razie tylko na iOS.',
   },
   en: {
@@ -62,6 +66,7 @@ export const captureHealthCopy = defineCopy({
     reasons: {
       neverRan: 'There is no confirmation for this bank yet. Check its shortcut.',
       recentFailure: 'The last automation run ended with an error.',
+      pendingNotification: 'The notification is safely saved on this phone, awaiting recognition.',
       staleEvidence: 'There has been no new confirmation for a month. No spending alone does not mean a failure.',
     },
     lastCapture: (when: string) => `Last transaction: ${when}`,
@@ -72,9 +77,12 @@ export const captureHealthCopy = defineCopy({
     outcomes: {
       success: 'Saved a transaction',
       ignored: 'Skipped a notification',
+      pending: 'Saved a notification awaiting recognition',
       failure: 'Error',
     },
     lastFailure: 'Last error',
+    pendingNotifications: 'Notifications awaiting recognition',
+    pendingRetention: 'Saved only on this phone for up to 30 days. We will check them again after recognition is updated.',
     failureReasons: {
       missingAppGroupConfiguration: 'The shared app storage is not configured',
       unavailableAppGroupContainer: 'The shared app storage is unavailable',
@@ -94,7 +102,7 @@ export const captureHealthCopy = defineCopy({
     selfTestPassed: 'Working: the rules are loaded and the encrypted database accepts writes.',
     selfTestFailed: (reason: string) => `Not working: ${reason}`,
     footnote:
-      'The status relies on evidence from this phone: captured transactions and recent automation runs. No spending is not an error.',
+      'The status relies on evidence from this phone: captured transactions and recent automation runs. No spending is not an error. Do Not Disturb or another Focus may interfere with capture. If saving is missing after a real notification, turn off Focus and check the next one. Add missed transactions manually.',
     iosOnly: 'Notification capture currently works on iOS only.',
   },
 });

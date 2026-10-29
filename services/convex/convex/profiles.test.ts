@@ -22,6 +22,7 @@ describe('profiles', () => {
       isPremium: false,
       premiumSince: null,
       premiumUntil: null,
+      subscription: null,
     });
   });
 
@@ -49,6 +50,7 @@ describe('profiles', () => {
       isPremium: false,
       premiumSince: null,
       premiumUntil: null,
+      subscription: null,
     });
   });
 

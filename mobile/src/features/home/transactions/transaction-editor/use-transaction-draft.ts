@@ -17,12 +17,13 @@ import {
 interface TransactionDraftOptions {
   record: IngestionRecord | null;
   accounts: FinancialAccount[];
+  initialDraft?: TransactionDraft;
   onSubmit: (record: IngestionRecord, options: { rememberCategory: boolean }) => void;
 }
 
-export function useTransactionDraft({ record, accounts, onSubmit }: TransactionDraftOptions) {
+export function useTransactionDraft({ record, accounts, onSubmit, initialDraft }: TransactionDraftOptions) {
   const [draft, setDraft] = useState<TransactionDraft>(() =>
-    record === null ? emptyDraft(new Date()) : draftFromRecord(record),
+    initialDraft ?? (record === null ? emptyDraft(new Date()) : draftFromRecord(record)),
   );
   const [validationError, setValidationError] = useState<string | null>(null);
   const [rememberCategory, setRememberCategory] = useState(false);

@@ -1,6 +1,7 @@
 import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { SkeletonBar, SkeletonPulse } from '@/features/app-shell/loading/skeleton-pulse';
 import type { PlatformSymbol } from '@/features/app-shell/symbols/platform-symbol';
 import { reportingCurrency } from '@/features/data/currency-conversion/exchange-rate';
 import type { MonthForecast } from '@/features/insights/forecast/month-forecast';
@@ -19,6 +20,7 @@ export interface OverviewShortcutsProps {
   recurringCount: number;
   reportMonth: number;
   isReportLocked: boolean;
+  isPremiumLoading: boolean;
   onOpenForecast: () => void;
   onOpenReport: () => void;
   onOpenRecurring: () => void;
@@ -70,12 +72,27 @@ function ShortcutTile({ symbol, title, value, tint, locked, accessibilityLabel, 
   );
 }
 
+function ShortcutTileSkeleton() {
+  return (
+    <SkeletonPulse style={styles.tile}>
+      <View style={styles.tileHeading}>
+        <SkeletonBar height={15} radius={5} width={15} />
+      </View>
+      <SkeletonBar height={10} width="55%" />
+      <View style={styles.skeletonValue}>
+        <SkeletonBar height={14} width="75%" />
+      </View>
+    </SkeletonPulse>
+  );
+}
+
 export function OverviewShortcuts({
   forecast,
   recurringMonthlyMinor,
   recurringCount,
   reportMonth,
   isReportLocked,
+  isPremiumLoading,
   onOpenForecast,
   onOpenReport,
   onOpenRecurring,
@@ -90,6 +107,17 @@ export function OverviewShortcuts({
     recurringCount === 0
       ? copy.recurringNone
       : copy.recurringValue(recurringAmount);
+
+  if (isPremiumLoading) {
+    return (
+      <View style={styles.row}>
+        <ShortcutTileSkeleton />
+        <ShortcutTileSkeleton />
+        <ShortcutTileSkeleton />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.row}>
       <ShortcutTile
@@ -146,6 +174,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     height: 18,
+  },
+  skeletonValue: {
+    marginTop: 6,
   },
   tileTitle: {
     fontSize: 12,

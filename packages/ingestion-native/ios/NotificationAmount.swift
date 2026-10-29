@@ -18,6 +18,8 @@ enum NotificationAmount {
       return nil
     }
 
-    return whole * 100 + minor
+    let (scaled, scalingOverflow) = whole.multipliedReportingOverflow(by: 100)
+    let (amount, additionOverflow) = scaled.addingReportingOverflow(minor)
+    return scalingOverflow || additionOverflow ? nil : amount
   }
 }

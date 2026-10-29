@@ -17,6 +17,8 @@ export interface TransactionBadge {
 
 const blockingReviewReasons: IngestionReviewReason[] = ['amount', 'currency', 'direction'];
 
+const walletPairingWindowMs = 10 * 60 * 1000;
+
 export function isReviewItem(record: IngestionRecord): boolean {
   return record.review !== undefined;
 }
@@ -74,18 +76,45 @@ export function transactionKindLabel(record: IngestionRecord): string {
 }
 
 export function transactionContext(record: IngestionRecord): string {
-  const bank = currentCopy(transactionsCopy).banks[record.bank];
+  const bank = record.bank === 'unknown'
+    ? record.bankName ?? [currentCopy(transactionsCopy).banks.unknown, record.notificationTitle?.trim()].filter(Boolean).join(' · ')
+    : currentCopy(transactionsCopy).banks[record.bank];
 
   return record.accountName === undefined ? bank : `${bank} · ${record.accountName}`;
 }
 
-export function transactionBadge(record: IngestionRecord): TransactionBadge | null {
+export function walletMerchantDeadline(record: IngestionRecord): number | null {
+  if (
+    record.origin === 'manual' ||
+    record.bank !== 'millennium' ||
+    record.transactionType !== 'cardPayment' ||
+    record.merchant !== undefined
+  ) {
+    return null;
+  }
+
+  const capturedAt = Date.parse(record.capturedAt);
+
+  return Number.isNaN(capturedAt) ? null : capturedAt + walletPairingWindowMs;
+}
+
+export function awaitsWalletMerchant(record: IngestionRecord, now: number): boolean {
+  const deadline = walletMerchantDeadline(record);
+
+  return deadline !== null && now < deadline;
+}
+
+export function transactionBadge(record: IngestionRecord, now: number): TransactionBadge | null {
   if (isReviewItem(record)) {
     return { label: currentCopy(transactionsCopy).toReview, tone: 'caution' };
   }
 
   if (record.status === 'reversed') {
     return { label: currentCopy(transactionsCopy).reversed, tone: 'neutral' };
+  }
+
+  if (awaitsWalletMerchant(record, now)) {
+    return { label: currentCopy(transactionsCopy).awaitingWallet, tone: 'neutral' };
   }
 
   return null;

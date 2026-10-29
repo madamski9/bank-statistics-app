@@ -10,9 +10,10 @@ import { PinDots, PinPad } from './pin-pad';
 
 interface PinSetupProps {
   onComplete: (pin: string) => Promise<void>;
+  isCompact?: boolean;
 }
 
-export function PinSetup({ onComplete }: PinSetupProps) {
+export function PinSetup({ onComplete, isCompact = false }: PinSetupProps) {
   const copy = useCopy(privacyCopy);
   const [firstPin, setFirstPin] = useState<string | null>(null);
   const [pin, setPin] = useState('');
@@ -61,7 +62,7 @@ export function PinSetup({ onComplete }: PinSetupProps) {
   );
 
   return (
-    <View style={styles.setup}>
+    <View style={[styles.setup, isCompact ? styles.compactSetup : null]}>
       <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={1.4} style={styles.prompt}>
         {firstPin === null ? copy.newPin : copy.repeatPin}
       </Text>
@@ -69,7 +70,12 @@ export function PinSetup({ onComplete }: PinSetupProps) {
       <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={1.5} style={styles.message}>
         {message ?? ' '}
       </Text>
-      <PinPad isDisabled={isSaving} onChange={(next) => void handleChange(next)} value={pin} />
+      <PinPad
+        isCompact={isCompact}
+        isDisabled={isSaving}
+        onChange={(next) => void handleChange(next)}
+        value={pin}
+      />
     </View>
   );
 }
@@ -77,6 +83,9 @@ export function PinSetup({ onComplete }: PinSetupProps) {
 const styles = StyleSheet.create({
   setup: {
     gap: 18,
+  },
+  compactSetup: {
+    gap: 12,
   },
   prompt: {
     fontSize: 17,

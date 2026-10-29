@@ -35,6 +35,10 @@ async function deleteOwnedRows(ctx: MutationCtx, ownerId: string): Promise<boole
       .withIndex('by_owner_revoked', (index) => index.eq('ownerId', ownerId))
       .take(deletionBatchSize),
     ctx.db
+      .query('diagnosticSamples')
+      .withIndex('by_owner_submitted', (index) => index.eq('ownerId', ownerId))
+      .take(deletionBatchSize),
+    ctx.db
       .query('profiles')
       .withIndex('by_owner', (index) => index.eq('ownerId', ownerId))
       .take(deletionBatchSize),

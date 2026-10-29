@@ -5,7 +5,8 @@ import type { CategorizationRule } from '@/features/data/classification/categori
 
 import type { AlertRule } from './rules/alert-rule';
 import { activeRules, removeRule, upsertAlertRule } from './rules/alert-rules';
-import { runAlerts, type AlertNotifier } from './delivery/alert-runner';
+import { runAlerts, type AlertNotifier, type AlertPause } from './delivery/alert-runner';
+import { encryptedAlertPauseStorage, type AlertPauseStorage } from './delivery/alert-pause-storage';
 import {
   readAlertRules,
   readSentAlerts,
@@ -26,34 +27,44 @@ export interface AlertsState {
 interface AlertsOptions {
   records: IngestionRecord[];
   categorizationRules: CategorizationRule[];
+  isReady?: boolean;
   isPremium?: boolean;
   hasAggressiveTone?: boolean;
   storage?: AlertStorage;
   notifier?: AlertNotifier;
+  pauseStorage?: AlertPauseStorage;
 }
 
 export function useAlerts({
   records,
   categorizationRules,
+  isReady = true,
   isPremium = false,
   hasAggressiveTone = false,
   storage = secureAlertStorage,
   notifier = expoAlertNotifier,
+  pauseStorage = encryptedAlertPauseStorage,
 }: AlertsOptions): AlertsState {
   const [rules, setRules] = useState<AlertRule[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [runCount, setRunCount] = useState(0);
   const sent = useRef<string[]>([]);
+  const missedCaptures = useRef<AlertPause | null>(null);
   const isRunning = useRef(false);
   const missedRun = useRef(false);
 
   useEffect(() => {
     let isActive = true;
+    const resumedAtMs = Date.now();
 
-    void Promise.all([readAlertRules(storage), readSentAlerts(storage)]).then(
-      ([storedRules, storedSent]) => {
+    void Promise.all([readAlertRules(storage), readSentAlerts(storage), pauseStorage.readPausedSince()]).then(
+      ([storedRules, storedSent, pausedSinceMs]) => {
         if (isActive) {
           sent.current = storedSent;
+          missedCaptures.current =
+            pausedSinceMs === null ? null : { sinceMs: pausedSinceMs, untilMs: resumedAtMs };
           setRules(storedRules);
+          setIsLoaded(true);
         }
       },
     );
@@ -61,10 +72,19 @@ export function useAlerts({
     return () => {
       isActive = false;
     };
-  }, [storage]);
+  }, [pauseStorage, storage]);
 
   useEffect(() => {
+    if (!isLoaded || !isReady) {
+      return;
+    }
+
     if (activeRules(rules).length === 0 || records.length === 0) {
+      if (missedCaptures.current !== null) {
+        missedCaptures.current = null;
+        void pauseStorage.clearPaused();
+      }
+
       return;
     }
 
@@ -75,6 +95,7 @@ export function useAlerts({
     }
 
     isRunning.current = true;
+    const catchUp = missedCaptures.current;
 
     void runAlerts(rules, records, {
       reference: new Date(),
@@ -82,8 +103,14 @@ export function useAlerts({
       sent: sent.current,
       notifier,
       hasAggressiveTone,
+      missedCaptures: catchUp ?? undefined,
     })
       .then(async (nextSent) => {
+        if (catchUp !== null) {
+          missedCaptures.current = null;
+          await pauseStorage.clearPaused();
+        }
+
         if (nextSent === sent.current) {
           return;
         }
@@ -99,7 +126,18 @@ export function useAlerts({
           setRunCount((current) => current + 1);
         }
       });
-  }, [categorizationRules, hasAggressiveTone, notifier, records, rules, runCount, storage]);
+  }, [
+    categorizationRules,
+    hasAggressiveTone,
+    isLoaded,
+    isReady,
+    notifier,
+    pauseStorage,
+    records,
+    rules,
+    runCount,
+    storage,
+  ]);
 
   const save = useCallback(
     async (rule: AlertRule) => {

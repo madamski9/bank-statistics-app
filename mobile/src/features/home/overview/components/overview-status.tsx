@@ -1,5 +1,6 @@
 import { Platform, StyleSheet, Text } from 'react-native';
 
+import { needsIosUpdateForCapture } from '@/features/app-shell/capture-support/device-capture-support';
 import { useCopy } from '@/features/app-shell/localization/language';
 import { overviewColors, overviewSpacing } from '@/features/app-shell/theme/overview-theme';
 
@@ -25,7 +26,7 @@ export function OverviewStatus({ error, isLoading, hasData }: OverviewStatusProp
   if (!hasData && !isLoading) {
     return (
       <Text maxFontSizeMultiplier={1.6} style={styles.hint}>
-        {Platform.OS === 'android' ? copy.noTransactionsAndroid : copy.noTransactions}
+        {Platform.OS !== 'ios' || needsIosUpdateForCapture ? copy.noTransactionsWithoutCapture : copy.noTransactions}
       </Text>
     );
   }

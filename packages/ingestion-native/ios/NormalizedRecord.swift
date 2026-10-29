@@ -13,7 +13,7 @@ enum ReviewReason {
 }
 
 struct NormalizedRecord: Codable, Equatable, Sendable {
-  let id: String
+  var id: String
   let bank: String
   let direction: String
   let transactionType: String?
@@ -34,6 +34,8 @@ struct NormalizedRecord: Codable, Equatable, Sendable {
   var exchangeRate: String? = nil
   var exchangeRateDate: String? = nil
   var exchangeRateTable: String? = nil
+  var notificationTitle: String? = nil
+  var bankName: String? = nil
 
   var dictionary: [String: Any] {
     var value: [String: Any] = [
@@ -60,6 +62,8 @@ struct NormalizedRecord: Codable, Equatable, Sendable {
     value["exchangeRate"] = exchangeRate
     value["exchangeRateDate"] = exchangeRateDate
     value["exchangeRateTable"] = exchangeRateTable
+    value["notificationTitle"] = notificationTitle
+    value["bankName"] = bankName
 
     return value
   }

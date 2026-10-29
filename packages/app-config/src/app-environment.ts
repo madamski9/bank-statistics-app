@@ -1,13 +1,20 @@
 const deliveryLanes = ['development', 'preview', 'production'] as const;
 
 const clerkProductionKeyPrefix = 'pk_live_';
+const revenueCatTestStoreKeyPrefix = 'test_';
 
 export type DeliveryLane = (typeof deliveryLanes)[number];
+
+export interface RevenueCatApiKeys {
+  ios: string | null;
+  android: string | null;
+}
 
 export interface AppEnvironment {
   lane: DeliveryLane;
   clerkPublishableKey: string;
   convexUrl: string;
+  revenueCatApiKeys: RevenueCatApiKeys;
 }
 
 function requireVariable(
@@ -22,6 +29,25 @@ function requireVariable(
   }
 
   return value;
+}
+
+function optionalVariable(env: Record<string, string | undefined>, name: string): string | null {
+  const value = env[name];
+
+  return value === undefined || value === '' ? null : value;
+}
+
+function resolveRevenueCatApiKeys(env: Record<string, string | undefined>, lane: DeliveryLane): RevenueCatApiKeys {
+  const keys = {
+    ios: optionalVariable(env, 'EXPO_PUBLIC_REVENUECAT_IOS_API_KEY'),
+    android: optionalVariable(env, 'EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY'),
+  };
+
+  if (lane === 'production' && Object.values(keys).some((key) => key?.startsWith(revenueCatTestStoreKeyPrefix))) {
+    throw new Error('production lane must not use the RevenueCat Test Store');
+  }
+
+  return keys;
 }
 
 function isDeliveryLane(value: string | undefined): value is DeliveryLane {
@@ -49,5 +75,7 @@ export function resolveAppEnvironment(env: Record<string, string | undefined>): 
 
   const convexUrl = requireVariable(env, 'EXPO_PUBLIC_CONVEX_URL', lane);
 
-  return { lane, clerkPublishableKey, convexUrl };
+  const revenueCatApiKeys = resolveRevenueCatApiKeys(env, lane);
+
+  return { lane, clerkPublishableKey, convexUrl, revenueCatApiKeys };
 }

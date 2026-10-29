@@ -12,6 +12,7 @@ interface PinPadProps {
   value: string;
   onChange: (value: string) => void;
   isDisabled?: boolean;
+  isCompact?: boolean;
   biometric?: { label: string; symbol: 'faceid' | 'touchid'; onPress: () => void };
 }
 
@@ -43,7 +44,7 @@ export function PinDots({ filled, hasError = false }: { filled: number; hasError
   );
 }
 
-export function PinPad({ value, onChange, isDisabled = false, biometric }: PinPadProps) {
+export function PinPad({ value, onChange, isDisabled = false, isCompact = false, biometric }: PinPadProps) {
   const copy = useCopy(privacyCopy);
   const press = (digit: string) => {
     if (isDisabled || value.length >= pinLength) {
@@ -63,22 +64,33 @@ export function PinPad({ value, onChange, isDisabled = false, biometric }: PinPa
   };
 
   return (
-    <View style={styles.pad}>
+    <View style={[styles.pad, isCompact ? styles.compactPad : null]}>
       {digitRows.map((row) => (
-        <View key={row.join('')} style={styles.row}>
+        <View key={row.join('')} style={[styles.row, isCompact ? styles.compactRow : null]}>
           {row.map((digit) => (
-            <Key disabled={isDisabled} key={digit} label={digit} onPress={() => press(digit)} />
+            <Key
+              disabled={isDisabled}
+              isCompact={isCompact}
+              key={digit}
+              label={digit}
+              onPress={() => press(digit)}
+            />
           ))}
         </View>
       ))}
-      <View style={styles.row}>
+      <View style={[styles.row, isCompact ? styles.compactRow : null]}>
         {biometric !== undefined ? (
           <Pressable
             accessibilityLabel={copy.useBiometric(biometric.label)}
             accessibilityRole="button"
             disabled={isDisabled}
             onPress={biometric.onPress}
-            style={({ pressed }) => [styles.key, styles.plainKey, pressed ? styles.pressed : null]}
+            style={({ pressed }) => [
+              styles.key,
+              isCompact ? styles.compactKey : null,
+              styles.plainKey,
+              pressed ? styles.pressed : null,
+            ]}
           >
             <SymbolView
               name={{ ios: biometric.symbol, android: 'fingerprint', web: 'fingerprint' }}
@@ -87,15 +99,20 @@ export function PinPad({ value, onChange, isDisabled = false, biometric }: PinPa
             />
           </Pressable>
         ) : (
-          <View style={[styles.key, styles.plainKey]} />
+          <View style={[styles.key, isCompact ? styles.compactKey : null, styles.plainKey]} />
         )}
-        <Key disabled={isDisabled} label="0" onPress={() => press('0')} />
+        <Key disabled={isDisabled} isCompact={isCompact} label="0" onPress={() => press('0')} />
         <Pressable
           accessibilityLabel={copy.deleteDigit}
           accessibilityRole="button"
           disabled={isDisabled || value.length === 0}
           onPress={erase}
-          style={({ pressed }) => [styles.key, styles.plainKey, pressed ? styles.pressed : null]}
+          style={({ pressed }) => [
+            styles.key,
+            isCompact ? styles.compactKey : null,
+            styles.plainKey,
+            pressed ? styles.pressed : null,
+          ]}
         >
           <SymbolView
             name={{ ios: 'delete.left', android: 'backspace', web: 'backspace' }}
@@ -108,7 +125,14 @@ export function PinPad({ value, onChange, isDisabled = false, biometric }: PinPa
   );
 }
 
-function Key({ label, onPress, disabled }: { label: string; onPress: () => void; disabled: boolean }) {
+interface KeyProps {
+  label: string;
+  onPress: () => void;
+  disabled: boolean;
+  isCompact: boolean;
+}
+
+function Key({ label, onPress, disabled, isCompact }: KeyProps) {
   return (
     <Pressable
       accessibilityLabel={label}
@@ -117,11 +141,12 @@ function Key({ label, onPress, disabled }: { label: string; onPress: () => void;
       onPress={onPress}
       style={({ pressed }) => [
         styles.key,
+        isCompact ? styles.compactKey : null,
         disabled ? styles.disabled : null,
         pressed ? styles.pressed : null,
       ]}
     >
-      <Text maxFontSizeMultiplier={1.3} style={styles.keyLabel}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.keyLabel, isCompact ? styles.compactKeyLabel : null]}>
         {label}
       </Text>
     </Pressable>
@@ -153,9 +178,15 @@ const styles = StyleSheet.create({
     gap: 14,
     alignSelf: 'center',
   },
+  compactPad: {
+    gap: 10,
+  },
   row: {
     flexDirection: 'row',
     gap: 22,
+  },
+  compactRow: {
+    gap: 20,
   },
   key: {
     width: 76,
@@ -165,6 +196,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: overviewColors.surfacePressed,
   },
+  compactKey: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+  },
   plainKey: {
     backgroundColor: 'transparent',
   },
@@ -172,6 +208,9 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontWeight: '500',
     color: overviewColors.textPrimary,
+  },
+  compactKeyLabel: {
+    fontSize: 26,
   },
   disabled: {
     opacity: 0.4,

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import * as Linking from 'expo-linking';
 import { Platform, StyleSheet, Text, View } from 'react-native';
@@ -14,9 +15,14 @@ import { formatDayHeading, formatTime } from '@/features/app-shell/formatting/fo
 import type { CaptureState } from './capture-health';
 import { captureHealthCopy } from './capture-health-copy';
 import { useCaptureHealth } from './use-capture-health';
+import {
+  NotificationInboxScreen,
+  type NotificationInboxScreenProps,
+} from './notification-inbox/notification-inbox-screen';
 
-interface CaptureHealthScreenProps {
+interface CaptureHealthScreenProps extends Omit<NotificationInboxScreenProps, 'onBack'> {
   records: IngestionRecord[];
+  inboxRequest?: number | null;
   onClose: () => void;
 }
 
@@ -33,15 +39,45 @@ function moment(value: string, now: Date): string {
   return `${formatDayHeading(date, now)}, ${formatTime(date)}`;
 }
 
-export function CaptureHealthScreen({ records, onClose }: CaptureHealthScreenProps) {
+export function CaptureHealthScreen({
+  records,
+  onClose,
+  accounts,
+  onCreateAccount,
+  onRecordsChanged,
+  inboxRequest = null,
+}: CaptureHealthScreenProps) {
   const copy = useCopy(captureHealthCopy);
-  const { health, selfTest, runSelfTest } = useCaptureHealth(records);
+  const [inboxOpen, setInboxOpen] = useState(inboxRequest !== null);
+  const [handledInboxRequest, setHandledInboxRequest] = useState(inboxRequest);
+  if (inboxRequest !== handledInboxRequest) {
+    setHandledInboxRequest(inboxRequest);
+    if (inboxRequest !== null) {
+      setInboxOpen(true);
+    }
+  }
+  const { health, selfTest, runSelfTest, refresh } = useCaptureHealth(records);
   const now = new Date();
   const failureLabel = (code: string | null) =>
     code === null
       ? copy.failureReasons.unknown
-      : (copy.failureReasons[code as keyof typeof copy.failureReasons] ?? copy.failureReasons.unknown);
+      : (copy.failureReasons[code as keyof typeof copy.failureReasons] ??
+        copy.failureReasons.unknown);
   const { automation } = health;
+
+  if (inboxOpen) {
+    return (
+      <NotificationInboxScreen
+        accounts={accounts}
+        onCreateAccount={onCreateAccount}
+        onRecordsChanged={onRecordsChanged}
+        onBack={() => {
+          setInboxOpen(false);
+          void refresh();
+        }}
+      />
+    );
+  }
 
   if (Platform.OS !== 'ios') {
     return (
@@ -66,7 +102,9 @@ export function CaptureHealthScreen({ records, onClose }: CaptureHealthScreenPro
           >
             <SheetRow
               detail={
-                bank.lastCaptureAt === null ? copy.noCapture : copy.lastCapture(moment(bank.lastCaptureAt, now))
+                bank.lastCaptureAt === null
+                  ? copy.noCapture
+                  : copy.lastCapture(moment(bank.lastCaptureAt, now))
               }
               isFirst
               label={copy.banks[bank.bank]}
@@ -100,6 +138,13 @@ export function CaptureHealthScreen({ records, onClose }: CaptureHealthScreenPro
           label={copy.lastRun}
           value={automation.lastRunAt === null ? copy.never : moment(automation.lastRunAt, now)}
           valueTone="muted"
+        />
+        <SheetRow
+          detail={copy.pendingRetention}
+          label={copy.pendingNotifications}
+          onPress={() => setInboxOpen(true)}
+          value={String(health.pendingNotificationCount)}
+          valueTone="caution"
         />
         {automation.lastFailureAt !== null ? (
           <SheetRow

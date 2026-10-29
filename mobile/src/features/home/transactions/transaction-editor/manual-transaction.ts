@@ -25,6 +25,7 @@ export interface TransactionDraft {
   eventId: string;
   date: string;
   time: string;
+  bankName?: string;
 }
 
 const transactionKindsByDirection: Record<TransactionDirection, TransactionKind[]> = {
@@ -97,6 +98,9 @@ export function draftFromRecord(record: IngestionRecord): TransactionDraft {
     eventId: record.eventId ?? '',
     date: formatDraftDate(moment),
     time: formatDraftTime(moment),
+    bankName: record.bank === 'unknown' && record.origin !== 'manual' && record.notificationTitle?.trim()
+      ? (record.bankName ?? record.notificationTitle).trim()
+      : undefined,
   };
 }
 
@@ -141,6 +145,9 @@ export function parseDraftMoment(date: string, time: string): Date | null {
 }
 
 export function draftError(draft: TransactionDraft): string | null {
+  if (draft.bankName !== undefined && (draft.bankName.trim() === '' || [...draft.bankName.trim()].length > 60)) {
+    return currentCopy(transactionsCopy).bankNameFormat;
+  }
   if (parseAmountMinor(draft.amount) === null) {
     return currentCopy(transactionsCopy).enterAmount;
   }
@@ -239,6 +246,7 @@ export function recordFromDraft(
     category: optional(draft.category),
     eventId: draft.eventId === '' ? undefined : draft.eventId,
     ...accountFields(draft, base, accounts),
+    ...(draft.bankName === undefined ? {} : { bankName: draft.bankName.trim() }),
     occurredAt,
   };
 

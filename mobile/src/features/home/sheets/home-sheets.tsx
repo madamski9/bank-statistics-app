@@ -72,6 +72,10 @@ function ActiveSheet({
     return (
       <AlertRuleSheet
         canUseAggressiveTone={alertEditing.canUseAggressiveTone}
+        existingRules={alertEditing.rules}
+        includesCustomCategories={hasPremiumAccess}
+        key={editor.rule?.id ?? 'new'}
+        onOpenRule={alertEditing.editRule}
         isFirstRule={alertEditing.isFirstRule}
         isScopeLocked={editor.isScopeLocked === true}
         merchants={alertEditing.merchants}
@@ -97,7 +101,14 @@ function ActiveSheet({
         />
       );
     case 'premium':
-      return <PremiumScreen onClose={sheets.closePremium} reason={sheets.premiumReason} status={premium} />;
+      return (
+        <PremiumScreen
+          capturedTransactionCount={ledger.records.filter((record) => record.origin !== 'manual').length}
+          onClose={sheets.closePremium}
+          reason={sheets.premiumReason}
+          status={premium}
+        />
+      );
     case 'language':
       return <LanguageScreen onClose={closeSheet} />;
     case 'privacy':
@@ -154,7 +165,16 @@ function ActiveSheet({
         />
       );
     case 'captureHealth':
-      return <CaptureHealthScreen onClose={closeSheet} records={ledger.records} />;
+      return (
+        <CaptureHealthScreen
+          accounts={ledger.financialAccounts.accounts}
+          inboxRequest={sheets.inboxRequest}
+          onClose={closeSheet}
+          onCreateAccount={ledger.financialAccounts.create}
+          onRecordsChanged={ledger.refresh}
+          records={ledger.records}
+        />
+      );
     case 'ignoredPayments':
       return (
         <IgnoredPaymentsScreen

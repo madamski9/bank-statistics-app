@@ -16,11 +16,17 @@ export const onboardingCopy = defineCopy({
     shortcutAdded: 'Skrót dodany — dalej',
     openingShortcut: 'Otwieranie Skrótów…',
     automationEnabled: 'Automatyzacja włączona',
+    showFocusSetup: 'Pokaż, jak to ustawić',
+    focusConfigured: 'Wyjątki dodane',
     openShortcuts: 'Otwórz Skróty',
     goToApp: 'Przejdź do aplikacji',
+    continueWithoutCapture: 'Kontynuuj bez odczytywania',
     next: 'Dalej',
     premiumSoon:
       'Płatności Premium będą dostępne wkrótce. Wybierz plan bezpłatny, aby kontynuować.',
+    startTrial: (days: number) => `Wypróbuj ${days} dni za darmo`,
+    plansFailed: 'Nie udało się wczytać cen. Spróbuj ponownie albo kontynuuj za darmo.',
+    purchaseFailed: 'Nie udało się dokończyć zakupu. Spróbuj ponownie albo kontynuuj za darmo.',
     back: 'Wróć do poprzedniego ekranu',
     done: 'Gotowe',
     skipIntro: 'Pomiń opis',
@@ -28,6 +34,17 @@ export const onboardingCopy = defineCopy({
     saving: 'Zapisywanie…',
     notNow: 'Nie teraz',
     setUpLater: 'Skonfiguruję później',
+    iosUpdate: {
+      eyebrow: 'WYMAGANY IOS 27',
+      title: 'BankStats działa w pełni na iOS 27',
+      description:
+        'Transakcje są odczytywane z powiadomień banku przez automatyzację w Skrótach, która wymaga iOS 27 lub nowszego.',
+      currentVersion: (version: string) => `Masz teraz iOS ${version}`,
+      updateHint: 'Zaktualizuj iPhone’a w Ustawienia → Ogólne → Uaktualnienia, aby korzystać z aplikacji.',
+      withoutCaptureTitle: 'Możesz zacząć już teraz',
+      withoutCaptureText:
+        'Bez aktualizacji transakcje nie będą odczytywane automatycznie, ale możesz dodawać je ręcznie i importować wyciągi.',
+    },
     welcome: {
       eyebrow: 'WITAJ W BANKSTATS',
       title: 'Zobacz, dokąd trafiają Twoje pieniądze',
@@ -67,12 +84,22 @@ export const onboardingCopy = defineCopy({
         'Plan Premium, 9,99 zł miesięcznie lub 99,99 zł rocznie zamiast 119,88 zł, dostępny wkrótce',
       comingSoon: 'WKRÓTCE',
       monthlyPrice: '9,99 zł / mies.',
-      or: 'lub',
       oldYearlyPrice: '119,88 zł',
       yearlyPrice: '99,99 zł / rok',
       unlimitedLimits: 'Nielimitowane aktywne limity',
       moreStatistics: 'Więcej statystyk i dłuższe zakresy czasu',
       note: 'Premium nie można jeszcze kupić. Możesz od razu korzystać z wersji bezpłatnej.',
+      sellingDescription:
+        'Korzystaj bezpłatnie albo wypróbuj Premium. Okres próbny możesz anulować w każdej chwili przed pierwszą płatnością.',
+      premiumYearlyName: 'Premium rocznie',
+      premiumMonthlyName: 'Premium miesięcznie',
+      trialBadge: (days: number) => `${days} DNI ZA DARMO`,
+      monthlyPriceOf: (price: string) => `${price} / mies.`,
+      yearlyPriceOf: (price: string) => `${price} / rok`,
+      afterTrial: (days: number, price: string) => `${days} dni za darmo, potem ${price}`,
+      premiumPlanLabel: (name: string, price: string) => `${name}, ${price}`,
+      storeNote: (store: string) =>
+        `Płatność i odnawianie obsługuje ${store}. Subskrypcję anulujesz w ustawieniach konta ${store}.`,
     },
     shortcuts: {
       eyebrow: 'JAK DZIAŁA PRZECHWYTYWANIE',
@@ -80,7 +107,7 @@ export const onboardingCopy = defineCopy({
       description:
         'Na iPhonie Skróty przekazują powiadomienia o transakcjach do BankStats. To Ty tworzysz i zatwierdzasz automatyzację.',
       warning:
-        'Włącz powiadomienia banku i Portfela Apple. Gdy są wyłączone, aplikacja nie otrzyma tych transakcji automatycznie.',
+        'Włącz powiadomienia banku i Portfela Apple. Wyłączone powiadomienia uniemożliwiają automatyczny zapis transakcji, a tryb Nie przeszkadzać lub inny tryb skupienia może go zakłócić.',
       manualNote: 'Transakcje nadal możesz dodać ręcznie.',
     },
     banks: {
@@ -103,6 +130,26 @@ export const onboardingCopy = defineCopy({
       stepOne: '1. W aplikacji Skróty otwórz Bibliotekę i stuknij Automatyzacja.',
       stepTwo: '2. Włącz przełącznik przy automatyzacji BankStats.',
     },
+    focusIntro: {
+      eyebrow: 'TRYB NIE PRZESZKADZAĆ',
+      title: 'Przepuść powiadomienia banku',
+      description:
+        'Tryb Nie przeszkadzać może zakłócić przechwytywanie transakcji. Dodaj do wyjątków przede wszystkim Portfel, a także aplikacje banków, aby ich powiadomienia nie były wyciszane. Potem sprawdź zapis na swoim telefonie.',
+      note: 'To samo ustaw w innych trybach skupienia, z których korzystasz, na przykład w trybie Sen.',
+    },
+    focusSetup: {
+      eyebrow: 'USTAWIENIA IPHONE’A',
+      title: 'Dodaj banki do wyjątków',
+      description: 'Po dodaniu wyjątków sprawdź, czy transakcje zapisują się także przy włączonym trybie Nie przeszkadzać.',
+      stepOne: '1. Otwórz Ustawienia, stuknij Skupienie, a potem Nie przeszkadzać.',
+      stepTwo: '2. W sekcji Włącz powiadomienia stuknij Aplikacje.',
+      stepThree: '3. Wybierz Pozwalaj na powiadomienia, stuknij Dodaj i zaznacz Portfel oraz aplikacje swoich banków.',
+      walletTitle: 'Najważniejszy jest Portfel',
+      walletDescription:
+        'Płatności kartą zapisujemy z powiadomień Portfela, bo tylko one mają nazwę sklepu. Bez Portfela na liście wyjątków te transakcje nie zapiszą się przy włączonym trybie Nie przeszkadzać.',
+      verification:
+        'Po prawdziwej transakcji sprawdź zapis w profilu, w sekcji Przechwytywanie. Jeśli jej brakuje, wyłącz tryb skupienia i sprawdź kolejne powiadomienie. Pominięte transakcje dodaj ręcznie.',
+    },
     pin: {
       eyebrow: 'ZABEZPIECZENIE',
       title: 'Chroń swoje finanse',
@@ -117,6 +164,9 @@ export const onboardingCopy = defineCopy({
       noteTitle: 'Transakcje ze Skrótów',
       noteText:
         'Będą dodawane automatycznie po zapisaniu i włączeniu automatyzacji w aplikacji Skróty. Możesz też dodawać je ręcznie.',
+      manualNoteTitle: 'Transakcje dodajesz ręcznie',
+      manualNoteText:
+        'Dodawaj transakcje ręcznie albo importuj wyciągi. Po aktualizacji do iOS 27 skonfigurujesz automatyczne odczytywanie w Profilu.',
     },
   },
   en: {
@@ -134,10 +184,16 @@ export const onboardingCopy = defineCopy({
     shortcutAdded: 'Shortcut added — continue',
     openingShortcut: 'Opening Shortcuts…',
     automationEnabled: "I've turned it on",
+    showFocusSetup: 'Show me how',
+    focusConfigured: "I've allowed them",
     openShortcuts: 'Open Shortcuts',
     goToApp: 'Go to the app',
+    continueWithoutCapture: 'Continue without capture',
     next: 'Next',
     premiumSoon: 'Premium payments are coming soon. Choose the free plan to continue.',
+    startTrial: (days: number) => `Try ${days} days free`,
+    plansFailed: 'Could not load prices. Try again or continue for free.',
+    purchaseFailed: 'Could not complete the purchase. Try again or continue for free.',
     back: 'Go back to the previous screen',
     done: 'Done',
     skipIntro: 'Skip intro',
@@ -145,6 +201,17 @@ export const onboardingCopy = defineCopy({
     saving: 'Saving…',
     notNow: 'Not now',
     setUpLater: "I'll set it up later",
+    iosUpdate: {
+      eyebrow: 'IOS 27 REQUIRED',
+      title: 'BankStats works fully on iOS 27',
+      description:
+        'Transactions are read from bank notifications by an automation in Shortcuts, which needs iOS 27 or later.',
+      currentVersion: (version: string) => `You have iOS ${version}`,
+      updateHint: 'Update your iPhone in Settings → General → Software Update to use the app.',
+      withoutCaptureTitle: 'You can start now',
+      withoutCaptureText:
+        "Without the update, transactions won't be captured automatically, but you can add them manually and import statements.",
+    },
     welcome: {
       eyebrow: 'WELCOME TO BANKSTATS',
       title: 'See where your money goes',
@@ -184,12 +251,21 @@ export const onboardingCopy = defineCopy({
         'Premium plan, 9.99 zł a month or 99.99 zł a year instead of 119.88 zł, coming soon',
       comingSoon: 'SOON',
       monthlyPrice: '9.99 zł / month',
-      or: 'or',
       oldYearlyPrice: '119.88 zł',
       yearlyPrice: '99.99 zł / year',
       unlimitedLimits: 'Unlimited active limits',
       moreStatistics: 'More statistics and longer time ranges',
       note: "Premium can't be bought yet. You can start using the free version right away.",
+      sellingDescription: 'Use it for free or try Premium. You can cancel the free trial anytime before the first payment.',
+      premiumYearlyName: 'Premium yearly',
+      premiumMonthlyName: 'Premium monthly',
+      trialBadge: (days: number) => `${days} DAYS FREE`,
+      monthlyPriceOf: (price: string) => `${price} / month`,
+      yearlyPriceOf: (price: string) => `${price} / year`,
+      afterTrial: (days: number, price: string) => `${days} days free, then ${price}`,
+      premiumPlanLabel: (name: string, price: string) => `${name}, ${price}`,
+      storeNote: (store: string) =>
+        `Payment and renewal are handled by ${store}. Cancel anytime in your ${store} account settings.`,
     },
     shortcuts: {
       eyebrow: 'HOW CAPTURE WORKS',
@@ -197,7 +273,7 @@ export const onboardingCopy = defineCopy({
       description:
         'On iPhone, Shortcuts passes transaction notifications to BankStats. You create and approve the automation yourself.',
       warning:
-        "Turn on notifications for your bank and Apple Wallet. When they're off, the app won't receive those transactions automatically.",
+        'Turn on notifications for your bank and Apple Wallet. Disabled notifications prevent automatic capture, and Do Not Disturb or another Focus may interfere with it.',
       manualNote: 'You can still add transactions manually.',
     },
     banks: {
@@ -220,6 +296,26 @@ export const onboardingCopy = defineCopy({
       stepOne: '1. In the Shortcuts app, open Library and tap Automation.',
       stepTwo: '2. Turn on the switch next to the BankStats automation.',
     },
+    focusIntro: {
+      eyebrow: 'DO NOT DISTURB',
+      title: 'Let your bank notifications through',
+      description:
+        'Do Not Disturb may interfere with transaction capture. Allow Wallet above all, along with your bank apps, so their notifications are not silenced. Then check saving on your phone.',
+      note: 'Do the same in any other Focus you use, such as Sleep.',
+    },
+    focusSetup: {
+      eyebrow: 'IPHONE SETTINGS',
+      title: 'Allow your banks',
+      description: 'After allowing the apps, check whether transactions also save while Do Not Disturb is on.',
+      stepOne: '1. Open Settings, tap Focus, then Do Not Disturb.',
+      stepTwo: '2. Under Allow Notifications, tap Apps.',
+      stepThree: '3. Choose Allow Notifications From, tap Add and select Wallet and your bank apps.',
+      walletTitle: 'Wallet matters most',
+      walletDescription:
+        "Card payments are saved from Wallet notifications, because only they include the shop name. If Wallet isn't allowed, those transactions won't save while Do Not Disturb is on.",
+      verification:
+        'After a real transaction, check saving under Capture in your profile. If it is missing, turn off Focus and check the next notification. Add missed transactions manually.',
+    },
     pin: {
       eyebrow: 'SECURITY',
       title: 'Protect your finances',
@@ -234,6 +330,9 @@ export const onboardingCopy = defineCopy({
       noteTitle: 'Transactions from Shortcuts',
       noteText:
         "They'll be added automatically once you save and turn on the automation in the Shortcuts app. You can also add them manually.",
+      manualNoteTitle: 'You add transactions yourself',
+      manualNoteText:
+        'Add transactions manually or import statements. After updating to iOS 27, you can set up automatic capture in Profile.',
     },
   },
 });

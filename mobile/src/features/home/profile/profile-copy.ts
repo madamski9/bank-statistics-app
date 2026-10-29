@@ -26,6 +26,8 @@ export const profileCopy = defineCopy({
     privacyHint: 'Otwiera blokadę aplikacji, tryb prywatny i ustawienia widżetu',
     privacy: 'Prywatność i blokada',
     replayOnboarding: 'Pokaż onboarding (test)',
+    previewPremiumLoading: (isOn: boolean): string =>
+      isOn ? 'Zakończ ładowanie premium (test)' : 'Pokaż ładowanie premium (test)',
     language: 'Język',
     languageHint: 'Zmienia język aplikacji',
     signOut: 'Wyloguj się',
@@ -55,6 +57,8 @@ export const profileCopy = defineCopy({
     privacyHint: 'Opens the app lock, privacy mode and widget settings',
     privacy: 'Privacy and lock',
     replayOnboarding: 'Show onboarding (test)',
+    previewPremiumLoading: (isOn: boolean): string =>
+      isOn ? 'Stop the premium loading preview (test)' : 'Preview premium loading (test)',
     language: 'Language',
     languageHint: 'Changes the app language',
     signOut: 'Sign out',

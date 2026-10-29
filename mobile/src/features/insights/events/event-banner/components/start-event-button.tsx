@@ -1,6 +1,7 @@
 import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { SkeletonBar, SkeletonPulse } from '@/features/app-shell/loading/skeleton-pulse';
 import { useCopy } from '@/features/app-shell/localization/language';
 import { overviewColors } from '@/features/app-shell/theme/overview-theme';
 import { impactLight } from '@/haptics';
@@ -12,6 +13,17 @@ interface StartEventButtonProps {
   canStartEvent: boolean;
   onStart: () => void;
   onRequirePremium: () => void;
+}
+
+export function StartEventButtonSkeleton() {
+  return (
+    <View style={bannerStyles.row}>
+      <SkeletonPulse style={[bannerStyles.banner, styles.startBanner]}>
+        <SkeletonBar height={13} radius={4} width={13} />
+        <SkeletonBar height={11} width="45%" />
+      </SkeletonPulse>
+    </View>
+  );
 }
 
 export function StartEventButton({ canStartEvent, onStart, onRequirePremium }: StartEventButtonProps) {

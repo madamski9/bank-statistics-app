@@ -61,6 +61,9 @@ const matchingShare = 0.75;
 const graceDays = 5;
 const analysedCharges = 12;
 const subscriptionCategory = 'services';
+const everydayShoppingCategories = new Set(['groceries', 'eatingOut']);
+const interleavedShare = 0.5;
+const minimumInterleavedIntervals = 2;
 
 const cadences: Record<Cadence, CadenceRule> = {
   weekly: { minimumDays: 5, maximumDays: 9, months: 0, days: 7, minimumCharges: 4 },
@@ -106,6 +109,18 @@ function partyOf(record: IngestionRecord, rules: CategorizationRule[]) {
   }
 
   return null;
+}
+
+function chargePairs(charges: IngestionRecord[]): [IngestionRecord, IngestionRecord][] {
+  return charges.slice(1).flatMap((current, index): [IngestionRecord, IngestionRecord][] => {
+    const previous = charges[index];
+
+    return previous === undefined ? [] : [[previous, current]];
+  });
+}
+
+function intervalDays(charges: IngestionRecord[]): number[] {
+  return chargePairs(charges).map(([previous, current]) => (occurredMs(current) - occurredMs(previous)) / dayMs);
 }
 
 function cadenceFor(intervals: number[]): Cadence | null {
@@ -222,6 +237,44 @@ interface PartyGroup {
   records: IngestionRecord[];
 }
 
+function priceChanges(amounts: number[]): number {
+  return amounts.filter((amount, index) => index > 0 && amount !== amounts[index - 1]).length;
+}
+
+function interleavedIntervals(charges: IngestionRecord[], otherVisitsMs: number[]): number {
+  let visitIndex = 0;
+  let interleaved = 0;
+
+  for (const [previous, current] of chargePairs(charges)) {
+    while (visitIndex < otherVisitsMs.length && (otherVisitsMs[visitIndex] ?? 0) <= occurredMs(previous)) {
+      visitIndex += 1;
+    }
+
+    if (visitIndex < otherVisitsMs.length && (otherVisitsMs[visitIndex] ?? 0) < occurredMs(current)) {
+      interleaved += 1;
+    }
+  }
+
+  return interleaved;
+}
+
+function looksLikeShopping(group: PartyGroup, charges: IngestionRecord[], otherVisitsMs: number[]): boolean {
+  if (group.category === subscriptionCategory) {
+    return false;
+  }
+
+  if (
+    everydayShoppingCategories.has(group.category ?? '') &&
+    priceChanges(charges.map((charge) => charge.amountMinor)) > 1
+  ) {
+    return true;
+  }
+
+  const interleaved = interleavedIntervals(charges, otherVisitsMs);
+
+  return interleaved >= minimumInterleavedIntervals && interleaved / (charges.length - 1) >= interleavedShare;
+}
+
 function groupExpensesByParty(
   records: IngestionRecord[],
   rules: CategorizationRule[],
@@ -300,37 +353,45 @@ function trackedPayment(
   };
 }
 
-function detectedPayment(
-  key: string,
-  group: PartyGroup,
-  records: IngestionRecord[],
-  now: Date,
-): RecurringPayment | null {
-  const charges = records.slice(-analysedCharges);
-
+function regularCadence(group: PartyGroup, charges: IngestionRecord[]): Cadence | null {
   if (charges.length < 2) {
     return null;
   }
 
-  const intervals = charges
-    .slice(1)
-    .map((charge, index) => (occurredMs(charge) - occurredMs(charges[index] ?? charge)) / dayMs);
-  const cadence = cadenceFor(intervals);
+  const cadence = cadenceFor(intervalDays(charges));
 
   if (cadence === null) {
     return null;
   }
 
-  const rule = cadences[cadence];
   const isKnownSubscription = group.category === subscriptionCategory && cadence === 'monthly';
 
-  if (charges.length < rule.minimumCharges && !isKnownSubscription) {
+  return charges.length < cadences[cadence].minimumCharges && !isKnownSubscription ? null : cadence;
+}
+
+function detectedPayment(
+  key: string,
+  group: PartyGroup,
+  records: IngestionRecord[],
+  otherVisitsMs: number[],
+  now: Date,
+): RecurringPayment | null {
+  const charges = records.slice(-analysedCharges);
+  const cadence = regularCadence(group, charges);
+
+  if (cadence === null) {
     return null;
   }
 
   if (!hasSteadyAmount(charges.map((charge) => charge.amountMinor))) {
     return null;
   }
+
+  if (looksLikeShopping(group, charges, otherVisitsMs)) {
+    return null;
+  }
+
+  const rule = cadences[cadence];
 
   const last = charges[charges.length - 1];
   const previous = charges[charges.length - 2];
@@ -385,6 +446,12 @@ export function detectRecurringPayments(
     }
 
     const clusters = amountClusters(remaining);
+    const regularIds = new Set(
+      clusters
+        .filter((cluster) => regularCadence(group, cluster.slice(-analysedCharges)) !== null)
+        .flatMap((cluster) => cluster.map((record) => record.id)),
+    );
+    const otherVisitsMs = remaining.filter((record) => !regularIds.has(record.id)).map(occurredMs);
 
     for (const cluster of clusters) {
       const key = clusterKey(partyKey, cluster);
@@ -393,7 +460,7 @@ export function detectRecurringPayments(
         continue;
       }
 
-      const payment = detectedPayment(key, group, cluster, now);
+      const payment = detectedPayment(key, group, cluster, otherVisitsMs, now);
 
       if (payment !== null) {
         payments.push(payment);

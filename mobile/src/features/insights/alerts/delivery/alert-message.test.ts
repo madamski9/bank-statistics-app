@@ -73,6 +73,10 @@ describe('alertMessage', () => {
     expect(scopeLabel({ kind: 'counterparty', name: 'Jan Kowalski' })).toBe('Jan Kowalski');
     expect(scopeLabel({ kind: 'category', id: 'groceries' })).toBe('Zakupy spożywcze');
   });
+
+  test('names a limit whose custom category was deleted as a deleted category', () => {
+    expect(scopeLabel({ kind: 'category', id: 'category-gone' })).toBe('Usunięta kategoria');
+  });
 });
 
 describe('wording follows the metric the rule watches', () => {

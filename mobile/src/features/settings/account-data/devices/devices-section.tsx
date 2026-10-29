@@ -14,16 +14,14 @@ import { devicePlatformName, lastSeenLabel } from './device-labels';
 
 export function DevicesSection() {
   const copy = useCopy(accountDataCopy);
-  const installationId = useInstallationId();
   const { isAuthenticated } = useConvexAuth();
   const isCloudEnabled = useCloudSyncEnabled();
-  const standing = useQuery(
-    api.devices.standing,
-    isAuthenticated && installationId !== null ? { installationId } : 'skip',
-  );
+  const installationId = useInstallationId();
+  const canQueryDevices = isCloudEnabled === true && isAuthenticated && installationId !== null;
+  const standing = useQuery(api.devices.standing, canQueryDevices ? { installationId } : 'skip');
   const devices = useQuery(
     api.devices.list,
-    isAuthenticated && installationId !== null && standing === 'active' ? { installationId } : 'skip',
+    canQueryDevices && standing === 'active' ? { installationId } : 'skip',
   );
   const revoke = useMutation(api.devices.revoke);
   const [error, setError] = useState<string | null>(null);
@@ -55,14 +53,24 @@ export function DevicesSection() {
     );
   };
 
-  if (devices === undefined) {
+  if (isCloudEnabled === false) {
     return (
       <View style={styles.placeholder}>
-        {isAuthenticated && installationId !== null && (standing === undefined || standing === 'active') ? (
+        <Text maxFontSizeMultiplier={1.5} style={styles.meta}>
+          {copy.devicesCloudOff}
+        </Text>
+      </View>
+    );
+  }
+
+  if (devices === undefined || devices.length === 0) {
+    return (
+      <View style={styles.placeholder}>
+        {canQueryDevices && devices === undefined && (standing === undefined || standing === 'active') ? (
           <ActivityIndicator color={overviewColors.textSecondary} />
         ) : null}
         <Text maxFontSizeMultiplier={1.5} style={styles.meta}>
-          {isCloudEnabled === false && standing === 'unregistered' ? copy.devicesLocalOnly : copy.devicesOffline}
+          {copy.devicesOffline}
         </Text>
       </View>
     );

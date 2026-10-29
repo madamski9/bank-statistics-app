@@ -1,15 +1,22 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { useCopy } from '@/features/app-shell/localization/language';
+import { languageLocales, useCopy, useLanguage } from '@/features/app-shell/localization/language';
 import { overviewColors } from '@/features/app-shell/theme/overview-theme';
 import { selectionChanged } from '@/haptics';
 
 import { alertsCopy } from '../../alerts-copy';
+import { scopeLabel } from '../../delivery/alert-message';
 import type { AlertScope } from '../../rules/alert-rule';
+import { categoryScopeOptions } from '../../rules/category-options';
 import { FormLabel } from './form-field';
+import { OptionChips } from './option-chips';
 
 type MerchantScope = Extract<AlertScope, { kind: 'merchant' }>;
+
+type ScopeListKind = 'merchant' | 'category';
+
+const scopeListKinds: ScopeListKind[] = ['merchant', 'category'];
 
 const merchantRowHeight = 48;
 const merchantRowGap = 8;
@@ -18,69 +25,123 @@ const visibleMerchantRows = 3;
 interface ScopePickerProps {
   initialScope: AlertScope;
   merchants: MerchantScope[];
+  includesCustomCategories: boolean;
   selectedScope: AlertScope;
   onSelect: (scope: AlertScope) => void;
 }
 
-export function ScopePicker({ initialScope, merchants, selectedScope, onSelect }: ScopePickerProps) {
+interface ScopeListItem {
+  key: string;
+  label: string;
+  scope: AlertScope;
+  isSelected: boolean;
+}
+
+function matchesSearch(label: string, search: string, locale: string): boolean {
+  return label.toLocaleLowerCase(locale).includes(search.trim().toLocaleLowerCase(locale));
+}
+
+export function ScopePicker({
+  initialScope,
+  merchants,
+  includesCustomCategories,
+  selectedScope,
+  onSelect,
+}: ScopePickerProps) {
   const copy = useCopy(alertsCopy);
-  const [merchantSearch, setMerchantSearch] = useState('');
-  const merchantListRef = useRef<ScrollView>(null);
+  const language = useLanguage();
+  const locale = languageLocales[language];
+  const [listKind, setListKind] = useState<ScopeListKind>(
+    initialScope.kind === 'category' ? 'category' : 'merchant',
+  );
+  const [search, setSearch] = useState('');
+  const listRef = useRef<ScrollView>(null);
+  const categories = useMemo(
+    () => categoryScopeOptions(includesCustomCategories, initialScope, language),
+    [includesCustomCategories, initialScope, language],
+  );
   const availableMerchants =
     initialScope.kind === 'merchant'
       ? [initialScope, ...merchants.filter((merchant) => merchant.key !== initialScope.key)]
       : merchants;
-  const visibleMerchants = availableMerchants
-    .filter((merchant) =>
-      merchant.name.toLocaleLowerCase('pl').includes(merchantSearch.trim().toLocaleLowerCase('pl')),
-    );
+  const items: ScopeListItem[] =
+    listKind === 'merchant'
+      ? availableMerchants.map((merchant) => ({
+          key: merchant.key,
+          label: merchant.name,
+          scope: merchant,
+          isSelected: selectedScope.kind === 'merchant' && selectedScope.key === merchant.key,
+        }))
+      : categories.map((category) => ({
+          key: category.scope.id,
+          label: category.label,
+          scope: category.scope,
+          isSelected: selectedScope.kind === 'category' && selectedScope.id === category.scope.id,
+        }));
+  const visibleItems = items.filter((item) => matchesSearch(item.label, search, locale));
+  const isSelectedElsewhere = selectedScope.kind !== 'all' && selectedScope.kind !== listKind;
+
+  const changeList = (next: ScopeListKind) => {
+    setListKind(next);
+    setSearch('');
+  };
 
   useEffect(() => {
-    merchantListRef.current?.flashScrollIndicators();
-  }, []);
+    listRef.current?.flashScrollIndicators();
+  }, [listKind]);
 
   return (
     <View style={styles.merchantSection}>
       <FormLabel>{copy.scopeSection}</FormLabel>
+      <OptionChips
+        onSelect={changeList}
+        options={scopeListKinds.map((value) => ({ key: value, value, label: copy.scopeLists[value] }))}
+        selected={listKind}
+      />
       <TextInput
-        accessibilityLabel={copy.searchShop}
+        accessibilityLabel={listKind === 'merchant' ? copy.searchShop : copy.searchCategory}
         autoCapitalize="none"
-        onChangeText={setMerchantSearch}
-        placeholder={copy.searchPlaceholder}
+        onChangeText={setSearch}
+        placeholder={listKind === 'merchant' ? copy.searchPlaceholder : copy.searchCategory}
         placeholderTextColor={overviewColors.textDisabled}
         selectionColor={overviewColors.textPrimary}
         style={styles.merchantSearch}
-        value={merchantSearch}
+        value={search}
       />
+      {isSelectedElsewhere ? (
+        <Text maxFontSizeMultiplier={1.5} numberOfLines={2} style={styles.note}>
+          {copy.selectedScope(scopeLabel(selectedScope))}
+        </Text>
+      ) : null}
       <ScopeOption
         isSelected={selectedScope.kind === 'all'}
         label={copy.allSpendingOption}
         onPress={() => onSelect({ kind: 'all' })}
       />
-      {visibleMerchants.length > 0 ? (
+      {visibleItems.length > 0 ? (
         <ScrollView
           contentContainerStyle={styles.merchantListContent}
           indicatorStyle="white"
           keyboardShouldPersistTaps="handled"
           nestedScrollEnabled
           persistentScrollbar
-          ref={merchantListRef}
+          ref={listRef}
           style={styles.merchantList}
         >
-          {visibleMerchants.map((merchant) => (
+          {visibleItems.map((item) => (
             <ScopeOption
-              isSelected={selectedScope.kind === 'merchant' && selectedScope.key === merchant.key}
-              key={merchant.key}
-              label={merchant.name}
-              onPress={() => onSelect(merchant)}
+              isSelected={item.isSelected}
+              key={item.key}
+              label={item.label}
+              onPress={() => onSelect(item.scope)}
             />
           ))}
         </ScrollView>
       ) : null}
-      {merchants.length === 0 ? (
+      {listKind === 'merchant' && items.length === 0 ? (
         <Text style={styles.note}>{copy.noMerchants}</Text>
-      ) : visibleMerchants.length === 0 ? (
-        <Text style={styles.note}>{copy.noMatchingMerchant}</Text>
+      ) : visibleItems.length === 0 ? (
+        <Text style={styles.note}>{listKind === 'merchant' ? copy.noMatchingMerchant : copy.noMatchingCategory}</Text>
       ) : null}
     </View>
   );

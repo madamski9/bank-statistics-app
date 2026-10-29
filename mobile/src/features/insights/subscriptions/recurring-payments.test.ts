@@ -70,6 +70,87 @@ describe('recurring payments', () => {
     expect(detectRecurringPayments(records, [], now)).toEqual([]);
   });
 
+  test('ignores a similar basket bought about once a month at a grocery shop', () => {
+    const records = [
+      charge('Żabka', '2026-06-25T08:00:00Z', 1499),
+      charge('Żabka', '2026-07-25T08:00:00Z', 1529),
+      charge('Żabka', '2026-08-25T08:00:00Z', 1499),
+      charge('Żabka', '2026-09-24T08:00:00Z', 1607),
+    ];
+
+    expect(detectRecurringPayments(records, [], now)).toEqual([]);
+  });
+
+  test('ignores a monthly-looking amount at a shop visited in between', () => {
+    const records = [
+      charge('Rossmann', '2026-06-10T08:00:00Z', 3499),
+      charge('Rossmann', '2026-06-21T08:00:00Z', 1250),
+      charge('Rossmann', '2026-07-10T08:00:00Z', 3499),
+      charge('Rossmann', '2026-07-28T08:00:00Z', 8900),
+      charge('Rossmann', '2026-08-10T08:00:00Z', 3499),
+      charge('Rossmann', '2026-08-19T08:00:00Z', 610),
+      charge('Rossmann', '2026-09-10T08:00:00Z', 3499),
+    ];
+
+    expect(detectRecurringPayments(records, [], now)).toEqual([]);
+  });
+
+  test('keeps a fixed monthly plan at a food delivery app', () => {
+    const records = [
+      charge('Wolt', '2026-06-12T08:00:00Z', 2999),
+      charge('Wolt', '2026-07-12T08:00:00Z', 2999),
+      charge('Wolt', '2026-08-12T08:00:00Z', 2999),
+      charge('Wolt', '2026-09-12T08:00:00Z', 2999),
+    ];
+
+    expect(detectRecurringPayments(records, [], now).map((payment) => payment.name)).toEqual(['Wolt']);
+  });
+
+  test('keeps a food delivery plan through one price increase', () => {
+    const records = [
+      ...Array.from({ length: 8 }, (_, month) =>
+        charge('Wolt', new Date(Date.UTC(2026, month, 12, 8)).toISOString(), 2999),
+      ),
+      charge('Wolt', '2026-09-12T08:00:00Z', 3299),
+    ];
+    const [payment] = detectRecurringPayments(records, [], now);
+
+    expect(payment).toMatchObject({ name: 'Wolt', lastAmountMinor: 3299 });
+    expect(hasPriceIncrease(payment!)).toBe(true);
+  });
+
+  test('keeps two monthly payments to one payee on their own days', () => {
+    const records = [6, 7, 8, 9].flatMap((month) => [
+      charge('Spółdzielnia Mieszkaniowa', new Date(Date.UTC(2026, month - 1, 1, 8)).toISOString(), 250000),
+      charge('Spółdzielnia Mieszkaniowa', new Date(Date.UTC(2026, month - 1, 15, 8)).toISOString(), 30000),
+    ]);
+    const payments = detectRecurringPayments(records, [], now);
+
+    expect(payments.map((payment) => payment.lastAmountMinor)).toEqual([250000, 30000]);
+  });
+
+  test('keeps a yearly fee at a shop also visited once in between', () => {
+    const records = [
+      charge('Decathlon', '2025-09-15T08:00:00Z', 19900),
+      charge('Decathlon', '2026-03-02T08:00:00Z', 8999),
+      charge('Decathlon', '2026-09-15T08:00:00Z', 19900),
+    ];
+    const payments = detectRecurringPayments(records, [], now);
+
+    expect(payments.map((payment) => [payment.cadence, payment.lastAmountMinor])).toEqual([['yearly', 19900]]);
+  });
+
+  test('keeps a monthly payment to a payee that is not paid in between', () => {
+    const records = [
+      charge('Siłownia Fit', '2026-06-01T08:00:00Z', 15900),
+      charge('Siłownia Fit', '2026-07-01T08:00:00Z', 15900),
+      charge('Siłownia Fit', '2026-08-01T08:00:00Z', 16900),
+      charge('Siłownia Fit', '2026-09-01T08:00:00Z', 16900),
+    ];
+
+    expect(detectRecurringPayments(records, [], now).map((payment) => payment.cadence)).toEqual(['monthly']);
+  });
+
   test('notices a price increase', () => {
     const records = [
       charge('Netflix', '2026-06-10T08:00:00Z', 4900),

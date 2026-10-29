@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { appEnvironment } from '@/app-environment';
 import { brandColors } from '@/features/app-shell/brand/brand-artwork';
+import { KeychainReadyGate } from '@/features/app-shell/keychain/keychain-ready-gate';
 import { tokenCache } from '@/features/auth/session/token-cache';
 import { LanguageBootstrap } from '@/features/app-shell/localization/language-bootstrap';
 import { convexClient } from '@/convex-client';
@@ -28,9 +29,11 @@ export default function RootLayout() {
         publishableKey={appEnvironment.clerkPublishableKey}
       >
         <ConvexProviderWithClerk client={convexClient} useAuth={useAuth}>
-          <LanguageBootstrap>
-            <Slot />
-          </LanguageBootstrap>
+          <KeychainReadyGate>
+            <LanguageBootstrap>
+              <Slot />
+            </LanguageBootstrap>
+          </KeychainReadyGate>
         </ConvexProviderWithClerk>
       </ClerkProvider>
     </GestureHandlerRootView>

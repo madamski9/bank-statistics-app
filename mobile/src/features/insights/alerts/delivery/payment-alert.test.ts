@@ -285,4 +285,87 @@ describe('runAlerts for shop limits', () => {
 
     expect(target.presented).toEqual([]);
   });
+
+  test('catches up on payments captured while signed out, once', async () => {
+    const signedOutAt = new Date(2026, 8, 22, 16, 0).getTime();
+    const signedInAt = new Date(2026, 8, 22, 17, 40).getTime();
+    const missed = payment('l', 2_000, { capturedAt: new Date(2026, 8, 22, 17, 0).toISOString() });
+    const target = sink();
+    const first = await runAlerts([shopLimit()], [missed], {
+      reference,
+      rules: [],
+      sent: [],
+      notifier: target.notifier,
+      missedCaptures: { sinceMs: signedOutAt, untilMs: signedInAt },
+    });
+    const second = await runAlerts([shopLimit()], [missed], {
+      reference,
+      rules: [],
+      sent: first,
+      notifier: target.notifier,
+      missedCaptures: { sinceMs: signedOutAt, untilMs: signedInAt },
+    });
+
+    expect(target.presented).toHaveLength(1);
+    expect(second).toEqual([paymentSentKey('rule-1', 'l')]);
+  });
+
+  test('leaves captures from outside the signed-out gap to the background capture', async () => {
+    const beforeSignOut = payment('m', 2_000, { capturedAt: new Date(2026, 8, 22, 15, 0).toISOString() });
+    const afterSignIn = payment('n', 2_000, { capturedAt: new Date(2026, 8, 22, 17, 42).toISOString() });
+    const target = sink();
+
+    await runAlerts([shopLimit()], [beforeSignOut, afterSignIn], {
+      reference,
+      rules: [],
+      sent: [],
+      notifier: target.notifier,
+      missedCaptures: {
+        sinceMs: new Date(2026, 8, 22, 16, 0).getTime(),
+        untilMs: new Date(2026, 8, 22, 17, 40).getTime(),
+      },
+    });
+
+    expect(target.presented).toEqual([]);
+  });
+
+  test('replays several missed captures in order so each crossed budget threshold is announced', async () => {
+    const budget = shopLimit({ scope: { kind: 'all' }, targetMinor: 10_000 });
+    const missed = [0, 1, 2, 3, 4, 5].map((index) =>
+      payment(`p${index}`, 2_000, {
+        occurredAt: new Date(2026, 8, 22, 16, 10 + index).toISOString(),
+        capturedAt: new Date(2026, 8, 22, 16, 10 + index).toISOString(),
+      }),
+    );
+    const target = sink();
+
+    const sent = await runAlerts([budget], missed, {
+      reference,
+      rules: [],
+      sent: [],
+      notifier: target.notifier,
+      missedCaptures: {
+        sinceMs: new Date(2026, 8, 22, 16, 0).getTime(),
+        untilMs: new Date(2026, 8, 22, 17, 40).getTime(),
+      },
+    });
+
+    expect(target.presented).toHaveLength(3);
+    expect(sent).toEqual([paymentSentKey('rule-1', 'p2'), paymentSentKey('rule-1', 'p3'), paymentSentKey('rule-1', 'p4')]);
+  });
+
+  test('does not replay captures older than a day after a long sign-out', async () => {
+    const stale = payment('o', 2_000, { capturedAt: new Date(2026, 8, 20, 10, 0).toISOString() });
+    const target = sink();
+
+    await runAlerts([shopLimit()], [stale], {
+      reference,
+      rules: [],
+      sent: [],
+      notifier: target.notifier,
+      missedCaptures: { sinceMs: new Date(2026, 8, 19).getTime(), untilMs: reference.getTime() },
+    });
+
+    expect(target.presented).toEqual([]);
+  });
 });

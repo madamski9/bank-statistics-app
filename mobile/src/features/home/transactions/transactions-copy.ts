@@ -1,7 +1,13 @@
 import { defineCopy } from '@/features/app-shell/localization/language';
+import { englishPlural, polishPlural } from '@/features/app-shell/localization/plural';
 
 export const transactionsCopy = defineCopy({
   pl: {
+    notificationTitle: 'Tytuł powiadomienia',
+    bankName: 'Bank',
+    bankNamePlaceholder: 'Na przykład Trade Republic',
+    bankNameFormat: 'Nazwa banku musi mieć od 1 do 60 znaków.',
+    rememberBankHelp: 'Zapisując, przypiszesz tę nazwę do wcześniejszych i kolejnych transakcji z tej samej aplikacji i z takim samym tytułem powiadomienia. Reguła zostaje na tym telefonie.',
     banks: { millennium: 'Millennium', pko: 'PKO BP', erste: 'Erste', ing: 'ING', mbank: 'mBank', unknown: 'Nieznany bank', manual: 'Wpis ręczny' },
     types: {
       cardPayment: 'Płatność kartą',
@@ -24,6 +30,7 @@ export const transactionsCopy = defineCopy({
     },
     toReview: 'Do sprawdzenia',
     reversed: 'Cofnięta',
+    awaitingWallet: 'Czeka na Portfel',
     kindOptions: {
       cardPayment: 'Karta lub Apple Pay',
       blikPayment: 'BLIK',
@@ -77,15 +84,23 @@ export const transactionsCopy = defineCopy({
     deleteTitle: 'Usunąć transakcję?',
     deleteBody: 'Tej operacji nie można cofnąć.',
     deleteConfirm: 'Usuń',
-    emptyAndroid: 'Brak transakcji. Dodaj transakcję ręcznie lub zaimportuj wyciąg CSV.',
     loading: 'Wczytywanie…',
     empty:
       'Nie przechwycono jeszcze żadnej transakcji. Skonfiguruj automatyzację powiadomień w aplikacji Skróty albo dodaj transakcję ręcznie.',
+    emptyWithoutCapture: 'Nie ma jeszcze żadnej transakcji. Dodaj transakcję ręcznie albo zaimportuj wyciąg.',
     rowHint: 'Otwiera szczegóły transakcji',
     addHint: 'Otwiera formularz ręcznej transakcji',
     add: 'Dodaj transakcję',
+    merchantHistoryTitle: 'Wydatki w tym sklepie',
+    merchantHistorySummary: (total: string, count: number) =>
+      `${total} łącznie · ${count} ${polishPlural(count, 'płatność', 'płatności', 'płatności')}`,
   },
   en: {
+    notificationTitle: 'Notification title',
+    bankName: 'Bank',
+    bankNamePlaceholder: 'For example Trade Republic',
+    bankNameFormat: 'A bank name must have between 1 and 60 characters.',
+    rememberBankHelp: 'Saving assigns this name to previous and future transactions from the same app with the same notification title. The rule stays on this phone.',
     banks: { millennium: 'Millennium', pko: 'PKO BP', erste: 'Erste', ing: 'ING', mbank: 'mBank', unknown: 'Unknown bank', manual: 'Manual entry' },
     types: {
       cardPayment: 'Card payment',
@@ -108,6 +123,7 @@ export const transactionsCopy = defineCopy({
     },
     toReview: 'To review',
     reversed: 'Reversed',
+    awaitingWallet: 'Awaiting Wallet',
     kindOptions: {
       cardPayment: 'Card or Apple Pay',
       blikPayment: 'BLIK',
@@ -160,12 +176,15 @@ export const transactionsCopy = defineCopy({
     deleteTitle: 'Delete this transaction?',
     deleteBody: 'This cannot be undone.',
     deleteConfirm: 'Delete',
-    emptyAndroid: 'No transactions yet. Add a transaction manually or import a CSV statement.',
     loading: 'Loading…',
     empty:
       'No transactions captured yet. Set up the notification automation in the Shortcuts app or add a transaction manually.',
+    emptyWithoutCapture: 'No transactions yet. Add a transaction manually or import a statement.',
     rowHint: 'Opens the transaction details',
     addHint: 'Opens the manual transaction form',
     add: 'Add transaction',
+    merchantHistoryTitle: 'Spending at this shop',
+    merchantHistorySummary: (total: string, count: number) =>
+      `${total} in total · ${count} ${englishPlural(count, 'payment', 'payments')}`,
   },
 });

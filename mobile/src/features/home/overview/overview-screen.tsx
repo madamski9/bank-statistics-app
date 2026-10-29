@@ -50,6 +50,7 @@ function OverviewScreenComponent({
   onToggleEventFocus,
   onStartEvent,
   onOpenEvents,
+  isPremiumLoading,
   ...shortcuts
 }: OverviewScreenProps) {
   const insets = useSafeAreaInsets();
@@ -67,6 +68,7 @@ function OverviewScreenComponent({
 
       <BubbleField
         bubbles={bubbles}
+        isLoading={isPremiumLoading || (isLoading && !hasData)}
         variant={focusedEvent === null ? 'period' : `event-${focusedEvent.event.id}`}
         onSelect={focusedEvent === null ? onSelectBubble : onOpenEvents}
       />
@@ -76,6 +78,7 @@ function OverviewScreenComponent({
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <EventBanner
           canStartEvent={canStartEvent}
+          isLoading={isPremiumLoading}
           isEventFocused={isEventFocused}
           onRequirePremium={onRequireEventPremium}
           onOpenEvents={onOpenEvents}
@@ -83,7 +86,7 @@ function OverviewScreenComponent({
           onToggleEventFocus={onToggleEventFocus}
           runningEvent={runningEvent}
         />
-        <OverviewShortcuts {...shortcuts} />
+        <OverviewShortcuts isPremiumLoading={isPremiumLoading} {...shortcuts} />
       </View>
     </View>
   );
