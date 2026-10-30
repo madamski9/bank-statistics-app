@@ -9,6 +9,7 @@ import {
   claimDevice,
   forgetSyncedState,
   runSync,
+  transferDevice,
   type CloudChanges,
   type CloudPort,
   type CloudTable,
@@ -409,6 +410,40 @@ describe('runSync', () => {
 
     expect(result).toEqual({ pushed: 0, pulled: 0, isForeignDevice: true });
     expect(bobCloud.stored.size).toBe(0);
+  });
+
+  test('hands a device to the account that replaced its previous owner and keeps syncing from where it stopped', async () => {
+    const cloud = createCloud();
+    const phone = createDevice(cloud, [manual('manual-lunch')]);
+    await runSync(phone.ports);
+
+    expect(await transferDevice(phone.ports.ledger, 'user_alice', 'user_alice_live')).toBe(true);
+    expect(await claimDevice(phone.ports.ledger, 'user_alice_live')).toBe(true);
+    expect(await claimDevice(phone.ports.ledger, 'user_alice')).toBe(false);
+
+    const result = await runSync({ ...phone.ports, ownerId: 'user_alice_live' });
+
+    expect(result).toEqual({ pushed: 0, pulled: 0, isForeignDevice: false });
+  });
+
+  test('does not hand over a device that belongs to someone else', async () => {
+    const cloud = createCloud();
+    const phone = createDevice(cloud, [manual('manual-lunch')]);
+    await runSync(phone.ports);
+
+    expect(await transferDevice(phone.ports.ledger, 'user_bob', 'user_bob_live')).toBe(false);
+    expect(await claimDevice(phone.ports.ledger, 'user_alice')).toBe(true);
+  });
+
+  test('does not hand over a fresh or unreadable device', async () => {
+    const cloud = createCloud();
+    const fresh = createDevice(cloud);
+    const unreadable = createDevice(cloud);
+    unreadable.ledger.value = '{not json';
+
+    expect(await transferDevice(fresh.ports.ledger, 'user_alice', 'user_alice_live')).toBe(false);
+    expect(await transferDevice(unreadable.ports.ledger, 'user_alice', 'user_alice_live')).toBe(false);
+    expect(fresh.ledger.value).toBeNull();
   });
 
   test('claims a fresh device for the first user who signs in, before any connection', async () => {

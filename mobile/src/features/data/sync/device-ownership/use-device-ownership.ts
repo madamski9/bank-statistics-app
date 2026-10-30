@@ -1,10 +1,17 @@
+import { api } from '@bankstats/convex/convex/_generated/api';
 import { useAuth } from '@clerk/expo';
+import { useConvex, useConvexAuth } from 'convex/react';
+import * as SecureStore from 'expo-secure-store';
 import { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
+import { readableWhileLocked } from '@/features/onboarding/onboarding-keychain';
+import { transferOnboardingState } from '@/features/onboarding/onboarding-transfer';
+
 import { clearLocalData } from '../cloud-sync/clear-local-data';
 import { encryptedLedgerStorage } from '../codecs/encrypted-ledger-storage';
-import { claimDevice } from '../engine/sync-runner';
+import { claimDevice, transferDevice } from '../engine/sync-runner';
+import { isOwnedAfterHandover, type AccountHandover } from './account-handover';
 
 export type DeviceOwnership = 'checking' | 'own' | 'foreign';
 
@@ -20,6 +27,8 @@ export interface DeviceOwnershipState {
 
 export function useDeviceOwnership(): DeviceOwnershipState {
   const { userId } = useAuth();
+  const convex = useConvex();
+  const { isAuthenticated } = useConvexAuth();
   const [check, setCheck] = useState<OwnershipCheck | null>(null);
   const isSupported = Platform.OS === 'ios';
 
@@ -29,10 +38,21 @@ export function useDeviceOwnership(): DeviceOwnershipState {
     }
 
     let isActive = true;
+    const handover: AccountHandover = {
+      claim: (owner) => claimDevice(encryptedLedgerStorage, owner),
+      previousOwnerOf: () => convex.query(api.owners.legacyOwnerId, {}),
+      transferOnboarding: (previousUserId, owner) =>
+        transferOnboardingState(SecureStore, readableWhileLocked, previousUserId, owner),
+      transferDevice: (previousUserId, owner) => transferDevice(encryptedLedgerStorage, previousUserId, owner),
+    };
 
-    claimDevice(encryptedLedgerStorage, userId)
+    const ownership = isAuthenticated
+      ? isOwnedAfterHandover(handover, userId)
+      : claimDevice(encryptedLedgerStorage, userId).then((isOwnDevice) => (isOwnDevice ? true : null));
+
+    ownership
       .then((isOwnDevice) => {
-        if (isActive) {
+        if (isActive && isOwnDevice !== null) {
           setCheck({ userId, ownership: isOwnDevice ? 'own' : 'foreign' });
         }
       })
@@ -45,7 +65,7 @@ export function useDeviceOwnership(): DeviceOwnershipState {
     return () => {
       isActive = false;
     };
-  }, [isSupported, userId]);
+  }, [convex, isAuthenticated, isSupported, userId]);
 
   const takeOver = useCallback(async () => {
     if (userId == null) {

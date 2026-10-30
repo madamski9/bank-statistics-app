@@ -3,11 +3,11 @@ import type { SecureStoreOptions } from 'expo-secure-store';
 import type { KeychainRead } from '@/features/app-shell/keychain/keychain-readiness';
 import type { KeychainStore } from '@/features/auth/session/session-token-cache';
 
-function completionKey(userId: string): string {
+export function completionKey(userId: string): string {
   return `bankstats.onboarding.v2.${userId}`;
 }
 
-function legacyCompletionKey(userId: string): string {
+export function legacyCompletionKey(userId: string): string {
   return `bankstats.onboarding.v1.${userId}`;
 }
 
