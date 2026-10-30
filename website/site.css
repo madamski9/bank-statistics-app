@@ -109,6 +109,7 @@ body:has(.screenshot-dialog[open]) { overflow: hidden; }
 .bank-list { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
 .bank { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; padding: 22px; border: 1px solid var(--line); border-radius: 22px; background: rgba(255, 255, 255, .03); font-size: 1.05rem; font-weight: 500; letter-spacing: -.02em; }
 .bank img { width: 56px; height: 56px; border-radius: 13px; background: #fff; object-fit: contain; }
+.bank-note { margin-top: 28px; }
 .tones { padding-block: 88px 116px; border-top: 1px solid var(--line); }
 .tone-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
 .tone-card { display: flex; flex-direction: column; align-items: stretch; border-top: 1px solid #555; padding-top: 19px; }
