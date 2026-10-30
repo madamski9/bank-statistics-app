@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { convexTest } from 'convex-test';
 
-import { api } from './_generated/api';
+import { api, internal } from './_generated/api';
 import { newOwner } from './owners';
 import schema from './schema';
 
@@ -39,5 +39,25 @@ describe('legacy owner', () => {
     const backend = convexTest(schema, modules);
 
     await expect(backend.query(api.owners.legacyOwnerId, {})).rejects.toThrow();
+  });
+
+  test('links a production account to its beta account after its first sign-in', async () => {
+    const backend = convexTest(schema, modules);
+
+    await backend.mutation(internal.owners.linkLegacyOwner, { ownerId: alice.subject, legacyOwnerId: 'user_alice_beta' });
+
+    expect(await backend.withIdentity(alice).query(api.owners.legacyOwnerId, {})).toBe('user_alice_beta');
+  });
+
+  test('keeps the sync position of an owner it links', async () => {
+    const backend = convexTest(schema, modules);
+
+    await backend.run((ctx) => ctx.db.insert('owners', { ...newOwner(alice.subject, 0), sequence: 12 }));
+    await backend.mutation(internal.owners.linkLegacyOwner, { ownerId: alice.subject, legacyOwnerId: 'user_alice_beta' });
+
+    const owners = await backend.run((ctx) => ctx.db.query('owners').collect());
+
+    expect(owners).toHaveLength(1);
+    expect(owners[0]).toMatchObject({ sequence: 12, legacyOwnerId: 'user_alice_beta' });
   });
 });

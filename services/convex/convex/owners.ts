@@ -103,3 +103,10 @@ export const legacyOwnerId = query({
     return owner?.legacyOwnerId ?? null;
   },
 });
+
+export const linkLegacyOwner = internalMutation({
+  args: { ownerId: v.string(), legacyOwnerId: v.string() },
+  handler: async (ctx, { ownerId, legacyOwnerId }) => {
+    await saveOwner(ctx, ownerId, await findOwner(ctx, ownerId), { legacyOwnerId }, Date.now());
+  },
+});

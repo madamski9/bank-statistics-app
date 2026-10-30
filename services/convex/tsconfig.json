@@ -11,6 +11,6 @@
     "isolatedModules": true,
     "noUncheckedIndexedAccess": true
   },
-  "include": ["convex"],
+  "include": ["convex", "migration"],
   "exclude": ["convex/_generated"]
 }
