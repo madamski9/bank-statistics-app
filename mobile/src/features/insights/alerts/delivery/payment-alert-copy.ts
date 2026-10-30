@@ -152,10 +152,6 @@ export const paymentAlertCopy = defineCopy<Record<AlertTone, Record<PaymentAlert
           body: 'Klaszczę, k**wa, na stojąco.',
         }),
         () => ({
-          title: 'Hamuj, do ch*ja wafla!',
-          body: 'Połowa limitu już przepie***lona.',
-        }),
-        () => ({
           title: 'Szastasz kasą jak po***b',
           body: 'Połowa limitu poszła w pi**u.',
         }),
