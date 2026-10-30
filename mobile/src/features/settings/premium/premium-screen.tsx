@@ -5,7 +5,6 @@ import { useCopy } from '@/features/app-shell/localization/language';
 import { overviewColors, overviewSpacing } from '@/features/app-shell/theme/overview-theme';
 
 import { PremiumBenefits } from './components/premium-benefits';
-import { PremiumCodeForm } from './components/premium-code-form';
 import { PremiumHero } from './components/premium-hero';
 import { PremiumPreviewToggle } from './components/premium-preview-toggle';
 import { PremiumReasonBanner } from './components/premium-reason-banner';
@@ -56,7 +55,6 @@ export function PremiumScreen({ status, reason, capturedTransactionCount, onClos
         {reason !== null && !isPremium ? <PremiumReasonBanner message={copy.reasons[reason]} /> : null}
         <PremiumHero status={status} />
         <PremiumBenefits isPremium={isPremium} />
-        {isPremium ? null : <PremiumCodeForm />}
         {__DEV__ && (isPremium || isPreviewingWithoutPremium) ? (
           <PremiumPreviewToggle isPreviewing={isPreviewingWithoutPremium} />
         ) : null}

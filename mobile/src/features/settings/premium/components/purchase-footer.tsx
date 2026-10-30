@@ -1,12 +1,18 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useCopy } from '@/features/app-shell/localization/language';
 import { overviewColors, overviewSpacing } from '@/features/app-shell/theme/overview-theme';
+import { privacyPolicyUrl, termsOfUseUrl } from '@/features/settings/legal/legal-links';
 
 import { premiumCopy } from '../premium-copy';
-import type { PremiumPlan, PremiumPlanPeriod } from '../store/store-purchases';
+import {
+  presentOfferCodeRedemption,
+  redeemsOfferCodes,
+  type PremiumPlan,
+  type PremiumPlanPeriod,
+} from '../store/store-purchases';
 import type { StoreOfferingId } from '../store/trial-offer';
 import { usePremiumOffer } from '../store/use-premium-offer';
 
@@ -133,21 +139,48 @@ export function PurchaseFooter({ offeringId }: { offeringId: StoreOfferingId }) 
         </Text>
       ) : null}
       {offer.state.kind === 'unavailable' ? null : (
-        <Pressable
-          accessibilityRole="button"
-          disabled={isBusy}
-          hitSlop={8}
-          onPress={() => void restore()}
-          style={({ pressed }) => [styles.restore, pressed ? styles.pressed : null]}
-        >
-          <Text maxFontSizeMultiplier={1.4} style={styles.restoreLabel}>
-            {copy.restore}
-          </Text>
-        </Pressable>
+        <View style={styles.secondaryActions}>
+          <Pressable
+            accessibilityRole="button"
+            disabled={isBusy}
+            hitSlop={8}
+            onPress={() => void restore()}
+            style={({ pressed }) => [styles.restore, pressed ? styles.pressed : null]}
+          >
+            <Text maxFontSizeMultiplier={1.4} style={styles.restoreLabel}>
+              {copy.restore}
+            </Text>
+          </Pressable>
+          {redeemsOfferCodes() ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={isBusy}
+              hitSlop={8}
+              onPress={() => void presentOfferCodeRedemption().catch(() => setMessage(copy.purchaseFailed))}
+              style={({ pressed }) => [styles.restore, pressed ? styles.pressed : null]}
+            >
+              <Text maxFontSizeMultiplier={1.4} style={styles.restoreLabel}>
+                {copy.redeemCode}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
       )}
       <Text maxFontSizeMultiplier={1.4} style={styles.footnote}>
         {copy.footnote(storeName)}
       </Text>
+      <View style={styles.legalLinks}>
+        <Pressable accessibilityRole="link" hitSlop={8} onPress={() => void Linking.openURL(privacyPolicyUrl)}>
+          <Text maxFontSizeMultiplier={1.4} style={styles.legalLink}>
+            {copy.privacyPolicy}
+          </Text>
+        </Pressable>
+        <Pressable accessibilityRole="link" hitSlop={8} onPress={() => void Linking.openURL(termsOfUseUrl)}>
+          <Text maxFontSizeMultiplier={1.4} style={styles.legalLink}>
+            {copy.termsOfUse}
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -205,6 +238,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: overviewColors.textSecondary,
   },
+  secondaryActions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 24,
+  },
   restore: {
     alignSelf: 'center',
     minHeight: 36,
@@ -219,6 +257,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     textAlign: 'center',
+    color: overviewColors.textSecondary,
+  },
+  legalLinks: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    columnGap: 18,
+    rowGap: 4,
+  },
+  legalLink: {
+    fontSize: 12,
+    lineHeight: 16,
+    textDecorationLine: 'underline',
     color: overviewColors.textSecondary,
   },
   pressed: {

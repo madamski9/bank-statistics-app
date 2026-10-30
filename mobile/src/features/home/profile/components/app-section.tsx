@@ -1,9 +1,12 @@
+import { Linking } from 'react-native';
+
 import { needsIosUpdateForCapture } from '@/features/app-shell/capture-support/device-capture-support';
 import { languageNames, useCopy, useLanguage } from '@/features/app-shell/localization/language';
 import {
   replayOnboarding,
   replayShortcutsSetup,
 } from '@/features/onboarding/onboarding-replay';
+import { privacyPolicyUrl, termsOfUseUrl } from '@/features/settings/legal/legal-links';
 import {
   setPreviewPremiumLoading,
   usePreviewPremiumLoading,
@@ -90,6 +93,18 @@ export function AppSection({
         onPress={onOpenLanguage}
         symbol={{ ios: 'globe', android: 'language', web: 'language' }}
         value={languageNames[language]}
+      />
+      <ProfileActionRow
+        accessibilityHint={copy.privacyPolicyHint}
+        label={copy.privacyPolicy}
+        onPress={() => void Linking.openURL(privacyPolicyUrl)}
+        symbol={{ ios: 'doc.text', android: 'description', web: 'description' }}
+      />
+      <ProfileActionRow
+        accessibilityHint={copy.termsOfUseHint}
+        label={copy.termsOfUse}
+        onPress={() => void Linking.openURL(termsOfUseUrl)}
+        symbol={{ ios: 'doc.plaintext', android: 'gavel', web: 'gavel' }}
       />
       {__DEV__ ? (
         <ProfileActionRow

@@ -39,6 +39,14 @@ export function sellsInApp(): boolean {
   return apiKey !== null;
 }
 
+export function redeemsOfferCodes(): boolean {
+  return apiKey !== null && Platform.OS === 'ios';
+}
+
+export function presentOfferCodeRedemption(): Promise<void> {
+  return Purchases.presentCodeRedemptionSheet();
+}
+
 export async function identifyStoreCustomer(ownerId: string): Promise<void> {
   if (apiKey === null || configuredCustomerId === ownerId) {
     return;
