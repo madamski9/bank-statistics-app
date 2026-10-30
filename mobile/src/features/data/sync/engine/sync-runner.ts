@@ -169,6 +169,22 @@ export async function claimDevice(storage: LedgerStorage, ownerId: string): Prom
   return reading.kind === 'owned' && reading.ledger.ownerId === ownerId;
 }
 
+export async function transferDevice(
+  storage: LedgerStorage,
+  previousOwnerId: string,
+  ownerId: string,
+): Promise<boolean> {
+  const reading = await readLedger(storage);
+
+  if (reading.kind !== 'owned' || reading.ledger.ownerId !== previousOwnerId) {
+    return false;
+  }
+
+  await writeLedger(storage, { ...reading.ledger, ownerId });
+
+  return true;
+}
+
 function emptyChanges(): CloudChanges {
   return { transactions: [], financialAccounts: [], categories: [], events: [] };
 }

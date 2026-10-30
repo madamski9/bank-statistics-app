@@ -1,8 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 
-export function banksKey(userId: string): string {
-  return `bankstats.onboarding.banks.v1.${userId}`;
-}
+import { banksKey } from './selected-banks-key';
 
 export async function readSelectedBanks(userId: string): Promise<string[]> {
   try {

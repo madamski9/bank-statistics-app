@@ -9,10 +9,11 @@ import { readWhenUnlocked } from '@/features/app-shell/keychain/keychain-readine
 import { keychainRetry } from '@/features/app-shell/keychain/keychain-retry';
 
 import { completedAfterRead, createOnboardingCompletion } from './onboarding-completion';
+import { readableWhileLocked } from './onboarding-keychain';
 import { onboardingFlow } from './onboarding-flow';
 import { finishOnboardingReplay, useOnboardingReplay } from './onboarding-replay';
 import { OnboardingScreen } from './onboarding-screen';
-import { banksKey } from './selected-banks';
+import { banksKey } from './selected-banks-key';
 
 interface OnboardingGateProps {
   children: ReactNode;
@@ -23,9 +24,7 @@ interface OnboardingState {
   completed: boolean;
 }
 
-const onboardingCompletion = createOnboardingCompletion(SecureStore, {
-  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
-});
+const onboardingCompletion = createOnboardingCompletion(SecureStore, readableWhileLocked);
 
 export function OnboardingGate({ children }: OnboardingGateProps) {
   const { userId } = useAuth();

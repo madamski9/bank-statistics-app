@@ -1,7 +1,8 @@
 import { v } from 'convex/values';
 
 import type { Doc } from './_generated/dataModel';
-import { internalMutation, type MutationCtx, type QueryCtx } from './_generated/server';
+import { internalMutation, query, type MutationCtx, type QueryCtx } from './_generated/server';
+import { requireOwnerId } from './owner';
 
 export interface AllowancePolicy {
   capacity: number;
@@ -91,5 +92,14 @@ export const spendRateLookups = internalMutation({
     }
 
     return granted;
+  },
+});
+
+export const legacyOwnerId = query({
+  args: {},
+  handler: async (ctx): Promise<string | null> => {
+    const owner = await findOwner(ctx, await requireOwnerId(ctx.auth));
+
+    return owner?.legacyOwnerId ?? null;
   },
 });
