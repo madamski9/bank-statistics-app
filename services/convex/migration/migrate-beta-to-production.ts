@@ -8,7 +8,9 @@ const clerkApiUrl = 'https://api.clerk.com/v1';
 const appleRelayDomain = '@privaterelay.appleid.com';
 
 interface ClerkEmail {
+  id: string;
   email_address: string;
+  verification: { status: string } | null;
 }
 
 interface ClerkUser {
@@ -16,6 +18,7 @@ interface ClerkUser {
   first_name: string | null;
   last_name: string | null;
   external_id: string | null;
+  primary_email_address_id: string | null;
   email_addresses: ClerkEmail[];
 }
 
@@ -52,14 +55,14 @@ function listUsers(secretKey: string, query = ''): Promise<ClerkUser[]> {
   return clerk<ClerkUser[]>(secretKey, `/users?limit=500${query}`);
 }
 
-function emailOf(user: ClerkUser): string {
-  const email = user.email_addresses[0]?.email_address;
+function verifiedPrimaryEmail(user: ClerkUser): string {
+  const primary = user.email_addresses.find((email) => email.id === user.primary_email_address_id);
 
-  if (email === undefined) {
-    throw new Error(`User ${user.id} has no email address`);
+  if (primary === undefined || primary.verification?.status !== 'verified') {
+    throw new Error(`User ${user.id} has no verified primary email address`);
   }
 
-  return email;
+  return primary.email_address;
 }
 
 async function productionUserFor(
@@ -67,20 +70,19 @@ async function productionUserFor(
   betaUser: ClerkUser,
   shouldCreate: boolean,
 ): Promise<ClerkUser | null> {
-  const email = emailOf(betaUser);
+  const email = verifiedPrimaryEmail(betaUser);
   const [linked] = await listUsers(secretKey, `&external_id=${encodeURIComponent(betaUser.id)}`);
-  const [sameEmail] = linked === undefined ? await listUsers(secretKey, `&email_address=${encodeURIComponent(email)}`) : [];
-  const existing = linked ?? sameEmail;
 
-  if (existing !== undefined) {
-    if (existing.external_id === null && shouldCreate) {
-      return clerk<ClerkUser>(secretKey, `/users/${existing.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ external_id: betaUser.id }),
-      });
-    }
+  if (linked !== undefined) {
+    return linked;
+  }
 
-    return existing;
+  const [sameEmail] = await listUsers(secretKey, `&email_address=${encodeURIComponent(email)}`);
+
+  if (sameEmail !== undefined) {
+    throw new Error(
+      `Production account ${sameEmail.id} already uses the email of ${betaUser.id}. Check it and set its external_id by hand.`,
+    );
   }
 
   if (!shouldCreate) {
@@ -110,7 +112,7 @@ async function createUsers(mappingPath: string, shouldApply: boolean): Promise<v
   const mappings: OwnerMapping[] = [];
 
   for (const betaUser of await listUsers(betaKey)) {
-    const email = emailOf(betaUser);
+    const email = verifiedPrimaryEmail(betaUser);
 
     if (email.endsWith(appleRelayDomain)) {
       console.log(`skip ${betaUser.id}: hidden Apple address, link after the first sign-in`);
