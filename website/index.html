@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#050507">
+    <meta name="description" content="BankStats pomaga zrozumieć wydatki i wpływy na podstawie obsługiwanych powiadomień bankowych. Bez łączenia konta bankowego.">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="BankStats: zobacz swoje wydatki wyraźniej">
+    <meta property="og:description" content="Spokojny obraz wydatków i wpływów. Powiadomienia są odczytywane na urządzeniu, bez dostępu do konta bankowego.">
+    <meta property="og:image" content="brand/icon.png">
+    <link rel="icon" href="brand/favicon.png" type="image/png">
+    <link rel="stylesheet" href="site.css">
+    <script src="site.js" defer></script>
+    <title>BankStats: zobacz swoje wydatki wyraźniej</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Przejdź do treści</a>
+    <div class="scroll-progress" aria-hidden="true"></div>
+    <header class="site-header">
+      <div class="shell header-inner">
+        <a class="brand" href="./" aria-label="BankStats, strona główna">
+          <img src="brand/icon.png" alt="" width="40" height="40">
+          <span>BankStats</span>
+        </a>
+        <nav class="header-nav" aria-label="Nawigacja główna">
+          <a href="#powiadomienia">Powiadomienia</a>
+          <a href="privacy/">Prywatność</a>
+          <a class="nav-support" href="support/">Wsparcie <span aria-hidden="true">↗</span></a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero shell" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <h1 id="hero-title"><span class="title-line">BankStats</span></h1>
+          <p class="hero-lead" data-reveal>BankStats porządkuje transakcje z obsługiwanych powiadomień bankowych i pokazuje, gdzie płyną Twoje pieniądze. Bez łączenia konta bankowego.</p>
+          <div class="hero-actions" data-reveal>
+            <a class="button button-primary" href="#jak-dziala">Zobacz, jak działa <span aria-hidden="true">↗</span></a>
+            <a class="button button-text" href="privacy/">Jak dbamy o dane <span aria-hidden="true">→</span></a>
+          </div>
+        </div>
+
+        <div class="hero-art">
+          <div class="phone-stage" data-reveal>
+            <div class="phone-frame" data-tilt>
+              <span class="phone-key phone-key-volume" aria-hidden="true"></span>
+              <span class="phone-key phone-key-power" aria-hidden="true"></span>
+              <div class="phone-screen">
+                <img class="phone-screenshot" src="screenshots/overview.png" alt="Ekran Przegląd aplikacji BankStats: wydatki, przychody i przepływ pieniędzy w tym miesiącu" width="1179" height="2556" fetchpriority="high">
+              </div>
+            </div>
+          </div>
+          <p class="preview-caption"><span>BankStats na iPhonie</span>Rzeczywisty ekran aplikacji</p>
+        </div>
+      </section>
+
+      <section class="banks shell" id="banki" aria-labelledby="banks-title">
+        <div class="section-intro" data-reveal>
+          <p class="section-label">Obsługiwane banki</p>
+          <h2 id="banks-title" data-text-reveal>Banki, które obsługujemy.</h2>
+          <p>BankStats odczytuje płatności z powiadomień tych banków. Revolut pojawi się wkrótce.</p>
+        </div>
+        <ul class="bank-list">
+          <li class="bank" data-reveal>
+            <img src="banks/millennium.png" alt="" width="56" height="56" loading="lazy">
+            <span>Millennium</span>
+          </li>
+          <li class="bank" data-reveal>
+            <img src="banks/pko.png" alt="" width="56" height="56" loading="lazy">
+            <span>PKO BP</span>
+          </li>
+          <li class="bank" data-reveal>
+            <img src="banks/ing.png" alt="" width="56" height="56" loading="lazy">
+            <span>ING</span>
+          </li>
+          <li class="bank" data-reveal>
+            <img src="banks/mbank.png" alt="" width="56" height="56" loading="lazy">
+            <span>mBank</span>
+          </li>
+          <li class="bank" data-reveal>
+            <img src="banks/revolut.png" alt="" width="56" height="56" loading="lazy">
+            <span>Revolut</span> <span class="tone-badge">Wkrótce</span>
+          </li>
+        </ul>
+        <div class="callout bank-note" data-reveal><p><strong>Twojego banku nie ma na liście?</strong> Nic straconego. BankStats zapisuje płatności z Portfela Apple, więc Twoje wydatki i tak trafią do aplikacji. Nie zobaczysz tylko przelewów przychodzących i wychodzących.</p></div>
+      </section>
+
+      <section class="screenshots-section shell" id="jak-dziala" aria-labelledby="screenshots-title">
+        <div class="screenshots-heading">
+          <div class="section-intro" data-reveal>
+            <p class="section-label">Zajrzyj do środka</p>
+            <h2 id="screenshots-title" data-text-reveal>Tak wygląda BankStats.</h2>
+            <p>Od szybkiego przeglądu po szczegóły pojedynczego zakupu. Wybierz ekran, żeby zobaczyć go z bliska.</p>
+          </div>
+          <div class="gallery-controls" aria-label="Przewijanie galerii">
+            <button type="button" data-gallery-direction="-1" aria-label="Poprzednie ekrany" aria-controls="screenshots-track">←</button>
+            <button type="button" data-gallery-direction="1" aria-label="Następne ekrany" aria-controls="screenshots-track">→</button>
+          </div>
+        </div>
+        <div class="screenshots-track" id="screenshots-track" role="region" aria-label="Ekrany aplikacji" tabindex="0">
+          <figure class="screenshot-card" data-reveal>
+            <a class="screenshot-link" href="screenshots/overview.png" data-screenshot data-title="Przegląd" aria-label="Powiększ: Przegląd">
+              <img src="screenshots/overview.png" alt="Przegląd, zrzut ekranu aplikacji BankStats" width="1179" height="2556" loading="lazy" decoding="async">
+              <span class="screenshot-expand" aria-hidden="true">↗</span>
+            </a>
+            <figcaption><h3>Przegląd</h3><p>Wydatki, przychody i przepływ pieniędzy w wybranym okresie.</p></figcaption>
+          </figure>
+          <figure class="screenshot-card" data-reveal>
+            <a class="screenshot-link" href="screenshots/monthly-report.png" data-screenshot data-title="Raport miesięczny" aria-label="Powiększ: Raport miesięczny">
+              <img src="screenshots/monthly-report.png" alt="Raport miesięczny, zrzut ekranu aplikacji BankStats" width="1179" height="2556" loading="lazy" decoding="async">
+              <span class="screenshot-expand" aria-hidden="true">↗</span>
+            </a>
+            <figcaption><h3>Raport miesięczny</h3><p>Wydatki dzień po dniu według kategorii i sklepy, w których wydajesz najwięcej.</p></figcaption>
+          </figure>
+          <figure class="screenshot-card" data-reveal>
+            <a class="screenshot-link" href="screenshots/spending.png" data-screenshot data-title="Szczegóły wydatków" aria-label="Powiększ: Szczegóły wydatków">
+              <img src="screenshots/spending.png" alt="Szczegóły wydatków, zrzut ekranu aplikacji BankStats" width="1179" height="2556" loading="lazy" decoding="async">
+              <span class="screenshot-expand" aria-hidden="true">↗</span>
+            </a>
+            <figcaption><h3>Szczegóły wydatków</h3><p>Wykres wydatków i ich podział według źródeł.</p></figcaption>
+          </figure>
+          <figure class="screenshot-card" data-reveal>
+            <a class="screenshot-link" href="screenshots/premium.png" data-screenshot data-title="BankStats Premium" aria-label="Powiększ: BankStats Premium">
+              <img src="screenshots/premium.png" alt="BankStats Premium, zrzut ekranu aplikacji BankStats" width="1179" height="2556" loading="lazy" decoding="async">
+              <span class="screenshot-expand" aria-hidden="true">↗</span>
+            </a>
+            <figcaption><h3>BankStats Premium</h3><p>Podgląd ekranu aktywnego planu Premium.</p></figcaption>
+          </figure>
+          <figure class="screenshot-card" data-reveal>
+            <a class="screenshot-link" href="screenshots/shop-details.png" data-screenshot data-title="Limity i historia sklepu" aria-label="Powiększ: Limity i historia sklepu">
+              <img src="screenshots/shop-details.png" alt="Limity i historia sklepu, zrzut ekranu aplikacji BankStats" width="1179" height="2556" loading="lazy" decoding="async">
+              <span class="screenshot-expand" aria-hidden="true">↗</span>
+            </a>
+            <figcaption><h3>Limity i historia sklepu</h3><p>Miesięczny limit, wykres i szczegóły zakupów.</p></figcaption>
+          </figure>
+          <figure class="screenshot-card" data-reveal>
+            <a class="screenshot-link" href="screenshots/transactions.png" data-screenshot data-title="Historia transakcji" aria-label="Powiększ: Historia transakcji">
+              <img src="screenshots/transactions.png" alt="Historia transakcji, zrzut ekranu aplikacji BankStats" width="1179" height="2556" loading="lazy" decoding="async">
+              <span class="screenshot-expand" aria-hidden="true">↗</span>
+            </a>
+            <figcaption><h3>Historia transakcji</h3><p>Codzienne operacje uporządkowane według dat.</p></figcaption>
+          </figure>
+          <figure class="screenshot-card" data-reveal>
+            <a class="screenshot-link" href="screenshots/shops.png" data-screenshot data-title="Sklepy i kategorie" aria-label="Powiększ: Sklepy i kategorie">
+              <img src="screenshots/shops.png" alt="Sklepy i kategorie, zrzut ekranu aplikacji BankStats" width="1179" height="2556" loading="lazy" decoding="async">
+              <span class="screenshot-expand" aria-hidden="true">↗</span>
+            </a>
+            <figcaption><h3>Sklepy i kategorie</h3><p>Miejsca, w których wydajesz najwięcej.</p></figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <dialog class="screenshot-dialog" aria-labelledby="screenshot-dialog-title">
+        <div class="screenshot-dialog-heading">
+          <h2 id="screenshot-dialog-title">Podgląd ekranu</h2>
+          <button type="button" class="dialog-close" aria-label="Zamknij podgląd">✕</button>
+        </div>
+        <img class="screenshot-full" alt="" width="1179" height="2556">
+      </dialog>
+
+      <section class="tones shell" id="powiadomienia" aria-labelledby="tones-title">
+        <div class="section-intro" data-reveal>
+          <p class="section-label">Powiadomienia o limitach</p>
+          <h2 id="tones-title" data-text-reveal>Wybierz, jak ostro ma być.</h2>
+          <p>Ustaw limit na sklep, kategorię albo wszystkie wydatki. BankStats powiadomi Cię, gdy przekroczysz 50%, 80%, 90% i 100% limitu, a przy limicie sklepu może też po każdej płatności.</p>
+        </div>
+        <div class="tone-grid">
+          <article class="tone-card" data-reveal>
+            <span class="feature-number">01</span>
+            <h3>Pasywny</h3>
+            <p>Spokojnie przypomina, ile zostało.</p>
+            <div class="notification-preview" aria-label="Przykładowe powiadomienie: 80% limitu za Tobą Uważaj na kolejne zakupy.">
+              <img src="brand/icon.png" alt="" width="34" height="34">
+              <div><strong>80% limitu za Tobą</strong><span>Uważaj na kolejne zakupy.</span></div>
+              <time>teraz</time>
+            </div>
+          </article>
+          <article class="tone-card" data-reveal>
+            <span class="feature-number">02</span>
+            <h3>Lekko agresywny</h3>
+            <p>Złośliwa uwaga. Im bliżej limitu, tym ostrzej.</p>
+            <div class="notification-preview" aria-label="Przykładowe powiadomienie: 80% limitu. Uważaj! Jeszcze chwila i limit pęknie.">
+              <img src="brand/icon.png" alt="" width="34" height="34">
+              <div><strong>80% limitu. Uważaj!</strong><span>Jeszcze chwila i limit pęknie.</span></div>
+              <time>teraz</time>
+            </div>
+          </article>
+          <article class="tone-card" data-reveal>
+            <span class="feature-number">03</span>
+            <h3>Bardzo agresywny <span class="tone-badge">Premium</span></h3>
+            <p>Ostry opie***l z wulgaryzmami. Im bliżej limitu, tym gorzej.</p>
+            <div class="notification-preview" aria-label="Przykładowe powiadomienie: Ogarnij się, k**wa! 80% limitu już poszło.">
+              <img src="brand/icon.png" alt="" width="34" height="34">
+              <div><strong>Ogarnij się, k**wa!</strong><span>80% limitu już poszło.</span></div>
+              <time>teraz</time>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="trust shell" aria-labelledby="trust-title">
+        <div class="trust-panel" data-reveal>
+          <p class="section-label">Prywatność od początku</p>
+          <h2 id="trust-title" data-text-reveal>Bez dostępu do konta bankowego.</h2>
+          <p>BankStats buduje obraz przepływów na podstawie obsługiwanych powiadomień i ręcznych wpisów. Nie pokazuje rzeczywistego salda rachunku ani nie gwarantuje pełnej historii operacji.</p>
+          <a class="inline-link" href="privacy/">Przeczytaj politykę prywatności <span aria-hidden="true">↗</span></a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="shell footer-top">
+        <div>
+          <a class="brand footer-brand" href="./"><img src="brand/icon.png" alt="" width="38" height="38"><span>BankStats</span></a>
+          <p>Spokojniejszy obraz codziennych finansów.</p>
+        </div>
+        <div class="footer-links">
+          <a href="privacy/">Polityka prywatności</a>
+          <a href="support/">Wsparcie i kontakt</a>
+          <a href="delete-account/">Usuwanie konta</a>
+        </div>
+      </div>
+      <div class="shell footer-bottom"><span>© 2026 Maciej Adamski</span><span>BankStats nie jest bankiem ani usługą doradztwa finansowego.</span></div>
+    </footer>
+  </body>
+</html>
