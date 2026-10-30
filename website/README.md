@@ -12,14 +12,11 @@ Open `http://127.0.0.1:4173/`.
 
 ## Hosting
 
-The site is served by Cloudflare Pages at `https://bankstats.app`:
+The site is served by the Cloudflare Pages project `bankstats` at `https://bankstats.app` and `https://www.bankstats.app`. The project uses direct upload, so publish changes from the repository root:
 
-| Setting | Value |
-| --- | --- |
-| Production branch | `main` |
-| Build command | none |
-| Build output directory | `website` |
-| Custom domain | `bankstats.app` |
+```sh
+bunx wrangler pages deploy website --project-name bankstats --branch main
+```
 
 The `bankstats.app` zone uses Cloudflare nameservers, because Pages serves an apex domain only from a Cloudflare zone. The Clerk records (`clerk`, `accounts`, `clkmail`, `clk._domainkey`, `clk2._domainkey`) stay `DNS only`, never proxied.
 
