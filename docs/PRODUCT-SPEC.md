@@ -289,7 +289,8 @@ BankStats earns revenue through an optional Premium subscription. The free produ
 - The product does not show advertising, sell financial data, or promote loans for commission.
 - A visible restore-purchases action is available. The application silently synchronizes known purchases after authentication where platform policy permits.
 - Store subscriptions use the configured free trial and a 16-day Apple billing grace period.
-- Gift codes grant Premium for a chosen number of months or for good. Each code works once, is created with `npx convex run premiumCodes:create`, and is entered under "I have a code" on the Premium screen. A gift that runs out returns the account to the free product, and a later gift extends a running one. Before the App Store release, the in-app code field is replaced by App Store and Google Play offer codes redeemed through RevenueCat, because App Store Review Guideline 3.1.1 forbids unlocking features with the application's own codes.
+- Premium is redeemed in the app only through App Store offer codes: "Redeem code" on the Premium screen opens Apple's redemption sheet through RevenueCat, because App Store Review Guideline 3.1.1 forbids unlocking features with the application's own codes. Gift codes created with `npx convex run premiumCodes:create` are no longer entered in the app. Premium granted by an earlier gift keeps its end date.
+- The purchase screen links the privacy policy (`https://bankstats.app/privacy/`) and Apple's standard Terms of Use (EULA), as Guideline 3.1.2 requires. Profile links both as well.
 
 ### Privacy, security, and compliance
 

@@ -29,6 +29,10 @@ export const profileCopy = defineCopy({
     previewPremiumLoading: (isOn: boolean): string =>
       isOn ? 'Zakończ ładowanie premium (test)' : 'Pokaż ładowanie premium (test)',
     language: 'Język',
+    privacyPolicy: 'Polityka prywatności',
+    privacyPolicyHint: 'Otwiera politykę prywatności BankStats w przeglądarce',
+    termsOfUse: 'Warunki korzystania',
+    termsOfUseHint: 'Otwiera warunki korzystania z aplikacji w przeglądarce',
     languageHint: 'Zmienia język aplikacji',
     signOut: 'Wyloguj się',
   },
@@ -60,6 +64,10 @@ export const profileCopy = defineCopy({
     previewPremiumLoading: (isOn: boolean): string =>
       isOn ? 'Stop the premium loading preview (test)' : 'Preview premium loading (test)',
     language: 'Language',
+    privacyPolicy: 'Privacy Policy',
+    privacyPolicyHint: 'Opens the BankStats privacy policy in the browser',
+    termsOfUse: 'Terms of Use',
+    termsOfUseHint: 'Opens the terms of use in the browser',
     languageHint: 'Changes the app language',
     signOut: 'Sign out',
   },
