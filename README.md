@@ -24,9 +24,9 @@ Every build belongs to exactly one lane, declared by `EXPO_PUBLIC_APP_ENV`:
 | ------------- | ---------------------------- | -------------------- | ----------------- |
 | `development` | `com.bankstats.app.dev`      | `bankstats-dev`      | `pk_test_…`       |
 | `preview`     | `com.bankstats.app.preview`  | `bankstats-preview`  | `pk_test_…`       |
-| `production`  | `com.bankstats.app`          | `bankstats`          | `pk_live_…`       |
+| `production`  | `com.bankstats.app.preview`  | `bankstats`          | `pk_live_…`       |
 
-Lanes install side by side and never share deep links. Nothing defaults to a lane: the Expo config
+Development installs side by side with the other lanes. Preview and production share `com.bankstats.app.preview`, so TestFlight and the App Store ship the same app and the Shortcuts automations bound to it keep working. Lanes never share deep links. Nothing defaults to a lane: the Expo config
 fails if `EXPO_PUBLIC_APP_ENV` is unset, and the application refuses to start when a lane is paired
 with credentials belonging to another one — a preview build cannot silently run on production Clerk
 keys, and a production build cannot ship pointing at a test instance.
