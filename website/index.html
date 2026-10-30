@@ -24,7 +24,7 @@
           <span>BankStats</span>
         </a>
         <nav class="header-nav" aria-label="Nawigacja główna">
-          <a href="#jak-dziala">Jak działa</a>
+          <a href="#powiadomienia">Powiadomienia</a>
           <a href="privacy/">Prywatność</a>
           <a class="nav-support" href="support/">Wsparcie <span aria-hidden="true">↗</span></a>
         </nav>
@@ -34,11 +34,10 @@
     <main id="main">
       <section class="hero shell" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow" data-reveal>BankStats / finanse osobiste</p>
-          <h1 id="hero-title"><span class="title-line">Twoje pieniądze.</span><span class="title-line title-muted">W jasnym</span><span class="title-line">świetle.</span></h1>
+          <h1 id="hero-title"><span class="title-line">BankStats</span></h1>
           <p class="hero-lead" data-reveal>BankStats porządkuje transakcje z obsługiwanych powiadomień bankowych i pokazuje, gdzie płyną Twoje pieniądze. Bez łączenia konta bankowego.</p>
           <div class="hero-actions" data-reveal>
-            <a class="button button-primary" href="#jak-dziala">Zobacz, jak działa <span aria-hidden="true">↗</span></a>
+            <a class="button button-primary" href="#powiadomienia">Zobacz powiadomienia <span aria-hidden="true">↗</span></a>
             <a class="button button-text" href="privacy/">Jak dbamy o dane <span aria-hidden="true">→</span></a>
           </div>
           <p class="hero-note">Pierwsza obsługiwana konfiguracja: iPhone i Bank Millennium.</p>
@@ -50,7 +49,7 @@
               <span class="phone-key phone-key-volume" aria-hidden="true"></span>
               <span class="phone-key phone-key-power" aria-hidden="true"></span>
               <div class="phone-screen">
-                <img class="phone-screenshot" src="screenshots/overview.png" alt="Ekran Overview aplikacji BankStats: wydatki, wpływy, przepływ pieniędzy i statystyki transakcji" width="1179" height="2556" fetchpriority="high">
+                <img class="phone-screenshot" src="screenshots/overview.png" alt="Ekran Przegląd aplikacji BankStats: wydatki, przychody i przepływ pieniędzy w tym miesiącu" width="1179" height="2556" fetchpriority="high">
               </div>
             </div>
           </div>
@@ -72,46 +71,18 @@
         </div>
         <div class="screenshots-track" id="screenshots-track" role="region" aria-label="Ekrany aplikacji" tabindex="0">
           <figure class="screenshot-card" data-reveal>
-            <a class="screenshot-link" href="screenshots/overview.png" data-screenshot data-title="Przegląd finansów" aria-label="Powiększ: Przegląd finansów">
-              <img src="screenshots/overview.png" alt="Przegląd finansów — zrzut ekranu aplikacji BankStats" width="1179" height="2556" loading="lazy" decoding="async">
+            <a class="screenshot-link" href="screenshots/overview.png" data-screenshot data-title="Przegląd" aria-label="Powiększ: Przegląd">
+              <img src="screenshots/overview.png" alt="Przegląd — zrzut ekranu aplikacji BankStats" width="1179" height="2556" loading="lazy" decoding="async">
               <span class="screenshot-expand" aria-hidden="true">↗</span>
             </a>
-            <figcaption><h3>Przegląd finansów</h3><p>Wydatki, wpływy i przepływ pieniędzy na jednym ekranie.</p></figcaption>
+            <figcaption><h3>Przegląd</h3><p>Wydatki, przychody i przepływ pieniędzy w wybranym okresie.</p></figcaption>
           </figure>
           <figure class="screenshot-card" data-reveal>
-            <a class="screenshot-link" href="screenshots/spending.png" data-screenshot data-title="Szczegóły wydatków" aria-label="Powiększ: Szczegóły wydatków">
-              <img src="screenshots/spending.png" alt="Szczegóły wydatków — zrzut ekranu aplikacji BankStats" width="1179" height="2556" loading="lazy" decoding="async">
+            <a class="screenshot-link" href="screenshots/monthly-report.png" data-screenshot data-title="Raport miesięczny" aria-label="Powiększ: Raport miesięczny">
+              <img src="screenshots/monthly-report.png" alt="Raport miesięczny — zrzut ekranu aplikacji BankStats" width="1179" height="2556" loading="lazy" decoding="async">
               <span class="screenshot-expand" aria-hidden="true">↗</span>
             </a>
-            <figcaption><h3>Szczegóły wydatków</h3><p>Wykres wydatków i ich podział według źródeł.</p></figcaption>
-          </figure>
-          <figure class="screenshot-card" data-reveal>
-            <a class="screenshot-link" href="screenshots/premium.png" data-screenshot data-title="BankStats Premium" aria-label="Powiększ: BankStats Premium">
-              <img src="screenshots/premium.png" alt="BankStats Premium — zrzut ekranu aplikacji BankStats" width="1179" height="2556" loading="lazy" decoding="async">
-              <span class="screenshot-expand" aria-hidden="true">↗</span>
-            </a>
-            <figcaption><h3>BankStats Premium</h3><p>Podgląd ekranu aktywnego planu Premium.</p></figcaption>
-          </figure>
-          <figure class="screenshot-card" data-reveal>
-            <a class="screenshot-link" href="screenshots/shop-details.png" data-screenshot data-title="Limity i historia sklepu" aria-label="Powiększ: Limity i historia sklepu">
-              <img src="screenshots/shop-details.png" alt="Limity i historia sklepu — zrzut ekranu aplikacji BankStats" width="1179" height="2556" loading="lazy" decoding="async">
-              <span class="screenshot-expand" aria-hidden="true">↗</span>
-            </a>
-            <figcaption><h3>Limity i historia sklepu</h3><p>Miesięczny limit, wykres i szczegóły zakupów.</p></figcaption>
-          </figure>
-          <figure class="screenshot-card" data-reveal>
-            <a class="screenshot-link" href="screenshots/transactions.png" data-screenshot data-title="Historia transakcji" aria-label="Powiększ: Historia transakcji">
-              <img src="screenshots/transactions.png" alt="Historia transakcji — zrzut ekranu aplikacji BankStats" width="1179" height="2556" loading="lazy" decoding="async">
-              <span class="screenshot-expand" aria-hidden="true">↗</span>
-            </a>
-            <figcaption><h3>Historia transakcji</h3><p>Codzienne operacje uporządkowane według dat.</p></figcaption>
-          </figure>
-          <figure class="screenshot-card" data-reveal>
-            <a class="screenshot-link" href="screenshots/shops.png" data-screenshot data-title="Sklepy i kategorie" aria-label="Powiększ: Sklepy i kategorie">
-              <img src="screenshots/shops.png" alt="Sklepy i kategorie — zrzut ekranu aplikacji BankStats" width="1179" height="2556" loading="lazy" decoding="async">
-              <span class="screenshot-expand" aria-hidden="true">↗</span>
-            </a>
-            <figcaption><h3>Sklepy i kategorie</h3><p>Miejsca, w których wydajesz najwięcej.</p></figcaption>
+            <figcaption><h3>Raport miesięczny</h3><p>Wydatki dzień po dniu według kategorii i sklepy, w których wydajesz najwięcej.</p></figcaption>
           </figure>
         </div>
       </section>
@@ -124,55 +95,43 @@
         <img class="screenshot-full" alt="" width="1179" height="2556">
       </dialog>
 
-      <section class="benefits shell" aria-labelledby="benefits-title">
+      <section class="tones shell" id="powiadomienia" aria-labelledby="tones-title">
         <div class="section-intro" data-reveal>
-          <p class="section-label">Po prostu więcej jasności</p>
-          <h2 id="benefits-title" data-text-reveal>To, co ważne, bez szumu.</h2>
-          <p>BankStats skupia się na codziennych decyzjach i daje Ci kontrolę nad danymi.</p>
+          <p class="section-label">Powiadomienia o limitach</p>
+          <h2 id="tones-title" data-text-reveal>Wybierz, jak ostro ma być.</h2>
+          <p>Ustaw limit na sklep, kategorię albo wszystkie wydatki. BankStats powiadomi Cię, gdy przekroczysz 50%, 80%, 90% i 100% limitu, a przy limicie sklepu może też po każdej płatności.</p>
         </div>
-        <div class="feature-grid">
-          <article class="feature-card" data-reveal>
+        <div class="tone-grid">
+          <article class="tone-card" data-reveal>
             <span class="feature-number">01</span>
-            <div class="feature-glyph glyph-chart" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-            <h3>Zobacz przepływ pieniędzy</h3>
-            <p>Wydatki, wpływy, historia i wykresy pomagają odnaleźć wzorce bez udawania salda bankowego.</p>
+            <h3>Pasywny</h3>
+            <p>Spokojnie przypomina, ile zostało.</p>
+            <div class="notification-preview" aria-label="Przykładowe powiadomienie: 80% limitu za Tobą Uważaj na kolejne zakupy.">
+              <img src="brand/icon.png" alt="" width="34" height="34">
+              <div><strong>80% limitu za Tobą</strong><span>Uważaj na kolejne zakupy.</span></div>
+              <time>teraz</time>
+            </div>
           </article>
-          <article class="feature-card" data-reveal>
+          <article class="tone-card" data-reveal>
             <span class="feature-number">02</span>
-            <div class="feature-glyph glyph-rings" aria-hidden="true"><i></i><i></i><i></i></div>
-            <h3>Powiadomienia pod kontrolą</h3>
-            <p>Treść obsługiwanych powiadomień jest interpretowana na urządzeniu. Do synchronizacji trafiają znormalizowane transakcje.</p>
+            <h3>Lekko agresywny</h3>
+            <p>Złośliwa uwaga. Im bliżej limitu, tym ostrzej.</p>
+            <div class="notification-preview" aria-label="Przykładowe powiadomienie: 80% limitu. Uważaj! Jeszcze chwila i limit pęknie.">
+              <img src="brand/icon.png" alt="" width="34" height="34">
+              <div><strong>80% limitu. Uważaj!</strong><span>Jeszcze chwila i limit pęknie.</span></div>
+              <time>teraz</time>
+            </div>
           </article>
-          <article class="feature-card" data-reveal>
+          <article class="tone-card" data-reveal>
             <span class="feature-number">03</span>
-            <div class="feature-glyph glyph-lock" aria-hidden="true"><i></i><i></i></div>
-            <h3>Twoje dane, Twoje zasady</h3>
-            <p>Możesz poprawiać transakcje, eksportować dane i usunąć konto. Blokada aplikacji oraz Tryb prywatny chronią widok kwot.</p>
+            <h3>Bardzo agresywny <span class="tone-badge">Premium</span></h3>
+            <p>Ostry opie***l z wulgaryzmami. Im bliżej limitu, tym gorzej.</p>
+            <div class="notification-preview" aria-label="Przykładowe powiadomienie: Ogarnij się, k**wa! 80% limitu już poszło.">
+              <img src="brand/icon.png" alt="" width="34" height="34">
+              <div><strong>Ogarnij się, k**wa!</strong><span>80% limitu już poszło.</span></div>
+              <time>teraz</time>
+            </div>
           </article>
-        </div>
-      </section>
-
-      <section class="steps-section" id="jak-dziala" aria-labelledby="steps-title">
-        <div class="shell steps-inner">
-          <div class="steps-heading" data-reveal>
-            <p class="section-label">Jak działa</p>
-            <h2 id="steps-title" data-text-reveal>Od powiadomienia do zrozumienia.</h2>
-            <p>Nie prosimy o login ani hasło do banku. Konfigurację powiadomień wybierasz samodzielnie.</p>
-          </div>
-          <div class="steps-list">
-            <article class="step" data-reveal>
-              <span class="step-index">01</span>
-              <div><h3>Skonfiguruj skrót</h3><p>Na iPhonie dodaj automatyzację Skrótów dla obsługiwanych powiadomień Banku Millennium. Aplikacja prowadzi Cię przez kolejne kroki.</p></div>
-            </article>
-            <article class="step" data-reveal>
-              <span class="step-index">02</span>
-              <div><h3>Sprawdź swoje liczby</h3><p>BankStats pokazuje zaobserwowane wydatki i wpływy. Możesz też dodać transakcję ręcznie lub poprawić zapis.</p></div>
-            </article>
-            <article class="step" data-reveal>
-              <span class="step-index">03</span>
-              <div><h3>Zachowaj kontrolę</h3><p>W dowolnym momencie wyeksportujesz dane, odłączysz urządzenie lub usuniesz konto w aplikacji.</p></div>
-            </article>
-          </div>
         </div>
       </section>
 
