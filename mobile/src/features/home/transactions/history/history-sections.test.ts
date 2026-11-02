@@ -4,7 +4,7 @@ import { describe, expect, test } from 'bun:test';
 import type { SpendingEvent } from '@/features/insights/events/spending-event';
 
 import { dayKey } from '@/features/app-shell/formatting/format-date';
-import { buildSections } from './history-sections';
+import { buildSections, firstDays } from './history-sections';
 
 function payment(id: string, occurredAt: string): IngestionRecord {
   return {
@@ -117,3 +117,39 @@ describe('history sections', () => {
   });
 });
 
+describe('showing the history a page at a time', () => {
+  const month = Array.from({ length: 30 }, (_, index) => {
+    const day = String(30 - index).padStart(2, '0');
+
+    return [
+      payment(`${day}-morning`, `2026-06-${day}T08:00:00.000Z`),
+      payment(`${day}-evening`, `2026-06-${day}T18:00:00.000Z`),
+    ];
+  }).flat();
+  const sections = buildSections(month, reference);
+
+  test('shows the newest days until the page is full', () => {
+    const { sections: visible, hasMore } = firstDays(sections, 10);
+
+    expect(visible.map((section) => section.key)).toEqual(sections.slice(0, 5).map((section) => section.key));
+    expect(hasMore).toBe(true);
+  });
+
+  test('never cuts a day in half, so its total stays complete', () => {
+    const { sections: visible } = firstDays(sections, 9);
+    const lastDay = visible.at(-1);
+
+    expect(visible).toHaveLength(5);
+    expect(lastDay?.data).toHaveLength(2);
+    expect(lastDay?.totalMinor).toBe(-2_000);
+  });
+
+  test('shows everything once the page reaches the oldest day', () => {
+    expect(firstDays(sections, 60)).toEqual({ sections, hasMore: false });
+    expect(firstDays(sections, 1_000).hasMore).toBe(false);
+  });
+
+  test('shows nothing more for an empty history', () => {
+    expect(firstDays([], 100)).toEqual({ sections: [], hasMore: false });
+  });
+});

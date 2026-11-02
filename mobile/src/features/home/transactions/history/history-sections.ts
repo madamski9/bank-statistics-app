@@ -104,3 +104,26 @@ export function buildSections(
 
   return [...sections.values()];
 }
+
+export const historyPageSize = 100;
+
+export interface VisibleHistory {
+  sections: DaySection[];
+  hasMore: boolean;
+}
+
+export function firstDays(sections: DaySection[], rowLimit: number): VisibleHistory {
+  const visible: DaySection[] = [];
+  let shownRows = 0;
+
+  for (const section of sections) {
+    if (shownRows >= rowLimit) {
+      return { sections: visible, hasMore: true };
+    }
+
+    visible.push(section);
+    shownRows += section.data.length;
+  }
+
+  return { sections: visible, hasMore: false };
+}
