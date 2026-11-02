@@ -105,7 +105,7 @@ export function buildSections(
   return [...sections.values()];
 }
 
-export const historyPageSize = 100;
+export const historyPageSize = 50;
 
 export interface VisibleHistory {
   sections: DaySection[];

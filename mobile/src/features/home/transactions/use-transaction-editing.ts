@@ -22,6 +22,8 @@ export function useTransactionEditing({ onChanged, onRememberRule }: Transaction
   const [editor, setEditor] = useState<EditorTarget | null>(null);
   const { clearError, error: writeError, isWriting, remove, save } = useTransactionWrites(onChanged);
 
+  const openDetail = useCallback((record: IngestionRecord) => setEditor({ mode: 'detail', record }), []);
+
   const closeEditor = useCallback(() => {
     clearError();
     setEditor(null);
@@ -95,7 +97,7 @@ export function useTransactionEditing({ onChanged, onRememberRule }: Transaction
     editor,
     writeError,
     isWriting,
-    openDetail: (record: IngestionRecord) => setEditor({ mode: 'detail', record }),
+    openDetail,
     openEditor: (record: IngestionRecord | null) => setEditor({ mode: 'edit', record }),
     closeEditor,
     cancelEditing,

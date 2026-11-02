@@ -1,6 +1,15 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
-import { memo, useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Platform, SectionList, StyleSheet, Text, View } from 'react-native';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Platform,
+  SectionList,
+  StyleSheet,
+  Text,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { needsIosUpdateForCapture } from '@/features/app-shell/capture-support/device-capture-support';
@@ -20,6 +29,8 @@ import { TransactionRow } from './history/components/transaction-row';
 import { buildSections, firstDays, historyPageSize } from './history/history-sections';
 import { transactionsCopy } from './transactions-copy';
 import { useTransactionEditing } from './use-transaction-editing';
+
+const nextPageDelayMs = 400;
 
 interface TransactionsScreenProps {
   records: IngestionRecord[];
@@ -56,12 +67,32 @@ function TransactionsScreenComponent({
   const eventsById = useMemo(() => new Map(events.map((event) => [event.id, event])), [events]);
   const sections = useMemo(() => buildSections(records, new Date(), events), [events, records]);
   const [rowLimit, setRowLimit] = useState(historyPageSize);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const visible = useMemo(() => firstDays(sections, rowLimit), [rowLimit, sections]);
-  const showMore = useCallback(() => {
-    if (visible.hasMore) {
-      setRowLimit((limit) => limit + historyPageSize);
+  const showMoreAtBottom = useCallback(
+    ({ nativeEvent }: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const distanceToBottom =
+        nativeEvent.contentSize.height - nativeEvent.contentOffset.y - nativeEvent.layoutMeasurement.height;
+
+      if (visible.hasMore && !isLoadingMore && distanceToBottom < nativeEvent.layoutMeasurement.height) {
+        setIsLoadingMore(true);
+      }
+    },
+    [isLoadingMore, visible.hasMore],
+  );
+
+  useEffect(() => {
+    if (!isLoadingMore) {
+      return;
     }
-  }, [visible.hasMore]);
+
+    const timer = setTimeout(() => {
+      setRowLimit((limit) => limit + historyPageSize);
+      setIsLoadingMore(false);
+    }, nextPageDelayMs);
+
+    return () => clearTimeout(timer);
+  }, [isLoadingMore]);
   const editing = useTransactionEditing({ onChanged, onRememberRule });
 
   const emptyMessage =
@@ -87,7 +118,11 @@ function TransactionsScreenComponent({
           </Text>
         }
         ListFooterComponent={
-          visible.hasMore ? <ActivityIndicator color={overviewColors.textSecondary} style={styles.more} /> : null
+          visible.hasMore ? (
+            <View style={styles.more}>
+              <ActivityIndicator animating={isLoadingMore} color={overviewColors.textSecondary} />
+            </View>
+          ) : null
         }
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 96 }]}
         indicatorStyle="white"
@@ -102,15 +137,15 @@ function TransactionsScreenComponent({
           return (
             <TransactionRow
               event={eventId === null ? undefined : eventsById.get(eventId)}
-              onPress={() => editing.openDetail(row.record)}
+              onOpen={editing.openDetail}
               record={row.record}
               rules={rules}
             />
           );
         }}
         renderSectionHeader={({ section }) => <HistorySectionHeader section={section} />}
-        onEndReached={showMore}
-        onEndReachedThreshold={0.6}
+        onMomentumScrollEnd={showMoreAtBottom}
+        onScrollEndDrag={showMoreAtBottom}
         sections={visible.sections}
         stickySectionHeadersEnabled
         style={styles.list}
@@ -152,6 +187,8 @@ const styles = StyleSheet.create({
     color: overviewColors.negative,
   },
   more: {
-    paddingVertical: overviewSpacing.block,
+    height: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
