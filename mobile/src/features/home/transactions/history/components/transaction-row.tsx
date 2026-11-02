@@ -1,5 +1,6 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { SymbolView } from 'expo-symbols';
+import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { formatTime } from '@/features/app-shell/formatting/format-date';
@@ -28,10 +29,10 @@ interface TransactionRowProps {
   record: IngestionRecord;
   rules: CategorizationRule[];
   event: SpendingEvent | undefined;
-  onPress: () => void;
+  onOpen: (record: IngestionRecord) => void;
 }
 
-export function TransactionRow({ record, rules, event, onPress }: TransactionRowProps) {
+function TransactionRowComponent({ record, rules, event, onOpen }: TransactionRowProps) {
   const { formatAmount } = useAmountFormatting();
   const copy = useCopy(transactionsCopy);
   const eventCopy = useCopy(eventsCopy);
@@ -60,7 +61,7 @@ export function TransactionRow({ record, rules, event, onPress }: TransactionRow
         .filter((part) => part !== undefined)
         .join(', ')}
       accessibilityRole="button"
-      onPress={onPress}
+      onPress={() => onOpen(record)}
       style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
     >
       <View
@@ -124,6 +125,8 @@ export function TransactionRow({ record, rules, event, onPress }: TransactionRow
     </Pressable>
   );
 }
+
+export const TransactionRow = memo(TransactionRowComponent);
 
 const styles = StyleSheet.create({
   row: {
