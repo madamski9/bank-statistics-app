@@ -1,5 +1,5 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, SectionList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -59,12 +59,19 @@ function TransactionsScreenComponent({
   const sections = useMemo(() => buildSections(records, new Date(), events), [events, records]);
   const [rowLimit, setRowLimit] = useState(historyPageSize);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const hasScrolledSinceLoad = useRef(false);
   const visible = useMemo(() => firstDays(sections, rowLimit), [rowLimit, sections]);
+  const markScrolled = useCallback(() => {
+    hasScrolledSinceLoad.current = true;
+  }, []);
   const showMore = useCallback(() => {
-    if (visible.hasMore) {
-      setIsLoadingMore(true);
+    if (!visible.hasMore || isLoadingMore || !hasScrolledSinceLoad.current) {
+      return;
     }
-  }, [visible.hasMore]);
+
+    hasScrolledSinceLoad.current = false;
+    setIsLoadingMore(true);
+  }, [isLoadingMore, visible.hasMore]);
 
   useEffect(() => {
     if (!isLoadingMore) {
@@ -132,6 +139,8 @@ function TransactionsScreenComponent({
         renderSectionHeader={({ section }) => <HistorySectionHeader section={section} />}
         maxToRenderPerBatch={20}
         onEndReached={showMore}
+        onMomentumScrollBegin={markScrolled}
+        onScrollBeginDrag={markScrolled}
         onEndReachedThreshold={0.6}
         sections={visible.sections}
         stickySectionHeadersEnabled
