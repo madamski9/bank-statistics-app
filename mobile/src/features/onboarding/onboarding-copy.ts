@@ -76,10 +76,10 @@ export const onboardingCopy = defineCopy({
       title: 'Wybierz swój plan',
       description:
         'Korzystaj bezpłatnie albo sprawdź, co zaoferuje Premium. Płatności Premium pojawią się wkrótce.',
-      freeLabel: 'Plan bezpłatny, 0 zł, docelowo jeden aktywny limit i miesiąc wydatków',
+      freeLabel: 'Plan bezpłatny, 0 zł, jeden aktywny limit i miesiąc wydatków',
       freeName: 'Bezpłatnie',
       freePrice: '0 zł',
-      freeDetail: 'Docelowo: 1 aktywny limit · wykresy i wydatki do 1 miesiąca',
+      freeDetail: '1 aktywny limit · wykresy i wydatki do 1 miesiąca',
       premiumLabel:
         'Plan Premium, 9,99 zł miesięcznie lub 99,99 zł rocznie zamiast 119,88 zł, dostępny wkrótce',
       comingSoon: 'WKRÓTCE',
@@ -89,7 +89,8 @@ export const onboardingCopy = defineCopy({
       unlimitedLimits: 'Nielimitowane aktywne limity',
       moreStatistics: 'Więcej statystyk i dłuższe zakresy czasu',
       note: 'Premium nie można jeszcze kupić. Możesz od razu korzystać z wersji bezpłatnej.',
-      sellingDescription:
+      sellingDescription: 'Korzystaj bezpłatnie albo przejdź na Premium. Subskrypcję możesz anulować w każdej chwili.',
+      sellingTrialDescription:
         'Korzystaj bezpłatnie albo wypróbuj Premium. Okres próbny możesz anulować w każdej chwili przed pierwszą płatnością.',
       premiumYearlyName: 'Premium rocznie',
       premiumMonthlyName: 'Premium miesięcznie',
@@ -243,10 +244,10 @@ export const onboardingCopy = defineCopy({
       title: 'Choose your plan',
       description:
         'Use it for free or see what Premium will offer. Premium payments are coming soon.',
-      freeLabel: 'Free plan, 0 zł, eventually one active limit and one month of spending',
+      freeLabel: 'Free plan, 0 zł, one active limit and one month of spending',
       freeName: 'Free',
       freePrice: '0 zł',
-      freeDetail: 'Eventually: 1 active limit · charts and spending up to 1 month',
+      freeDetail: '1 active limit · charts and spending up to 1 month',
       premiumLabel:
         'Premium plan, 9.99 zł a month or 99.99 zł a year instead of 119.88 zł, coming soon',
       comingSoon: 'SOON',
@@ -256,7 +257,8 @@ export const onboardingCopy = defineCopy({
       unlimitedLimits: 'Unlimited active limits',
       moreStatistics: 'More statistics and longer time ranges',
       note: "Premium can't be bought yet. You can start using the free version right away.",
-      sellingDescription: 'Use it for free or try Premium. You can cancel the free trial anytime before the first payment.',
+      sellingDescription: 'Use it for free or upgrade to Premium. You can cancel the subscription anytime.',
+      sellingTrialDescription: 'Use it for free or try Premium. You can cancel the free trial anytime before the first payment.',
       premiumYearlyName: 'Premium yearly',
       premiumMonthlyName: 'Premium monthly',
       trialBadge: (days: number) => `${days} DAYS FREE`,
