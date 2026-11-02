@@ -30,13 +30,14 @@ export function PlansStep({ onSelect, selectedPlan, premiumPlans, sellsPremium }
   const trialDays = premiumPlans.find((plan) => plan.trialDays !== null)?.trialDays ?? null;
   const annualPrice = annual === undefined ? copy.yearlyPrice : copy.yearlyPriceOf(annual.price);
   const monthlyPrice = monthly === undefined ? copy.monthlyPrice : copy.monthlyPriceOf(monthly.price);
+  const sellingDescription = trialDays === null ? copy.sellingDescription : copy.sellingTrialDescription;
 
   return (
     <View style={stepStyles.stepContent}>
       <SectionHeading
         eyebrow={copy.eyebrow}
         title={copy.title}
-        description={sellsPremium ? copy.sellingDescription : copy.description}
+        description={sellsPremium ? sellingDescription : copy.description}
       />
       <SelectionCard
         selected={selectedPlan === 'free'}
