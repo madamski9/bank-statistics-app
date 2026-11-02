@@ -29,9 +29,11 @@ Prices are 9.99 PLN monthly and 99.99 PLN yearly.
 | Google public SDK key (`goog_…`) | `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` in the same places |
 | Secret API key (v1, `sk_…`) | `npx convex env set REVENUECAT_SECRET_API_KEY …` on the lane's Convex deployment |
 | Webhook authorization header value | `npx convex env set REVENUECAT_WEBHOOK_AUTHORIZATION …` and the same value in the RevenueCat webhook settings |
-| Sandbox purchases | `npx convex env set REVENUECAT_ACCEPTS_SANDBOX true` on the development and beta deployments only. Test Store, TestFlight and App Store sandbox purchases grant Premium only where this is set, so production never gives Premium for a free sandbox purchase. |
+| Sandbox purchases | `npx convex env set REVENUECAT_ACCEPTS_SANDBOX true` on every deployment, production included. TestFlight builds and App Review only make sandbox purchases, so without it a tester or reviewer buys Premium and nothing unlocks. App Store customers cannot make sandbox purchases, so this only gives free Premium to invited TestFlight testers and Apple reviewers. |
 
 The production lane refuses RevenueCat Test Store keys (`test_…`). Without a public key, the Premium screen keeps saying that purchases are coming soon.
+
+Production uses the App Store app `com.bankstats.app.preview` in RevenueCat, and its webhook points at `https://content-bison-766.eu-west-1.convex.site/revenuecat/webhook` for both production and sandbox events.
 
 ## Webhook
 
