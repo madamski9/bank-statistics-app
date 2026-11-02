@@ -1,6 +1,15 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, SectionList, StyleSheet, Text, View } from 'react-native';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Platform,
+  SectionList,
+  StyleSheet,
+  Text,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { needsIosUpdateForCapture } from '@/features/app-shell/capture-support/device-capture-support';
@@ -59,19 +68,18 @@ function TransactionsScreenComponent({
   const sections = useMemo(() => buildSections(records, new Date(), events), [events, records]);
   const [rowLimit, setRowLimit] = useState(historyPageSize);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const hasScrolledSinceLoad = useRef(false);
   const visible = useMemo(() => firstDays(sections, rowLimit), [rowLimit, sections]);
-  const markScrolled = useCallback(() => {
-    hasScrolledSinceLoad.current = true;
-  }, []);
-  const showMore = useCallback(() => {
-    if (!visible.hasMore || isLoadingMore || !hasScrolledSinceLoad.current) {
-      return;
-    }
+  const showMoreAtBottom = useCallback(
+    ({ nativeEvent }: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const distanceToBottom =
+        nativeEvent.contentSize.height - nativeEvent.contentOffset.y - nativeEvent.layoutMeasurement.height;
 
-    hasScrolledSinceLoad.current = false;
-    setIsLoadingMore(true);
-  }, [isLoadingMore, visible.hasMore]);
+      if (visible.hasMore && !isLoadingMore && distanceToBottom < nativeEvent.layoutMeasurement.height) {
+        setIsLoadingMore(true);
+      }
+    },
+    [isLoadingMore, visible.hasMore],
+  );
 
   useEffect(() => {
     if (!isLoadingMore) {
@@ -118,7 +126,6 @@ function TransactionsScreenComponent({
         }
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 96 }]}
         indicatorStyle="white"
-        initialNumToRender={20}
         keyExtractor={(row) => row.key}
         renderItem={({ item: row }) => {
           if (row.kind === 'marker') {
@@ -137,15 +144,11 @@ function TransactionsScreenComponent({
           );
         }}
         renderSectionHeader={({ section }) => <HistorySectionHeader section={section} />}
-        maxToRenderPerBatch={20}
-        onEndReached={showMore}
-        onMomentumScrollBegin={markScrolled}
-        onScrollBeginDrag={markScrolled}
-        onEndReachedThreshold={0.6}
+        onMomentumScrollEnd={showMoreAtBottom}
+        onScrollEndDrag={showMoreAtBottom}
         sections={visible.sections}
         stickySectionHeadersEnabled
         style={styles.list}
-        windowSize={11}
       />
 
       <AddTransactionButton onPress={() => editing.openEditor(null)} />
