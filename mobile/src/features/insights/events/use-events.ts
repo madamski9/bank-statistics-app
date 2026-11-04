@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { queueLocalWrite } from '@/features/data/local-storage/local-write-queue';
+
 import { nextEventColor } from './event-colors';
 import { eventStore } from './event-storage';
 import { endedEvent, newSpendingEvent, type SpendingEvent } from './spending-event';
@@ -36,7 +38,7 @@ export function useEvents(): SpendingEvents {
 
   const save = useCallback(
     async (event: SpendingEvent) => {
-      await eventStore.upsert(event);
+      await queueLocalWrite(() => eventStore.upsert(event));
       await reload();
     },
     [reload],
@@ -51,7 +53,7 @@ export function useEvents(): SpendingEvents {
       const stored = await eventStore.load();
 
       for (const running of stored.filter((event) => event.endedAt === undefined)) {
-        await eventStore.upsert(endedEvent(running, now));
+        await queueLocalWrite(() => eventStore.upsert(endedEvent(running, now)));
       }
 
       const event = newSpendingEvent(name, now, Math.random, nextEventColor(stored));
@@ -64,7 +66,7 @@ export function useEvents(): SpendingEvents {
 
   const remove = useCallback(
     async (id: string) => {
-      await eventStore.remove(id);
+      await queueLocalWrite(() => eventStore.remove(id));
       await reload();
     },
     [reload],

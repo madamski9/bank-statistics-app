@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { queueLocalWrite } from '@/features/data/local-storage/local-write-queue';
+
 import { loadAccounts, upsertAccount } from './account-storage';
 import { newFinancialAccount, withGeneralAccounts, type FinancialAccount } from './financial-account';
 import { encryptedAccountStorage } from './encrypted-account-storage';
@@ -33,7 +35,7 @@ export function useFinancialAccounts(): FinancialAccounts {
 
   const create = useCallback(async (name: string) => {
     const account = newFinancialAccount(name, new Date(), Math.random);
-    await upsertAccount(encryptedAccountStorage, account);
+    await queueLocalWrite(() => upsertAccount(encryptedAccountStorage, account));
     setStored(await loadAccounts(encryptedAccountStorage));
 
     return account;

@@ -6,6 +6,8 @@ import { clearCategorizationRules } from '@/features/data/classification/rules/u
 import { clearEvents } from '@/features/insights/events/event-storage';
 import { clearIgnoreRules } from '@/features/data/ignored-payments/ignore-rule-storage';
 import { clearAccountStorage } from '@/features/data/financial-accounts/encrypted-account-storage';
+import { endLocalDataSessions } from '@/features/data/local-storage/local-data-session';
+import { queueLocalWrite } from '@/features/data/local-storage/local-write-queue';
 import { clearMonthlySummaryPreference } from '@/features/insights/monthly-summary/reminder/monthly-summary-preference';
 import { clearPrivacyStorage } from '@/features/settings/privacy/privacy-storage';
 import { clearDismissedSubscriptions } from '@/features/insights/subscriptions/dismissed-subscriptions';
@@ -15,6 +17,11 @@ import { clearCloudSyncPreference } from './cloud-sync-preference';
 import { clearLedger } from '../codecs/encrypted-ledger-storage';
 
 export async function clearLocalData(): Promise<void> {
+  await endLocalDataSessions();
+  await queueLocalWrite(clearStoredData);
+}
+
+async function clearStoredData(): Promise<void> {
   await Promise.all([
     clearAccountStorage(),
     clearLedger(),

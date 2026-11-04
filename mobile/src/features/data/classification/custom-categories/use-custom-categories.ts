@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { queueLocalWrite } from '@/features/data/local-storage/local-write-queue';
+
 import { setCustomCategories, type CustomCategory } from '../categories';
 import { newCustomCategory } from './custom-category';
 import { customCategoryStore } from './custom-category-storage';
@@ -39,7 +41,7 @@ export function useCustomCategories(): CustomCategories {
   const create = useCallback(
     async (name: string) => {
       const category = newCustomCategory(name, new Date(), Math.random);
-      await customCategoryStore.upsert(category);
+      await queueLocalWrite(() => customCategoryStore.upsert(category));
       await reload();
 
       return category;
@@ -49,7 +51,7 @@ export function useCustomCategories(): CustomCategories {
 
   const rename = useCallback(
     async (id: string, name: string) => {
-      await customCategoryStore.upsert({ id, name: name.trim() });
+      await queueLocalWrite(() => customCategoryStore.upsert({ id, name: name.trim() }));
       await reload();
     },
     [reload],
@@ -57,7 +59,7 @@ export function useCustomCategories(): CustomCategories {
 
   const remove = useCallback(
     async (id: string) => {
-      await customCategoryStore.remove(id);
+      await queueLocalWrite(() => customCategoryStore.remove(id));
       await reload();
     },
     [reload],

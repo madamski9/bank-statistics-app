@@ -4,6 +4,7 @@ import type { IngestionRecord } from '@bankstats/ingestion-native';
 import type { CustomCategory } from '@/features/data/classification/categories';
 import type { SpendingEvent } from '@/features/insights/events/spending-event';
 import type { FinancialAccount } from '@/features/data/financial-accounts/financial-account';
+import type { LocalDataSession } from '@/features/data/local-storage/local-data-session';
 
 import { accountCodec, type RemoteAccount } from '../codecs/account-codec';
 import { categoryCodec, type RemoteCategory } from '../codecs/category-codec';
@@ -58,6 +59,8 @@ export interface SyncPorts {
   categories: LocalPort<CustomCategory>;
   events: LocalPort<SpendingEvent>;
   ledger: LedgerStorage;
+  session: LocalDataSession;
+  exclusive: <Result>(work: () => Promise<Result>) => Promise<Result>;
   now: () => number;
 }
 
@@ -214,29 +217,33 @@ interface Reconciled<Change> {
   pulled: number;
 }
 
-async function reconcile<Item, Change extends { clientId: string }>(
+function reconcile<Item, Change extends { clientId: string }>(
+  ports: SyncPorts,
   local: LocalPort<Item>,
   codec: SyncCodec<Item, Change>,
   remote: SyncedChange<Change>[],
   ledger: SyncLedger,
   now: number,
 ): Promise<Reconciled<Change>> {
-  const plan = planSync({ local: await local.list(), remote, ledger, now }, codec);
+  return ports.exclusive(async () => {
+    ports.session.assertCurrent();
+    const plan = planSync({ local: await local.list(), remote, ledger, now }, codec);
 
-  for (const item of plan.saveLocally) {
-    await local.save(item);
-  }
+    for (const item of plan.saveLocally) {
+      await ports.session.write(() => local.save(item));
+    }
 
-  for (const id of plan.removeLocally) {
-    await local.remove(id);
-  }
+    for (const id of plan.removeLocally) {
+      await ports.session.write(() => local.remove(id));
+    }
 
-  return {
-    push: plan.push.filter((change) => isPushable(codec, change)),
-    pulledLedger: plan.pulledLedger,
-    ledger: plan.ledger,
-    pulled: plan.saveLocally.length + plan.removeLocally.length,
-  };
+    return {
+      push: plan.push.filter((change) => isPushable(codec, change)),
+      pulledLedger: plan.pulledLedger,
+      ledger: plan.ledger,
+      pulled: plan.saveLocally.length + plan.removeLocally.length,
+    };
+  });
 }
 
 type PushEntry =
@@ -281,10 +288,11 @@ export async function runSync(ports: SyncPorts): Promise<SyncResult> {
   const ledger = reading.kind === 'owned' ? reading.ledger : emptyLedger(ports.ownerId);
   const now = ports.now();
   const remote = await pullSince(ports.cloud, ledger.cursor);
-  const accounts = await reconcile(ports.accounts, accountCodec, remote.changes.financialAccounts, ledger.accounts, now);
-  const categories = await reconcile(ports.categories, categoryCodec, remote.changes.categories, ledger.categories, now);
-  const events = await reconcile(ports.events, eventCodec, remote.changes.events, ledger.events, now);
+  const accounts = await reconcile(ports, ports.accounts, accountCodec, remote.changes.financialAccounts, ledger.accounts, now);
+  const categories = await reconcile(ports, ports.categories, categoryCodec, remote.changes.categories, ledger.categories, now);
+  const events = await reconcile(ports, ports.events, eventCodec, remote.changes.events, ledger.events, now);
   const transactions = await reconcile(
+    ports,
     ports.transactions,
     transactionCodec,
     remote.changes.transactions,
@@ -297,7 +305,7 @@ export async function runSync(ports: SyncPorts): Promise<SyncResult> {
   ledger.categories = categories.pulledLedger;
   ledger.events = events.pulledLedger;
   ledger.transactions = transactions.pulledLedger;
-  await writeLedger(ports.ledger, ledger);
+  await ports.session.write(() => writeLedger(ports.ledger, ledger));
 
   const entries: PushEntry[] = [
     ...accounts.push.map((change) => ({ table: 'financialAccounts' as const, change })),
@@ -309,6 +317,7 @@ export async function runSync(ports: SyncPorts): Promise<SyncResult> {
   let isContiguous = true;
 
   for (let start = 0; start < entries.length; start += maximumChangesPerPush) {
+    ports.session.assertCurrent();
     const receipt = await ports.cloud.push(batchOf(entries.slice(start, start + maximumChangesPerPush)));
     isContiguous &&= receipt.sequenceBefore === cursor;
 
@@ -322,7 +331,7 @@ export async function runSync(ports: SyncPorts): Promise<SyncResult> {
   ledger.categories = categories.ledger;
   ledger.events = events.ledger;
   ledger.transactions = transactions.ledger;
-  await writeLedger(ports.ledger, ledger);
+  await ports.session.write(() => writeLedger(ports.ledger, ledger));
 
   return {
     pushed: entries.length,

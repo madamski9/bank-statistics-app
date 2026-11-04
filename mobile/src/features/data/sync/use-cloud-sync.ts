@@ -15,11 +15,13 @@ import { customCategoryStore } from '@/features/data/classification/custom-categ
 import { eventStore } from '@/features/insights/events/event-storage';
 import type { SpendingEvent } from '@/features/insights/events/spending-event';
 import {
-  loadAccounts,
+  readAccounts,
   removeAccount,
   upsertAccount,
 } from '@/features/data/financial-accounts/account-storage';
 import type { FinancialAccount } from '@/features/data/financial-accounts/financial-account';
+import { openLocalDataSession } from '@/features/data/local-storage/local-data-session';
+import { queueLocalWrite } from '@/features/data/local-storage/local-write-queue';
 import { encryptedAccountStorage } from '@/features/data/financial-accounts/encrypted-account-storage';
 
 import { isCloudSyncEnabledNow, useCloudSyncEnabled } from './cloud-sync/cloud-sync-preference';
@@ -69,6 +71,11 @@ export function useCloudSync({
   const [registrationAttempt, setRegistrationAttempt] = useState(0);
   const isRunning = useRef(false);
   const isRerunNeeded = useRef(false);
+  const signedInUserId = useRef(userId);
+
+  useEffect(() => {
+    signedInUserId.current = userId;
+  }, [userId]);
 
   useEffect(() => {
     if (!isSupported || !isAuthenticated || userId == null || sessionId == null) {
@@ -131,21 +138,23 @@ export function useCloudSync({
         remove: deleteIngestionRecord,
       },
       accounts: {
-        list: () => loadAccounts(encryptedAccountStorage),
+        list: () => readAccounts(encryptedAccountStorage),
         save: (account) => upsertAccount(encryptedAccountStorage, account),
         remove: (id) => removeAccount(encryptedAccountStorage, id),
       },
       categories: {
-        list: customCategoryStore.load,
+        list: customCategoryStore.read,
         save: customCategoryStore.upsert,
         remove: customCategoryStore.remove,
       },
       events: {
-        list: eventStore.load,
+        list: eventStore.read,
         save: eventStore.upsert,
         remove: eventStore.remove,
       },
       ledger: encryptedLedgerStorage,
+      session: openLocalDataSession(() => signedInUserId.current === userId),
+      exclusive: queueLocalWrite,
       now: Date.now,
     };
 

@@ -8,6 +8,9 @@ import { useConvex, useConvexAuth } from 'convex/react';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
+import { openLocalDataSession } from '@/features/data/local-storage/local-data-session';
+import { queueLocalWrite } from '@/features/data/local-storage/local-write-queue';
+
 import { convertedRecords, pendingRateRequests } from './exchange-rate';
 
 const maximumRequests = 60;
@@ -42,16 +45,23 @@ export function useCurrencyConversion(
 
     lastAttempt.current = { key, at: Date.now() };
     isRunning.current = true;
+    const session = openLocalDataSession();
 
     void convex
       .action(api.exchangeRates.snapshots, { requests })
-      .then(async (snapshots) => {
-        const updated = convertedRecords(await listIngestionRecords(), snapshots);
+      .then((snapshots) =>
+        queueLocalWrite(async () => {
+          session.assertCurrent();
+          const updated = convertedRecords(await listIngestionRecords(), snapshots);
 
-        for (const record of updated) {
-          await saveIngestionRecord(record);
-        }
+          for (const record of updated) {
+            await session.write(() => saveIngestionRecord(record));
+          }
 
+          return updated;
+        }),
+      )
+      .then(async (updated) => {
         if (updated.length > 0) {
           await onConverted();
         }
