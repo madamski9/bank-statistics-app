@@ -6,7 +6,7 @@ import { captureHealth } from './capture-health';
 const now = new Date('2026-09-30T12:00:00Z');
 const diagnostics: StorageDiagnostics = { cipherVersion: '4.10', databasePath: '/outbox' };
 
-function captured(bank: 'millennium' | 'pko' | 'mbank', capturedAt: string): IngestionRecord {
+function captured(bank: 'millennium' | 'pko' | 'mbank' | 'unknown', capturedAt: string): IngestionRecord {
   return {
     id: `${bank}-${capturedAt}`,
     bank,
@@ -22,7 +22,7 @@ function captured(bank: 'millennium' | 'pko' | 'mbank', capturedAt: string): Ing
   };
 }
 
-function stateOf(health: ReturnType<typeof captureHealth>, bank: 'millennium' | 'pko' | 'mbank') {
+function stateOf(health: ReturnType<typeof captureHealth>, bank: 'millennium' | 'pko' | 'mbank' | 'wallet') {
   const found = health.banks.find((entry) => entry.bank === bank);
 
   return [found?.state, found?.reason];
@@ -174,5 +174,14 @@ describe('capture health', () => {
     });
 
     expect(stateOf(health, 'pko')).toEqual(['working', null]);
+  });
+
+  test('reports Wallet capture only for a Wallet-only setup', () => {
+    const records = [captured('unknown', '2026-09-29T10:00:00Z')];
+    const walletOnly = captureHealth({ records, diagnostics, enabledBanks: ['wallet'], now });
+    const withBanks = captureHealth({ records, diagnostics, enabledBanks: ['millennium'], now });
+
+    expect(stateOf(walletOnly, 'wallet')).toEqual(['working', null]);
+    expect(withBanks.banks.some((entry) => entry.bank === 'wallet')).toBe(false);
   });
 });

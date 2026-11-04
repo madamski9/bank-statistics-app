@@ -1,4 +1,7 @@
+export const walletOnlyCapture = 'wallet';
+
 const shortcutUrls: Record<string, string> = {
+  [walletOnlyCapture]: 'https://www.icloud.com/shortcuts/f7325b6d1661438baa43f075469d868e',
   millennium: 'https://www.icloud.com/shortcuts/51141e5363284d27b912bc7cfc6ef78e',
   pko: 'https://www.icloud.com/shortcuts/512f1cf0bab546a18915fd870208a659',
   'millennium+pko': 'https://www.icloud.com/shortcuts/a75d53a89cb7444fb7dc8d13f95fa746',
@@ -18,7 +21,25 @@ const shortcutUrls: Record<string, string> = {
 
 const shortcutBankOrder = ['millennium', 'pko', 'ing', 'mbank'];
 
+export function isWalletOnly(selectedBanks: readonly string[]): boolean {
+  return selectedBanks.length === 1 && selectedBanks[0] === walletOnlyCapture;
+}
+
+export function toggledCapture(selectedBanks: string[], choice: string): string[] {
+  if (choice === walletOnlyCapture) {
+    return isWalletOnly(selectedBanks) ? [] : [walletOnlyCapture];
+  }
+
+  const banks = selectedBanks.filter((bank) => bank !== walletOnlyCapture);
+
+  return banks.includes(choice) ? banks.filter((bank) => bank !== choice) : [...banks, choice];
+}
+
 export function shortcutUrlFor(selectedBanks: string[]): string | null {
+  if (selectedBanks.includes(walletOnlyCapture)) {
+    return isWalletOnly(selectedBanks) ? shortcutUrls[walletOnlyCapture] : null;
+  }
+
   const key = shortcutBankOrder.filter((bank) => selectedBanks.includes(bank)).join('+');
 
   return shortcutUrls[key] ?? null;

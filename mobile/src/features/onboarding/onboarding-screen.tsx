@@ -22,6 +22,7 @@ import {
   shortcutsIntroStep,
   stepCount,
 } from './onboarding-steps';
+import { isWalletOnly } from './shortcut-setup/shortcut-links';
 import { AutomationStep } from './steps/automation-step';
 import { BanksStep } from './steps/banks-step';
 import { CompletionStep } from './steps/completion-step';
@@ -39,6 +40,7 @@ export function OnboardingScreen(props: OnboardingFlowOptions) {
   const copy = useCopy(onboardingCopy);
   const insets = useSafeAreaInsets();
   const { scrollRef, ...onboarding } = useOnboardingFlow(props);
+  const capturesWalletOnly = isWalletOnly(onboarding.selectedBanks);
   const { step } = onboarding;
 
   if (onboarding.isRestoring) {
@@ -90,9 +92,9 @@ export function OnboardingScreen(props: OnboardingFlowOptions) {
               selectedBanks={onboarding.selectedBanks}
             />
           ) : null}
-          {step === automationStep ? <AutomationStep /> : null}
-          {step === focusIntroStep ? <FocusIntroStep /> : null}
-          {step === focusSetupStep ? <FocusSetupStep /> : null}
+          {step === automationStep ? <AutomationStep isWalletOnly={capturesWalletOnly} /> : null}
+          {step === focusIntroStep ? <FocusIntroStep isWalletOnly={capturesWalletOnly} /> : null}
+          {step === focusSetupStep ? <FocusSetupStep isWalletOnly={capturesWalletOnly} /> : null}
           {step === pinStep ? (
             <PinStep biometricName={onboarding.biometricName} onComplete={onboarding.protectWithPin} />
           ) : null}

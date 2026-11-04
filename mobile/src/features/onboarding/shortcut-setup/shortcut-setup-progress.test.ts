@@ -15,6 +15,11 @@ describe('pending shortcut setup', () => {
     expect(pendingShortcutBanks(JSON.stringify(banks), ['millennium'])).toEqual(banks);
   });
 
+  test('restores a Wallet-only shortcut selection', () => {
+    expect(pendingShortcutBanks('["wallet"]', [])).toEqual(['wallet']);
+    expect(pendingShortcutBanks('["wallet","pko"]', [])).toBeNull();
+  });
+
   test('resumes an older pending launch with saved banks or the original default', () => {
     expect(pendingShortcutBanks('true', ['ing'])).toEqual(['ing']);
     expect(pendingShortcutBanks('true', [])).toEqual(['millennium']);

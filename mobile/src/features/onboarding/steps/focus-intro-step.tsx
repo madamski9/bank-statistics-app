@@ -7,7 +7,11 @@ import { stepStyles } from '../components/step-styles';
 import { FocusIllustration } from '../illustrations/focus-illustration';
 import { onboardingCopy } from '../onboarding-copy';
 
-export function FocusIntroStep() {
+interface FocusIntroStepProps {
+  isWalletOnly: boolean;
+}
+
+export function FocusIntroStep({ isWalletOnly }: FocusIntroStepProps) {
   const copy = useCopy(onboardingCopy).focusIntro;
 
   return (
@@ -15,8 +19,8 @@ export function FocusIntroStep() {
       <FocusIllustration />
       <SectionHeading
         eyebrow={copy.eyebrow}
-        title={copy.title}
-        description={copy.description}
+        title={isWalletOnly ? copy.walletTitle : copy.title}
+        description={isWalletOnly ? copy.walletDescription : copy.description}
       />
       <Text style={stepStyles.smallNote}>{copy.note}</Text>
     </View>

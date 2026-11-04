@@ -7,7 +7,7 @@ import { useCopy } from '@/features/app-shell/localization/language';
 
 import { onboardingCopy } from '../onboarding-copy';
 import { readSelectedBanks } from '../selected-banks';
-import { shortcutUrlFor } from './shortcut-links';
+import { shortcutUrlFor, toggledCapture } from './shortcut-links';
 import { pendingShortcutBanks, shortcutSetupProgressKey } from './shortcut-setup-progress';
 
 interface ShortcutSetupOptions {
@@ -67,11 +67,7 @@ export function useShortcutSetup({ isShortcutsFlow, onError, onResume }: Shortcu
     (bankId: string) => {
       setHasOpenedShortcut(false);
       onError(null);
-      setSelectedBanks((current) =>
-        current.includes(bankId)
-          ? current.filter((id) => id !== bankId)
-          : [...current, bankId],
-      );
+      setSelectedBanks((current) => toggledCapture(current, bankId));
     },
     [onError],
   );

@@ -1,6 +1,6 @@
 import type { IngestionRecord, StorageDiagnostics } from '@bankstats/ingestion-native';
 
-export const capturedBanks = ['millennium', 'pko', 'ing', 'mbank'] as const;
+export const capturedBanks = ['millennium', 'pko', 'ing', 'mbank', 'wallet'] as const;
 
 export type CapturedBank = (typeof capturedBanks)[number];
 
@@ -46,11 +46,15 @@ function timestamp(value: string | null | undefined): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
+function capturedFor(record: IngestionRecord, bank: CapturedBank): boolean {
+  return bank === 'wallet' ? record.bank === 'unknown' : record.bank === bank;
+}
+
 function latestCapture(records: IngestionRecord[], bank: CapturedBank): string | null {
   let latest: IngestionRecord | null = null;
 
   for (const record of records) {
-    if (record.bank !== bank || record.origin === 'manual' || record.merchant === syntheticMerchant) {
+    if (!capturedFor(record, bank) || record.origin === 'manual' || record.merchant === syntheticMerchant) {
       continue;
     }
 
@@ -85,7 +89,9 @@ export function captureHealth({
   const lastAttemptMs = timestamp(automation.lastRunAt);
   const selectedBanks = capturedBanks.filter((bank) => enabledBanks.includes(bank));
 
-  const banks = capturedBanks.map((bank): BankCaptureHealth => {
+  const shownBanks = capturedBanks.filter((bank) => bank !== 'wallet' || enabledBanks.includes(bank));
+
+  const banks = shownBanks.map((bank): BankCaptureHealth => {
     const lastCaptureAt = latestCapture(records, bank);
     const lastCaptureMs = timestamp(lastCaptureAt);
     const isEnabled = enabledBanks.includes(bank);

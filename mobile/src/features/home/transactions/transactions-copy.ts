@@ -8,7 +8,7 @@ export const transactionsCopy = defineCopy({
     bankNamePlaceholder: 'Na przykład Trade Republic',
     bankNameFormat: 'Nazwa banku musi mieć od 1 do 60 znaków.',
     rememberBankHelp: 'Zapisując, przypiszesz tę nazwę do wcześniejszych i kolejnych transakcji z tej samej aplikacji i z takim samym tytułem powiadomienia. Reguła zostaje na tym telefonie.',
-    banks: { millennium: 'Millennium', pko: 'PKO BP', erste: 'Erste', ing: 'ING', mbank: 'mBank', unknown: 'Nieznany bank', manual: 'Wpis ręczny' },
+    banks: { millennium: 'Millennium', pko: 'PKO BP', erste: 'Erste', ing: 'ING', mbank: 'mBank', unknown: 'Portfel', manual: 'Wpis ręczny' },
     types: {
       cardPayment: 'Płatność kartą',
       blikPayment: 'Płatność BLIK',
@@ -102,7 +102,7 @@ export const transactionsCopy = defineCopy({
     bankNamePlaceholder: 'For example Trade Republic',
     bankNameFormat: 'A bank name must have between 1 and 60 characters.',
     rememberBankHelp: 'Saving assigns this name to previous and future transactions from the same app with the same notification title. The rule stays on this phone.',
-    banks: { millennium: 'Millennium', pko: 'PKO BP', erste: 'Erste', ing: 'ING', mbank: 'mBank', unknown: 'Unknown bank', manual: 'Manual entry' },
+    banks: { millennium: 'Millennium', pko: 'PKO BP', erste: 'Erste', ing: 'ING', mbank: 'mBank', unknown: 'Wallet', manual: 'Manual entry' },
     types: {
       cardPayment: 'Card payment',
       blikPayment: 'BLIK payment',

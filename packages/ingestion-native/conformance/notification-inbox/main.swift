@@ -516,6 +516,11 @@ let otherApp = try wallet("Trade Republic", sourceApp: "other.wallet")
 let supportedBank = try wallet("mBank")
 check(tradeRepublic.bank == "unknown", "Generic Wallet recognition must keep the bank unassigned")
 check(tradeRepublic.notificationTitle == "Trade Republic", "Successful capture must retain the original notification title")
+check(
+  tradeRepublic.amountMinor == 1999 && tradeRepublic.currency == "PLN" && tradeRepublic.merchant == "SKLEP TESTOWY"
+    && tradeRepublic.transactionType == "cardPayment",
+  "A Wallet payment without a bank counterpart must be saved with its amount, currency and shop"
+)
 check(tradeRepublic.bankName == nil, "A notification title must not silently become a confirmed bank name")
 check(try captureCount("notification_inbox") == 0, "Successful capture must still release the full raw notification")
 var namedTradeRepublic = tradeRepublic

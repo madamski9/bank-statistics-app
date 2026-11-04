@@ -11,14 +11,18 @@ import { stepStyles } from '../components/step-styles';
 import { onboardingCopy } from '../onboarding-copy';
 import { onboardingColors } from '../onboarding-motion';
 
-export function FocusSetupStep() {
+interface FocusSetupStepProps {
+  isWalletOnly: boolean;
+}
+
+export function FocusSetupStep({ isWalletOnly }: FocusSetupStepProps) {
   const copy = useCopy(onboardingCopy).focusSetup;
 
   return (
     <View style={stepStyles.stepContent}>
       <SectionHeading
         eyebrow={copy.eyebrow}
-        title={copy.title}
+        title={isWalletOnly ? copy.walletOnlyTitle : copy.title}
         description={copy.description}
       />
       <View style={styles.walletCard}>
@@ -43,7 +47,7 @@ export function FocusSetupStep() {
           style={[styles.stepScreenshot, styles.appsScreenshot]}
         />
       </InstructionCard>
-      <InstructionCard number={3} title={copy.stepThree}>
+      <InstructionCard number={3} title={isWalletOnly ? copy.walletOnlyStepThree : copy.stepThree}>
         <Image
           accessible={false}
           contentFit="contain"
