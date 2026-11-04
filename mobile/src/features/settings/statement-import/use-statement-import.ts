@@ -3,7 +3,7 @@ import { File } from 'expo-file-system';
 import { useCallback, useState } from 'react';
 
 import type { FinancialAccount } from '@/features/data/financial-accounts/financial-account';
-import { saveForCurrentOwner } from '@/features/data/local-storage/save-for-current-owner';
+import { saveForCurrentOwner } from '@/features/data/local-storage/current-owner-writes';
 
 import type { StatementBank } from './parsing/statement-bank';
 import type { StatementParseProblem, StatementParseResult } from './parsing/statement-parser';
