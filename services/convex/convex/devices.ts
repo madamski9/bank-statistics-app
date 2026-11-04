@@ -113,6 +113,10 @@ export const register = mutation({
       throw new ConvexError('This account is being deleted.');
     }
 
+    if (await isSessionRevoked(ctx, sessionId)) {
+      throw new ConvexError('This device was revoked.');
+    }
+
     const now = Date.now();
     const existing = await findDevice(ctx, ownerId, installationId);
 
@@ -126,10 +130,6 @@ export const register = mutation({
       }
 
       return existing._id;
-    }
-
-    if (await isSessionRevoked(ctx, sessionId)) {
-      throw new ConvexError('This device was revoked.');
     }
 
     const active = await activeDevices(ctx, ownerId).take(maximumActiveDevices);
