@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 
-import { endLocalDataSessions, openLocalDataSession, StaleLocalDataError } from './local-data-session';
+import {
+  endLocalDataSessions,
+  openLocalDataScope,
+  openLocalDataSession,
+  StaleLocalDataError,
+} from './local-data-session';
 
 describe('local data session', () => {
   test('refuses writes once the local data was handed to someone else', async () => {
@@ -44,6 +49,18 @@ describe('local data session', () => {
     isSignedIn = false;
 
     expect(() => session.assertCurrent()).toThrow(StaleLocalDataError);
+  });
+
+  test('stops every session of a scope once it closes, without another render', async () => {
+    const scope = openLocalDataScope();
+    const running = scope.open();
+
+    await running.write(async () => 'saved');
+    scope.close();
+
+    expect(() => running.assertCurrent()).toThrow(StaleLocalDataError);
+    expect(() => scope.open().assertCurrent()).toThrow(StaleLocalDataError);
+    expect(() => openLocalDataScope().open().assertCurrent()).not.toThrow();
   });
 
   test('lets a session opened after the handover write', async () => {

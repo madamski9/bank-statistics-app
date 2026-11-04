@@ -20,7 +20,7 @@ import {
   upsertAccount,
 } from '@/features/data/financial-accounts/account-storage';
 import type { FinancialAccount } from '@/features/data/financial-accounts/financial-account';
-import { openLocalDataSession } from '@/features/data/local-storage/local-data-session';
+import { openLocalDataScope, type LocalDataScope } from '@/features/data/local-storage/local-data-session';
 import { queueLocalWrite } from '@/features/data/local-storage/local-write-queue';
 import { encryptedAccountStorage } from '@/features/data/financial-accounts/encrypted-account-storage';
 
@@ -71,11 +71,14 @@ export function useCloudSync({
   const [registrationAttempt, setRegistrationAttempt] = useState(0);
   const isRunning = useRef(false);
   const isRerunNeeded = useRef(false);
-  const signedInUserId = useRef(userId);
+  const localDataScope = useRef<LocalDataScope | null>(null);
 
   useEffect(() => {
-    signedInUserId.current = userId;
-  }, [userId]);
+    const scope = openLocalDataScope();
+    localDataScope.current = scope;
+
+    return () => scope.close();
+  }, [sessionId, userId]);
 
   useEffect(() => {
     if (!isSupported || !isAuthenticated || userId == null || sessionId == null) {
@@ -114,7 +117,9 @@ export function useCloudSync({
   }, [convex, isAuthenticated, isSupported, registrationAttempt, sessionId, userId]);
 
   const synchronize = useCallback(async () => {
-    if (!isReady || userId == null || !isCloudSyncEnabledNow()) {
+    const scope = localDataScope.current;
+
+    if (!isReady || userId == null || scope === null || !isCloudSyncEnabledNow()) {
       return;
     }
 
@@ -153,7 +158,7 @@ export function useCloudSync({
         remove: eventStore.remove,
       },
       ledger: encryptedLedgerStorage,
-      session: openLocalDataSession(() => signedInUserId.current === userId),
+      session: scope.open(),
       exclusive: queueLocalWrite,
       now: Date.now,
     };

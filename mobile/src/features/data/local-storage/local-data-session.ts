@@ -10,6 +10,11 @@ export interface LocalDataSession {
   write: <Result>(change: () => Promise<Result>) => Promise<Result>;
 }
 
+export interface LocalDataScope {
+  open: () => LocalDataSession;
+  close: () => void;
+}
+
 let generation = 0;
 const pendingWrites = new Set<Promise<unknown>>();
 
@@ -34,6 +39,17 @@ export function openLocalDataSession(isStillValid: () => boolean = () => true): 
       );
 
       return written;
+    },
+  };
+}
+
+export function openLocalDataScope(): LocalDataScope {
+  let isOpen = true;
+
+  return {
+    open: () => openLocalDataSession(() => isOpen),
+    close: () => {
+      isOpen = false;
     },
   };
 }
