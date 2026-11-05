@@ -9,6 +9,7 @@ enum CardPaymentResolution: Equatable {
 struct CardPaymentPairing {
   static let walletSourceApp = "com.apple.Passbook"
   static let window: TimeInterval = 10 * 60
+  static let lateCaptureAllowance: TimeInterval = 60 * 60
 
   let paired: Set<String>
 
@@ -16,15 +17,17 @@ struct CardPaymentPairing {
     guard let capturedAt = date(record.capturedAt) else {
       return nil
     }
+    let occurredAt = date(record.occurredAt) ?? capturedAt
+    let margin = window + lateCaptureAllowance
     let formatter = ISO8601DateFormatter()
     return (
-      formatter.string(from: capturedAt.addingTimeInterval(-window)),
-      formatter.string(from: capturedAt.addingTimeInterval(window))
+      formatter.string(from: min(capturedAt, occurredAt).addingTimeInterval(-margin)),
+      formatter.string(from: max(capturedAt, occurredAt).addingTimeInterval(margin))
     )
   }
 
   func resolve(_ record: NormalizedRecord, existing: [NormalizedRecord]) -> CardPaymentResolution {
-    guard Self.isCapturedCardPayment(record), let capturedAt = Self.date(record.capturedAt) else {
+    guard Self.isCapturedCardPayment(record), Self.date(record.capturedAt) != nil else {
       return .insert
     }
 
@@ -39,10 +42,9 @@ struct CardPaymentPairing {
           && candidate.currency == record.currency
       }
       .compactMap { candidate -> (record: NormalizedRecord, distance: TimeInterval)? in
-        guard let candidateCapturedAt = Self.date(candidate.capturedAt) else {
+        guard let distance = Self.distance(between: record, and: candidate) else {
           return nil
         }
-        let distance = abs(candidateCapturedAt.timeIntervalSince(capturedAt))
         return distance <= Self.window ? (candidate, distance) : nil
       }
       .min { $0.distance < $1.distance }?
@@ -74,6 +76,18 @@ struct CardPaymentPairing {
 
   private static func isMillenniumPaymentWithMerchant(_ record: NormalizedRecord) -> Bool {
     record.bank == "millennium" && record.merchant != nil
+  }
+
+  private static func distance(between record: NormalizedRecord, and candidate: NormalizedRecord) -> TimeInterval? {
+    guard let capturedAt = date(record.capturedAt), let candidateCapturedAt = date(candidate.capturedAt) else {
+      return nil
+    }
+    let occurredAt = date(record.occurredAt) ?? capturedAt
+    let candidateOccurredAt = date(candidate.occurredAt) ?? candidateCapturedAt
+    return min(
+      abs(candidateCapturedAt.timeIntervalSince(capturedAt)),
+      abs(candidateOccurredAt.timeIntervalSince(occurredAt))
+    )
   }
 
   private static func date(_ value: String) -> Date? {

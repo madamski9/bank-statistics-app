@@ -8,7 +8,8 @@ func card(
   currency: String = "PLN",
   bank: String = "mbank",
   merchant: String? = "AUTOPAY MOBILITY WARSZAWA",
-  origin: String = NormalizedRecordOrigin.capture
+  origin: String = NormalizedRecordOrigin.capture,
+  occurredAt: String? = nil
 ) -> NormalizedRecord {
   NormalizedRecord(
     id: id,
@@ -19,7 +20,7 @@ func card(
     currency: currency,
     merchant: merchant,
     accountName: nil,
-    occurredAt: capturedAt,
+    occurredAt: occurredAt ?? capturedAt,
     capturedAt: capturedAt,
     sourceApp: sourceApp,
     status: "pending",
@@ -70,6 +71,18 @@ let millenniumDebitPush = card(
 )
 let millenniumWalletPush = card(
   "millenniumWallet", from: millenniumApp, at: "2026-10-28T12:28:10Z", amountMinor: 150099, bank: "millennium", merchant: "Lidl"
+)
+
+let lateMillenniumDebitPush = card(
+  "lateMillenniumDebit", from: millenniumApp, at: "2026-11-04T10:46:01Z", amountMinor: 425, bank: "millennium",
+  merchant: nil, occurredAt: "2026-11-04T10:23:00Z"
+)
+let zabkaWalletPush = card(
+  "zabkaWallet", from: millenniumApp, at: "2026-11-04T10:23:25Z", amountMinor: 425, bank: "millennium", merchant: "Żabka"
+)
+let lateLidlDebitPush = card(
+  "lateLidlDebit", from: millenniumApp, at: "2026-11-04T13:36:11Z", amountMinor: 1137, bank: "millennium",
+  merchant: nil, occurredAt: "2026-11-04T13:12:00Z"
 )
 
 let cases = [
@@ -153,6 +166,30 @@ let cases = [
     record: millenniumWalletPush,
     existing: [millenniumDebitPush],
     expected: .replace(merged(millenniumDebitPush, merchant: "Lidl"))
+  ),
+  Case(
+    "a Millennium debit push captured late pairs by the operation time it carries",
+    record: lateMillenniumDebitPush,
+    existing: [zabkaWalletPush],
+    expected: .keepExisting(id: "zabkaWallet")
+  ),
+  Case(
+    "a Wallet push pairs with a Millennium debit push captured late",
+    record: card(
+      "lidlWallet", from: millenniumApp, at: "2026-11-04T13:13:27Z", amountMinor: 1137, bank: "millennium",
+      merchant: "Lidl"
+    ),
+    existing: [lateLidlDebitPush],
+    expected: .replace(merged(lateLidlDebitPush, merchant: "Lidl"))
+  ),
+  Case(
+    "a late Millennium debit push for an operation long after the Wallet payment is a separate payment",
+    record: card(
+      "laterDebit", from: millenniumApp, at: "2026-11-04T10:46:01Z", amountMinor: 425, bank: "millennium",
+      merchant: nil, occurredAt: "2026-11-04T10:40:00Z"
+    ),
+    existing: [zabkaWalletPush],
+    expected: .insert
   ),
   Case(
     "Millennium debit push without a Wallet push is saved",
