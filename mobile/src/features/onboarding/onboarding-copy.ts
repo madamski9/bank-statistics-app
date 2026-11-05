@@ -122,12 +122,16 @@ export const onboardingCopy = defineCopy({
       stepOne: '1. Otwórz udostępniony skrót i dodaj go do aplikacji Skróty.',
       stepTwo: '2. Po dodaniu wróć do BankStats i wybierz „Skrót dodany — dalej”. Pokażemy, jak włączyć automatyzację.',
       note: 'Jeśli zobaczysz ekran powitania w Skrótach, przejdź go, wróć tutaj i wybierz „Dodaj skrót ponownie”.',
+      walletOption: 'Mojego banku nie ma na liście, dodaj Portfel',
+      walletOptionDetail: 'Zapiszemy płatności kartą z powiadomień Portfela, z kwotą i nazwą sklepu.',
     },
     automation: {
       eyebrow: 'OSTATNI KROK W SKRÓTACH',
       title: 'Włącz automatyzację',
       description:
         'iOS dodaje automatyzację ze skrótu jako wyłączoną. Dopóki jej nie włączysz, BankStats nie dostanie powiadomień z banku.',
+      walletDescription:
+        'iOS dodaje automatyzację ze skrótu jako wyłączoną. Dopóki jej nie włączysz, BankStats nie dostanie powiadomień z Portfela.',
       stepOne: '1. W aplikacji Skróty otwórz Bibliotekę i stuknij Automatyzacja.',
       stepTwo: '2. Włącz przełącznik przy automatyzacji BankStats.',
     },
@@ -137,6 +141,9 @@ export const onboardingCopy = defineCopy({
       description:
         'Tryb Nie przeszkadzać może zakłócić przechwytywanie transakcji. Dodaj do wyjątków przede wszystkim Portfel, a także aplikacje banków, aby ich powiadomienia nie były wyciszane. Potem sprawdź zapis na swoim telefonie.',
       note: 'To samo ustaw w innych trybach skupienia, z których korzystasz, na przykład w trybie Sen.',
+      walletTitle: 'Przepuść powiadomienia Portfela',
+      walletDescription:
+        'Tryb Nie przeszkadzać może zakłócić przechwytywanie transakcji. Dodaj Portfel do wyjątków, aby jego powiadomienia nie były wyciszane. Potem sprawdź zapis na swoim telefonie.',
     },
     focusSetup: {
       eyebrow: 'USTAWIENIA IPHONE’A',
@@ -145,6 +152,8 @@ export const onboardingCopy = defineCopy({
       stepOne: '1. Otwórz Ustawienia, stuknij Skupienie, a potem Nie przeszkadzać.',
       stepTwo: '2. W sekcji Włącz powiadomienia stuknij Aplikacje.',
       stepThree: '3. Wybierz Pozwalaj na powiadomienia, stuknij Dodaj i zaznacz Portfel oraz aplikacje swoich banków.',
+      walletOnlyTitle: 'Dodaj Portfel do wyjątków',
+      walletOnlyStepThree: '3. Wybierz Pozwalaj na powiadomienia, stuknij Dodaj i zaznacz Portfel.',
       walletTitle: 'Najważniejszy jest Portfel',
       walletDescription:
         'Płatności kartą zapisujemy z powiadomień Portfela, bo tylko one mają nazwę sklepu. Bez Portfela na liście wyjątków te transakcje nie zapiszą się przy włączonym trybie Nie przeszkadzać.',
@@ -289,12 +298,16 @@ export const onboardingCopy = defineCopy({
       stepOne: '1. Open the shared shortcut and add it to the Shortcuts app.',
       stepTwo: "2. After adding it, return to BankStats and choose “Shortcut added — continue”. We'll show you how to turn on the automation.",
       note: 'If Shortcuts shows a welcome screen, complete it, return here and choose “Add the shortcut again”.',
+      walletOption: "My bank isn't listed, add Wallet",
+      walletOptionDetail: 'We save card payments from Wallet notifications, with the amount and the shop name.',
     },
     automation: {
       eyebrow: 'LAST STEP IN SHORTCUTS',
       title: 'Turn on the automation',
       description:
         "iOS adds the shortcut's automation turned off. Until you turn it on, BankStats won't receive your bank notifications.",
+      walletDescription:
+        "iOS adds the shortcut's automation turned off. Until you turn it on, BankStats won't receive your Wallet notifications.",
       stepOne: '1. In the Shortcuts app, open Library and tap Automation.',
       stepTwo: '2. Turn on the switch next to the BankStats automation.',
     },
@@ -304,6 +317,9 @@ export const onboardingCopy = defineCopy({
       description:
         'Do Not Disturb may interfere with transaction capture. Allow Wallet above all, along with your bank apps, so their notifications are not silenced. Then check saving on your phone.',
       note: 'Do the same in any other Focus you use, such as Sleep.',
+      walletTitle: 'Let your Wallet notifications through',
+      walletDescription:
+        'Do Not Disturb may interfere with transaction capture. Allow Wallet so its notifications are not silenced. Then check saving on your phone.',
     },
     focusSetup: {
       eyebrow: 'IPHONE SETTINGS',
@@ -312,6 +328,8 @@ export const onboardingCopy = defineCopy({
       stepOne: '1. Open Settings, tap Focus, then Do Not Disturb.',
       stepTwo: '2. Under Allow Notifications, tap Apps.',
       stepThree: '3. Choose Allow Notifications From, tap Add and select Wallet and your bank apps.',
+      walletOnlyTitle: 'Allow Wallet',
+      walletOnlyStepThree: '3. Choose Allow Notifications From, tap Add and select Wallet.',
       walletTitle: 'Wallet matters most',
       walletDescription:
         "Card payments are saved from Wallet notifications, because only they include the shop name. If Wallet isn't allowed, those transactions won't save while Do Not Disturb is on.",

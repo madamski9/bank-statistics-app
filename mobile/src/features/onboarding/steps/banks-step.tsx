@@ -11,6 +11,7 @@ import { SelectionCard } from '../components/selection-card';
 import { stepStyles } from '../components/step-styles';
 import { onboardingCopy } from '../onboarding-copy';
 import { onboardingColors } from '../onboarding-motion';
+import { walletOnlyCapture } from '../shortcut-setup/shortcut-links';
 import { supportedBanks } from './supported-banks';
 
 interface BanksStepProps {
@@ -21,6 +22,7 @@ interface BanksStepProps {
 
 export function BanksStep({ disabled, onToggle, selectedBanks }: BanksStepProps) {
   const copy = useCopy(onboardingCopy).banks;
+  const isWalletSelected = selectedBanks.includes(walletOnlyCapture);
   return (
     <View style={stepStyles.stepContent}>
       <SectionHeading
@@ -79,6 +81,42 @@ export function BanksStep({ disabled, onToggle, selectedBanks }: BanksStepProps)
             </SelectionCard>
           );
         })}
+        <SelectionCard
+          selected={isWalletSelected}
+          delay={100 + supportedBanks.length * 50}
+          accessibilityLabel={copy.walletOption}
+          accessibilityHint={copy.walletOptionDetail}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: isWalletSelected, disabled }}
+          disabled={disabled}
+          onPress={() => onToggle(walletOnlyCapture)}
+          style={styles.bankCard}
+        >
+          <View style={[styles.checkbox, isWalletSelected ? styles.checkboxSelected : null]}>
+            {isWalletSelected ? (
+              <SymbolView
+                name={{ ios: 'checkmark', android: 'check', web: 'check' }}
+                size={14}
+                tintColor={overviewColors.background}
+              />
+            ) : null}
+          </View>
+          <View style={styles.walletIcon}>
+            <SymbolView
+              name={{ ios: 'wallet.pass.fill', android: 'wallet', web: 'wallet' }}
+              size={20}
+              tintColor={overviewColors.textPrimary}
+            />
+          </View>
+          <View style={styles.walletText}>
+            <Text maxFontSizeMultiplier={1.4} style={styles.bankName}>
+              {copy.walletOption}
+            </Text>
+            <Text maxFontSizeMultiplier={1.4} style={styles.walletDetail}>
+              {copy.walletOptionDetail}
+            </Text>
+          </View>
+        </SelectionCard>
       </View>
       <AnimatedReveal delay={300} style={stepStyles.stepsCard}>
         <Text style={stepStyles.stepsTitle}>{copy.stepsTitle}</Text>
@@ -129,6 +167,20 @@ const styles = StyleSheet.create({
     color: overviewColors.textPrimary,
     fontSize: 16,
     fontWeight: '600',
+  },
+  walletIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: overviewColors.hairline,
+  },
+  walletText: { flex: 1, gap: 4 },
+  walletDetail: {
+    color: overviewColors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
   },
   bankSoon: {
     color: overviewColors.textSecondary,

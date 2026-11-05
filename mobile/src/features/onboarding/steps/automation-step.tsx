@@ -9,14 +9,18 @@ import { SectionHeading } from '../components/section-heading';
 import { stepStyles } from '../components/step-styles';
 import { onboardingCopy } from '../onboarding-copy';
 
-export function AutomationStep() {
+interface AutomationStepProps {
+  isWalletOnly: boolean;
+}
+
+export function AutomationStep({ isWalletOnly }: AutomationStepProps) {
   const copy = useCopy(onboardingCopy).automation;
   return (
     <View style={stepStyles.stepContent}>
       <SectionHeading
         eyebrow={copy.eyebrow}
         title={copy.title}
-        description={copy.description}
+        description={isWalletOnly ? copy.walletDescription : copy.description}
       />
       <InstructionCard number={1} title={copy.stepOne}>
         <Image

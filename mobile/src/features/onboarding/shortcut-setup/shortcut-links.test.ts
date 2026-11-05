@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { shortcutUrlFor } from './shortcut-links';
+import { isWalletOnly, shortcutUrlFor, toggledCapture, walletOnlyCapture } from './shortcut-links';
 
 describe('shortcutUrlFor', () => {
   test('opens the combined shortcut whatever order the banks were selected in', () => {
@@ -37,5 +37,31 @@ describe('shortcutUrlFor', () => {
 
     expect(shortcutUrlFor(banks)).toBe(expected);
     expect(shortcutUrlFor([...banks].reverse())).toBe(expected);
+  });
+
+  test('opens the Wallet-only shortcut when only Wallet is chosen', () => {
+    expect(shortcutUrlFor([walletOnlyCapture])).toBe(
+      'https://www.icloud.com/shortcuts/f7325b6d1661438baa43f075469d868e',
+    );
+    expect(shortcutUrlFor([walletOnlyCapture, 'pko'])).toBeNull();
+  });
+});
+
+describe('toggledCapture', () => {
+  test('choosing Wallet replaces the banks and choosing a bank replaces Wallet', () => {
+    expect(toggledCapture(['millennium', 'pko'], walletOnlyCapture)).toEqual([walletOnlyCapture]);
+    expect(toggledCapture([walletOnlyCapture], 'ing')).toEqual(['ing']);
+    expect(toggledCapture([walletOnlyCapture], walletOnlyCapture)).toEqual([]);
+  });
+
+  test('toggles banks as before', () => {
+    expect(toggledCapture(['millennium'], 'pko')).toEqual(['millennium', 'pko']);
+    expect(toggledCapture(['millennium', 'pko'], 'millennium')).toEqual(['pko']);
+  });
+
+  test('recognises a Wallet-only selection', () => {
+    expect(isWalletOnly([walletOnlyCapture])).toBe(true);
+    expect(isWalletOnly(['millennium'])).toBe(false);
+    expect(isWalletOnly([])).toBe(false);
   });
 });
