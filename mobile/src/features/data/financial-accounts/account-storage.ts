@@ -1,3 +1,5 @@
+import { parseDocumentList } from '@/features/data/local-storage/document-list';
+
 import { isFinancialAccountBank, type FinancialAccount } from './financial-account';
 
 export interface AccountStorage {
@@ -20,17 +22,13 @@ function isFinancialAccount(value: unknown): value is FinancialAccount {
   );
 }
 
+export async function readAccounts(storage: AccountStorage): Promise<FinancialAccount[]> {
+  return parseDocumentList(await storage.read(), isFinancialAccount);
+}
+
 export async function loadAccounts(storage: AccountStorage): Promise<FinancialAccount[]> {
   try {
-    const stored = await storage.read();
-
-    if (stored === null) {
-      return [];
-    }
-
-    const parsed: unknown = JSON.parse(stored);
-
-    return Array.isArray(parsed) ? parsed.filter(isFinancialAccount) : [];
+    return await readAccounts(storage);
   } catch {
     return [];
   }
@@ -49,7 +47,7 @@ function updateAccounts(
   const previous = pendingUpdates.get(storage) ?? Promise.resolve();
   const next = previous
     .catch(() => undefined)
-    .then(async () => saveAccounts(storage, change(await loadAccounts(storage))));
+    .then(async () => saveAccounts(storage, change(await readAccounts(storage))));
 
   pendingUpdates.set(storage, next);
 

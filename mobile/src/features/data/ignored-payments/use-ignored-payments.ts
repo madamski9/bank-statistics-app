@@ -1,6 +1,8 @@
 import { deleteIngestionRecord, type IngestionRecord } from '@bankstats/ingestion-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { writeForCurrentOwner } from '@/features/data/local-storage/current-owner-writes';
+
 import {
   isIgnored,
   withIgnoreRule,
@@ -70,7 +72,7 @@ export function useIgnoredPayments(
 
     pending.forEach((id) => attempted.current.add(id));
 
-    void Promise.allSettled(pending.map((id) => deleteIngestionRecord(id))).then((results) => {
+    void Promise.allSettled(pending.map((id) => writeForCurrentOwner(() => deleteIngestionRecord(id)))).then((results) => {
       const removedAny = results.some((result) => result.status === 'fulfilled');
 
       results.forEach((result, position) => {

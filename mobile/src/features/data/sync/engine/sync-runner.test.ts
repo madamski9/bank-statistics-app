@@ -4,6 +4,12 @@ import { describe, expect, test } from 'bun:test';
 import type { CustomCategory } from '@/features/data/classification/categories';
 import type { SpendingEvent } from '@/features/insights/events/spending-event';
 import type { FinancialAccount } from '@/features/data/financial-accounts/financial-account';
+import {
+  endLocalDataSessions,
+  openLocalDataSession,
+  StaleLocalDataError,
+} from '@/features/data/local-storage/local-data-session';
+import { queueLocalWrite } from '@/features/data/local-storage/local-write-queue';
 
 import {
   claimDevice,
@@ -173,6 +179,8 @@ function createDevice(
         ledger.value = value;
       },
     },
+    session: openLocalDataSession(),
+    exclusive: queueLocalWrite,
     now: () => {
       clock += 1000;
 
@@ -368,6 +376,85 @@ describe('runSync', () => {
     await runSync(phone.ports);
 
     expect(phone.outbox.get('manual-lunch')?.merchant).toBe('Bistro');
+  });
+
+  test('stops without sending removals when a local document cannot be read', async () => {
+    const cloud = createCloud();
+    const phone = createDevice(cloud);
+    phone.accounts.set('account-a', { id: 'account-a', bank: 'manual', name: 'Wspólne', isGeneral: false });
+    await runSync(phone.ports);
+    const ledgerBefore = phone.ledger.value;
+    const readAccounts = phone.ports.accounts.list;
+    phone.ports.accounts.list = async () => {
+      throw new Error('database is locked');
+    };
+
+    await expect(runSync(phone.ports)).rejects.toThrow('locked');
+
+    phone.ports.accounts.list = readAccounts;
+    const tablet = createDevice(cloud);
+    await runSync(tablet.ports);
+
+    expect(phone.ledger.value).toBe(ledgerBefore);
+    expect(tablet.accounts.get('account-a')?.name).toBe('Wspólne');
+  });
+
+  test('keeps the data of the previous account out once the phone changed hands mid sync', async () => {
+    const cloud = createCloud();
+    const laptop = createDevice(cloud, [manual('alice-private')]);
+    await runSync(laptop.ports);
+    const phone = createDevice(cloud);
+    let releasePull: () => void = () => undefined;
+    const pull = cloud.port.pull;
+    phone.ports.cloud = {
+      ...cloud.port,
+      pull: (cursors) =>
+        new Promise((resolve, reject) => {
+          releasePull = () => void pull(cursors).then(resolve, reject);
+        }),
+    };
+
+    const aliceRun = runSync(phone.ports);
+    await Promise.resolve();
+    await endLocalDataSessions();
+    phone.outbox.clear();
+    phone.ledger.value = null;
+    await claimDevice(phone.ports.ledger, 'user_bob');
+    releasePull();
+
+    await expect(aliceRun).rejects.toThrow(StaleLocalDataError);
+    expect(phone.outbox.has('alice-private')).toBe(false);
+    expect(JSON.parse(phone.ledger.value ?? '{}').ownerId).toBe('user_bob');
+  });
+
+  test('keeps an edit made while the sync was applying the cloud changes', async () => {
+    const cloud = createCloud();
+    const phone = createDevice(cloud, [manual('manual-lunch')]);
+    const tablet = createDevice(cloud);
+    await runSync(phone.ports);
+    await runSync(tablet.ports);
+    tablet.outbox.set('manual-lunch', manual('manual-lunch', { amountMinor: 5000 }));
+    await runSync(tablet.ports);
+
+    const list = phone.ports.transactions.list;
+    let edit: Promise<unknown> = Promise.resolve();
+    phone.ports.transactions.list = async () => {
+      const listed = await list();
+      edit = queueLocalWrite(async () =>
+        phone.outbox.set('manual-lunch', manual('manual-lunch', { amountMinor: 9000 })),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      return listed;
+    };
+    await runSync(phone.ports);
+    await edit;
+    phone.ports.transactions.list = list;
+    await runSync(phone.ports);
+    await runSync(tablet.ports);
+
+    expect(phone.outbox.get('manual-lunch')?.amountMinor).toBe(9000);
+    expect(tablet.outbox.get('manual-lunch')?.amountMinor).toBe(9000);
   });
 
   test('treats an unreadable ledger as a device it cannot vouch for', async () => {

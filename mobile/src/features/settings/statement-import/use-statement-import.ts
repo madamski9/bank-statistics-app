@@ -3,6 +3,7 @@ import { File } from 'expo-file-system';
 import { useCallback, useState } from 'react';
 
 import type { FinancialAccount } from '@/features/data/financial-accounts/financial-account';
+import { saveForCurrentOwner } from '@/features/data/local-storage/current-owner-writes';
 
 import type { StatementBank } from './parsing/statement-bank';
 import type { StatementParseProblem, StatementParseResult } from './parsing/statement-parser';
@@ -144,9 +145,7 @@ export function useStatementImport(
     setState({ ...state, isSaving: true, saveFailed: false });
 
     try {
-      for (const record of additions) {
-        await saveIngestionRecord(record);
-      }
+      await saveForCurrentOwner(additions, saveIngestionRecord);
       await onImported();
       setState({ step: 'finished', addedCount: additions.length });
     } catch {

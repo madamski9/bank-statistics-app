@@ -2,8 +2,36 @@ import type { DocumentStorage } from './encrypted-document';
 
 export interface DocumentList<Item> {
   load: () => Promise<Item[]>;
+  read: () => Promise<Item[]>;
   upsert: (item: Item) => Promise<void>;
   remove: (id: string) => Promise<void>;
+}
+
+export class UnreadableDocumentError extends Error {
+  constructor() {
+    super('The stored document could not be read.');
+    this.name = 'UnreadableDocumentError';
+  }
+}
+
+export function parseDocumentList<Item>(stored: string | null, isItem: (value: unknown) => value is Item): Item[] {
+  if (stored === null) {
+    return [];
+  }
+
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(stored);
+  } catch {
+    throw new UnreadableDocumentError();
+  }
+
+  if (!Array.isArray(parsed)) {
+    throw new UnreadableDocumentError();
+  }
+
+  return parsed.filter(isItem);
 }
 
 export function documentList<Item extends { id: string }>(
@@ -12,23 +40,11 @@ export function documentList<Item extends { id: string }>(
 ): DocumentList<Item> {
   let pending: Promise<unknown> = Promise.resolve();
 
-  const parse = (stored: string | null): Item[] => {
-    if (stored === null) {
-      return [];
-    }
-
-    try {
-      const parsed: unknown = JSON.parse(stored);
-
-      return Array.isArray(parsed) ? parsed.filter(isItem) : [];
-    } catch {
-      return [];
-    }
-  };
+  const read = async (): Promise<Item[]> => parseDocumentList(await storage.read(), isItem);
 
   const load = async (): Promise<Item[]> => {
     try {
-      return parse(await storage.read());
+      return await read();
     } catch {
       return [];
     }
@@ -37,7 +53,7 @@ export function documentList<Item extends { id: string }>(
   const update = (change: (items: Item[]) => Item[]): Promise<void> => {
     const next = pending
       .catch(() => undefined)
-      .then(async () => storage.write(JSON.stringify(change(parse(await storage.read())))));
+      .then(async () => storage.write(JSON.stringify(change(await read()))));
 
     pending = next;
 
@@ -46,6 +62,7 @@ export function documentList<Item extends { id: string }>(
 
   return {
     load,
+    read,
     upsert: (item) =>
       update((items) =>
         items.some((candidate) => candidate.id === item.id)

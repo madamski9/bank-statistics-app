@@ -5,6 +5,7 @@ import {
   type IngestionRecord,
 } from '@bankstats/ingestion-native';
 import { useCallback, useRef, useState } from 'react';
+import { writeForCurrentOwner } from '@/features/data/local-storage/current-owner-writes';
 
 export interface TransactionWrites {
   error: string | null;
@@ -48,15 +49,17 @@ export function useTransactionWrites(onChanged: () => void | Promise<void>): Tra
 
   const save = useCallback(
     (record: IngestionRecord) => run(() =>
-      record.bank === 'unknown' && record.origin !== 'manual' &&
-      record.notificationTitle?.trim() && record.bankName?.trim()
-        ? saveIngestionRecordAndRememberBank(record)
-        : saveIngestionRecord(record),
+      writeForCurrentOwner(() =>
+        record.bank === 'unknown' && record.origin !== 'manual' &&
+        record.notificationTitle?.trim() && record.bankName?.trim()
+          ? saveIngestionRecordAndRememberBank(record)
+          : saveIngestionRecord(record),
+      ),
     ),
     [run],
   );
 
-  const remove = useCallback((id: string) => run(() => deleteIngestionRecord(id)), [run]);
+  const remove = useCallback((id: string) => run(() => writeForCurrentOwner(() => deleteIngestionRecord(id))), [run]);
 
   const clearError = useCallback(() => setError(null), []);
 

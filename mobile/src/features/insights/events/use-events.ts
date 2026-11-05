@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { withCurrentOwner, writeForCurrentOwner } from '@/features/data/local-storage/current-owner-writes';
+
 import { nextEventColor } from './event-colors';
 import { eventStore } from './event-storage';
 import { endedEvent, newSpendingEvent, type SpendingEvent } from './spending-event';
@@ -36,7 +38,7 @@ export function useEvents(): SpendingEvents {
 
   const save = useCallback(
     async (event: SpendingEvent) => {
-      await eventStore.upsert(event);
+      await writeForCurrentOwner(() => eventStore.upsert(event));
       await reload();
     },
     [reload],
@@ -47,24 +49,28 @@ export function useEvents(): SpendingEvents {
   const start = useCallback(
     async (name: string) => {
       const now = new Date();
+      const event = await withCurrentOwner(async (write) => {
+        const stored = await eventStore.load();
 
-      const stored = await eventStore.load();
+        for (const running of stored.filter((candidate) => candidate.endedAt === undefined)) {
+          await write(() => eventStore.upsert(endedEvent(running, now)));
+        }
 
-      for (const running of stored.filter((event) => event.endedAt === undefined)) {
-        await eventStore.upsert(endedEvent(running, now));
-      }
+        const started = newSpendingEvent(name, now, Math.random, nextEventColor(stored));
+        await write(() => eventStore.upsert(started));
 
-      const event = newSpendingEvent(name, now, Math.random, nextEventColor(stored));
-      await save(event);
+        return started;
+      });
+      await reload();
 
       return event;
     },
-    [save],
+    [reload],
   );
 
   const remove = useCallback(
     async (id: string) => {
-      await eventStore.remove(id);
+      await writeForCurrentOwner(() => eventStore.remove(id));
       await reload();
     },
     [reload],

@@ -103,6 +103,21 @@ describe('devices', () => {
     await expect(tablet.mutation(api.account.deleteCloudCopy, {})).rejects.toThrow('revoked');
   });
 
+  test('keeps a revoked session from taking over another active installation', async () => {
+    const { user, tablet } = await twoDevices();
+    await user.mutation(api.devices.revoke, { installationId: 'phone', deviceId: await tabletId(user) });
+
+    await expect(
+      tablet.mutation(api.devices.register, { installationId: 'phone', platform: 'ios' }),
+    ).rejects.toThrow('revoked');
+    await expect(pulled(tablet, 'phone', 'transactions')).rejects.toThrow();
+    expect(await tablet.query(api.sync.head, { installationId: 'phone' })).toBeNull();
+    await expect(
+      tablet.mutation(api.sync.push, { installationId: 'phone', changes: { transactions: [lunch()] } }),
+    ).rejects.toThrow();
+    expect(await user.query(api.devices.standing, { installationId: 'phone' })).toBe('active');
+  });
+
   test('lets the owner sign in again on a revoked device with a new session', async () => {
     const { backend, user } = await twoDevices();
     await user.mutation(api.devices.revoke, { installationId: 'phone', deviceId: await tabletId(user) });

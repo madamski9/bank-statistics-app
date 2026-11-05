@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import {
   loadAccounts,
+  readAccounts,
   removeAccount,
   saveAccounts,
   upsertAccount,
@@ -28,6 +29,18 @@ describe('account storage', () => {
     await saveAccounts(storage, accounts);
 
     expect(await loadAccounts(storage)).toEqual(accounts);
+  });
+
+  test('refuses to read or overwrite a document it cannot parse', async () => {
+    const storage = memoryStorage('{oops');
+
+    await expect(readAccounts(storage)).rejects.toThrow();
+    await expect(
+      upsertAccount(storage, { id: 'account-a', bank: 'manual', name: 'A', isGeneral: false }),
+    ).rejects.toThrow();
+
+    expect(storage.value).toBe('{oops');
+    expect(await readAccounts(memoryStorage())).toEqual([]);
   });
 
   test('drops malformed entries and survives unreadable storage', async () => {

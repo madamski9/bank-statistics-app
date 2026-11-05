@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { documentList } from './document-list';
+import { documentList, UnreadableDocumentError } from './document-list';
 
 function memoryStorage(initial: string | null = null) {
   let value = initial;
@@ -43,6 +43,34 @@ describe('document list', () => {
     expect(
       await documentList(memoryStorage('[{"id":"a","name":"A"},{"id":1}]'), isNamed).load(),
     ).toEqual([{ id: 'a', name: 'A' }]);
+  });
+
+  test('tells a missing or empty document apart from one it cannot read', async () => {
+    expect(await documentList(memoryStorage(), isNamed).read()).toEqual([]);
+    expect(await documentList(memoryStorage('[]'), isNamed).read()).toEqual([]);
+    await expect(documentList(memoryStorage('{broken'), isNamed).read()).rejects.toThrow(UnreadableDocumentError);
+    await expect(documentList(memoryStorage('{"id":"a"}'), isNamed).read()).rejects.toThrow(UnreadableDocumentError);
+    await expect(
+      documentList(
+        {
+          read: async () => {
+            throw new Error('database is locked');
+          },
+          write: async () => undefined,
+        },
+        isNamed,
+      ).read(),
+    ).rejects.toThrow('locked');
+  });
+
+  test('never overwrites a document it cannot parse', async () => {
+    const storage = memoryStorage('{broken');
+    const list = documentList(storage, isNamed);
+
+    await expect(list.upsert({ id: 'b', name: 'B' })).rejects.toThrow(UnreadableDocumentError);
+    await expect(list.remove('a')).rejects.toThrow(UnreadableDocumentError);
+
+    expect(storage.current()).toBe('{broken');
   });
 
   test('keeps the stored list when reading it fails during a write', async () => {
