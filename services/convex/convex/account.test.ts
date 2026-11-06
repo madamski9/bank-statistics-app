@@ -270,8 +270,28 @@ describe('account deletion', () => {
     const retries = await pendingJobs(backend, 'removeRevenueCatCustomer');
     expect(retries.map((job) => job.args[0])).toEqual([{ ownerId: 'user_alice', attempt: 2 }]);
     await expect(
-      backend.action(internal.account.removeRevenueCatCustomer, { ownerId: 'user_alice', attempt: 6 }),
+      backend.action(internal.account.removeRevenueCatCustomer, { ownerId: 'user_alice', attempt: 12 }),
     ).rejects.toThrow('503');
   });
-});
 
+  test('retries instead of giving up when the RevenueCat key is missing', async () => {
+    const { backend } = await withData();
+    delete process.env.REVENUECAT_SECRET_API_KEY;
+
+    await backend.action(internal.account.removeRevenueCatCustomer, { ownerId: 'user_alice', attempt: 1 });
+
+    const retries = await pendingJobs(backend, 'removeRevenueCatCustomer');
+    expect(retries.map((job) => job.args[0])).toEqual([{ ownerId: 'user_alice', attempt: 2 }]);
+  });
+
+  test('removes the RevenueCat customer again once the Clerk user is gone and the app can no longer recreate it', async () => {
+    const { backend } = await withData();
+    process.env.CLERK_SECRET_KEY = 'sk_clerk';
+    revenueCatAnswering([200], []);
+
+    await backend.action(internal.account.removeClerkUser, { ownerId: 'user_alice' });
+
+    const removals = await pendingJobs(backend, 'removeRevenueCatCustomer');
+    expect(removals.map((job) => job.args[0])).toEqual([{ ownerId: 'user_alice', attempt: 1 }]);
+  });
+});

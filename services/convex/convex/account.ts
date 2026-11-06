@@ -12,7 +12,7 @@ import { syncedTables } from './sync';
 const deletionBatchSize = 500;
 const clerkUserRemovalDelayMs = 60 * 60 * 1000;
 const clerkApiUrl = 'https://api.clerk.com/v1';
-const revenueCatRemovalAttempts = 6;
+const revenueCatRemovalAttempts = 12;
 const revenueCatRetryBaseMs = 60 * 1000;
 
 async function deleteSyncedRows(ctx: MutationCtx, ownerId: string): Promise<boolean> {
@@ -176,7 +176,7 @@ export const forgetDeletedUser = internalMutation({
 
 export const removeClerkUser = internalAction({
   args: { ownerId: v.string() },
-  handler: async (_ctx, { ownerId }) => {
+  handler: async (ctx, { ownerId }) => {
     const secretKey = process.env.CLERK_SECRET_KEY;
 
     if (secretKey === undefined || secretKey === '') {
@@ -191,19 +191,21 @@ export const removeClerkUser = internalAction({
     if (!response.ok && response.status !== 404) {
       throw new Error(`Clerk refused to delete the user with status ${response.status}.`);
     }
+
+    await ctx.scheduler.runAfter(0, internal.account.removeRevenueCatCustomer, { ownerId, attempt: 1 });
   },
 });
 
 export const removeRevenueCatCustomer = internalAction({
   args: { ownerId: v.string(), attempt: v.number() },
   handler: async (ctx, { ownerId, attempt }) => {
-    const secretKey = process.env.REVENUECAT_SECRET_API_KEY;
-
-    if (secretKey === undefined || secretKey === '') {
-      throw new Error('REVENUECAT_SECRET_API_KEY is not configured, so the deleted customer stays in RevenueCat.');
-    }
-
     try {
+      const secretKey = process.env.REVENUECAT_SECRET_API_KEY;
+
+      if (secretKey === undefined || secretKey === '') {
+        throw new Error('REVENUECAT_SECRET_API_KEY is not configured, so the deleted customer stays in RevenueCat.');
+      }
+
       await deleteRevenueCatCustomer(ownerId, secretKey);
     } catch (error) {
       if (attempt >= revenueCatRemovalAttempts) {
