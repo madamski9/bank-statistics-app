@@ -231,7 +231,12 @@ describe('account deletion', () => {
     await user.mutation(internal.account.beginDeletion, {});
 
     const removals = await pendingJobs(backend, 'removeRevenueCatCustomer');
-    expect(removals.map((job) => job.args[0])).toEqual([{ ownerId: 'user_alice', attempt: 1 }]);
+    expect(removals.map((job) => job.args[0])).toEqual([
+      { ownerId: 'user_alice', attempt: 1 },
+      { ownerId: 'user_alice', attempt: 1 },
+    ]);
+    const [now, afterSession] = removals.map((job) => job.scheduledTime).sort((left, right) => left - right);
+    expect(afterSession! - now!).toBeGreaterThan(60 * 60 * 1000);
   });
 
   test('also removes the RevenueCat customer of a user deleted in Clerk', async () => {
@@ -284,18 +289,18 @@ describe('account deletion', () => {
     expect(retries.map((job) => job.args[0])).toEqual([{ ownerId: 'user_alice', attempt: 2 }]);
   });
 
-  test('removes the RevenueCat customer again once the Clerk user is gone and the app can no longer recreate it', async () => {
-    const { backend } = await withData();
+  test('schedules the late RevenueCat removal even when Clerk refuses to delete the user', async () => {
+    const { backend, user } = await withData();
     process.env.CLERK_SECRET_KEY = 'sk_clerk';
-    revenueCatAnswering([200], []);
+    revenueCatAnswering([500], []);
 
-    await backend.action(internal.account.removeClerkUser, { ownerId: 'user_alice' });
+    await user.mutation(internal.account.beginDeletion, {});
+    await expect(backend.action(internal.account.removeClerkUser, { ownerId: 'user_alice' })).rejects.toThrow('500');
 
-    const removals = await pendingJobs(backend, 'removeRevenueCatCustomer');
-    expect(removals.map((job) => job.args[0])).toEqual([{ ownerId: 'user_alice', attempt: 1 }]);
+    expect(await pendingJobs(backend, 'removeRevenueCatCustomer')).toHaveLength(2);
   });
 
-  test('removes recreated RevenueCat customers daily for recent deletions and monthly for every deletion', async () => {
+  test('removes recreated RevenueCat customers daily for recent deletions and monthly for older ones', async () => {
     const { backend } = await withData();
     const day = 24 * 60 * 60 * 1000;
     await backend.run(async (ctx) => {
@@ -324,12 +329,12 @@ describe('account deletion', () => {
     await backend.mutation(internal.account.sweepRevenueCatCustomers, { scope: 'recent' });
 
     const removals = await pendingJobs(backend, 'removeRevenueCatCustomer');
-    expect(removals.map((job) => job.args[0].ownerId)).toEqual(['user_recent']);
+    expect(removals.map((job) => job.args[0])).toEqual([{ ownerId: 'user_recent', attempt: 12 }]);
 
-    await backend.mutation(internal.account.sweepRevenueCatCustomers, { scope: 'all' });
+    await backend.mutation(internal.account.sweepRevenueCatCustomers, { scope: 'older' });
 
     const everyRemoval = await pendingJobs(backend, 'removeRevenueCatCustomer');
-    expect(new Set(everyRemoval.map((job) => job.args[0].ownerId))).toEqual(new Set(['user_recent', 'user_long_gone']));
+    expect(everyRemoval.map((job) => job.args[0].ownerId).sort()).toEqual(['user_long_gone', 'user_recent']);
   });
 
   test('sweeps every recently deleted account across pages with one fixed date range', async () => {
@@ -364,7 +369,11 @@ describe('account deletion', () => {
     expect(thirdPage!.args[0].since).toBe(since);
     await backend.mutation(internal.account.sweepRevenueCatCustomers, thirdPage!.args[0]);
 
-    const removals = await pendingJobs(backend, 'removeRevenueCatCustomer');
+    const removals = await backend.run(async (ctx) =>
+      (await ctx.db.system.query('_scheduled_functions').collect()).filter((job) =>
+        job.name.includes('removeRevenueCatCustomer'),
+      ),
+    );
     expect(new Set(removals.map((job) => job.args[0].ownerId)).size).toBe(405);
   });
 });

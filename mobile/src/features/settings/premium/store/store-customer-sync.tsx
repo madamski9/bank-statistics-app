@@ -18,11 +18,14 @@ export function StoreCustomerSync() {
     void identifyStoreCustomer(userId)
       .then(() => refresh({}))
       .catch(() => undefined);
-
-    return () => {
-      void forgetStoreCustomer();
-    };
   }, [isAuthenticated, refresh, userId]);
+
+  useEffect(
+    () => () => {
+      void forgetStoreCustomer();
+    },
+    [],
+  );
 
   return null;
 }

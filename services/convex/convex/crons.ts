@@ -24,10 +24,10 @@ crons.daily(
 );
 
 crons.monthly(
-  'remove RevenueCat customers that a device recreated after any deletion',
+  'remove RevenueCat customers that a device recreated after an older deletion',
   { day: 1, hourUTC: 4, minuteUTC: 12 },
   internal.account.sweepRevenueCatCustomers,
-  { scope: 'all' },
+  { scope: 'older' },
 );
 
 export default crons;

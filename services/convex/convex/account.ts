@@ -17,6 +17,7 @@ const revenueCatRetryBaseMs = 60 * 1000;
 const revenueCatSweepDays = 90;
 const dayMs = 24 * 60 * 60 * 1000;
 const revenueCatSweepBatchSize = 200;
+const revenueCatSecondRemovalDelayMs = clerkUserRemovalDelayMs + 10 * 60 * 1000;
 
 async function deleteSyncedRows(ctx: MutationCtx, ownerId: string): Promise<boolean> {
   let isComplete = true;
@@ -74,6 +75,10 @@ async function purgeBatch(ctx: MutationCtx, request: PurgeRequest): Promise<bool
     const now = Date.now();
     await saveOwner(ctx, request.ownerId, owner, { dataPurgedAt: now }, now);
     await ctx.scheduler.runAfter(0, internal.account.removeRevenueCatCustomer, {
+      ownerId: request.ownerId,
+      attempt: 1,
+    });
+    await ctx.scheduler.runAfter(revenueCatSecondRemovalDelayMs, internal.account.removeRevenueCatCustomer, {
       ownerId: request.ownerId,
       attempt: 1,
     });
@@ -179,7 +184,7 @@ export const forgetDeletedUser = internalMutation({
 
 export const removeClerkUser = internalAction({
   args: { ownerId: v.string() },
-  handler: async (ctx, { ownerId }) => {
+  handler: async (_ctx, { ownerId }) => {
     const secretKey = process.env.CLERK_SECRET_KEY;
 
     if (secretKey === undefined || secretKey === '') {
@@ -194,8 +199,6 @@ export const removeClerkUser = internalAction({
     if (!response.ok && response.status !== 404) {
       throw new Error(`Clerk refused to delete the user with status ${response.status}.`);
     }
-
-    await ctx.scheduler.runAfter(0, internal.account.removeRevenueCatCustomer, { ownerId, attempt: 1 });
   },
 });
 
@@ -225,22 +228,24 @@ export const removeRevenueCatCustomer = internalAction({
 
 export const sweepRevenueCatCustomers = internalMutation({
   args: {
-    scope: v.union(v.literal('recent'), v.literal('all')),
+    scope: v.union(v.literal('recent'), v.literal('older')),
     since: v.optional(v.number()),
     cursor: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, { scope, since: continuedSince, cursor }) => {
-    const since = continuedSince ?? (scope === 'recent' ? Date.now() - revenueCatSweepDays * dayMs : 0);
+    const since = continuedSince ?? Date.now() - revenueCatSweepDays * dayMs;
     const page = await ctx.db
       .query('owners')
-      .withIndex('by_data_purged', (index) => index.gte('dataPurgedAt', since))
+      .withIndex('by_data_purged', (index) =>
+        scope === 'recent' ? index.gte('dataPurgedAt', since) : index.gte('dataPurgedAt', 0).lt('dataPurgedAt', since),
+      )
       .paginate({ cursor: cursor ?? null, numItems: revenueCatSweepBatchSize });
 
     await Promise.all(
       page.page.map((owner, position) =>
         ctx.scheduler.runAfter(position * 1000, internal.account.removeRevenueCatCustomer, {
           ownerId: owner.ownerId,
-          attempt: 1,
+          attempt: revenueCatRemovalAttempts,
         }),
       ),
     );

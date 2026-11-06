@@ -61,6 +61,10 @@ export const apply = internalMutation({
     const owner = await findOwner(ctx, ownerId);
 
     if (owner?.deletionRequestedAt !== undefined) {
+      if (owner.dataPurgedAt !== undefined) {
+        await ctx.scheduler.runAfter(0, internal.account.removeRevenueCatCustomer, { ownerId, attempt: 1 });
+      }
+
       return;
     }
 
