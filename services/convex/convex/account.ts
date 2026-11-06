@@ -224,22 +224,28 @@ export const removeRevenueCatCustomer = internalAction({
 });
 
 export const sweepRevenueCatCustomers = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const since = Date.now() - revenueCatSweepDays * dayMs;
-    const deleted = await ctx.db
+  args: { scope: v.union(v.literal('recent'), v.literal('all')), cursor: v.optional(v.union(v.string(), v.null())) },
+  handler: async (ctx, { scope, cursor }) => {
+    const since = scope === 'recent' ? Date.now() - revenueCatSweepDays * dayMs : 0;
+    const page = await ctx.db
       .query('owners')
       .withIndex('by_data_purged', (index) => index.gte('dataPurgedAt', since))
-      .take(revenueCatSweepBatchSize);
+      .paginate({ cursor: cursor ?? null, numItems: revenueCatSweepBatchSize });
 
     await Promise.all(
-      deleted.map((owner, position) =>
+      page.page.map((owner, position) =>
         ctx.scheduler.runAfter(position * 1000, internal.account.removeRevenueCatCustomer, {
           ownerId: owner.ownerId,
           attempt: 1,
         }),
       ),
     );
+
+    if (!page.isDone) {
+      await ctx.scheduler.runAfter(page.page.length * 1000, internal.account.sweepRevenueCatCustomers, {
+        scope,
+        cursor: page.continueCursor,
+      });
+    }
   },
 });
-

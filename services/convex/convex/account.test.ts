@@ -295,7 +295,7 @@ describe('account deletion', () => {
     expect(removals.map((job) => job.args[0])).toEqual([{ ownerId: 'user_alice', attempt: 1 }]);
   });
 
-  test('keeps removing the RevenueCat customer of recently deleted accounts in case a device recreated it', async () => {
+  test('removes recreated RevenueCat customers daily for recent deletions and monthly for every deletion', async () => {
     const { backend } = await withData();
     const day = 24 * 60 * 60 * 1000;
     await backend.run(async (ctx) => {
@@ -321,10 +321,42 @@ describe('account deletion', () => {
       });
     });
 
-    await backend.mutation(internal.account.sweepRevenueCatCustomers, {});
+    await backend.mutation(internal.account.sweepRevenueCatCustomers, { scope: 'recent' });
 
     const removals = await pendingJobs(backend, 'removeRevenueCatCustomer');
     expect(removals.map((job) => job.args[0].ownerId)).toEqual(['user_recent']);
+
+    await backend.mutation(internal.account.sweepRevenueCatCustomers, { scope: 'all' });
+
+    const everyRemoval = await pendingJobs(backend, 'removeRevenueCatCustomer');
+    expect(new Set(everyRemoval.map((job) => job.args[0].ownerId))).toEqual(new Set(['user_recent', 'user_long_gone']));
+  });
+
+  test('sweeps every recently deleted account across pages', async () => {
+    const backend = convexTest(schema, modules);
+    const day = 24 * 60 * 60 * 1000;
+    await backend.run(async (ctx) => {
+      for (let index = 0; index < 205; index += 1) {
+        await ctx.db.insert('owners', {
+          ownerId: `user_deleted_${index}`,
+          sequence: 0,
+          pushAllowance: 0,
+          pushAllowanceAt: 0,
+          rateLookupAllowance: 0,
+          rateLookupAllowanceAt: 0,
+          deletionRequestedAt: Date.now() - day,
+          dataPurgedAt: Date.now() - day,
+        });
+      }
+    });
+
+    await backend.mutation(internal.account.sweepRevenueCatCustomers, { scope: 'recent' });
+    const nextPage = await pendingJobs(backend, 'sweepRevenueCatCustomers');
+    expect(nextPage).toHaveLength(1);
+    await backend.mutation(internal.account.sweepRevenueCatCustomers, nextPage[0]!.args[0]);
+
+    const removals = await pendingJobs(backend, 'removeRevenueCatCustomer');
+    expect(new Set(removals.map((job) => job.args[0].ownerId)).size).toBe(205);
   });
 });
 
