@@ -294,4 +294,37 @@ describe('account deletion', () => {
     const removals = await pendingJobs(backend, 'removeRevenueCatCustomer');
     expect(removals.map((job) => job.args[0])).toEqual([{ ownerId: 'user_alice', attempt: 1 }]);
   });
+
+  test('keeps removing the RevenueCat customer of recently deleted accounts in case a device recreated it', async () => {
+    const { backend } = await withData();
+    const day = 24 * 60 * 60 * 1000;
+    await backend.run(async (ctx) => {
+      await ctx.db.insert('owners', {
+        ownerId: 'user_recent',
+        sequence: 0,
+        pushAllowance: 0,
+        pushAllowanceAt: 0,
+        rateLookupAllowance: 0,
+        rateLookupAllowanceAt: 0,
+        deletionRequestedAt: Date.now() - 10 * day,
+        dataPurgedAt: Date.now() - 10 * day,
+      });
+      await ctx.db.insert('owners', {
+        ownerId: 'user_long_gone',
+        sequence: 0,
+        pushAllowance: 0,
+        pushAllowanceAt: 0,
+        rateLookupAllowance: 0,
+        rateLookupAllowanceAt: 0,
+        deletionRequestedAt: Date.now() - 120 * day,
+        dataPurgedAt: Date.now() - 120 * day,
+      });
+    });
+
+    await backend.mutation(internal.account.sweepRevenueCatCustomers, {});
+
+    const removals = await pendingJobs(backend, 'removeRevenueCatCustomer');
+    expect(removals.map((job) => job.args[0].ownerId)).toEqual(['user_recent']);
+  });
 });
+

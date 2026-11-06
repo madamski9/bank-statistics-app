@@ -14,6 +14,9 @@ const clerkUserRemovalDelayMs = 60 * 60 * 1000;
 const clerkApiUrl = 'https://api.clerk.com/v1';
 const revenueCatRemovalAttempts = 12;
 const revenueCatRetryBaseMs = 60 * 1000;
+const revenueCatSweepDays = 90;
+const dayMs = 24 * 60 * 60 * 1000;
+const revenueCatSweepBatchSize = 200;
 
 async function deleteSyncedRows(ctx: MutationCtx, ownerId: string): Promise<boolean> {
   let isComplete = true;
@@ -219,3 +222,24 @@ export const removeRevenueCatCustomer = internalAction({
     }
   },
 });
+
+export const sweepRevenueCatCustomers = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const since = Date.now() - revenueCatSweepDays * dayMs;
+    const deleted = await ctx.db
+      .query('owners')
+      .withIndex('by_data_purged', (index) => index.gte('dataPurgedAt', since))
+      .take(revenueCatSweepBatchSize);
+
+    await Promise.all(
+      deleted.map((owner, position) =>
+        ctx.scheduler.runAfter(position * 1000, internal.account.removeRevenueCatCustomer, {
+          ownerId: owner.ownerId,
+          attempt: 1,
+        }),
+      ),
+    );
+  },
+});
+

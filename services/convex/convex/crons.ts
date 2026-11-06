@@ -16,4 +16,10 @@ crons.daily(
   internal.diagnosticSamples.purgeExpired,
 );
 
+crons.daily(
+  'remove RevenueCat customers that a device recreated after deletion',
+  { hourUTC: 3, minuteUTC: 34 },
+  internal.account.sweepRevenueCatCustomers,
+);
+
 export default crons;
