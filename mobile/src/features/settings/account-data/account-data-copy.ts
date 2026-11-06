@@ -33,6 +33,10 @@ export const accountDataCopy = defineCopy({
     subscriptionBody:
       'Płatności w App Store prowadzi Apple. Jeśli masz aktywną subskrypcję, anuluj ją w ustawieniach subskrypcji, zanim usuniesz konto.',
     manageSubscriptions: 'Zarządzaj subskrypcjami',
+    appleTitle: 'Odłącz też logowanie przez Apple',
+    appleBody:
+      'Usunięcie konta nie wyłącza logowania przez Apple dla BankStats. Po usunięciu otwórz Ustawienia, stuknij swoje imię, potem Logowanie i bezpieczeństwo, Zaloguj się przez Apple, wybierz BankStats i przestań używać logowania przez Apple.',
+    appleHelp: 'Instrukcja Apple',
     continue: 'Kontynuuj',
     confirmIdentity: 'Potwierdź, że to Ty. Bez tego nie usuniemy konta.',
     deleting: 'Usuwamy zsynchronizowane dane…',
@@ -96,6 +100,10 @@ export const accountDataCopy = defineCopy({
     subscriptionBody:
       'App Store payments are handled by Apple. If you have an active subscription, cancel it in your subscription settings before deleting your account.',
     manageSubscriptions: 'Manage subscriptions',
+    appleTitle: 'Also disconnect Sign in with Apple',
+    appleBody:
+      'Deleting your account does not turn off Sign in with Apple for BankStats. Afterwards, open Settings, tap your name, then Sign-In & Security, Sign in with Apple, choose BankStats and stop using Sign in with Apple.',
+    appleHelp: "Apple's instructions",
     continue: 'Continue',
     confirmIdentity: 'Confirm it is you. We cannot delete the account without it.',
     deleting: 'Deleting your synced data…',

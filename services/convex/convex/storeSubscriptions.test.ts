@@ -384,4 +384,17 @@ describe('store subscription refresh', () => {
     expect(pending).toHaveLength(1);
     expect(pending[0]?.scheduledTime).toBe(now + 60 * dayMs + 60 * 1000);
   });
+
+  test('never looks up an account that is being deleted, so RevenueCat does not recreate its customer', async () => {
+    const backend = convexTest(schema, modules);
+    const calls = revenueCatServing({});
+    await backend.mutation(internal.account.forgetDeletedUser, { ownerId: 'user_alice' });
+
+    await backend.action(internal.storeSubscriptions.recheck, { ownerId: 'user_alice' });
+    const response = await webhook(backend, { type: 'CANCELLATION', app_user_id: 'user_alice' });
+
+    expect(response.status).toBe(200);
+    expect(calls).toEqual([]);
+  });
 });
+

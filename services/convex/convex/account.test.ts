@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
 import { convexTest } from 'convex-test';
 import { ConvexError } from 'convex/values';
 
@@ -76,6 +76,34 @@ async function countOwned(backend: Awaited<ReturnType<typeof withData>>['backend
 
     return transactions.length + accounts.length + devices.length;
   });
+}
+
+const originalFetch = globalThis.fetch;
+const originalEnvironment = { ...process.env };
+
+afterEach(() => {
+  globalThis.fetch = originalFetch;
+  process.env = { ...originalEnvironment };
+});
+
+function revenueCatAnswering(statuses: number[], calls: { url: string; method: string; authorization: string | null }[]) {
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    calls.push({
+      url: String(input),
+      method: init?.method ?? 'GET',
+      authorization: new Headers(init?.headers).get('Authorization'),
+    });
+
+    return new Response('{}', { status: statuses.shift() ?? 200 });
+  }) as typeof fetch;
+}
+
+async function pendingJobs(backend: Awaited<ReturnType<typeof withData>>['backend'], name: string) {
+  return backend.run(async (ctx) =>
+    (await ctx.db.system.query('_scheduled_functions').collect()).filter(
+      (job) => job.state.kind === 'pending' && job.name.includes(name),
+    ),
+  );
 }
 
 describe('account deletion', () => {
@@ -196,4 +224,54 @@ describe('account deletion', () => {
     expect(await countOwned(backend, 'user_alice')).toBe(0);
     expect(await countOwned(backend, 'user_bob')).toBe(3);
   });
+
+  test('removes the RevenueCat customer once the data of the account is gone', async () => {
+    const { backend, user } = await withData();
+
+    await user.mutation(internal.account.beginDeletion, {});
+
+    const removals = await pendingJobs(backend, 'removeRevenueCatCustomer');
+    expect(removals.map((job) => job.args[0])).toEqual([{ ownerId: 'user_alice', attempt: 1 }]);
+  });
+
+  test('also removes the RevenueCat customer of a user deleted in Clerk', async () => {
+    const { backend } = await withData();
+
+    await backend.mutation(internal.account.forgetDeletedUser, { ownerId: 'user_alice' });
+    await backend.mutation(internal.account.purgeOwner, { ownerId: 'user_alice', removeClerkUser: false });
+
+    const removals = await pendingJobs(backend, 'removeRevenueCatCustomer');
+    expect(removals.map((job) => job.args[0].ownerId)).toContain('user_alice');
+  });
+
+  test('deletes the customer in RevenueCat and treats a missing customer as removed', async () => {
+    const { backend } = await withData();
+    const calls: { url: string; method: string; authorization: string | null }[] = [];
+    process.env.REVENUECAT_SECRET_API_KEY = 'sk_test';
+    revenueCatAnswering([200, 404], calls);
+
+    await backend.action(internal.account.removeRevenueCatCustomer, { ownerId: 'user_alice', attempt: 1 });
+    await backend.action(internal.account.removeRevenueCatCustomer, { ownerId: 'user_alice', attempt: 1 });
+
+    expect(calls).toEqual([
+      { url: 'https://api.revenuecat.com/v1/subscribers/user_alice', method: 'DELETE', authorization: 'Bearer sk_test' },
+      { url: 'https://api.revenuecat.com/v1/subscribers/user_alice', method: 'DELETE', authorization: 'Bearer sk_test' },
+    ]);
+    expect(await pendingJobs(backend, 'removeRevenueCatCustomer')).toEqual([]);
+  });
+
+  test('tries again later when RevenueCat is unavailable and gives up loudly after the last attempt', async () => {
+    const { backend } = await withData();
+    process.env.REVENUECAT_SECRET_API_KEY = 'sk_test';
+    revenueCatAnswering([503, 503], []);
+
+    await backend.action(internal.account.removeRevenueCatCustomer, { ownerId: 'user_alice', attempt: 1 });
+
+    const retries = await pendingJobs(backend, 'removeRevenueCatCustomer');
+    expect(retries.map((job) => job.args[0])).toEqual([{ ownerId: 'user_alice', attempt: 2 }]);
+    await expect(
+      backend.action(internal.account.removeRevenueCatCustomer, { ownerId: 'user_alice', attempt: 6 }),
+    ).rejects.toThrow('503');
+  });
 });
+

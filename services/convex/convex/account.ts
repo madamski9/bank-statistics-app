@@ -5,12 +5,15 @@ import { action, internalAction, internalMutation, mutation, type MutationCtx } 
 import { requireTrustedSession } from './devices';
 import { identityCheckRequiredError, requireSignedIn } from './owner';
 import { findOwner, saveOwner } from './owners';
+import { deleteRevenueCatCustomer } from './revenueCat';
 import { fetchSigningKeys, isRecentlyVerifiedSession } from './sessionToken';
 import { syncedTables } from './sync';
 
 const deletionBatchSize = 500;
 const clerkUserRemovalDelayMs = 60 * 60 * 1000;
 const clerkApiUrl = 'https://api.clerk.com/v1';
+const revenueCatRemovalAttempts = 6;
+const revenueCatRetryBaseMs = 60 * 1000;
 
 async function deleteSyncedRows(ctx: MutationCtx, ownerId: string): Promise<boolean> {
   let isComplete = true;
@@ -67,6 +70,10 @@ async function purgeBatch(ctx: MutationCtx, request: PurgeRequest): Promise<bool
   if (owner !== null && owner.dataPurgedAt === undefined) {
     const now = Date.now();
     await saveOwner(ctx, request.ownerId, owner, { dataPurgedAt: now }, now);
+    await ctx.scheduler.runAfter(0, internal.account.removeRevenueCatCustomer, {
+      ownerId: request.ownerId,
+      attempt: 1,
+    });
 
     if (request.removeClerkUser) {
       await ctx.scheduler.runAfter(clerkUserRemovalDelayMs, internal.account.removeClerkUser, {
@@ -183,6 +190,30 @@ export const removeClerkUser = internalAction({
 
     if (!response.ok && response.status !== 404) {
       throw new Error(`Clerk refused to delete the user with status ${response.status}.`);
+    }
+  },
+});
+
+export const removeRevenueCatCustomer = internalAction({
+  args: { ownerId: v.string(), attempt: v.number() },
+  handler: async (ctx, { ownerId, attempt }) => {
+    const secretKey = process.env.REVENUECAT_SECRET_API_KEY;
+
+    if (secretKey === undefined || secretKey === '') {
+      throw new Error('REVENUECAT_SECRET_API_KEY is not configured, so the deleted customer stays in RevenueCat.');
+    }
+
+    try {
+      await deleteRevenueCatCustomer(ownerId, secretKey);
+    } catch (error) {
+      if (attempt >= revenueCatRemovalAttempts) {
+        throw error;
+      }
+
+      await ctx.scheduler.runAfter(revenueCatRetryBaseMs * 2 ** (attempt - 1), internal.account.removeRevenueCatCustomer, {
+        ownerId,
+        attempt: attempt + 1,
+      });
     }
   },
 });
