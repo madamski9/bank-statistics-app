@@ -224,9 +224,13 @@ export const removeRevenueCatCustomer = internalAction({
 });
 
 export const sweepRevenueCatCustomers = internalMutation({
-  args: { scope: v.union(v.literal('recent'), v.literal('all')), cursor: v.optional(v.union(v.string(), v.null())) },
-  handler: async (ctx, { scope, cursor }) => {
-    const since = scope === 'recent' ? Date.now() - revenueCatSweepDays * dayMs : 0;
+  args: {
+    scope: v.union(v.literal('recent'), v.literal('all')),
+    since: v.optional(v.number()),
+    cursor: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, { scope, since: continuedSince, cursor }) => {
+    const since = continuedSince ?? (scope === 'recent' ? Date.now() - revenueCatSweepDays * dayMs : 0);
     const page = await ctx.db
       .query('owners')
       .withIndex('by_data_purged', (index) => index.gte('dataPurgedAt', since))
@@ -244,6 +248,7 @@ export const sweepRevenueCatCustomers = internalMutation({
     if (!page.isDone) {
       await ctx.scheduler.runAfter(page.page.length * 1000, internal.account.sweepRevenueCatCustomers, {
         scope,
+        since,
         cursor: page.continueCursor,
       });
     }

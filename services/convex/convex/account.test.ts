@@ -332,11 +332,11 @@ describe('account deletion', () => {
     expect(new Set(everyRemoval.map((job) => job.args[0].ownerId))).toEqual(new Set(['user_recent', 'user_long_gone']));
   });
 
-  test('sweeps every recently deleted account across pages', async () => {
+  test('sweeps every recently deleted account across pages with one fixed date range', async () => {
     const backend = convexTest(schema, modules);
     const day = 24 * 60 * 60 * 1000;
     await backend.run(async (ctx) => {
-      for (let index = 0; index < 205; index += 1) {
+      for (let index = 0; index < 405; index += 1) {
         await ctx.db.insert('owners', {
           ownerId: `user_deleted_${index}`,
           sequence: 0,
@@ -351,12 +351,21 @@ describe('account deletion', () => {
     });
 
     await backend.mutation(internal.account.sweepRevenueCatCustomers, { scope: 'recent' });
-    const nextPage = await pendingJobs(backend, 'sweepRevenueCatCustomers');
-    expect(nextPage).toHaveLength(1);
-    await backend.mutation(internal.account.sweepRevenueCatCustomers, nextPage[0]!.args[0]);
+    const [secondPage] = await pendingJobs(backend, 'sweepRevenueCatCustomers');
+    const since = secondPage!.args[0].since;
+    expect(since).toBeLessThanOrEqual(Date.now() - 90 * day);
+    expect(since).toBeGreaterThan(Date.now() - 90 * day - 60 * 1000);
+
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await backend.mutation(internal.account.sweepRevenueCatCustomers, secondPage!.args[0]);
+    const thirdPage = (await pendingJobs(backend, 'sweepRevenueCatCustomers')).find(
+      (job) => job.args[0].cursor !== secondPage!.args[0].cursor,
+    );
+    expect(thirdPage!.args[0].since).toBe(since);
+    await backend.mutation(internal.account.sweepRevenueCatCustomers, thirdPage!.args[0]);
 
     const removals = await pendingJobs(backend, 'removeRevenueCatCustomer');
-    expect(new Set(removals.map((job) => job.args[0].ownerId)).size).toBe(205);
+    expect(new Set(removals.map((job) => job.args[0].ownerId)).size).toBe(405);
   });
 });
 
