@@ -28,9 +28,9 @@ export default function Index() {
   return (
     <>
       <Show when="signed-in">
-        <StoreCustomerSync />
         <OwnedDeviceGate>
           <AccountStandingGate>
+            <StoreCustomerSync />
             <PrivacyProvider lockScreen={<AppLockScreen />}>
               <PrivacyBoundary>
                 <OnboardingGate>

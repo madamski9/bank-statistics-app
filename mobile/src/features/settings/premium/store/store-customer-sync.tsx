@@ -3,7 +3,7 @@ import { api } from '@bankstats/convex/convex/_generated/api';
 import { useAction, useConvexAuth } from 'convex/react';
 import { useEffect } from 'react';
 
-import { identifyStoreCustomer, sellsInApp } from './store-purchases';
+import { forgetStoreCustomer, identifyStoreCustomer, sellsInApp } from './store-purchases';
 
 export function StoreCustomerSync() {
   const { userId } = useAuth();
@@ -18,6 +18,10 @@ export function StoreCustomerSync() {
     void identifyStoreCustomer(userId)
       .then(() => refresh({}))
       .catch(() => undefined);
+
+    return () => {
+      void forgetStoreCustomer();
+    };
   }, [isAuthenticated, refresh, userId]);
 
   return null;

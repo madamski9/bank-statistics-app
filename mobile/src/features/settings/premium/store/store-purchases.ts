@@ -9,6 +9,7 @@ import Purchases, {
 
 import { appEnvironment } from '@/app-environment';
 
+import { storeIdentity } from './store-identity';
 import { advertisedTrialDays, trialDays, type IntroEligibility, type StoreOfferingId } from './trial-offer';
 
 const premiumEntitlementId = 'bank_stats_premium';
@@ -20,7 +21,14 @@ const apiKey =
       ? appEnvironment.revenueCatApiKeys.android
       : null;
 
-let configuredCustomerId: string | null = null;
+const customerIdentity = storeIdentity({
+  configure: (appUserID) => {
+    Purchases.setLogHandler(logStoreMessage);
+    Purchases.configure({ apiKey: apiKey ?? '', appUserID });
+  },
+  logIn: (appUserID) => Purchases.logIn(appUserID),
+  logOut: () => Purchases.logOut(),
+});
 
 export type PremiumPlanPeriod = 'monthly' | 'annual';
 
@@ -47,19 +55,12 @@ export function presentOfferCodeRedemption(): Promise<void> {
   return Purchases.presentCodeRedemptionSheet();
 }
 
-export async function identifyStoreCustomer(ownerId: string): Promise<void> {
-  if (apiKey === null || configuredCustomerId === ownerId) {
-    return;
-  }
+export function identifyStoreCustomer(ownerId: string): Promise<void> {
+  return apiKey === null ? Promise.resolve() : customerIdentity.identify(ownerId);
+}
 
-  if (configuredCustomerId === null) {
-    Purchases.setLogHandler(logStoreMessage);
-    Purchases.configure({ apiKey, appUserID: ownerId });
-  } else {
-    await Purchases.logIn(ownerId);
-  }
-
-  configuredCustomerId = ownerId;
+export function forgetStoreCustomer(): Promise<void> {
+  return apiKey === null ? Promise.resolve() : customerIdentity.forget();
 }
 
 export function hasPremiumEntitlement(customerInfo: CustomerInfo): boolean {
