@@ -368,4 +368,3 @@ describe('account deletion', () => {
     expect(new Set(removals.map((job) => job.args[0].ownerId)).size).toBe(405);
   });
 });
-

@@ -397,4 +397,3 @@ describe('store subscription refresh', () => {
     expect(calls).toEqual([]);
   });
 });
-

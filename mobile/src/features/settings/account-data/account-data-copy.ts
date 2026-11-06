@@ -35,7 +35,7 @@ export const accountDataCopy = defineCopy({
     manageSubscriptions: 'Zarządzaj subskrypcjami',
     appleTitle: 'Odłącz też logowanie przez Apple',
     appleBody:
-      'Usunięcie konta nie wyłącza logowania przez Apple dla BankStats. Po usunięciu otwórz Ustawienia, stuknij swoje imię, potem Logowanie i bezpieczeństwo, Zaloguj się przez Apple, wybierz BankStats i przestań używać logowania przez Apple.',
+      'Usunięcie konta nie wyłącza logowania przez Apple dla BankStats. Po usunięciu otwórz Ustawienia, stuknij swoje imię, potem Zaloguj się przez Apple, wybierz BankStats i stuknij Usuń.',
     appleHelp: 'Instrukcja Apple',
     continue: 'Kontynuuj',
     confirmIdentity: 'Potwierdź, że to Ty. Bez tego nie usuniemy konta.',
@@ -102,7 +102,7 @@ export const accountDataCopy = defineCopy({
     manageSubscriptions: 'Manage subscriptions',
     appleTitle: 'Also disconnect Sign in with Apple',
     appleBody:
-      'Deleting your account does not turn off Sign in with Apple for BankStats. Afterwards, open Settings, tap your name, then Sign-In & Security, Sign in with Apple, choose BankStats and stop using Sign in with Apple.',
+      'Deleting your account does not turn off Sign in with Apple for BankStats. Afterwards, open Settings, tap your name, then Sign in with Apple, choose BankStats and tap Delete.',
     appleHelp: "Apple's instructions",
     continue: 'Continue',
     confirmIdentity: 'Confirm it is you. We cannot delete the account without it.',
