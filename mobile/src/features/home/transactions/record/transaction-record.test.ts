@@ -8,6 +8,7 @@ import {
   transactionBadge,
   transactionContext,
   transactionTitle,
+  withoutWalletWait,
 } from './transaction-record';
 
 function record(overrides: Partial<IngestionRecord> = {}): IngestionRecord {
@@ -69,7 +70,8 @@ describe('transactionBadge', () => {
     const debitPush = record({ merchant: undefined });
 
     expect(transactionBadge(debitPush, capturedAt + 60_000)).toEqual({ label: 'Czeka na Portfel', tone: 'neutral' });
-    expect(transactionBadge(debitPush, capturedAt + 10 * 60_000)).toBeNull();
+    expect(transactionBadge(debitPush, capturedAt + 30 * 60_000)?.label).toBe('Czeka na Portfel');
+    expect(transactionBadge(debitPush, capturedAt + 3 * 60 * 60_000)).toBeNull();
   });
 });
 
@@ -82,6 +84,14 @@ describe('awaitsWalletMerchant', () => {
     expect(awaitsWalletMerchant(record({ merchant: undefined, origin: 'manual' }), soon)).toBe(false);
     expect(awaitsWalletMerchant(record({ merchant: undefined, bank: 'mbank' }), soon)).toBe(false);
     expect(awaitsWalletMerchant(record({ merchant: undefined, transactionType: 'outgoingTransfer' }), soon)).toBe(false);
+  });
+
+  test('stops waiting once the user declines the Wallet pairing', () => {
+    const declined = withoutWalletWait(record({ merchant: undefined }));
+
+    expect(declined.walletPairing).toBe('declined');
+    expect(awaitsWalletMerchant(declined, capturedAt + 60_000)).toBe(false);
+    expect(transactionBadge(declined, capturedAt + 60_000)).toBeNull();
   });
 });
 

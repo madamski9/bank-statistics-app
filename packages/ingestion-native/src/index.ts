@@ -9,6 +9,8 @@ export type IngestionRecordStatus = 'pending' | 'posted' | 'reversed';
 
 export type IngestionReviewReason = 'amount' | 'currency' | 'direction' | 'merchant';
 
+export type IngestionWalletPairing = 'declined';
+
 export const ingestionTransactionTypes = [
   'cardPayment',
   'blikPayment',
@@ -46,6 +48,7 @@ export interface IngestionRecord {
   exchangeRateTable?: string;
   notificationTitle?: string;
   bankName?: string;
+  walletPairing?: IngestionWalletPairing;
 }
 
 export interface StorageDiagnostics {

@@ -4,6 +4,7 @@ import { Alert } from 'react-native';
 
 import { useCopy } from '@/features/app-shell/localization/language';
 
+import { withoutWalletWait } from './record/transaction-record';
 import { confirmedRecord } from './transaction-editor/manual-transaction';
 import { transactionsCopy } from './transactions-copy';
 import { useTransactionWrites } from './use-transaction-writes';
@@ -86,6 +87,22 @@ export function useTransactionEditing({ onChanged, onRememberRule }: Transaction
     ]);
   }, [closeEditor, copy, editor, remove]);
 
+  const stopAwaitingWallet = useCallback(() => {
+    const target = editor?.record;
+
+    if (target === null || target === undefined) {
+      return;
+    }
+
+    const declined = withoutWalletWait(target);
+
+    void save(declined).then((saved) => {
+      if (saved) {
+        setEditor((current) => (current?.record?.id === declined.id ? { mode: 'detail', record: declined } : current));
+      }
+    });
+  }, [editor, save]);
+
   const cancelEditing = useCallback(() => {
     clearError();
     setEditor((current) =>
@@ -104,6 +121,7 @@ export function useTransactionEditing({ onChanged, onRememberRule }: Transaction
     submit,
     confirm,
     requestDelete,
+    stopAwaitingWallet,
   };
 }
 

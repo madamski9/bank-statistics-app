@@ -31,6 +31,8 @@ export const transactionsCopy = defineCopy({
     toReview: 'Do sprawdzenia',
     reversed: 'Cofnięta',
     awaitingWallet: 'Czeka na Portfel',
+    stopAwaitingWallet: 'Nie czekaj na Portfel',
+    stopAwaitingWalletHelp: 'Bank wysłał tę płatność bez nazwy sklepu. Przez 3 godziny połączy się z płatnością z Portfela na tę samą kwotę. Jeśli to była płatność fizyczną kartą lub online, przestań czekać, a transakcja zostanie taka, jaka jest.',
     kindOptions: {
       cardPayment: 'Karta lub Apple Pay',
       blikPayment: 'BLIK',
@@ -125,6 +127,8 @@ export const transactionsCopy = defineCopy({
     toReview: 'To review',
     reversed: 'Reversed',
     awaitingWallet: 'Awaiting Wallet',
+    stopAwaitingWallet: 'Stop waiting for Wallet',
+    stopAwaitingWalletHelp: 'The bank sent this payment without a shop name. For 3 hours it will merge with a Wallet payment of the same amount. If you paid with a physical card or online, stop waiting and the transaction stays as it is.',
     kindOptions: {
       cardPayment: 'Card or Apple Pay',
       blikPayment: 'BLIK',

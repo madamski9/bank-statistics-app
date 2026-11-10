@@ -17,7 +17,7 @@ export interface TransactionBadge {
 
 const blockingReviewReasons: IngestionReviewReason[] = ['amount', 'currency', 'direction'];
 
-const walletPairingWindowMs = 10 * 60 * 1000;
+const walletPairingWindowMs = 3 * 60 * 60 * 1000;
 
 export function isReviewItem(record: IngestionRecord): boolean {
   return record.review !== undefined;
@@ -88,7 +88,8 @@ export function walletMerchantDeadline(record: IngestionRecord): number | null {
     record.origin === 'manual' ||
     record.bank !== 'millennium' ||
     record.transactionType !== 'cardPayment' ||
-    record.merchant !== undefined
+    record.merchant !== undefined ||
+    record.walletPairing === 'declined'
   ) {
     return null;
   }
@@ -102,6 +103,10 @@ export function awaitsWalletMerchant(record: IngestionRecord, now: number): bool
   const deadline = walletMerchantDeadline(record);
 
   return deadline !== null && now < deadline;
+}
+
+export function withoutWalletWait(record: IngestionRecord): IngestionRecord {
+  return { ...record, walletPairing: 'declined' };
 }
 
 export function transactionBadge(record: IngestionRecord, now: number): TransactionBadge | null {

@@ -9,6 +9,8 @@ enum CardPaymentResolution: Equatable {
 struct CardPaymentPairing {
   static let walletSourceApp = "com.apple.Passbook"
   static let window: TimeInterval = 10 * 60
+  static let millenniumWindow: TimeInterval = 3 * 60 * 60
+  static let declinedWalletPairing = "declined"
   static let lateCaptureAllowance: TimeInterval = 60 * 60
 
   let paired: Set<String>
@@ -18,7 +20,7 @@ struct CardPaymentPairing {
       return nil
     }
     let occurredAt = date(record.occurredAt) ?? capturedAt
-    let margin = window + lateCaptureAllowance
+    let margin = pairingWindow(for: record.bank) + lateCaptureAllowance
     let formatter = ISO8601DateFormatter()
     return (
       formatter.string(from: min(capturedAt, occurredAt).addingTimeInterval(-margin)),
@@ -35,6 +37,7 @@ struct CardPaymentPairing {
       .filter { candidate in
         candidate.id != record.id
           && !paired.contains(candidate.id)
+          && candidate.walletPairing != Self.declinedWalletPairing
           && Self.isCapturedCardPayment(candidate)
           && Self.isWallet(candidate) != Self.isWallet(record)
           && candidate.bank == record.bank
@@ -45,7 +48,7 @@ struct CardPaymentPairing {
         guard let distance = Self.distance(between: record, and: candidate) else {
           return nil
         }
-        return distance <= Self.window ? (candidate, distance) : nil
+        return distance <= Self.pairingWindow(for: record.bank) ? (candidate, distance) : nil
       }
       .min { $0.distance < $1.distance }?
       .record
@@ -61,6 +64,10 @@ struct CardPaymentPairing {
     var merged = counterpart
     merged.merchant = merchant
     return .replace(merged)
+  }
+
+  static func pairingWindow(for bank: String) -> TimeInterval {
+    bank == "millennium" ? millenniumWindow : window
   }
 
   private static func isCapturedCardPayment(_ record: NormalizedRecord) -> Bool {

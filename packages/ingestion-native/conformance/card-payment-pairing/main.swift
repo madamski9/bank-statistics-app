@@ -84,6 +84,24 @@ let lateLidlDebitPush = card(
   "lateLidlDebit", from: millenniumApp, at: "2026-11-04T13:36:11Z", amountMinor: 1137, bank: "millennium",
   merchant: nil, occurredAt: "2026-11-04T13:12:00Z"
 )
+let firstPubDebitPush = card(
+  "firstPubDebit", from: millenniumApp, at: "2026-11-09T19:48:20Z", amountMinor: 4200, bank: "millennium",
+  merchant: nil, occurredAt: "2026-11-09T19:48:00Z"
+)
+let secondPubDebitPush = card(
+  "secondPubDebit", from: millenniumApp, at: "2026-11-09T20:51:15Z", amountMinor: 4200, bank: "millennium",
+  merchant: nil, occurredAt: "2026-11-09T20:51:00Z"
+)
+let boltDebitPush = card(
+  "boltDebit", from: millenniumApp, at: "2026-11-09T22:10:30Z", amountMinor: 1890, bank: "millennium",
+  merchant: nil, occurredAt: "2026-11-09T22:10:00Z"
+)
+
+func declined(_ record: NormalizedRecord) -> NormalizedRecord {
+  var copy = record
+  copy.walletPairing = CardPaymentPairing.declinedWalletPairing
+  return copy
+}
 
 let cases = [
   Case(
@@ -183,12 +201,64 @@ let cases = [
     expected: .replace(merged(lateLidlDebitPush, merchant: "Lidl"))
   ),
   Case(
-    "a late Millennium debit push for an operation long after the Wallet payment is a separate payment",
+    "a Millennium debit push for an operation more than three hours after the Wallet payment is a separate payment",
     record: card(
-      "laterDebit", from: millenniumApp, at: "2026-11-04T10:46:01Z", amountMinor: 425, bank: "millennium",
-      merchant: nil, occurredAt: "2026-11-04T10:40:00Z"
+      "laterDebit", from: millenniumApp, at: "2026-11-04T13:30:01Z", amountMinor: 425, bank: "millennium",
+      merchant: nil, occurredAt: "2026-11-04T13:24:00Z"
     ),
     existing: [zabkaWalletPush],
+    expected: .insert
+  ),
+  Case(
+    "a Wallet push thirteen minutes after a Millennium pre-authorisation names the merchant",
+    record: card(
+      "pubWallet", from: millenniumApp, at: "2026-11-09T20:01:12Z", amountMinor: 4200, bank: "millennium",
+      merchant: "Pub Red Light"
+    ),
+    existing: [firstPubDebitPush],
+    expected: .replace(merged(firstPubDebitPush, merchant: "Pub Red Light"))
+  ),
+  Case(
+    "a Wallet push half an hour after a Millennium pre-authorisation names the merchant",
+    record: card(
+      "boltWallet", from: millenniumApp, at: "2026-11-09T22:40:05Z", amountMinor: 1890, bank: "millennium",
+      merchant: "Bolt"
+    ),
+    existing: [boltDebitPush],
+    expected: .replace(merged(boltDebitPush, merchant: "Bolt"))
+  ),
+  Case(
+    "a second Wallet payment of the same amount pairs with the unpaired Millennium push",
+    record: card(
+      "secondPubWallet", from: millenniumApp, at: "2026-11-09T21:20:40Z", amountMinor: 4200, bank: "millennium",
+      merchant: "Pub Red Light"
+    ),
+    existing: [merged(firstPubDebitPush, merchant: "Pub Red Light"), secondPubDebitPush],
+    paired: ["firstPubDebit"],
+    expected: .replace(merged(secondPubDebitPush, merchant: "Pub Red Light"))
+  ),
+  Case(
+    "a Millennium push the user stopped waiting on is never paired",
+    record: card(
+      "boltWallet", from: millenniumApp, at: "2026-11-09T22:40:05Z", amountMinor: 1890, bank: "millennium",
+      merchant: "Bolt"
+    ),
+    existing: [declined(boltDebitPush)],
+    expected: .insert
+  ),
+  Case(
+    "a Wallet push more than three hours after a Millennium push is a separate payment",
+    record: card(
+      "lateWallet", from: millenniumApp, at: "2026-11-10T01:10:31Z", amountMinor: 1890, bank: "millennium",
+      merchant: "Bolt"
+    ),
+    existing: [boltDebitPush],
+    expected: .insert
+  ),
+  Case(
+    "the three hour window applies only to Millennium",
+    record: bankPush,
+    existing: [walletCard("wallet", at: "2026-10-16T14:00:00Z")],
     expected: .insert
   ),
   Case(
