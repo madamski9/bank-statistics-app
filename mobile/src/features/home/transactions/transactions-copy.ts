@@ -84,7 +84,6 @@ export const transactionsCopy = defineCopy({
     deleteTitle: 'Usunąć transakcję?',
     deleteBody: 'Tej operacji nie można cofnąć.',
     deleteConfirm: 'Usuń',
-    captureIosOnly: 'Przechwytywanie powiadomień działa na razie tylko na iOS.',
     loading: 'Wczytywanie…',
     empty:
       'Nie przechwycono jeszcze żadnej transakcji. Skonfiguruj automatyzację powiadomień w aplikacji Skróty albo dodaj transakcję ręcznie.',
@@ -177,7 +176,6 @@ export const transactionsCopy = defineCopy({
     deleteTitle: 'Delete this transaction?',
     deleteBody: 'This cannot be undone.',
     deleteConfirm: 'Delete',
-    captureIosOnly: 'Notification capture currently works on iOS only.',
     loading: 'Loading…',
     empty:
       'No transactions captured yet. Set up the notification automation in the Shortcuts app or add a transaction manually.',

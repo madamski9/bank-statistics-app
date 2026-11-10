@@ -1,3 +1,4 @@
+import { useAndroidBack } from '@/features/app-shell/sheet/sheet-modal';
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -122,6 +123,11 @@ export function MonthlySummaryScreen({
       return true;
     },
   });
+
+  useAndroidBack(() => {
+    setSelectedHighlight(null);
+    setSelectedGroup(null);
+  }, selectedHighlight !== null || selectedGroup !== null);
 
   if (selectedHighlight !== null) {
     return (

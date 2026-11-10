@@ -1,3 +1,4 @@
+import { useAndroidBack } from '@/features/app-shell/sheet/sheet-modal';
 import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInRight, ReduceMotion } from 'react-native-reanimated';
@@ -65,6 +66,8 @@ export function CategoryDetailScreen({
     () => merchants.filter((merchant) => !assignedKeys.has(merchant.key)),
     [assignedKeys, merchants],
   );
+
+  useAndroidBack(() => setIsPicking(false), isPicking, 1);
 
   if (isPicking) {
     return (

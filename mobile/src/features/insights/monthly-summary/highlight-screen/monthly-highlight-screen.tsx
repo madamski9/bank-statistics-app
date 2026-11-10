@@ -1,3 +1,4 @@
+import { useAndroidBack } from '@/features/app-shell/sheet/sheet-modal';
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { SymbolView } from 'expo-symbols';
 import { useMemo, useState } from 'react';
@@ -75,6 +76,8 @@ export function MonthlyHighlightScreen({
 
     onBack();
   };
+
+  useAndroidBack(goBack, true, 1);
 
   const backButton = (
     <Pressable

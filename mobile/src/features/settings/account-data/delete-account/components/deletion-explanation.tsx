@@ -1,4 +1,4 @@
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useCopy } from '@/features/app-shell/localization/language';
 import { overviewColors, overviewSpacing } from '@/features/app-shell/theme/overview-theme';
@@ -24,7 +24,7 @@ export function DeletionExplanation({ onContinue }: { onContinue: () => void }) 
           {copy.subscriptionTitle}
         </Text>
         <Text maxFontSizeMultiplier={1.5} style={styles.noticeBody}>
-          {copy.subscriptionBody}
+          {Platform.OS === 'android' ? copy.subscriptionBodyAndroid : copy.subscriptionBody}
         </Text>
         <Pressable
           accessibilityRole="link"

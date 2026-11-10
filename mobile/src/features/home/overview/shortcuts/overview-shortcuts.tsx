@@ -1,7 +1,8 @@
-import { SymbolView, type SymbolViewProps } from 'expo-symbols';
+import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SkeletonBar, SkeletonPulse } from '@/features/app-shell/loading/skeleton-pulse';
+import type { PlatformSymbol } from '@/features/app-shell/symbols/platform-symbol';
 import { reportingCurrency } from '@/features/data/currency-conversion/exchange-rate';
 import type { MonthForecast } from '@/features/insights/forecast/month-forecast';
 import { calendarCopy } from '@/features/app-shell/localization/calendar-copy';
@@ -26,7 +27,7 @@ export interface OverviewShortcutsProps {
 }
 
 interface ShortcutTileProps {
-  symbol: SymbolViewProps['name'];
+  symbol: PlatformSymbol;
   title: string;
   value: string;
   tint?: string;

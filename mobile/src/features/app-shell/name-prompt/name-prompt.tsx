@@ -75,7 +75,7 @@ function NamePromptCard({
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.backdrop}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.backdrop}>
       <View style={styles.card}>
         <Text accessibilityRole="header" maxFontSizeMultiplier={1.4} style={styles.title}>
           {title}

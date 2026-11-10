@@ -3,16 +3,15 @@ import type { ComponentProps } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, ReduceMotion } from 'react-native-reanimated';
 
+import type { PlatformSymbol } from '@/features/app-shell/symbols/platform-symbol';
 import { ScalePressable } from '@/features/app-shell/motion/scale-pressable';
 import { overviewColors, overviewSpacing } from '@/features/app-shell/theme/overview-theme';
-
-type SymbolName = ComponentProps<typeof SymbolView>['name'];
 
 interface OptionButtonProps {
   label: string;
   labelKey?: string;
   detail: string;
-  symbol: SymbolName;
+  symbol: PlatformSymbol;
   tone?: 'default' | 'danger';
   disabled: boolean;
   isBusy: boolean;

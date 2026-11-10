@@ -30,7 +30,7 @@ export function useDeviceOwnership(): DeviceOwnershipState {
   const convex = useConvex();
   const { isAuthenticated } = useConvexAuth();
   const [check, setCheck] = useState<OwnershipCheck | null>(null);
-  const isSupported = Platform.OS === 'ios';
+  const isSupported = Platform.OS === 'ios' || Platform.OS === 'android';
 
   useEffect(() => {
     if (!isSupported || userId == null) {

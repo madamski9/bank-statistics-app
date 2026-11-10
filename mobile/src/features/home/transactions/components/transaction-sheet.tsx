@@ -1,5 +1,5 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
-import { Modal } from 'react-native';
+import { SheetModal } from '@/features/app-shell/sheet/sheet-modal';
 
 import { overviewColors } from '@/features/app-shell/theme/overview-theme';
 import type { CustomCategory } from '@/features/data/classification/categories';
@@ -49,10 +49,10 @@ export function TransactionSheet({
   const { editor } = editing;
 
   return (
-    <Modal
+    <SheetModal
       animationType="slide"
       backdropColor={overviewColors.background}
-      onRequestClose={editing.closeEditor}
+      onRequestClose={editor?.mode === 'edit' ? editing.cancelEditing : editing.closeEditor}
       presentationStyle="pageSheet"
       visible={editor !== null}
     >
@@ -95,6 +95,6 @@ export function TransactionSheet({
         />
       )}
       <PrivacyShield />
-    </Modal>
+    </SheetModal>
   );
 }

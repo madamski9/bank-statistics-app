@@ -1,4 +1,5 @@
 import { useSSO } from '@clerk/expo';
+import { makeRedirectUri } from 'expo-auth-session';
 import { useCallback, useState } from 'react';
 
 import { useCopy } from '@/features/app-shell/localization/language';
@@ -19,7 +20,7 @@ export function useSocialSignIn() {
       setActiveStrategy(strategy);
 
       try {
-        const { createdSessionId, setActive, signUp } = await startSSOFlow({ strategy });
+        const { createdSessionId, setActive, signUp } = await startSSOFlow({ strategy, redirectUrl: makeRedirectUri({ path: 'sso-callback' }) });
 
         if (createdSessionId && setActive) {
           await setActive({ session: createdSessionId });

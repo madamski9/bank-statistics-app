@@ -32,6 +32,8 @@ export const accountDataCopy = defineCopy({
     subscriptionTitle: 'Usunięcie konta nie anuluje subskrypcji',
     subscriptionBody:
       'Płatności w App Store prowadzi Apple. Jeśli masz aktywną subskrypcję, anuluj ją w ustawieniach subskrypcji, zanim usuniesz konto.',
+    subscriptionBodyAndroid:
+      'Płatności w Google Play prowadzi Google. Jeśli masz aktywną subskrypcję, anuluj ją w ustawieniach subskrypcji, zanim usuniesz konto.',
     manageSubscriptions: 'Zarządzaj subskrypcjami',
     continue: 'Kontynuuj',
     confirmIdentity: 'Potwierdź, że to Ty. Bez tego nie usuniemy konta.',
@@ -95,6 +97,8 @@ export const accountDataCopy = defineCopy({
     subscriptionTitle: 'Deleting your account does not cancel subscriptions',
     subscriptionBody:
       'App Store payments are handled by Apple. If you have an active subscription, cancel it in your subscription settings before deleting your account.',
+    subscriptionBodyAndroid:
+      'Google Play payments are handled by Google. If you have an active subscription, cancel it in your subscription settings before deleting your account.',
     manageSubscriptions: 'Manage subscriptions',
     continue: 'Continue',
     confirmIdentity: 'Confirm it is you. We cannot delete the account without it.',

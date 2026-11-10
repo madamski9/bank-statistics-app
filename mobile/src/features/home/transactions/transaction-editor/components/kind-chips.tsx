@@ -1,4 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { useCopy } from '@/features/app-shell/localization/language';
+import { transactionsCopy } from '../../transactions-copy';
 
 import { overviewColors } from '@/features/app-shell/theme/overview-theme';
 import { selectionChanged } from '@/haptics';
@@ -12,6 +15,7 @@ interface KindChipsProps {
 }
 
 export function KindChips({ direction, kind, onChange }: KindChipsProps) {
+  const copy = useCopy(transactionsCopy);
   return (
     <View style={styles.kinds}>
       {transactionKindOptions(direction).map((option) => {
@@ -36,7 +40,7 @@ export function KindChips({ direction, kind, onChange }: KindChipsProps) {
               maxFontSizeMultiplier={1.3}
               style={[styles.kindLabel, isActive ? styles.kindLabelActive : null]}
             >
-              {option.label}
+              {Platform.OS === 'android' && option.value === 'cardPayment' ? copy.types.cardPayment : option.label}
             </Text>
           </Pressable>
         );

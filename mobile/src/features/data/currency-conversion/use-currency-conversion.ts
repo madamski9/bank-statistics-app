@@ -26,7 +26,7 @@ export function useCurrencyConversion(
   const lastAttempt = useRef<{ key: string; at: number } | null>(null);
 
   useEffect(() => {
-    if (Platform.OS !== 'ios' || !isAuthenticated || isRunning.current) {
+    if ((Platform.OS !== 'ios' && Platform.OS !== 'android') || !isAuthenticated || isRunning.current) {
       return;
     }
 

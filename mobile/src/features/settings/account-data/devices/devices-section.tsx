@@ -17,8 +17,12 @@ export function DevicesSection() {
   const { isAuthenticated } = useConvexAuth();
   const isCloudEnabled = useCloudSyncEnabled();
   const installationId = useInstallationId();
-  const canListDevices = isCloudEnabled === true && isAuthenticated && installationId !== null;
-  const devices = useQuery(api.devices.list, canListDevices ? { installationId } : 'skip');
+  const canQueryDevices = isCloudEnabled === true && isAuthenticated && installationId !== null;
+  const standing = useQuery(api.devices.standing, canQueryDevices ? { installationId } : 'skip');
+  const devices = useQuery(
+    api.devices.list,
+    canQueryDevices && standing === 'active' ? { installationId } : 'skip',
+  );
   const revoke = useMutation(api.devices.revoke);
   const [error, setError] = useState<string | null>(null);
   const [revokingId, setRevokingId] = useState<Id<'devices'> | null>(null);
@@ -62,7 +66,7 @@ export function DevicesSection() {
   if (devices === undefined || devices.length === 0) {
     return (
       <View style={styles.placeholder}>
-        {canListDevices && devices === undefined ? (
+        {canQueryDevices && devices === undefined && (standing === undefined || standing === 'active') ? (
           <ActivityIndicator color={overviewColors.textSecondary} />
         ) : null}
         <Text maxFontSizeMultiplier={1.5} style={styles.meta}>

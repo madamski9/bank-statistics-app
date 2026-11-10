@@ -1,3 +1,4 @@
+import { useAndroidBack } from '@/features/app-shell/sheet/sheet-modal';
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { useMemo, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
@@ -55,6 +56,8 @@ export function EventsScreen({
     [events, now, ordered, records, rules],
   );
   const summary = selected === null ? null : (summaries.get(selected.id) ?? null);
+
+  useAndroidBack(() => setSelectedId(null), selected !== null && showsHistory);
 
   const confirmDelete = (event: SpendingEvent) => {
     Alert.alert(copy.deleteTitle, copy.deleteBody, [

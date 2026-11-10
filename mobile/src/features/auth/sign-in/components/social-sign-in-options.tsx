@@ -1,4 +1,4 @@
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { useCopy } from '@/features/app-shell/localization/language';
 import { AnimatedReveal } from '@/features/app-shell/motion/animated-reveal';
@@ -33,13 +33,15 @@ export function SocialSignInOptions({ activeStrategy, isDisabled, onSignIn }: So
           onPress={() => onSignIn('oauth_google')}
           provider="google"
         />
-        <SocialButton
-          isDisabled={isDisabled}
-          isLoading={activeStrategy === 'oauth_apple'}
-          label={copy.continueWithApple}
-          onPress={() => onSignIn('oauth_apple')}
-          provider="apple"
-        />
+        {Platform.OS !== 'android' ? (
+          <SocialButton
+            isDisabled={isDisabled}
+            isLoading={activeStrategy === 'oauth_apple'}
+            label={copy.continueWithApple}
+            onPress={() => onSignIn('oauth_apple')}
+            provider="apple"
+          />
+        ) : null}
       </View>
     </AnimatedReveal>
   );

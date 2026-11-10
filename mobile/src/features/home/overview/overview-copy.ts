@@ -9,7 +9,6 @@ export const overviewCopy = defineCopy({
     incomeLabel: (amount: string, period: string) => `Przychody, ${amount}, ${period}`,
     netLabel: (amount: string, period: string) => `Przepływ, przychody minus wydatki, ${amount}, ${period}`,
     context: (period: string) => `Wydatki · ${period}`,
-    captureIosOnly: 'Przechwytywanie powiadomień działa na razie tylko na iOS.',
     noTransactions:
       'Nie przechwycono jeszcze żadnej transakcji. Skonfiguruj automatyzację powiadomień w aplikacji Skróty.',
     noTransactionsWithoutCapture: 'Nie ma jeszcze żadnej transakcji. Dodaj transakcję ręcznie albo zaimportuj wyciąg.',
@@ -31,7 +30,6 @@ export const overviewCopy = defineCopy({
     incomeLabel: (amount: string, period: string) => `Income, ${amount}, ${period}`,
     netLabel: (amount: string, period: string) => `Net flow, income minus spending, ${amount}, ${period}`,
     context: (period: string) => `Spending · ${period}`,
-    captureIosOnly: 'Notification capture currently works on iOS only.',
     noTransactions:
       'No transactions captured yet. Set up the notification automation in the Shortcuts app.',
     noTransactionsWithoutCapture: 'No transactions yet. Add a transaction manually or import a statement.',

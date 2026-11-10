@@ -1,3 +1,4 @@
+import { useAndroidBack } from '@/features/app-shell/sheet/sheet-modal';
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { useMemo, useState } from 'react';
 import { Keyboard, StyleSheet, View } from 'react-native';
@@ -41,6 +42,8 @@ export function IgnoredPaymentsScreen({
     setHasNavigated(true);
     setView('rules');
   };
+
+  useAndroidBack(backToRules, view === 'picker');
 
   const openChoice = (target: IgnoreTarget, rule: IgnoreRule | null, match: IgnoreMatch = 'exact') => {
     Keyboard.dismiss();

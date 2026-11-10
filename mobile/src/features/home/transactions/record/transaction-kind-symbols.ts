@@ -1,3 +1,4 @@
+import type { PlatformSymbol } from '@/features/app-shell/symbols/platform-symbol';
 import type { SpendingSourceKind } from '@/features/home/overview/spending/spending-summary';
 
 export const transactionKindSymbols = {
@@ -14,4 +15,4 @@ export const transactionKindSymbols = {
   fee: { ios: 'percent', android: 'percent', web: 'percent' },
   interest: { ios: 'chart.line.uptrend.xyaxis', android: 'trending_up', web: 'trending_up' },
   other: { ios: 'square.grid.2x2.fill', android: 'grid_view', web: 'grid_view' },
-} as const satisfies Record<SpendingSourceKind, { ios: string; android: string; web: string }>;
+} as const satisfies Record<SpendingSourceKind, PlatformSymbol>;
