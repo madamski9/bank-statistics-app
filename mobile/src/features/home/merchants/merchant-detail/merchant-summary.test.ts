@@ -1,7 +1,7 @@
 import type { IngestionRecord } from '@bankstats/ingestion-native';
 import { describe, expect, test } from 'bun:test';
 
-import { bucketSizeFor, bucketSpending, chartWindow, earliestOccurredMs } from './merchant-summary';
+import { barBucketSizeFor, bucketSizeFor, bucketSpending, chartWindow, earliestOccurredMs, spendBuckets } from './merchant-summary';
 
 function expense(occurredAt: string): IngestionRecord {
   return {
@@ -67,5 +67,30 @@ describe('bucketSizeFor', () => {
     expect(bucketSizeFor('all', daysAgo(400), endMs)).toBe('week');
     expect(bucketSizeFor('all', daysAgo(1000), endMs)).toBe('month');
     expect(bucketSizeFor('all', null, endMs)).toBe('month');
+  });
+});
+
+describe('barBucketSizeFor', () => {
+  const endMs = new Date(2026, 10, 12).getTime();
+  const daysAgo = (days: number) => endMs - days * 86_400_000;
+
+  test('keeps a bar per day up to a month', () => {
+    expect(barBucketSizeFor('week', { startMs: daysAgo(7), endMs }, daysAgo(3))).toBe('day');
+    expect(barBucketSizeFor('month', { startMs: daysAgo(30), endMs }, daysAgo(3))).toBe('day');
+  });
+
+  test('groups three months into weeks so the bars stay wide', () => {
+    expect(barBucketSizeFor('quarter', { startMs: daysAgo(90), endMs }, daysAgo(80))).toBe('week');
+
+    const buckets = spendBuckets([expense(new Date(daysAgo(60)).toISOString())], { startMs: daysAgo(90), endMs }, 'quarter');
+
+    expect(buckets.length).toBeLessThanOrEqual(14);
+    expect(buckets.filter((bucket) => bucket.totalMinor > 0)).toHaveLength(1);
+  });
+
+  test('groups a Max history longer than a month into weeks', () => {
+    expect(barBucketSizeFor('all', { startMs: null, endMs }, daysAgo(20))).toBe('day');
+    expect(barBucketSizeFor('all', { startMs: null, endMs }, daysAgo(60))).toBe('week');
+    expect(barBucketSizeFor('all', { startMs: null, endMs }, daysAgo(1000))).toBe('month');
   });
 });

@@ -212,11 +212,13 @@ export function HomeScreen({ initialPage = 'overview' }: HomeScreenProps) {
         <MerchantDetail
           group={selection.group}
           limit={alertEditing.selectedLimit}
+          lockedPeriods={periodLocks}
           onClosed={selection.closeGroup}
           onEditLimit={alertEditing.editGroupLimit}
+          onRequirePremium={() => openPremium('period')}
           period={period}
+          records={countedRecords}
           rules={rules}
-          spendWindow={numbers.spendWindow}
         />
       ) : null}
 

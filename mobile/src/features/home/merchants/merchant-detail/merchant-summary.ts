@@ -167,13 +167,26 @@ export function chartWindow(
   return { ...window, startMs: Math.min(earliestMs, window.endMs - minimumChartDays * dayMs) };
 }
 
+const maximumDailyBars = 31;
+
+export function barBucketSizeFor(
+  period: SpendingPeriod,
+  window: PeriodWindow,
+  earliestMs: number | null,
+): BucketSize {
+  const size = bucketSizeFor(period, earliestMs, window.endMs);
+  const startMs = window.startMs ?? earliestMs ?? window.endMs;
+
+  return size === 'day' && (window.endMs - startMs) / dayMs > maximumDailyBars ? 'week' : size;
+}
+
 export function spendBuckets(
   records: IngestionRecord[],
   window: PeriodWindow,
   period: SpendingPeriod,
 ): SpendBucket[] {
   const earliestMs = earliestOccurredMs(records);
-  const size = bucketSizeFor(period, earliestMs, window.endMs);
+  const size = barBucketSizeFor(period, window, earliestMs);
 
   return bucketSpending(records, chartWindow(window, size, earliestMs), size);
 }
