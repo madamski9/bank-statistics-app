@@ -12,6 +12,7 @@ import { useInstallationId } from '@/features/data/sync/device-ownership/use-ins
 import { useCopy } from '@/features/app-shell/localization/language';
 
 import { accountDataCopy } from '../account-data-copy';
+import { AppleDisconnectNotice } from '../delete-account/components/apple-disconnect-notice';
 import { EmailReverification } from './email-reverification';
 
 interface AccountStandingGateProps {
@@ -124,6 +125,7 @@ function FinishDeletionScreen() {
       body={copy.deletionBody}
       title={copy.deletionTitle}
     >
+      <AppleDisconnectNotice />
       {cleanup === 'failed' ? (
         <ActionButton label={copy.retry} onPress={() => void retry()} />
       ) : identity === 'needsVerification' ? (

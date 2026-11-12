@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
 import { convexTest } from 'convex-test';
 import { ConvexError } from 'convex/values';
 
@@ -76,6 +76,34 @@ async function countOwned(backend: Awaited<ReturnType<typeof withData>>['backend
 
     return transactions.length + accounts.length + devices.length;
   });
+}
+
+const originalFetch = globalThis.fetch;
+const originalEnvironment = { ...process.env };
+
+afterEach(() => {
+  globalThis.fetch = originalFetch;
+  process.env = { ...originalEnvironment };
+});
+
+function revenueCatAnswering(statuses: number[], calls: { url: string; method: string; authorization: string | null }[]) {
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    calls.push({
+      url: String(input),
+      method: init?.method ?? 'GET',
+      authorization: new Headers(init?.headers).get('Authorization'),
+    });
+
+    return new Response('{}', { status: statuses.shift() ?? 200 });
+  }) as typeof fetch;
+}
+
+async function pendingJobs(backend: Awaited<ReturnType<typeof withData>>['backend'], name: string) {
+  return backend.run(async (ctx) =>
+    (await ctx.db.system.query('_scheduled_functions').collect()).filter(
+      (job) => job.state.kind === 'pending' && job.name.includes(name),
+    ),
+  );
 }
 
 describe('account deletion', () => {
@@ -195,5 +223,157 @@ describe('account deletion', () => {
 
     expect(await countOwned(backend, 'user_alice')).toBe(0);
     expect(await countOwned(backend, 'user_bob')).toBe(3);
+  });
+
+  test('removes the RevenueCat customer once the data of the account is gone', async () => {
+    const { backend, user } = await withData();
+
+    await user.mutation(internal.account.beginDeletion, {});
+
+    const removals = await pendingJobs(backend, 'removeRevenueCatCustomer');
+    expect(removals.map((job) => job.args[0])).toEqual([
+      { ownerId: 'user_alice', attempt: 1 },
+      { ownerId: 'user_alice', attempt: 1 },
+    ]);
+    const [now, afterSession] = removals.map((job) => job.scheduledTime).sort((left, right) => left - right);
+    expect(afterSession! - now!).toBeGreaterThan(60 * 60 * 1000);
+  });
+
+  test('also removes the RevenueCat customer of a user deleted in Clerk', async () => {
+    const { backend } = await withData();
+
+    await backend.mutation(internal.account.forgetDeletedUser, { ownerId: 'user_alice' });
+    await backend.mutation(internal.account.purgeOwner, { ownerId: 'user_alice', removeClerkUser: false });
+
+    const removals = await pendingJobs(backend, 'removeRevenueCatCustomer');
+    expect(removals.map((job) => job.args[0].ownerId)).toContain('user_alice');
+  });
+
+  test('deletes the customer in RevenueCat and treats a missing customer as removed', async () => {
+    const { backend } = await withData();
+    const calls: { url: string; method: string; authorization: string | null }[] = [];
+    process.env.REVENUECAT_SECRET_API_KEY = 'sk_test';
+    revenueCatAnswering([200, 404], calls);
+
+    await backend.action(internal.account.removeRevenueCatCustomer, { ownerId: 'user_alice', attempt: 1 });
+    await backend.action(internal.account.removeRevenueCatCustomer, { ownerId: 'user_alice', attempt: 1 });
+
+    expect(calls).toEqual([
+      { url: 'https://api.revenuecat.com/v1/subscribers/user_alice', method: 'DELETE', authorization: 'Bearer sk_test' },
+      { url: 'https://api.revenuecat.com/v1/subscribers/user_alice', method: 'DELETE', authorization: 'Bearer sk_test' },
+    ]);
+    expect(await pendingJobs(backend, 'removeRevenueCatCustomer')).toEqual([]);
+  });
+
+  test('tries again later when RevenueCat is unavailable and gives up loudly after the last attempt', async () => {
+    const { backend } = await withData();
+    process.env.REVENUECAT_SECRET_API_KEY = 'sk_test';
+    revenueCatAnswering([503, 503], []);
+
+    await backend.action(internal.account.removeRevenueCatCustomer, { ownerId: 'user_alice', attempt: 1 });
+
+    const retries = await pendingJobs(backend, 'removeRevenueCatCustomer');
+    expect(retries.map((job) => job.args[0])).toEqual([{ ownerId: 'user_alice', attempt: 2 }]);
+    await expect(
+      backend.action(internal.account.removeRevenueCatCustomer, { ownerId: 'user_alice', attempt: 12 }),
+    ).rejects.toThrow('503');
+  });
+
+  test('retries instead of giving up when the RevenueCat key is missing', async () => {
+    const { backend } = await withData();
+    delete process.env.REVENUECAT_SECRET_API_KEY;
+
+    await backend.action(internal.account.removeRevenueCatCustomer, { ownerId: 'user_alice', attempt: 1 });
+
+    const retries = await pendingJobs(backend, 'removeRevenueCatCustomer');
+    expect(retries.map((job) => job.args[0])).toEqual([{ ownerId: 'user_alice', attempt: 2 }]);
+  });
+
+  test('schedules the late RevenueCat removal even when Clerk refuses to delete the user', async () => {
+    const { backend, user } = await withData();
+    process.env.CLERK_SECRET_KEY = 'sk_clerk';
+    revenueCatAnswering([500], []);
+
+    await user.mutation(internal.account.beginDeletion, {});
+    await expect(backend.action(internal.account.removeClerkUser, { ownerId: 'user_alice' })).rejects.toThrow('500');
+
+    expect(await pendingJobs(backend, 'removeRevenueCatCustomer')).toHaveLength(2);
+  });
+
+  test('removes recreated RevenueCat customers daily for recent deletions and monthly for older ones', async () => {
+    const { backend } = await withData();
+    const day = 24 * 60 * 60 * 1000;
+    await backend.run(async (ctx) => {
+      await ctx.db.insert('owners', {
+        ownerId: 'user_recent',
+        sequence: 0,
+        pushAllowance: 0,
+        pushAllowanceAt: 0,
+        rateLookupAllowance: 0,
+        rateLookupAllowanceAt: 0,
+        deletionRequestedAt: Date.now() - 10 * day,
+        dataPurgedAt: Date.now() - 10 * day,
+      });
+      await ctx.db.insert('owners', {
+        ownerId: 'user_long_gone',
+        sequence: 0,
+        pushAllowance: 0,
+        pushAllowanceAt: 0,
+        rateLookupAllowance: 0,
+        rateLookupAllowanceAt: 0,
+        deletionRequestedAt: Date.now() - 120 * day,
+        dataPurgedAt: Date.now() - 120 * day,
+      });
+    });
+
+    await backend.mutation(internal.account.sweepRevenueCatCustomers, { scope: 'recent' });
+
+    const removals = await pendingJobs(backend, 'removeRevenueCatCustomer');
+    expect(removals.map((job) => job.args[0])).toEqual([{ ownerId: 'user_recent', attempt: 12 }]);
+
+    await backend.mutation(internal.account.sweepRevenueCatCustomers, { scope: 'older' });
+
+    const everyRemoval = await pendingJobs(backend, 'removeRevenueCatCustomer');
+    expect(everyRemoval.map((job) => job.args[0].ownerId).sort()).toEqual(['user_long_gone', 'user_recent']);
+  });
+
+  test('sweeps every recently deleted account across pages with one fixed date range', async () => {
+    const backend = convexTest(schema, modules);
+    const day = 24 * 60 * 60 * 1000;
+    await backend.run(async (ctx) => {
+      for (let index = 0; index < 405; index += 1) {
+        await ctx.db.insert('owners', {
+          ownerId: `user_deleted_${index}`,
+          sequence: 0,
+          pushAllowance: 0,
+          pushAllowanceAt: 0,
+          rateLookupAllowance: 0,
+          rateLookupAllowanceAt: 0,
+          deletionRequestedAt: Date.now() - day,
+          dataPurgedAt: Date.now() - day,
+        });
+      }
+    });
+
+    await backend.mutation(internal.account.sweepRevenueCatCustomers, { scope: 'recent' });
+    const [secondPage] = await pendingJobs(backend, 'sweepRevenueCatCustomers');
+    const since = secondPage!.args[0].since;
+    expect(since).toBeLessThanOrEqual(Date.now() - 90 * day);
+    expect(since).toBeGreaterThan(Date.now() - 90 * day - 60 * 1000);
+
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await backend.mutation(internal.account.sweepRevenueCatCustomers, secondPage!.args[0]);
+    const thirdPage = (await pendingJobs(backend, 'sweepRevenueCatCustomers')).find(
+      (job) => job.args[0].cursor !== secondPage!.args[0].cursor,
+    );
+    expect(thirdPage!.args[0].since).toBe(since);
+    await backend.mutation(internal.account.sweepRevenueCatCustomers, thirdPage!.args[0]);
+
+    const removals = await backend.run(async (ctx) =>
+      (await ctx.db.system.query('_scheduled_functions').collect()).filter((job) =>
+        job.name.includes('removeRevenueCatCustomer'),
+      ),
+    );
+    expect(new Set(removals.map((job) => job.args[0].ownerId)).size).toBe(405);
   });
 });

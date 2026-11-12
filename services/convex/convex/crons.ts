@@ -16,4 +16,18 @@ crons.daily(
   internal.diagnosticSamples.purgeExpired,
 );
 
+crons.daily(
+  'remove RevenueCat customers that a device recreated after a recent deletion',
+  { hourUTC: 3, minuteUTC: 34 },
+  internal.account.sweepRevenueCatCustomers,
+  { scope: 'recent' },
+);
+
+crons.monthly(
+  'remove RevenueCat customers that a device recreated after an older deletion',
+  { day: 1, hourUTC: 4, minuteUTC: 12 },
+  internal.account.sweepRevenueCatCustomers,
+  { scope: 'older' },
+);
+
 export default crons;

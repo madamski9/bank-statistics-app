@@ -1,10 +1,10 @@
 import { v } from 'convex/values';
 
 import { internal } from './_generated/api';
-import { action, internalAction, internalMutation, type ActionCtx, type MutationCtx } from './_generated/server';
+import { action, internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx } from './_generated/server';
 import type { Id } from './_generated/dataModel';
 import { requireOwnerId } from './owner';
-import { findOwner } from './owners';
+import { findOwner, isDeletionRequested } from './owners';
 import { findProfile } from './profiles';
 import {
   fetchRevenueCatCustomer,
@@ -16,7 +16,16 @@ import {
 const recheckDelayAfterExpiryMs = 60 * 1000;
 const recheckRetryMs = 15 * 60 * 1000;
 
-async function syncOwner(ctx: ActionCtx, ownerId: string): Promise<StoreSubscription> {
+export const isLeaving = internalQuery({
+  args: { ownerId: v.string() },
+  handler: async (ctx, { ownerId }) => isDeletionRequested(await findOwner(ctx, ownerId)),
+});
+
+async function syncOwner(ctx: ActionCtx, ownerId: string): Promise<StoreSubscription | null> {
+  if (await ctx.runQuery(internal.storeSubscriptions.isLeaving, { ownerId })) {
+    return null;
+  }
+
   const secretKey = process.env.REVENUECAT_SECRET_API_KEY;
 
   if (secretKey === undefined || secretKey === '') {
@@ -52,6 +61,10 @@ export const apply = internalMutation({
     const owner = await findOwner(ctx, ownerId);
 
     if (owner?.deletionRequestedAt !== undefined) {
+      if (owner.dataPurgedAt !== undefined) {
+        await ctx.scheduler.runAfter(0, internal.account.removeRevenueCatCustomer, { ownerId, attempt: 1 });
+      }
+
       return;
     }
 
@@ -96,6 +109,6 @@ export const refresh = action({
     const ownerId = await requireOwnerId(ctx.auth);
     const subscription = await syncOwner(ctx, ownerId);
 
-    return { isActive: subscription.isActive };
+    return { isActive: subscription?.isActive ?? false };
   },
 });

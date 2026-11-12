@@ -384,4 +384,37 @@ describe('store subscription refresh', () => {
     expect(pending).toHaveLength(1);
     expect(pending[0]?.scheduledTime).toBe(now + 60 * dayMs + 60 * 1000);
   });
+
+  test('never looks up an account that is being deleted, so RevenueCat does not recreate its customer', async () => {
+    const backend = convexTest(schema, modules);
+    const calls = revenueCatServing({});
+    await backend.mutation(internal.account.forgetDeletedUser, { ownerId: 'user_alice' });
+
+    await backend.action(internal.storeSubscriptions.recheck, { ownerId: 'user_alice' });
+    const response = await webhook(backend, { type: 'CANCELLATION', app_user_id: 'user_alice' });
+
+    expect(response.status).toBe(200);
+    expect(calls).toEqual([]);
+  });
+
+  test('removes the customer again when a lookup that started before the deletion finishes after it', async () => {
+    const backend = convexTest(schema, modules);
+    await backend.mutation(internal.account.forgetDeletedUser, { ownerId: 'user_alice' });
+    await backend.mutation(internal.account.purgeOwner, { ownerId: 'user_alice', removeClerkUser: false });
+    const removalsBefore = await backend.run(async (ctx) =>
+      (await ctx.db.system.query('_scheduled_functions').collect()).filter((job) => job.name.includes('removeRevenueCatCustomer')),
+    );
+
+    await backend.mutation(internal.storeSubscriptions.apply, {
+      ownerId: 'user_alice',
+      subscription: storeSubscriptionFrom(neverSubscribed, now, false),
+    });
+
+    const removalsAfter = await backend.run(async (ctx) =>
+      (await ctx.db.system.query('_scheduled_functions').collect()).filter((job) => job.name.includes('removeRevenueCatCustomer')),
+    );
+    expect(removalsAfter.length).toBe(removalsBefore.length + 1);
+    const profiles = await backend.run((ctx) => ctx.db.query('profiles').collect());
+    expect(profiles).toEqual([]);
+  });
 });

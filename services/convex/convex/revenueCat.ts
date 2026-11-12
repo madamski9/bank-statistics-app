@@ -115,6 +115,17 @@ export function storeSubscriptionFrom(
   };
 }
 
+export async function deleteRevenueCatCustomer(appUserId: string, secretKey: string): Promise<void> {
+  const response = await fetch(`${revenueCatApiUrl}/subscribers/${encodeURIComponent(appUserId)}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${secretKey}`, 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok && response.status !== 404) {
+    throw new Error(`RevenueCat refused to delete the customer with status ${response.status}.`);
+  }
+}
+
 export async function fetchRevenueCatCustomer(appUserId: string, secretKey: string): Promise<RevenueCatCustomer> {
   const response = await fetch(`${revenueCatApiUrl}/subscribers/${encodeURIComponent(appUserId)}`, {
     headers: { Authorization: `Bearer ${secretKey}` },

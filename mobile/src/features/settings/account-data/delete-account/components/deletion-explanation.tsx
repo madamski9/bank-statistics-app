@@ -5,6 +5,7 @@ import { overviewColors, overviewSpacing } from '@/features/app-shell/theme/over
 
 import { accountDataCopy } from '../../account-data-copy';
 import { subscriptionManagementUrl } from '../../account-links';
+import { AppleDisconnectNotice } from './apple-disconnect-notice';
 import { DangerButton } from './danger-button';
 import { deletionStyles } from './deletion-styles';
 
@@ -36,6 +37,7 @@ export function DeletionExplanation({ onContinue }: { onContinue: () => void }) 
           </Text>
         </Pressable>
       </View>
+      <AppleDisconnectNotice />
       <DangerButton label={copy.continue} onPress={onContinue} />
     </View>
   );

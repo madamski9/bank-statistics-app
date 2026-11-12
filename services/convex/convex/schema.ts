@@ -98,7 +98,9 @@ export default defineSchema({
     deletionRequestedAt: v.optional(v.number()),
     dataPurgedAt: v.optional(v.number()),
     legacyOwnerId: v.optional(v.string()),
-  }).index('by_owner', ['ownerId']),
+  })
+    .index('by_owner', ['ownerId'])
+    .index('by_data_purged', ['dataPurgedAt']),
   devices: defineTable({
     ownerId: v.string(),
     installationId: v.string(),
