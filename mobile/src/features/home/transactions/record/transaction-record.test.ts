@@ -8,6 +8,7 @@ import {
   transactionBadge,
   transactionContext,
   transactionTitle,
+  declinedWalletWait,
   withoutWalletWait,
 } from './transaction-record';
 
@@ -70,8 +71,8 @@ describe('transactionBadge', () => {
     const debitPush = record({ merchant: undefined });
 
     expect(transactionBadge(debitPush, capturedAt + 60_000)).toEqual({ label: 'Czeka na Portfel', tone: 'neutral' });
-    expect(transactionBadge(debitPush, capturedAt + 30 * 60_000)?.label).toBe('Czeka na Portfel');
-    expect(transactionBadge(debitPush, capturedAt + 3 * 60 * 60_000)).toBeNull();
+    expect(transactionBadge(debitPush, capturedAt + 59 * 60_000)?.label).toBe('Czeka na Portfel');
+    expect(transactionBadge(debitPush, capturedAt + 60 * 60_000)).toBeNull();
   });
 });
 
@@ -89,7 +90,7 @@ describe('awaitsWalletMerchant', () => {
     const mbankPush = record({ bank: 'mbank', sourceApp: 'pl.mbank', merchant: 'HTTPSAPPSURFBURG GDANSK' });
 
     expect(awaitsWalletMerchant(mbankPush, capturedAt + 60_000)).toBe(true);
-    expect(awaitsWalletMerchant(mbankPush, capturedAt + 3 * 60 * 60_000)).toBe(false);
+    expect(awaitsWalletMerchant(mbankPush, capturedAt + 60 * 60_000)).toBe(false);
     expect(transactionBadge(mbankPush, capturedAt + 60_000)?.label).toBe('Czeka na Portfel');
   });
 
@@ -106,6 +107,22 @@ describe('awaitsWalletMerchant', () => {
 
     expect(awaitsWalletMerchant(record({ bank: 'mbank', sourceApp: 'com.apple.Passbook' }), soon)).toBe(false);
     expect(awaitsWalletMerchant(record({ bank: 'unknown', sourceApp: 'com.apple.Passbook' }), soon)).toBe(false);
+  });
+
+  test('keeps waiting as long as an operation time stated after the capture allows', () => {
+    const late = record({ merchant: undefined, occurredAt: '2026-09-20T10:45:00.000Z' });
+
+    expect(awaitsWalletMerchant(late, capturedAt + 70 * 60_000)).toBe(true);
+    expect(awaitsWalletMerchant(late, capturedAt + 90 * 60_000)).toBe(false);
+  });
+
+  test('declines only a payment that is still waiting', () => {
+    const waiting = record({ bank: 'mbank', sourceApp: 'pl.mbank' });
+    const named = { ...waiting, merchant: 'Surfburg', walletPairing: 'paired' as const };
+
+    expect(declinedWalletWait(waiting, capturedAt + 60_000)?.walletPairing).toBe('declined');
+    expect(declinedWalletWait(named, capturedAt + 60_000)).toBeNull();
+    expect(declinedWalletWait(undefined, capturedAt + 60_000)).toBeNull();
   });
 
   test('stops waiting once Wallet has named the payment', () => {

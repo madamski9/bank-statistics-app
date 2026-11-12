@@ -297,7 +297,7 @@ final class EncryptedOutbox: @unchecked Sendable {
   }
 
   private func rememberCardPush(key: String, capturedAt: String, database: OpaquePointer) throws {
-    let cutoff = ISO8601DateFormatter().string(from: Date().addingTimeInterval(-CardPaymentPairing.window))
+    let cutoff = ISO8601DateFormatter().string(from: Date().addingTimeInterval(-CardPaymentPairing.repeatWindow - CardPaymentPairing.lateCaptureAllowance))
     var cleanup: OpaquePointer?
     try check(sqlite3_prepare_v2(database, "DELETE FROM card_payment_pushes WHERE captured_at < ?", -1, &cleanup, nil), database)
     defer { sqlite3_finalize(cleanup) }
@@ -573,6 +573,10 @@ final class EncryptedOutbox: @unchecked Sendable {
       )
       try execute(
         "CREATE TABLE IF NOT EXISTS card_payment_pushes (key TEXT NOT NULL, captured_at TEXT NOT NULL)",
+        database: database
+      )
+      try execute(
+        "CREATE INDEX IF NOT EXISTS card_payment_pushes_by_key ON card_payment_pushes (key, captured_at)",
         database: database
       )
       let inbox = NotificationInbox(database: database)

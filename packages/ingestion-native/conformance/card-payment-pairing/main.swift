@@ -122,13 +122,13 @@ let cases = [
   Case(
     "the same amount outside the window is a separate payment",
     record: bankPush,
-    existing: [walletCard("wallet", at: "2026-10-16T11:20:59Z")],
+    existing: [walletCard("wallet", at: "2026-10-16T13:20:59Z")],
     expected: .insert
   ),
   Case(
     "the window edge still pairs",
     record: bankPush,
-    existing: [walletCard("wallet", at: "2026-10-16T11:21:00Z")],
+    existing: [walletCard("wallet", at: "2026-10-16T13:21:00Z")],
     expected: .keepExisting(id: "wallet")
   ),
   Case(
@@ -202,10 +202,10 @@ let cases = [
     expected: .replace(merged(lateLidlDebitPush, merchant: "Lidl"))
   ),
   Case(
-    "a Millennium debit push for an operation more than three hours after the Wallet payment is a separate payment",
+    "a Millennium debit push for an operation more than an hour after the Wallet payment is a separate payment",
     record: card(
-      "laterDebit", from: millenniumApp, at: "2026-11-04T13:30:01Z", amountMinor: 425, bank: "millennium",
-      merchant: nil, occurredAt: "2026-11-04T13:24:00Z"
+      "laterDebit", from: millenniumApp, at: "2026-11-04T11:30:01Z", amountMinor: 425, bank: "millennium",
+      merchant: nil, occurredAt: "2026-11-04T11:24:00Z"
     ),
     existing: [zabkaWalletPush],
     expected: .insert
@@ -248,9 +248,9 @@ let cases = [
     expected: .insert
   ),
   Case(
-    "a Wallet push more than three hours after a Millennium push is a separate payment",
+    "a Wallet push more than an hour after a Millennium push is a separate payment",
     record: card(
-      "lateWallet", from: millenniumApp, at: "2026-11-10T01:10:31Z", amountMinor: 1890, bank: "millennium",
+      "lateWallet", from: millenniumApp, at: "2026-11-09T23:10:31Z", amountMinor: 1890, bank: "millennium",
       merchant: "Bolt"
     ),
     existing: [boltDebitPush],
@@ -263,7 +263,7 @@ let cases = [
     expected: .keepExisting(id: "wallet")
   ),
   Case(
-    "a Wallet push an hour after the mBank push names the merchant on the existing record",
+    "a Wallet push exactly an hour after the mBank push names the merchant on the existing record",
     record: walletCard("wallet", at: "2026-10-16T15:21:00Z"),
     existing: [bankPush],
     expected: .replace(merged(bankPush, merchant: "Autopay Mobility"))
@@ -325,6 +325,22 @@ let repeatChecks: [(String, Bool)] = [
   ("a Wallet push is never treated as a repeated bank push", CardPaymentPairing.repeatKey(for: walletPush) == nil),
   ("a Millennium push naming the shop counts as the Wallet side", CardPaymentPairing.repeatKey(for: millenniumWalletPush) == nil),
   ("a manual transaction has no repeat key", CardPaymentPairing.repeatKey(for: card("manual", from: bankApp, at: "2026-10-16T14:21:00Z", origin: NormalizedRecordOrigin.manual)) == nil),
+  (
+    "two Millennium debit pushes stating different operation times are not repeats",
+    CardPaymentPairing.repeatKey(for: millenniumDebitPush)
+      != CardPaymentPairing.repeatKey(for: card(
+        "nextDebit", from: millenniumApp, at: "2026-10-28T12:28:30Z", amountMinor: 150099, bank: "millennium",
+        merchant: nil, occurredAt: "2026-10-28T12:27:00Z"
+      ))
+  ),
+  (
+    "the same Millennium debit push captured twice is a repeat",
+    CardPaymentPairing.repeatKey(for: lateMillenniumDebitPush)
+      == CardPaymentPairing.repeatKey(for: card(
+        "againDebit", from: millenniumApp, at: "2026-11-04T10:46:05Z", amountMinor: 425, bank: "millennium",
+        merchant: nil, occurredAt: "2026-11-04T10:23:00Z"
+      ))
+  ),
   ("a push thirty seconds later is a repeat", CardPaymentPairing.isRepeat(capturedAt: "2026-10-16T14:21:30Z", of: "2026-10-16T14:21:00Z")),
   ("a push thirty one seconds later is a new payment", !CardPaymentPairing.isRepeat(capturedAt: "2026-10-16T14:21:31Z", of: "2026-10-16T14:21:00Z")),
 ]

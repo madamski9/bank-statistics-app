@@ -1,10 +1,10 @@
-import type { IngestionRecord } from '@bankstats/ingestion-native';
+import { listIngestionRecords, type IngestionRecord } from '@bankstats/ingestion-native';
 import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 
 import { useCopy } from '@/features/app-shell/localization/language';
 
-import { withoutWalletWait } from './record/transaction-record';
+import { declinedWalletWait } from './record/transaction-record';
 import { confirmedRecord } from './transaction-editor/manual-transaction';
 import { transactionsCopy } from './transactions-copy';
 import { useTransactionWrites } from './use-transaction-writes';
@@ -94,12 +94,22 @@ export function useTransactionEditing({ onChanged, onRememberRule }: Transaction
       return;
     }
 
-    const declined = withoutWalletWait(target);
+    void listIngestionRecords().then((records) => {
+      const current = records.find((record) => record.id === target.id);
+      const declined = declinedWalletWait(current, Date.now());
 
-    void save(declined).then((saved) => {
-      if (saved) {
-        setEditor((current) => (current?.record?.id === declined.id ? { mode: 'detail', record: declined } : current));
+      if (declined === null) {
+        if (current !== undefined) {
+          setEditor((open) => (open?.record?.id === current.id ? { mode: 'detail', record: current } : open));
+        }
+        return;
       }
+
+      void save(declined).then((saved) => {
+        if (saved) {
+          setEditor((open) => (open?.record?.id === declined.id ? { mode: 'detail', record: declined } : open));
+        }
+      });
     });
   }, [editor, save]);
 
