@@ -17,7 +17,7 @@ export interface TransactionBadge {
 
 const blockingReviewReasons: IngestionReviewReason[] = ['amount', 'currency', 'direction'];
 
-const walletPairingWindowMs = 10 * 60 * 1000;
+const walletPairingWindowMs = 60 * 60 * 1000;
 
 export function isReviewItem(record: IngestionRecord): boolean {
   return record.review !== undefined;
@@ -83,25 +83,43 @@ export function transactionContext(record: IngestionRecord): string {
   return record.accountName === undefined ? bank : `${bank} · ${record.accountName}`;
 }
 
+const walletSourceApp = 'com.apple.Passbook';
+
+function isWalletSide(record: IngestionRecord): boolean {
+  return record.sourceApp === walletSourceApp || (record.bank === 'millennium' && record.merchant !== undefined);
+}
+
 export function walletMerchantDeadline(record: IngestionRecord): number | null {
   if (
     record.origin === 'manual' ||
-    record.bank !== 'millennium' ||
+    record.bank === 'unknown' ||
+    record.direction !== 'expense' ||
     record.transactionType !== 'cardPayment' ||
-    record.merchant !== undefined
+    record.walletPairing !== undefined ||
+    isWalletSide(record)
   ) {
     return null;
   }
 
-  const capturedAt = Date.parse(record.capturedAt);
+  const latest = Math.max(
+    ...[record.capturedAt, record.occurredAt].map(Date.parse).filter((time) => !Number.isNaN(time)),
+  );
 
-  return Number.isNaN(capturedAt) ? null : capturedAt + walletPairingWindowMs;
+  return Number.isFinite(latest) ? latest + walletPairingWindowMs : null;
 }
 
 export function awaitsWalletMerchant(record: IngestionRecord, now: number): boolean {
   const deadline = walletMerchantDeadline(record);
 
   return deadline !== null && now < deadline;
+}
+
+export function withoutWalletWait(record: IngestionRecord): IngestionRecord {
+  return { ...record, walletPairing: 'declined' };
+}
+
+export function declinedWalletWait(current: IngestionRecord | undefined, now: number): IngestionRecord | null {
+  return current !== undefined && awaitsWalletMerchant(current, now) ? withoutWalletWait(current) : null;
 }
 
 export function transactionBadge(record: IngestionRecord, now: number): TransactionBadge | null {

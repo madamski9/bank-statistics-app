@@ -161,6 +161,9 @@ final class EncryptedOutbox: @unchecked Sendable {
     database: OpaquePointer
   ) throws -> NormalizedRecord? {
     let record = try NotificationBankStore(database: database).applying(to: record)
+    if try isRepeatedCardPush(record, database: database) {
+      return nil
+    }
     let pairing = CardPaymentPairing(paired: try pairedIdentifiers(database))
 
     switch pairing.resolve(record, existing: try recordsCaptured(around: record, database: database)) {
@@ -265,6 +268,50 @@ final class EncryptedOutbox: @unchecked Sendable {
     return records
   }
 
+  private func isRepeatedCardPush(_ record: NormalizedRecord, database: OpaquePointer) throws -> Bool {
+    guard let key = CardPaymentPairing.repeatKey(for: record) else {
+      return false
+    }
+    var statement: OpaquePointer?
+    try check(sqlite3_prepare_v2(database, "SELECT captured_at FROM card_payment_pushes WHERE key = ?", -1, &statement, nil), database)
+    defer { sqlite3_finalize(statement) }
+    try check(sqlite3_bind_text(statement, 1, key, -1, transient), database)
+    var isRepeat = false
+    var status = sqlite3_step(statement)
+
+    while status == SQLITE_ROW {
+      if let capturedAt = sqlite3_column_text(statement, 0),
+        CardPaymentPairing.isRepeat(capturedAt: record.capturedAt, of: String(cString: capturedAt))
+      {
+        isRepeat = true
+      }
+      status = sqlite3_step(statement)
+    }
+
+    try check(status, database, accepted: [SQLITE_DONE])
+
+    if !isRepeat {
+      try rememberCardPush(key: key, capturedAt: record.capturedAt, database: database)
+    }
+    return isRepeat
+  }
+
+  private func rememberCardPush(key: String, capturedAt: String, database: OpaquePointer) throws {
+    let cutoff = ISO8601DateFormatter().string(from: Date().addingTimeInterval(-CardPaymentPairing.repeatWindow - CardPaymentPairing.lateCaptureAllowance))
+    var cleanup: OpaquePointer?
+    try check(sqlite3_prepare_v2(database, "DELETE FROM card_payment_pushes WHERE captured_at < ?", -1, &cleanup, nil), database)
+    defer { sqlite3_finalize(cleanup) }
+    try check(sqlite3_bind_text(cleanup, 1, cutoff, -1, transient), database)
+    try check(sqlite3_step(cleanup), database, accepted: [SQLITE_DONE])
+
+    var insert: OpaquePointer?
+    try check(sqlite3_prepare_v2(database, "INSERT INTO card_payment_pushes (key, captured_at) VALUES (?, ?)", -1, &insert, nil), database)
+    defer { sqlite3_finalize(insert) }
+    try check(sqlite3_bind_text(insert, 1, key, -1, transient), database)
+    try check(sqlite3_bind_text(insert, 2, capturedAt, -1, transient), database)
+    try check(sqlite3_step(insert), database, accepted: [SQLITE_DONE])
+  }
+
   private func pairedIdentifiers(_ database: OpaquePointer) throws -> Set<String> {
     let sql = "SELECT record_id FROM card_payment_pairs"
     var statement: OpaquePointer?
@@ -311,6 +358,7 @@ final class EncryptedOutbox: @unchecked Sendable {
       try NotificationInbox(database: database).clear()
       try execute("DELETE FROM outbox", database: database)
       try execute("DELETE FROM card_payment_pairs", database: database)
+      try execute("DELETE FROM card_payment_pushes", database: database)
       try execute("DELETE FROM documents", database: database)
       try execute("DELETE FROM notification_banks", database: database)
       IngestionAttemptLog(configuration: configuration).reset()
@@ -521,6 +569,14 @@ final class EncryptedOutbox: @unchecked Sendable {
       )
       try execute(
         "CREATE TABLE IF NOT EXISTS card_payment_pairs (record_id TEXT PRIMARY KEY)",
+        database: database
+      )
+      try execute(
+        "CREATE TABLE IF NOT EXISTS card_payment_pushes (key TEXT NOT NULL, captured_at TEXT NOT NULL)",
+        database: database
+      )
+      try execute(
+        "CREATE INDEX IF NOT EXISTS card_payment_pushes_by_key ON card_payment_pushes (key, captured_at)",
         database: database
       )
       let inbox = NotificationInbox(database: database)

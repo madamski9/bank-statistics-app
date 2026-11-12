@@ -36,6 +36,7 @@ struct NormalizedRecord: Codable, Equatable, Sendable {
   var exchangeRateTable: String? = nil
   var notificationTitle: String? = nil
   var bankName: String? = nil
+  var walletPairing: String? = nil
 
   var dictionary: [String: Any] {
     var value: [String: Any] = [
@@ -64,6 +65,7 @@ struct NormalizedRecord: Codable, Equatable, Sendable {
     value["exchangeRateTable"] = exchangeRateTable
     value["notificationTitle"] = notificationTitle
     value["bankName"] = bankName
+    value["walletPairing"] = walletPairing
 
     return value
   }
