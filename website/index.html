@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#050507">
+    <meta name="theme-color" content="#0b0b0b">
     <meta name="description" content="BankStats pomaga zrozumieć wydatki i wpływy na podstawie obsługiwanych powiadomień bankowych. Bez łączenia konta bankowego.">
     <meta property="og:type" content="website">
     <meta property="og:title" content="BankStats: zobacz swoje wydatki wyraźniej">
@@ -12,10 +12,12 @@
     <link rel="icon" href="brand/favicon.png?v=3" type="image/png">
     <link rel="apple-touch-icon" href="brand/apple-touch-icon.png">
     <link rel="stylesheet" href="site.css">
+    <link rel="stylesheet" href="landing/landing.css">
     <script src="site.js" defer></script>
+    <script type="module" src="landing/interactions.js"></script>
     <title>BankStats: zobacz swoje wydatki wyraźniej</title>
   </head>
-  <body>
+  <body class="landing">
     <a class="skip-link" href="#main">Przejdź do treści</a>
     <div class="scroll-progress" aria-hidden="true"></div>
     <header class="site-header">
@@ -25,6 +27,7 @@
           <span>BankStats</span>
         </a>
         <nav class="header-nav" aria-label="Nawigacja główna">
+          <a href="#jak-dziala">Aplikacja</a>
           <a href="#powiadomienia">Powiadomienia</a>
           <a href="privacy/">Prywatność</a>
           <a class="nav-support" href="support/">Wsparcie <span aria-hidden="true">↗</span></a>
@@ -36,32 +39,42 @@
       <section class="hero shell" aria-labelledby="hero-title">
         <div class="hero-copy">
           <h1 id="hero-title"><span class="title-line">BankStats</span></h1>
-          <p class="hero-lead" data-reveal>BankStats porządkuje transakcje z obsługiwanych powiadomień bankowych i pokazuje, gdzie płyną Twoje pieniądze. Bez łączenia konta bankowego.</p>
+          <p class="hero-lead" data-reveal>Zobacz, gdzie płyną Twoje pieniądze. BankStats zamienia obsługiwane powiadomienia bankowe w czytelny obraz codziennych wydatków.</p>
           <div class="hero-actions" data-reveal>
-            <a class="button button-primary" href="#jak-dziala">Zobacz, jak działa <span aria-hidden="true">↗</span></a>
+            <a class="button button-primary" href="#jak-dziala">Poznaj BankStats <span aria-hidden="true">↗</span></a>
             <a class="button button-text" href="privacy/">Jak dbamy o dane <span aria-hidden="true">→</span></a>
           </div>
+          <div class="hero-assurance"><span class="assurance-icon" aria-hidden="true">✓</span> Bez loginu i hasła do banku <span class="assurance-separator" aria-hidden="true">/</span> Na Twoim iPhonie</div>
         </div>
 
         <div class="hero-art">
-          <div class="phone-stage" data-reveal>
+          <div class="phone-stage">
             <div class="phone-frame" data-tilt>
               <span class="phone-key phone-key-volume" aria-hidden="true"></span>
               <span class="phone-key phone-key-power" aria-hidden="true"></span>
-              <div class="phone-screen">
+              <div class="phone-screen" id="interactive-phone" data-screen="overview" role="group" aria-label="Interaktywny podgląd aplikacji BankStats" aria-describedby="phone-hint">
                 <img class="phone-screenshot" src="screenshots/overview.png" alt="Ekran Przegląd aplikacji BankStats: wydatki, przychody i przepływ pieniędzy w tym miesiącu" width="1179" height="2556" fetchpriority="high">
+                <span class="phone-island" aria-hidden="true"></span>
+                <div class="phone-hotspots" id="phone-hotspots" hidden></div>
               </div>
             </div>
           </div>
-          <p class="preview-caption"><span>BankStats na iPhonie</span>Rzeczywisty ekran aplikacji</p>
+          <div class="preview-switcher" role="group" aria-label="Wybierz podgląd aplikacji">
+            <button type="button" data-preview="overview" aria-pressed="true">Przegląd</button>
+            <button type="button" data-preview="transactions" aria-pressed="false">Transakcje</button>
+            <button type="button" data-preview="monthly-report" aria-pressed="false">Raport</button>
+            <button type="button" data-preview="shops" aria-pressed="false">Sklepy</button>
+          </div>
+          <p class="preview-caption" aria-live="polite">Przegląd · Rzeczywisty ekran aplikacji</p>
+          <p class="phone-hint" id="phone-hint" hidden>Kliknij zakładkę lub kwotę na ekranie telefonu.</p>
         </div>
       </section>
 
       <section class="banks shell" id="banki" aria-labelledby="banks-title">
         <div class="section-intro" data-reveal>
           <p class="section-label">Obsługiwane banki</p>
-          <h2 id="banks-title" data-text-reveal>Banki, które obsługujemy.</h2>
-          <p>BankStats odczytuje płatności z powiadomień tych banków. Revolut pojawi się wkrótce.</p>
+          <h2 id="banks-title" data-text-reveal>Obsługiwane banki.</h2>
+          <p>BankStats odczytuje płatności z powiadomień tych banków.</p>
         </div>
         <ul class="bank-list">
           <li class="bank" data-reveal>
@@ -82,17 +95,18 @@
           </li>
           <li class="bank" data-reveal>
             <img src="banks/revolut.png" alt="" width="56" height="56" loading="lazy">
-            <span>Revolut</span> <span class="tone-badge">Wkrótce</span>
+            <span>Revolut</span>
           </li>
         </ul>
+        <p class="bank-availability">Revolut wkrótce.</p>
         <div class="callout bank-note" data-reveal><p><strong>Twojego banku nie ma na liście?</strong> Nic straconego. BankStats zapisuje płatności z Portfela Apple, więc Twoje wydatki i tak trafią do aplikacji. Nie zobaczysz tylko przelewów przychodzących i wychodzących.</p></div>
       </section>
 
       <section class="screenshots-section shell" id="jak-dziala" aria-labelledby="screenshots-title">
         <div class="screenshots-heading">
           <div class="section-intro" data-reveal>
-            <p class="section-label">Zajrzyj do środka</p>
-            <h2 id="screenshots-title" data-text-reveal>Tak wygląda BankStats.</h2>
+            <p class="section-label">01 / Aplikacja</p>
+            <h2 id="screenshots-title" data-text-reveal>Poznaj aplikację.</h2>
             <p>Od szybkiego przeglądu po szczegóły pojedynczego zakupu. Wybierz ekran, żeby zobaczyć go z bliska.</p>
           </div>
           <div class="gallery-controls" aria-label="Przewijanie galerii">
@@ -163,48 +177,49 @@
 
       <section class="tones shell" id="powiadomienia" aria-labelledby="tones-title">
         <div class="section-intro" data-reveal>
-          <p class="section-label">Powiadomienia o limitach</p>
-          <h2 id="tones-title" data-text-reveal>Wybierz, jak ostro ma być.</h2>
+          <p class="section-label">02 / Limity wydatków</p>
+          <h2 id="tones-title" data-text-reveal>Limity i powiadomienia.</h2>
           <p>Ustaw limit na sklep, kategorię albo wszystkie wydatki. BankStats powiadomi Cię, gdy przekroczysz 50%, 80%, 90% i 100% limitu, a przy limicie sklepu może też po każdej płatności.</p>
         </div>
-        <div class="tone-grid">
-          <article class="tone-card" data-reveal>
-            <span class="feature-number">01</span>
-            <h3>Pasywny</h3>
-            <p>Spokojnie przypomina, ile zostało.</p>
-            <div class="notification-preview" aria-label="Przykładowe powiadomienie: 80% limitu za Tobą Uważaj na kolejne zakupy.">
-              <img src="brand/icon.png" alt="" width="34" height="34">
-              <div><strong>80% limitu za Tobą</strong><span>Uważaj na kolejne zakupy.</span></div>
-              <time>teraz</time>
+        <div class="tone-playground" data-reveal>
+          <div class="tone-settings">
+            <p class="control-label" id="tone-choice-label">Sprawdź powiadomienia</p>
+            <div class="limit-scopes" role="group" aria-label="Rodzaj przykładowego limitu">
+              <button type="button" data-limit-scope="all" aria-pressed="true">Wszystkie wydatki</button>
+              <button type="button" data-limit-scope="food" aria-pressed="false">Jedzenie</button>
+              <button type="button" data-limit-scope="shop" aria-pressed="false">Sklep</button>
             </div>
-          </article>
-          <article class="tone-card" data-reveal>
-            <span class="feature-number">02</span>
-            <h3>Lekko agresywny</h3>
-            <p>Złośliwa uwaga. Im bliżej limitu, tym ostrzej.</p>
-            <div class="notification-preview" aria-label="Przykładowe powiadomienie: 80% limitu. Uważaj! Jeszcze chwila i limit pęknie.">
-              <img src="brand/icon.png" alt="" width="34" height="34">
-              <div><strong>80% limitu. Uważaj!</strong><span>Jeszcze chwila i limit pęknie.</span></div>
-              <time>teraz</time>
+            <div class="tone-options" role="group" aria-labelledby="tone-choice-label">
+              <button type="button" class="tone-option" data-tone="passive" aria-pressed="true"><span class="tone-option-index">01</span><span><strong>Pasywny</strong><small>Spokojne przypomnienie</small></span><span class="selection-mark" aria-hidden="true">✓</span></button>
+              <button type="button" class="tone-option" data-tone="mild" aria-pressed="false"><span class="tone-option-index">02</span><span><strong>Lekko agresywny</strong><small>Odrobina uszczypliwości</small></span><span class="selection-mark" aria-hidden="true">✓</span></button>
+              <button type="button" class="tone-option" data-tone="aggressive" aria-pressed="false"><span class="tone-option-index">03</span><span><strong>Bardzo agresywny <span class="tone-badge">Premium</span></strong><small>Bez owijania w bawełnę</small></span><span class="selection-mark" aria-hidden="true">✓</span></button>
             </div>
-          </article>
-          <article class="tone-card" data-reveal>
-            <span class="feature-number">03</span>
-            <h3>Bardzo agresywny <span class="tone-badge">Premium</span></h3>
-            <p>Ostry opie***l z wulgaryzmami. Im bliżej limitu, tym gorzej.</p>
-            <div class="notification-preview" aria-label="Przykładowe powiadomienie: Ogarnij się, k**wa! 80% limitu już poszło.">
-              <img src="brand/icon.png" alt="" width="34" height="34">
-              <div><strong>Ogarnij się, k**wa!</strong><span>80% limitu już poszło.</span></div>
-              <time>teraz</time>
+          </div>
+          <div class="tone-demo">
+            <div class="demo-heading"><span id="demo-scope-label">WSZYSTKIE WYDATKI</span><span>1 000 zł / miesiąc</span></div>
+            <div class="limit-amount"><span id="demo-spent">800</span><span> / 1 000 zł</span></div>
+            <label for="limit-usage" class="range-label">Próg powiadomienia <output id="limit-percent" for="limit-usage">80%</output></label>
+            <input id="limit-usage" type="range" min="0" max="3" step="1" value="1" aria-describedby="demo-hint">
+            <div class="range-endpoints" aria-hidden="true"><span>50%</span><span>80%</span><span>90%</span><span>100%</span></div>
+            <div class="notification-preview demo-notification" role="status" aria-live="polite" aria-atomic="true">
+              <img src="brand/icon.png" alt="" width="38" height="38">
+              <div><span class="notification-app">BANKSTATS</span><strong id="notification-title">80% limitu za Tobą</strong><span id="notification-body">Uważaj na kolejne zakupy.</span></div>
+              <span class="notification-time">teraz</span>
             </div>
-          </article>
+            <div class="notification-variants">
+              <span id="variant-count">Tekst 1 z 1</span>
+              <button type="button" id="next-notification" aria-describedby="variant-count" disabled>Pokaż inny tekst <span aria-hidden="true">↻</span></button>
+            </div>
+            <p id="demo-hint" class="demo-hint">Zobacz przykłady z aplikacji. Wybierz rodzaj limitu, ton i próg.</p>
+          </div>
         </div>
       </section>
 
       <section class="trust shell" aria-labelledby="trust-title">
         <div class="trust-panel" data-reveal>
-          <p class="section-label">Prywatność od początku</p>
+          <p class="section-label">03 / Prywatność</p>
           <h2 id="trust-title" data-text-reveal>Bez dostępu do konta bankowego.</h2>
+          <div class="trust-emblem" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><path d="M24 5 9 11v12c0 10 15 20 15 20s15-10 15-20V11L24 5Z" stroke="currentColor" stroke-width="1.5"/><path d="m17 24 5 5 10-11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
           <p>BankStats buduje obraz przepływów na podstawie obsługiwanych powiadomień i ręcznych wpisów. Nie pokazuje rzeczywistego salda rachunku ani nie gwarantuje pełnej historii operacji.</p>
           <a class="inline-link" href="privacy/">Przeczytaj politykę prywatności <span aria-hidden="true">↗</span></a>
         </div>
@@ -215,7 +230,7 @@
       <div class="shell footer-top">
         <div>
           <a class="brand footer-brand" href="./"><img src="brand/icon.png" alt="" width="38" height="38"><span>BankStats</span></a>
-          <p>Spokojniejszy obraz codziennych finansów.</p>
+          <p>Statystyki codziennych wydatków.</p>
         </div>
         <div class="footer-links">
           <a href="privacy/">Polityka prywatności</a>
