@@ -38,6 +38,7 @@ func walletCard(_ id: String, at capturedAt: String, amountMinor: Int = 2670, cu
 func merged(_ record: NormalizedRecord, merchant: String) -> NormalizedRecord {
   var copy = record
   copy.merchant = merchant
+  copy.walletPairing = CardPaymentPairing.pairedWalletPairing
   return copy
 }
 
@@ -121,13 +122,13 @@ let cases = [
   Case(
     "the same amount outside the window is a separate payment",
     record: bankPush,
-    existing: [walletCard("wallet", at: "2026-10-16T14:10:59Z")],
+    existing: [walletCard("wallet", at: "2026-10-16T11:20:59Z")],
     expected: .insert
   ),
   Case(
     "the window edge still pairs",
     record: bankPush,
-    existing: [walletCard("wallet", at: "2026-10-16T14:11:00Z")],
+    existing: [walletCard("wallet", at: "2026-10-16T11:21:00Z")],
     expected: .keepExisting(id: "wallet")
   ),
   Case(
@@ -256,10 +257,28 @@ let cases = [
     expected: .insert
   ),
   Case(
-    "the three hour window applies only to Millennium",
+    "an mBank push captured twenty minutes after the Wallet push keeps the Wallet record",
     record: bankPush,
     existing: [walletCard("wallet", at: "2026-10-16T14:00:00Z")],
+    expected: .keepExisting(id: "wallet")
+  ),
+  Case(
+    "a Wallet push an hour after the mBank push names the merchant on the existing record",
+    record: walletCard("wallet", at: "2026-10-16T15:21:00Z"),
+    existing: [bankPush],
+    expected: .replace(merged(bankPush, merchant: "Autopay Mobility"))
+  ),
+  Case(
+    "an mBank push the user stopped waiting on is never paired",
+    record: walletCard("wallet", at: "2026-10-16T14:30:00Z"),
+    existing: [declined(bankPush)],
     expected: .insert
+  ),
+  Case(
+    "an ING push pairs with the ING Wallet payment like any other bank",
+    record: card("ingPush", from: "pl.ing.mojeing", at: "2026-10-16T15:00:00Z", bank: "ing", merchant: "SKLEP"),
+    existing: [card("ingWallet", from: wallet, at: "2026-10-16T14:20:30Z", bank: "ing", merchant: "Sklep")],
+    expected: .keepExisting(id: "ingWallet")
   ),
   Case(
     "Millennium debit push without a Wallet push is saved",
@@ -292,5 +311,28 @@ for testCase in cases {
   }
 }
 
-print("\(cases.count - failures)/\(cases.count) pairing cases pass")
+let repeatChecks: [(String, Bool)] = [
+  (
+    "the same mBank push captured twice has one repeat key",
+    CardPaymentPairing.repeatKey(for: bankPush) != nil
+      && CardPaymentPairing.repeatKey(for: bankPush) == CardPaymentPairing.repeatKey(for: card("again", from: bankApp, at: "2026-10-16T14:21:00Z"))
+  ),
+  (
+    "a different shop is not a repeat",
+    CardPaymentPairing.repeatKey(for: bankPush)
+      != CardPaymentPairing.repeatKey(for: card("other", from: bankApp, at: "2026-10-16T14:21:00Z", merchant: "INNY SKLEP"))
+  ),
+  ("a Wallet push is never treated as a repeated bank push", CardPaymentPairing.repeatKey(for: walletPush) == nil),
+  ("a Millennium push naming the shop counts as the Wallet side", CardPaymentPairing.repeatKey(for: millenniumWalletPush) == nil),
+  ("a manual transaction has no repeat key", CardPaymentPairing.repeatKey(for: card("manual", from: bankApp, at: "2026-10-16T14:21:00Z", origin: NormalizedRecordOrigin.manual)) == nil),
+  ("a push thirty seconds later is a repeat", CardPaymentPairing.isRepeat(capturedAt: "2026-10-16T14:21:30Z", of: "2026-10-16T14:21:00Z")),
+  ("a push thirty one seconds later is a new payment", !CardPaymentPairing.isRepeat(capturedAt: "2026-10-16T14:21:31Z", of: "2026-10-16T14:21:00Z")),
+]
+
+for (name, passes) in repeatChecks where !passes {
+  failures += 1
+  print("FAIL \(name)")
+}
+
+print("\(cases.count - failures)/\(cases.count) pairing cases pass, \(repeatChecks.count) repeat checks run")
 exit(failures == 0 ? 0 : 1)

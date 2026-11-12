@@ -59,7 +59,7 @@ struct TransactionInput: Record {
       exchangeRateTable: exchangeRateTable,
       notificationTitle: notificationTitle,
       bankName: bankName,
-      walletPairing: walletPairing == CardPaymentPairing.declinedWalletPairing ? walletPairing : nil
+      walletPairing: [CardPaymentPairing.declinedWalletPairing, CardPaymentPairing.pairedWalletPairing].contains(walletPairing) ? walletPairing : nil
     )
   }
 }

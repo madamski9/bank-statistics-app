@@ -83,13 +83,20 @@ export function transactionContext(record: IngestionRecord): string {
   return record.accountName === undefined ? bank : `${bank} · ${record.accountName}`;
 }
 
+const walletSourceApp = 'com.apple.Passbook';
+
+function isWalletSide(record: IngestionRecord): boolean {
+  return record.sourceApp === walletSourceApp || (record.bank === 'millennium' && record.merchant !== undefined);
+}
+
 export function walletMerchantDeadline(record: IngestionRecord): number | null {
   if (
     record.origin === 'manual' ||
-    record.bank !== 'millennium' ||
+    record.bank === 'unknown' ||
+    record.direction !== 'expense' ||
     record.transactionType !== 'cardPayment' ||
-    record.merchant !== undefined ||
-    record.walletPairing === 'declined'
+    record.walletPairing !== undefined ||
+    isWalletSide(record)
   ) {
     return null;
   }

@@ -583,6 +583,33 @@ try outbox.clear()
 check(try captureCount("notification_banks") == 0, "Clearing local data must clear bank mappings")
 check(try wallet("Trade Republic").bankName == nil, "Cleared mappings must no longer label captures")
 try outbox.clear()
+
+func mbankCardPush() throws -> NotificationCaptureResult {
+  try NotificationCapture.capture(
+    title: "Nowa operacja kartą", subtitle: "", body: "40,00 PLN w HTTPSAPPSURFBURG GDANSK", sourceApp: "pl.mbank"
+  )
+}
+
+if case .saved = try mbankCardPush() {} else { fatalError("The first mBank card push must be saved") }
+if case .alreadySaved = try mbankCardPush() {} else { fatalError("The same mBank card push captured again must be dropped") }
+check(try outbox.records().count == 1, "One mBank card push captured twice must stay one transaction")
+let pairedWallet = try outbox.ingest(
+  title: "mBank", subtitle: "Tejst Spolka Z Ograniczon Odpowiedzialn", body: "40,00 zł", sourceApp: "com.apple.Passbook"
+)
+guard case .record(let walletNamed) = pairedWallet else { fatalError("The Wallet push must name the saved mBank payment") }
+check(walletNamed.walletPairing == "paired", "A bank record named by Wallet must stop waiting for Wallet")
+if case .alreadySaved = try mbankCardPush() {} else { fatalError("The repeated mBank card push must be dropped after Wallet named it") }
+check(try outbox.records().count == 1, "Wallet and a repeated mBank card push must stay one transaction")
+try outbox.clear()
+
+let walletFirst = try outbox.ingest(
+  title: "mBank", subtitle: "Tejst Spolka Z Ograniczon Odpowiedzialn", body: "40,00 zł", sourceApp: "com.apple.Passbook"
+)
+guard case .record = walletFirst else { fatalError("The Wallet push must be saved first") }
+if case .alreadySaved = try mbankCardPush() {} else { fatalError("The mBank card push after Wallet must be dropped") }
+if case .alreadySaved = try mbankCardPush() {} else { fatalError("The repeated mBank card push after Wallet must be dropped") }
+check(try outbox.records().count == 1, "Wallet followed by a repeated mBank card push must stay one transaction")
+try outbox.clear()
 print("\(checks) notification admission and encrypted inbox checks pass")
 
 func cardForRecovery() -> NormalizedRecord {

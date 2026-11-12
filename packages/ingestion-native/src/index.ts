@@ -9,7 +9,7 @@ export type IngestionRecordStatus = 'pending' | 'posted' | 'reversed';
 
 export type IngestionReviewReason = 'amount' | 'currency' | 'direction' | 'merchant';
 
-export type IngestionWalletPairing = 'declined';
+export type IngestionWalletPairing = 'declined' | 'paired';
 
 export const ingestionTransactionTypes = [
   'cardPayment',

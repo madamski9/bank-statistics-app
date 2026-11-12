@@ -8,9 +8,10 @@ enum CardPaymentResolution: Equatable {
 
 struct CardPaymentPairing {
   static let walletSourceApp = "com.apple.Passbook"
-  static let window: TimeInterval = 10 * 60
-  static let millenniumWindow: TimeInterval = 3 * 60 * 60
+  static let window: TimeInterval = 3 * 60 * 60
+  static let repeatWindow: TimeInterval = 30
   static let declinedWalletPairing = "declined"
+  static let pairedWalletPairing = "paired"
   static let lateCaptureAllowance: TimeInterval = 60 * 60
 
   let paired: Set<String>
@@ -20,7 +21,7 @@ struct CardPaymentPairing {
       return nil
     }
     let occurredAt = date(record.occurredAt) ?? capturedAt
-    let margin = pairingWindow(for: record.bank) + lateCaptureAllowance
+    let margin = window + lateCaptureAllowance
     let formatter = ISO8601DateFormatter()
     return (
       formatter.string(from: min(capturedAt, occurredAt).addingTimeInterval(-margin)),
@@ -48,7 +49,7 @@ struct CardPaymentPairing {
         guard let distance = Self.distance(between: record, and: candidate) else {
           return nil
         }
-        return distance <= Self.pairingWindow(for: record.bank) ? (candidate, distance) : nil
+        return distance <= Self.window ? (candidate, distance) : nil
       }
       .min { $0.distance < $1.distance }?
       .record
@@ -63,11 +64,23 @@ struct CardPaymentPairing {
 
     var merged = counterpart
     merged.merchant = merchant
+    merged.walletPairing = Self.pairedWalletPairing
     return .replace(merged)
   }
 
-  static func pairingWindow(for bank: String) -> TimeInterval {
-    bank == "millennium" ? millenniumWindow : window
+  static func repeatKey(for record: NormalizedRecord) -> String? {
+    guard isCapturedCardPayment(record), !isWallet(record) else {
+      return nil
+    }
+    return [record.bank, record.sourceApp, String(record.amountMinor), record.currency, record.merchant ?? ""]
+      .joined(separator: "\u{1F}")
+  }
+
+  static func isRepeat(capturedAt: String, of earlierCapturedAt: String) -> Bool {
+    guard let capturedAt = date(capturedAt), let earlier = date(earlierCapturedAt) else {
+      return false
+    }
+    return abs(capturedAt.timeIntervalSince(earlier)) <= repeatWindow
   }
 
   private static func isCapturedCardPayment(_ record: NormalizedRecord) -> Bool {

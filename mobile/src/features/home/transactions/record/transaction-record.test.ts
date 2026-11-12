@@ -76,14 +76,42 @@ describe('transactionBadge', () => {
 });
 
 describe('awaitsWalletMerchant', () => {
-  test('waits only for a captured Millennium card payment without a shop', () => {
+  test('waits for a card payment pushed by the bank app', () => {
     const soon = capturedAt + 60_000;
 
     expect(awaitsWalletMerchant(record({ merchant: undefined }), soon)).toBe(true);
     expect(awaitsWalletMerchant(record(), soon)).toBe(false);
     expect(awaitsWalletMerchant(record({ merchant: undefined, origin: 'manual' }), soon)).toBe(false);
-    expect(awaitsWalletMerchant(record({ merchant: undefined, bank: 'mbank' }), soon)).toBe(false);
     expect(awaitsWalletMerchant(record({ merchant: undefined, transactionType: 'outgoingTransfer' }), soon)).toBe(false);
+  });
+
+  test('waits for an mBank card push even though it names the shop', () => {
+    const mbankPush = record({ bank: 'mbank', sourceApp: 'pl.mbank', merchant: 'HTTPSAPPSURFBURG GDANSK' });
+
+    expect(awaitsWalletMerchant(mbankPush, capturedAt + 60_000)).toBe(true);
+    expect(awaitsWalletMerchant(mbankPush, capturedAt + 3 * 60 * 60_000)).toBe(false);
+    expect(transactionBadge(mbankPush, capturedAt + 60_000)?.label).toBe('Czeka na Portfel');
+  });
+
+  test('waits for card pushes of every supported bank', () => {
+    const soon = capturedAt + 60_000;
+
+    for (const [bank, sourceApp] of [['pko', 'pl.pkobp.iko'], ['ing', 'pl.ing.mojeing'], ['erste', 'pl.erste']] as const) {
+      expect(awaitsWalletMerchant(record({ bank, sourceApp }), soon)).toBe(true);
+    }
+  });
+
+  test('never waits on the Wallet side of a pair', () => {
+    const soon = capturedAt + 60_000;
+
+    expect(awaitsWalletMerchant(record({ bank: 'mbank', sourceApp: 'com.apple.Passbook' }), soon)).toBe(false);
+    expect(awaitsWalletMerchant(record({ bank: 'unknown', sourceApp: 'com.apple.Passbook' }), soon)).toBe(false);
+  });
+
+  test('stops waiting once Wallet has named the payment', () => {
+    const named = record({ bank: 'mbank', sourceApp: 'pl.mbank', merchant: 'Surfburg', walletPairing: 'paired' });
+
+    expect(awaitsWalletMerchant(named, capturedAt + 60_000)).toBe(false);
   });
 
   test('stops waiting once the user declines the Wallet pairing', () => {
