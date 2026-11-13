@@ -74,20 +74,19 @@ A Wallet push whose title names mBank records the card payment as `mbank`, with
 body `26,70 PLN w AUTOPAY MOBILITY WARSZAWA`, which is saved as an `mbank` card payment. Card-on-file
 and online payments produce only this push, but an Apple Pay purchase produces both, so the outbox
 pairs them when it saves a card payment: a Wallet card payment and a bank card payment from the same
-bank, for the same amount and currency, captured at most an hour apart, are one purchase. A push
+bank, for the same amount and currency, captured at most two hours apart, are one purchase. A push
 that states its operation time, like Millennium's debit card push, also pairs when that time is at most
-an hour from the other record's. The window is the same for every bank, because Shortcuts can run a
+two hours from the other record's. The window is the same for every bank, because Shortcuts can run a
 bank's automation long after the purchase and Millennium pushes a pre-authorisation, such as Bolt's or a
-pub tab's, up to half an hour before Wallet reports the payment. The closest unpaired counterpart wins,
-and a bank push the user stopped waiting on, marked with `walletPairing` `declined`, is never paired. A
-bank push arriving after the Wallet record is dropped with the reason `cardPaymentAlreadySaved`; a
-Wallet push arriving after the bank record keeps that record and its identifier, gives it Wallet's
-merchant name, so the shop is named the same way as other Wallet payments, and marks it `walletPairing`
-`paired`. Until it is paired, declined or an hour past its capture or stated operation time, a bank card payment
-shows the Awaiting Wallet badge. The same bank card push captured again within 30 seconds, with the same bank, source app,
-amount, currency, merchant and stated operation time, is dropped as `cardPaymentAlreadySaved`, even when its first copy was
-already paired or dropped. Each record can be paired once, which keeps two identical purchases made
-minutes apart as two transactions. The pairing is checked by `sh conformance/card-payment-pairing/run.sh`.
+pub tab's, up to half an hour before Wallet reports the payment. The closest unpaired counterpart wins.
+Pairing happens silently: the app shows no waiting state. A bank push arriving after the Wallet record
+is dropped with the reason `cardPaymentAlreadySaved`; a Wallet push arriving after the bank record keeps
+that record and its identifier and gives it Wallet's merchant name, so the shop is named the same way as
+other Wallet payments. A bank push with no Wallet counterpart stays as it was saved. The same bank card
+push captured again within 30 seconds, with the same bank, source app, amount, currency, merchant and
+stated operation time, is dropped as `cardPaymentAlreadySaved`, even when its first copy was already
+paired or dropped. Each record can be paired once, which keeps two identical purchases made minutes
+apart as two transactions. The pairing is checked by `sh conformance/card-payment-pairing/run.sh`.
 
 A Wallet push whose body carries an amount with no currency symbol is still captured, as a Review
 Item flagged `currency`: the transaction reaches the timeline but stays out of statistics until the

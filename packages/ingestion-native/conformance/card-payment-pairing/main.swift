@@ -38,7 +38,6 @@ func walletCard(_ id: String, at capturedAt: String, amountMinor: Int = 2670, cu
 func merged(_ record: NormalizedRecord, merchant: String) -> NormalizedRecord {
   var copy = record
   copy.merchant = merchant
-  copy.walletPairing = CardPaymentPairing.pairedWalletPairing
   return copy
 }
 
@@ -98,11 +97,6 @@ let boltDebitPush = card(
   merchant: nil, occurredAt: "2026-11-09T22:10:00Z"
 )
 
-func declined(_ record: NormalizedRecord) -> NormalizedRecord {
-  var copy = record
-  copy.walletPairing = CardPaymentPairing.declinedWalletPairing
-  return copy
-}
 
 let cases = [
   Case(
@@ -122,13 +116,13 @@ let cases = [
   Case(
     "the same amount outside the window is a separate payment",
     record: bankPush,
-    existing: [walletCard("wallet", at: "2026-10-16T13:20:59Z")],
+    existing: [walletCard("wallet", at: "2026-10-16T12:20:59Z")],
     expected: .insert
   ),
   Case(
     "the window edge still pairs",
     record: bankPush,
-    existing: [walletCard("wallet", at: "2026-10-16T13:21:00Z")],
+    existing: [walletCard("wallet", at: "2026-10-16T12:21:00Z")],
     expected: .keepExisting(id: "wallet")
   ),
   Case(
@@ -202,10 +196,10 @@ let cases = [
     expected: .replace(merged(lateLidlDebitPush, merchant: "Lidl"))
   ),
   Case(
-    "a Millennium debit push for an operation more than an hour after the Wallet payment is a separate payment",
+    "a Millennium debit push for an operation more than two hours after the Wallet payment is a separate payment",
     record: card(
-      "laterDebit", from: millenniumApp, at: "2026-11-04T11:30:01Z", amountMinor: 425, bank: "millennium",
-      merchant: nil, occurredAt: "2026-11-04T11:24:00Z"
+      "laterDebit", from: millenniumApp, at: "2026-11-04T12:30:01Z", amountMinor: 425, bank: "millennium",
+      merchant: nil, occurredAt: "2026-11-04T12:24:00Z"
     ),
     existing: [zabkaWalletPush],
     expected: .insert
@@ -239,18 +233,9 @@ let cases = [
     expected: .replace(merged(secondPubDebitPush, merchant: "Pub Red Light"))
   ),
   Case(
-    "a Millennium push the user stopped waiting on is never paired",
+    "a Wallet push more than two hours after a Millennium push is a separate payment",
     record: card(
-      "boltWallet", from: millenniumApp, at: "2026-11-09T22:40:05Z", amountMinor: 1890, bank: "millennium",
-      merchant: "Bolt"
-    ),
-    existing: [declined(boltDebitPush)],
-    expected: .insert
-  ),
-  Case(
-    "a Wallet push more than an hour after a Millennium push is a separate payment",
-    record: card(
-      "lateWallet", from: millenniumApp, at: "2026-11-09T23:10:31Z", amountMinor: 1890, bank: "millennium",
+      "lateWallet", from: millenniumApp, at: "2026-11-10T00:10:31Z", amountMinor: 1890, bank: "millennium",
       merchant: "Bolt"
     ),
     existing: [boltDebitPush],
@@ -263,16 +248,10 @@ let cases = [
     expected: .keepExisting(id: "wallet")
   ),
   Case(
-    "a Wallet push exactly an hour after the mBank push names the merchant on the existing record",
-    record: walletCard("wallet", at: "2026-10-16T15:21:00Z"),
+    "a Wallet push an hour and a half after the mBank push names the merchant on the existing record",
+    record: walletCard("wallet", at: "2026-10-16T15:51:00Z"),
     existing: [bankPush],
     expected: .replace(merged(bankPush, merchant: "Autopay Mobility"))
-  ),
-  Case(
-    "an mBank push the user stopped waiting on is never paired",
-    record: walletCard("wallet", at: "2026-10-16T14:30:00Z"),
-    existing: [declined(bankPush)],
-    expected: .insert
   ),
   Case(
     "an ING push pairs with the ING Wallet payment like any other bank",

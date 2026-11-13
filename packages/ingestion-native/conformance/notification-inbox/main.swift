@@ -597,7 +597,7 @@ let pairedWallet = try outbox.ingest(
   title: "mBank", subtitle: "Tejst Spolka Z Ograniczon Odpowiedzialn", body: "40,00 zł", sourceApp: "com.apple.Passbook"
 )
 guard case .record(let walletNamed) = pairedWallet else { fatalError("The Wallet push must name the saved mBank payment") }
-check(walletNamed.walletPairing == "paired", "A bank record named by Wallet must stop waiting for Wallet")
+check(walletNamed.merchant == "Tejst Spolka Z Ograniczon Odpowiedzialn", "Wallet must name the saved mBank payment")
 if case .alreadySaved = try mbankCardPush() {} else { fatalError("The repeated mBank card push must be dropped after Wallet named it") }
 check(try outbox.records().count == 1, "Wallet and a repeated mBank card push must stay one transaction")
 try outbox.clear()

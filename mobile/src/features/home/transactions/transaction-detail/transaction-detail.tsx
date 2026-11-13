@@ -16,14 +16,12 @@ import {
 } from '@/features/data/ignored-payments/ignore-rule';
 import type { SpendingEvent } from '@/features/insights/events/spending-event';
 
-import { awaitsWalletMerchant, reviewPrompt } from '../record/transaction-record';
-import { useWalletMerchantClock } from '../record/use-wallet-merchant-clock';
+import { reviewPrompt } from '../record/transaction-record';
 import { transactionsCopy } from '../transactions-copy';
 import { DetailHeader } from './components/detail-header';
 import { DetailRowsCard } from './components/detail-rows-card';
 import { IgnorePaymentButton } from './components/ignore-payment-button';
 import { MerchantHistoryChart } from './components/merchant-history-chart';
-import { StopAwaitingWalletButton } from './components/stop-awaiting-wallet-button';
 import { TransactionHero } from './components/transaction-hero';
 import { merchantSpendHistory, type ChartPeriod } from './merchant-spend-history';
 import { useDetailRows } from './use-detail-rows';
@@ -37,7 +35,6 @@ interface TransactionDetailProps {
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
-  onStopAwaitingWallet: () => void;
   history: IngestionRecord[];
   ignoreRules: IgnoreRule[];
   onIgnore: (rule: IgnoreRule) => Promise<void>;
@@ -53,7 +50,6 @@ export function TransactionDetail({
   onClose,
   onEdit,
   onDelete,
-  onStopAwaitingWallet,
   history,
   ignoreRules,
   onIgnore,
@@ -66,8 +62,6 @@ export function TransactionDetail({
   const [ignoreChoice, setIgnoreChoice] = useState<IgnoreChoiceTarget | null>(null);
   const prompt = record.review === undefined ? null : reviewPrompt(record.review);
   const details = useDetailRows(record, rules, events);
-  const now = useWalletMerchantClock(record);
-  const isAwaitingWallet = awaitsWalletMerchant(record, now);
   const [openedAtMs] = useState(() => Date.now());
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('month');
   const spendHistory = useMemo(
@@ -106,10 +100,6 @@ export function TransactionDetail({
           <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={1.5} style={styles.error}>
             {writeError}
           </Text>
-        ) : null}
-
-        {isAwaitingWallet ? (
-          <StopAwaitingWalletButton isDisabled={isWriting} onPress={onStopAwaitingWallet} />
         ) : null}
 
         {ignoreTarget !== null ? (
