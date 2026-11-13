@@ -1,5 +1,4 @@
 import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useCopy } from '@/features/app-shell/localization/language';
@@ -26,10 +25,11 @@ export function FocusSetupStep({ isWalletOnly }: FocusSetupStepProps) {
         description={copy.description}
       />
       <View style={styles.walletCard}>
-        <SymbolView
-          name={{ ios: 'wallet.pass.fill', android: 'wallet', web: 'wallet' }}
-          size={22}
-          tintColor={overviewColors.caution}
+        <Image
+          accessible={false}
+          contentFit="cover"
+          source={require('../assets/wallet.png')}
+          style={styles.walletIcon}
         />
         <View style={styles.walletText}>
           <Text maxFontSizeMultiplier={1.5} style={styles.walletTitle}>{copy.walletTitle}</Text>
@@ -61,6 +61,11 @@ export function FocusSetupStep({ isWalletOnly }: FocusSetupStepProps) {
 }
 
 const styles = StyleSheet.create({
+  walletIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 7,
+  },
   walletCard: {
     flexDirection: 'row',
     gap: 12,
