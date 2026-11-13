@@ -8,10 +8,8 @@ enum CardPaymentResolution: Equatable {
 
 struct CardPaymentPairing {
   static let walletSourceApp = "com.apple.Passbook"
-  static let window: TimeInterval = 60 * 60
+  static let window: TimeInterval = 2 * 60 * 60
   static let repeatWindow: TimeInterval = 30
-  static let declinedWalletPairing = "declined"
-  static let pairedWalletPairing = "paired"
   static let lateCaptureAllowance: TimeInterval = 60 * 60
 
   let paired: Set<String>
@@ -38,7 +36,6 @@ struct CardPaymentPairing {
       .filter { candidate in
         candidate.id != record.id
           && !paired.contains(candidate.id)
-          && candidate.walletPairing != Self.declinedWalletPairing
           && Self.isCapturedCardPayment(candidate)
           && Self.isWallet(candidate) != Self.isWallet(record)
           && candidate.bank == record.bank
@@ -64,7 +61,6 @@ struct CardPaymentPairing {
 
     var merged = counterpart
     merged.merchant = merchant
-    merged.walletPairing = Self.pairedWalletPairing
     return .replace(merged)
   }
 

@@ -61,7 +61,6 @@ export function TransactionSheet({
           isWriting={editing.isWriting}
           onClose={editing.closeEditor}
           onDelete={editing.requestDelete}
-          onStopAwaitingWallet={editing.stopAwaitingWallet}
           history={records}
           ignoreRules={ignoreRules}
           onIgnore={onIgnore}
