@@ -74,9 +74,9 @@ A Wallet push whose title names mBank records the card payment as `mbank`, with
 body `26,70 PLN w AUTOPAY MOBILITY WARSZAWA`, which is saved as an `mbank` card payment. Card-on-file
 and online payments produce only this push, but an Apple Pay purchase produces both, so the outbox
 pairs them when it saves a card payment: a Wallet card payment and a bank card payment from the same
-bank, for the same amount and currency, captured at most two hours apart, are one purchase. A push
+bank, for the same amount and currency, captured at most an hour apart, are one purchase. A push
 that states its operation time, like Millennium's debit card push, also pairs when that time is at most
-two hours from the other record's. The window is the same for every bank, because Shortcuts can run a
+an hour from the other record's. The window is the same for every bank, because Shortcuts can run a
 bank's automation long after the purchase and Millennium pushes a pre-authorisation, such as Bolt's or a
 pub tab's, up to half an hour before Wallet reports the payment. The closest unpaired counterpart wins.
 Pairing happens silently: the app shows no waiting state. A bank push arriving after the Wallet record
