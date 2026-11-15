@@ -6,11 +6,29 @@ Notifications are read and interpreted on the phone. Transactions live in an enc
 
 Website: [bankstats.app](https://bankstats.app) · Product specification: [docs/PRODUCT-SPEC.md](docs/PRODUCT-SPEC.md)
 
+## Technology stack
+
+<div align="center">
+
+| Area | Technology |
+|:---:|:---:|
+| Mobile application | <img height="32" src="https://img.shields.io/badge/Expo%20SDK%2057-000020?style=for-the-badge&logo=expo&logoColor=white"><img height="32" src="https://img.shields.io/badge/React%20Native%200.86-61DAFB?style=for-the-badge&logo=react&logoColor=black"><img height="32" src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white"><img height="32" src="https://img.shields.io/badge/Expo%20Router-000020?style=for-the-badge&logo=expo&logoColor=white"><img height="32" src="https://img.shields.io/badge/Reanimated-6B52AE?style=for-the-badge&logo=react&logoColor=white"> |
+| Native modules | <img height="32" src="https://img.shields.io/badge/Swift-F05138?style=for-the-badge&logo=swift&logoColor=white"><img height="32" src="https://img.shields.io/badge/App%20Intents-000000?style=for-the-badge&logo=apple&logoColor=white"><img height="32" src="https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white"><img height="32" src="https://img.shields.io/badge/Expo%20Modules-000020?style=for-the-badge&logo=expo&logoColor=white"> |
+| Widgets | <img height="32" src="https://img.shields.io/badge/expo--widgets-000020?style=for-the-badge&logo=expo&logoColor=white"><img height="32" src="https://img.shields.io/badge/WidgetKit-000000?style=for-the-badge&logo=apple&logoColor=white"> |
+| Local storage | <img height="32" src="https://img.shields.io/badge/SQLCipher-003B57?style=for-the-badge&logo=sqlite&logoColor=white"><img height="32" src="https://img.shields.io/badge/Keychain-000000?style=for-the-badge&logo=apple&logoColor=white"> |
+| Backend and sync | <img height="32" src="https://img.shields.io/badge/Convex-EE342F?style=for-the-badge&logoColor=white"><img height="32" src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white"> |
+| Authentication | <img height="32" src="https://img.shields.io/badge/Clerk-6C47FF?style=for-the-badge&logo=clerk&logoColor=white"><img height="32" src="https://img.shields.io/badge/Sign%20in%20with%20Apple-000000?style=for-the-badge&logo=apple&logoColor=white"><img height="32" src="https://img.shields.io/badge/Google-4285F4?style=for-the-badge&logo=google&logoColor=white"> |
+| Subscriptions | <img height="32" src="https://img.shields.io/badge/RevenueCat-F25A5A?style=for-the-badge&logoColor=white"><img height="32" src="https://img.shields.io/badge/App%20Store-0D96F6?style=for-the-badge&logo=appstore&logoColor=white"> |
+| Exchange rates | <img height="32" src="https://img.shields.io/badge/NBP%20API-1F4E79?style=for-the-badge&logoColor=white"> |
+| Website | <img height="32" src="https://img.shields.io/badge/HTML-E34F26?style=for-the-badge&logo=html5&logoColor=white"><img height="32" src="https://img.shields.io/badge/CSS-663399?style=for-the-badge&logo=css&logoColor=white"><img height="32" src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black"><img height="32" src="https://img.shields.io/badge/Three.js-000000?style=for-the-badge&logo=threedotjs&logoColor=white"><img height="32" src="https://img.shields.io/badge/Cloudflare%20Pages-F38020?style=for-the-badge&logo=cloudflare&logoColor=white"> |
+| Tooling | <img height="32" src="https://img.shields.io/badge/Bun-000000?style=for-the-badge&logo=bun&logoColor=white"><img height="32" src="https://img.shields.io/badge/EAS%20Build-000020?style=for-the-badge&logo=expo&logoColor=white"><img height="32" src="https://img.shields.io/badge/ESLint-4B32C3?style=for-the-badge&logo=eslint&logoColor=white"><img height="32" src="https://img.shields.io/badge/GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white"> |
+
+</div>
+
 ## Table of contents
 
 - [Features](#features)
 - [Preview](#preview)
-- [Technology stack](#technology-stack)
 - [How a transaction is captured](#how-a-transaction-is-captured)
 - [Workspace](#workspace)
 - [Delivery lanes](#delivery-lanes)
@@ -38,32 +56,9 @@ Website: [bankstats.app](https://bankstats.app) · Product specification: [docs/
 
 <div align="center">
 
-| Overview | Spending | Transactions | Monthly report |
+| Overview | Spending | Monthly report | Shops |
 |:---:|:---:|:---:|:---:|
-| <img src="website/screenshots/overview.png" width="200" alt="Overview with income, spending and net flow"> | <img src="website/screenshots/spending.png" width="200" alt="Spending chart with shops ranked by amount"> | <img src="website/screenshots/transactions.png" width="200" alt="Transaction history"> | <img src="website/screenshots/monthly-report.png" width="200" alt="Monthly spending report"> |
-
-| Shops | Shop detail | Premium |
-|:---:|:---:|:---:|
-| <img src="website/screenshots/shops.png" width="200" alt="Shops ranked by spending"> | <img src="website/screenshots/shop-details.png" width="200" alt="Shop detail with a monthly limit, chart and history"> | <img src="website/screenshots/premium.png" width="200" alt="BankStats Premium plans"> |
-
-</div>
-
-## Technology stack
-
-<div align="center">
-
-| Area | Technology |
-|:---:|:---:|
-| Mobile application | <img height="32" src="https://img.shields.io/badge/Expo%20SDK%2057-000020?style=for-the-badge&logo=expo&logoColor=white"><img height="32" src="https://img.shields.io/badge/React%20Native%200.86-61DAFB?style=for-the-badge&logo=react&logoColor=black"><img height="32" src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white"><img height="32" src="https://img.shields.io/badge/Expo%20Router-000020?style=for-the-badge&logo=expo&logoColor=white"><img height="32" src="https://img.shields.io/badge/Reanimated-6B52AE?style=for-the-badge&logo=react&logoColor=white"> |
-| Native modules | <img height="32" src="https://img.shields.io/badge/Swift-F05138?style=for-the-badge&logo=swift&logoColor=white"><img height="32" src="https://img.shields.io/badge/App%20Intents-000000?style=for-the-badge&logo=apple&logoColor=white"><img height="32" src="https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white"><img height="32" src="https://img.shields.io/badge/Expo%20Modules-000020?style=for-the-badge&logo=expo&logoColor=white"> |
-| Widgets | <img height="32" src="https://img.shields.io/badge/expo--widgets-000020?style=for-the-badge&logo=expo&logoColor=white"><img height="32" src="https://img.shields.io/badge/WidgetKit-000000?style=for-the-badge&logo=apple&logoColor=white"> |
-| Local storage | <img height="32" src="https://img.shields.io/badge/SQLCipher-003B57?style=for-the-badge&logo=sqlite&logoColor=white"><img height="32" src="https://img.shields.io/badge/Keychain-000000?style=for-the-badge&logo=apple&logoColor=white"> |
-| Backend and sync | <img height="32" src="https://img.shields.io/badge/Convex-EE342F?style=for-the-badge&logoColor=white"><img height="32" src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white"> |
-| Authentication | <img height="32" src="https://img.shields.io/badge/Clerk-6C47FF?style=for-the-badge&logo=clerk&logoColor=white"><img height="32" src="https://img.shields.io/badge/Sign%20in%20with%20Apple-000000?style=for-the-badge&logo=apple&logoColor=white"><img height="32" src="https://img.shields.io/badge/Google-4285F4?style=for-the-badge&logo=google&logoColor=white"> |
-| Subscriptions | <img height="32" src="https://img.shields.io/badge/RevenueCat-F25A5A?style=for-the-badge&logoColor=white"><img height="32" src="https://img.shields.io/badge/App%20Store-0D96F6?style=for-the-badge&logo=appstore&logoColor=white"> |
-| Exchange rates | <img height="32" src="https://img.shields.io/badge/NBP%20API-1F4E79?style=for-the-badge&logoColor=white"> |
-| Website | <img height="32" src="https://img.shields.io/badge/HTML-E34F26?style=for-the-badge&logo=html5&logoColor=white"><img height="32" src="https://img.shields.io/badge/CSS-663399?style=for-the-badge&logo=css&logoColor=white"><img height="32" src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black"><img height="32" src="https://img.shields.io/badge/Three.js-000000?style=for-the-badge&logo=threedotjs&logoColor=white"><img height="32" src="https://img.shields.io/badge/Cloudflare%20Pages-F38020?style=for-the-badge&logo=cloudflare&logoColor=white"> |
-| Tooling | <img height="32" src="https://img.shields.io/badge/Bun-000000?style=for-the-badge&logo=bun&logoColor=white"><img height="32" src="https://img.shields.io/badge/EAS%20Build-000020?style=for-the-badge&logo=expo&logoColor=white"><img height="32" src="https://img.shields.io/badge/ESLint-4B32C3?style=for-the-badge&logo=eslint&logoColor=white"><img height="32" src="https://img.shields.io/badge/GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white"> |
+| <img src="website/screenshots/overview.png" width="200" alt="Overview with income, spending and net flow"> | <img src="website/screenshots/spending.png" width="200" alt="Spending chart with shops ranked by amount"> | <img src="website/screenshots/monthly-report.png" width="200" alt="Monthly spending report"> | <img src="website/screenshots/shops.png" width="200" alt="Shops ranked by spending"> |
 
 </div>
 
