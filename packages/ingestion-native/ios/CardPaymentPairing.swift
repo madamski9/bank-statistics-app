@@ -8,7 +8,7 @@ enum CardPaymentResolution: Equatable {
 
 struct CardPaymentPairing {
   static let walletSourceApp = "com.apple.Passbook"
-  static let window: TimeInterval = 2 * 60 * 60
+  static let window: TimeInterval = 60 * 60
   static let repeatWindow: TimeInterval = 30
   static let lateCaptureAllowance: TimeInterval = 60 * 60
 
