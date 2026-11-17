@@ -28,6 +28,7 @@ Use these public URLs in App Store Connect:
 | --- | --- |
 | Privacy Policy URL | `https://bankstats.app/privacy/` |
 | Support URL | `https://bankstats.app/support/` |
+| Terms of service, in the App Store description or as a custom license | `https://bankstats.app/terms/` |
 | Marketing URL, optional | `https://bankstats.app/` |
 
 The privacy policy must also be linked from inside the iOS app before submitting it for review. Keep its data-processing details aligned with the shipped app and configured production services. The `/delete-account/` page explains the in-app deletion path and can be used as a privacy choices URL.
