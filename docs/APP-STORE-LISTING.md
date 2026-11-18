@@ -199,3 +199,7 @@ bun scripts/render-app-store-screenshots.ts
 ```
 
 A subscription's review screenshot is a plain screenshot of the Premium screen from the device, not one of these.
+
+## Header
+
+Upload `app-store/header/header-5244x2950.png` or `app-store/header/header-3840x1646.png` as the Header asset under "Previews and Screenshots". It has no text, so one image serves both languages. App Store crops it differently per device and orientation, so the three phones stay in the middle and the bottom fades to black under the app name and the Get button. `app-store/header/index.html` builds it from the same phone model and neon line as the screenshots (`app-store/phone-scene.js`), and the screenshot command renders it too.
