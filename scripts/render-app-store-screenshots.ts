@@ -45,6 +45,12 @@ try {
         throw new Error(`Rendering ${panel} (${language}) failed: ${await new Response(chromeProcess.stderr).text()}`);
       }
 
+      const resize = Bun.spawn(['sips', '--resampleHeightWidth', '2622', '1206', output], { stdout: 'ignore', stderr: 'pipe' });
+
+      if ((await resize.exited) !== 0) {
+        throw new Error(`Resizing ${panel} (${language}) failed: ${await new Response(resize.stderr).text()}`);
+      }
+
       console.log(output);
     }
   }
