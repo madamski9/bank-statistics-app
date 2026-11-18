@@ -459,7 +459,7 @@
 
   const bodyWidth = 2.55;
   const bodyHeight = 5.47;
-  const screenWidth = 2.4;
+  const screenWidth = 2.49;
   const screenHeight = (screenWidth * 2556) / 1179;
 
   const renderer = new WebGLRenderer({ canvas: document.getElementById('scene'), alpha: true, antialias: true, preserveDrawingBuffer: true });
@@ -512,7 +512,7 @@
     glass.position.z = 0.214;
     device.add(glass);
     const screen = new Mesh(
-      mappedShapeGeometry(screenWidth, screenHeight, 0.33),
+      mappedShapeGeometry(screenWidth, screenHeight, 0.37),
       new MeshBasicMaterial({ map: texture, toneMapped: false }),
     );
     screen.position.z = 0.24;
