@@ -53,17 +53,6 @@
     left: 0;
   }
 
-  .bubble {
-    position: absolute;
-    border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.14);
-    box-shadow: inset 0 0 60px rgba(255, 255, 255, 0.06), 0 0 120px var(--bubble-glow);
-    background:
-      radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 16%),
-      radial-gradient(circle at 70% 78%, var(--bubble-light), transparent 42%),
-      radial-gradient(circle at 50% 50%, rgba(10, 10, 12, 0.2), var(--bubble-dark) 72%, var(--bubble-edge));
-  }
-
   #scene {
     position: absolute;
     top: 0;
@@ -268,21 +257,6 @@
     { image: 'shop-details.png', x: 5940, y: 1900, height: 1880, rotation: { x: -0.06, y: -0.16, z: 0 } },
   ];
 
-  const bubbles = [
-    { size: 420, left: 60, top: 1250, color: 'violet' },
-    { size: 260, left: 1880, top: 1180, color: 'green' },
-    { size: 340, left: 3020, top: 2450, color: 'pink' },
-    { size: 300, left: 4100, top: 1220, color: 'green' },
-    { size: 460, left: 5100, top: 2350, color: 'violet' },
-    { size: 280, left: 6420, top: 2420, color: 'pink' },
-    { size: 220, left: 7600, top: 1000, color: 'green' },
-  ];
-
-  const bubbleColors = {
-    pink: { light: 'rgba(255, 150, 120, 0.55)', dark: 'rgba(120, 40, 70, 0.55)', edge: 'rgba(255, 120, 150, 0.6)', glow: 'rgba(255, 77, 87, 0.25)' },
-    green: { light: 'rgba(90, 200, 230, 0.5)', dark: 'rgba(20, 70, 60, 0.55)', edge: 'rgba(110, 220, 200, 0.55)', glow: 'rgba(61, 220, 151, 0.18)' },
-    violet: { light: 'rgba(90, 160, 255, 0.45)', dark: 'rgba(40, 35, 90, 0.6)', edge: 'rgba(150, 140, 255, 0.55)', glow: 'rgba(139, 124, 246, 0.2)' },
-  };
 
   const glows = [
     { size: 2200, left: 150, top: 900 },
@@ -372,6 +346,9 @@
           <stop offset="0.5" stop-color="#ff4d57"/>
           <stop offset="1" stop-color="#ff8a65"/>
         </linearGradient>
+        <filter id="neon" x="-10%" y="-60%" width="120%" height="220%">
+          <feGaussianBlur stdDeviation="40"/>
+        </filter>
         <filter id="glow" x="-5%" y="-50%" width="110%" height="200%">
           <feGaussianBlur stdDeviation="18" result="blur"/>
           <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
@@ -379,20 +356,11 @@
       </defs>
       ${grid}
       <path d="${line} L ${panoramaWidth + 200} ${panelHeight} L -200 ${panelHeight} Z" fill="url(#area)"/>
-      <path d="${line}" fill="none" stroke="url(#stroke)" stroke-width="10" stroke-linecap="round" filter="url(#glow)"/>
+      <path d="${line}" fill="none" stroke="#ff4d57" stroke-width="34" stroke-linecap="round" opacity="0.35" filter="url(#neon)"/>
+      <path d="${line}" fill="none" stroke="url(#stroke)" stroke-width="12" stroke-linecap="round" filter="url(#glow)"/>
+      <path d="${line}" fill="none" stroke="#ffd9d6" stroke-width="3.5" stroke-linecap="round"/>
     </svg>`,
   );
-  for (const bubble of bubbles) {
-    const colors = bubbleColors[bubble.color];
-    const element = document.createElement('div');
-    element.className = 'bubble';
-    Object.assign(element.style, { width: `${bubble.size}px`, height: `${bubble.size}px`, left: `${bubble.left}px`, top: `${bubble.top}px` });
-    element.style.setProperty('--bubble-light', colors.light);
-    element.style.setProperty('--bubble-dark', colors.dark);
-    element.style.setProperty('--bubble-edge', colors.edge);
-    element.style.setProperty('--bubble-glow', colors.glow);
-    background.append(element);
-  }
 
   const foreground = document.getElementById('foreground');
   panels.forEach((id, index) => {
