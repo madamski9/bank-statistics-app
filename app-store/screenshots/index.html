@@ -47,14 +47,21 @@
     background: radial-gradient(closest-side, rgba(255, 77, 87, 0.22), rgba(255, 77, 87, 0.06) 55%, transparent);
   }
 
-  .ring {
+  .chart {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
+  .bubble {
     position: absolute;
     border-radius: 50%;
-    border-style: solid;
-    border-color: transparent;
+    border: 2px solid rgba(255, 255, 255, 0.14);
+    box-shadow: inset 0 0 60px rgba(255, 255, 255, 0.06), 0 0 120px var(--bubble-glow);
     background:
-      linear-gradient(var(--background), var(--background)) padding-box,
-      linear-gradient(140deg, var(--accent-warm), var(--accent) 45%, #7a1622) border-box;
+      radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 16%),
+      radial-gradient(circle at 70% 78%, var(--bubble-light), transparent 42%),
+      radial-gradient(circle at 50% 50%, rgba(10, 10, 12, 0.2), var(--bubble-dark) 72%, var(--bubble-edge));
   }
 
   #scene {
@@ -261,14 +268,21 @@
     { image: 'shop-details.png', x: 5940, y: 1900, height: 1880, rotation: { x: -0.06, y: -0.16, z: 0 } },
   ];
 
-  const rings = [
-    { size: 1700, width: 150, left: -1000, top: 1450 },
-    { size: 1500, width: 140, left: 1700, top: 1900 },
-    { size: 1300, width: 130, left: 2950, top: 2250 },
-    { size: 1600, width: 150, left: 4950, top: 1600 },
-    { size: 1400, width: 140, left: 6200, top: 2100 },
-    { size: 900, width: 110, left: 7500, top: -800 },
+  const bubbles = [
+    { size: 420, left: 60, top: 1250, color: 'violet' },
+    { size: 260, left: 1880, top: 1180, color: 'green' },
+    { size: 340, left: 3020, top: 2450, color: 'pink' },
+    { size: 300, left: 4100, top: 1220, color: 'green' },
+    { size: 460, left: 5100, top: 2350, color: 'violet' },
+    { size: 280, left: 6420, top: 2420, color: 'pink' },
+    { size: 220, left: 7600, top: 1000, color: 'green' },
   ];
+
+  const bubbleColors = {
+    pink: { light: 'rgba(255, 150, 120, 0.55)', dark: 'rgba(120, 40, 70, 0.55)', edge: 'rgba(255, 120, 150, 0.6)', glow: 'rgba(255, 77, 87, 0.25)' },
+    green: { light: 'rgba(90, 200, 230, 0.5)', dark: 'rgba(20, 70, 60, 0.55)', edge: 'rgba(110, 220, 200, 0.55)', glow: 'rgba(61, 220, 151, 0.18)' },
+    violet: { light: 'rgba(90, 160, 255, 0.45)', dark: 'rgba(40, 35, 90, 0.6)', edge: 'rgba(150, 140, 255, 0.55)', glow: 'rgba(139, 124, 246, 0.2)' },
+  };
 
   const glows = [
     { size: 2200, left: 150, top: 900 },
@@ -326,16 +340,57 @@
     Object.assign(element.style, { width: `${glow.size}px`, height: `${glow.size}px`, left: `${glow.left}px`, top: `${glow.top}px` });
     background.append(element);
   }
-  for (const ring of rings) {
+  const chartPoints = [];
+  let seed = 7;
+  for (let x = -200; x <= panoramaWidth + 200; x += 220) {
+    seed = (seed * 9301 + 49297) % 233280;
+    const noise = seed / 233280;
+    const spike = noise > 0.78 ? 380 : noise > 0.55 ? 200 : 60;
+    chartPoints.push([x, 2380 - spike * (0.6 + noise * 0.6)]);
+  }
+  let line = `M ${chartPoints[0][0]} ${chartPoints[0][1]}`;
+  for (let index = 0; index < chartPoints.length - 1; index += 1) {
+    const [x0, y0] = chartPoints[Math.max(index - 1, 0)];
+    const [x1, y1] = chartPoints[index];
+    const [x2, y2] = chartPoints[index + 1];
+    const [x3, y3] = chartPoints[Math.min(index + 2, chartPoints.length - 1)];
+    line += ` C ${x1 + (x2 - x0) / 6} ${y1 + (y2 - y0) / 6}, ${x2 - (x3 - x1) / 6} ${y2 - (y3 - y1) / 6}, ${x2} ${y2}`;
+  }
+  const grid = Array.from({ length: 7 }, (_, index) => 1180 + index * 260)
+    .map((y) => `<line x1="0" x2="${panoramaWidth}" y1="${y}" y2="${y}" stroke="rgba(255,255,255,0.05)" stroke-width="2"/>`)
+    .join('');
+  background.insertAdjacentHTML(
+    'beforeend',
+    `<svg class="chart" width="${panoramaWidth}" height="${panelHeight}" viewBox="0 0 ${panoramaWidth} ${panelHeight}">
+      <defs>
+        <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#ff4d57" stop-opacity="0.32"/>
+          <stop offset="1" stop-color="#ff4d57" stop-opacity="0"/>
+        </linearGradient>
+        <linearGradient id="stroke" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#ff8a65"/>
+          <stop offset="0.5" stop-color="#ff4d57"/>
+          <stop offset="1" stop-color="#ff8a65"/>
+        </linearGradient>
+        <filter id="glow" x="-5%" y="-50%" width="110%" height="200%">
+          <feGaussianBlur stdDeviation="18" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      ${grid}
+      <path d="${line} L ${panoramaWidth + 200} ${panelHeight} L -200 ${panelHeight} Z" fill="url(#area)"/>
+      <path d="${line}" fill="none" stroke="url(#stroke)" stroke-width="10" stroke-linecap="round" filter="url(#glow)"/>
+    </svg>`,
+  );
+  for (const bubble of bubbles) {
+    const colors = bubbleColors[bubble.color];
     const element = document.createElement('div');
-    element.className = 'ring';
-    Object.assign(element.style, {
-      width: `${ring.size}px`,
-      height: `${ring.size}px`,
-      left: `${ring.left}px`,
-      top: `${ring.top}px`,
-      borderWidth: `${ring.width}px`,
-    });
+    element.className = 'bubble';
+    Object.assign(element.style, { width: `${bubble.size}px`, height: `${bubble.size}px`, left: `${bubble.left}px`, top: `${bubble.top}px` });
+    element.style.setProperty('--bubble-light', colors.light);
+    element.style.setProperty('--bubble-dark', colors.dark);
+    element.style.setProperty('--bubble-edge', colors.edge);
+    element.style.setProperty('--bubble-glow', colors.glow);
     background.append(element);
   }
 
