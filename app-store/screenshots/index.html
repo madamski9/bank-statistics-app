@@ -198,7 +198,9 @@
   const panelWidth = 1320;
   const panelHeight = 2868;
   const panelCount = 6;
-  const panoramaWidth = panelWidth * panelCount;
+  const seamGap = 64;
+  const panelStride = panelWidth + seamGap;
+  const panoramaWidth = panelStride * (panelCount - 1) + panelWidth;
 
   const copy = {
     overview: {
@@ -251,10 +253,10 @@
 
   const phones = [
     { image: 'overview.png', x: 1300, y: 1980, height: 2150, rotation: { x: -0.16, y: 0.52, z: 0.24 } },
-    { image: 'transactions.png', x: 2540, y: 1990, height: 1950, rotation: { x: -0.12, y: -0.46, z: -0.2 } },
-    { image: 'spending.png', x: 3580, y: 1930, height: 1820, rotation: { x: -0.1, y: 0.36, z: 0.12 } },
-    { image: 'monthly-report.png', x: 4620, y: 1900, height: 1880, rotation: { x: -0.06, y: 0.16, z: 0 } },
-    { image: 'shop-details.png', x: 5940, y: 1900, height: 1880, rotation: { x: -0.06, y: -0.16, z: 0 } },
+    { image: 'transactions.png', x: 2604, y: 1990, height: 1950, rotation: { x: -0.12, y: -0.46, z: -0.2 } },
+    { image: 'spending.png', x: 3708, y: 1930, height: 1820, rotation: { x: -0.1, y: 0.36, z: 0.12 } },
+    { image: 'monthly-report.png', x: 4812, y: 1900, height: 1880, rotation: { x: -0.06, y: 0.16, z: 0 } },
+    { image: 'shop-details.png', x: 6196, y: 1900, height: 1880, rotation: { x: -0.06, y: -0.16, z: 0 } },
   ];
 
 
@@ -304,8 +306,8 @@
 
   const panorama = document.getElementById('panorama');
   panorama.style.width = `${panoramaWidth}px`;
-  panorama.style.transform = `translateX(${-panel * panelWidth}px)`;
-  document.getElementById('scene').style.left = `${panel * panelWidth}px`;
+  panorama.style.transform = `translateX(${-panel * panelStride}px)`;
+  document.getElementById('scene').style.left = `${panel * panelStride}px`;
 
   const background = document.getElementById('background');
   for (const glow of glows) {
@@ -367,7 +369,7 @@
     const text = copy[id];
     const element = document.createElement('div');
     element.className = 'copy';
-    element.style.left = `${index * panelWidth + 96}px`;
+    element.style.left = `${index * panelStride + 96}px`;
     element.style.top = `${copyTops[id]}px`;
     element.innerHTML =
       (text.eyebrow ? `<div class="eyebrow"><span class="dot"></span>${text.eyebrow[lang]}</div>` : '') +
@@ -377,7 +379,7 @@
 
   const list = document.createElement('div');
   list.className = 'features';
-  list.style.left = `${5 * panelWidth + 110}px`;
+  list.style.left = `${5 * panelStride + 110}px`;
   list.style.top = '1180px';
   list.innerHTML = features
     .map(
@@ -567,7 +569,7 @@
   const distance = panelHeight / 2 / Math.tan(((fieldOfView / 2) * Math.PI) / 180);
   const camera = new PerspectiveCamera(fieldOfView, panoramaWidth / panelHeight, distance - 3000, distance + 3000);
   camera.position.set(panoramaWidth / 2, -panelHeight / 2, distance);
-  camera.setViewOffset(panoramaWidth, panelHeight, panel * panelWidth, 0, panelWidth, panelHeight);
+  camera.setViewOffset(panoramaWidth, panelHeight, panel * panelStride, 0, panelWidth, panelHeight);
 
   scene.add(new AmbientLight(0xffffff, 0.5));
   const key = new DirectionalLight(0xffffff, 3);

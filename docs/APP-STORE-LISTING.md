@@ -192,7 +192,7 @@ Answer "None" to every content question and "No" to unrestricted web access, gam
 
 Upload `app-store/screenshots/pl` to the Polish localization and `app-store/screenshots/en` to the English one, in file order, under "iPhone with Dynamic Island (medium display)" (1206 × 2622). App Store Connect scales them for other iPhones.
 
-The six images are slices of one panorama, so the phones continue from one image into the next in the order above. `app-store/screenshots/index.html` builds it: a three.js iPhone model (loaded from jsDelivr) shows each app screenshot from `website/screenshots` with a clean 9:41 status bar, on the black and coral style of bankstats.app, over one neon spending line that runs across all six images. After changing a headline, a phone's position or a source screenshot, render them again with Google Chrome installed:
+The six images are slices of one panorama, so the phones continue from one image into the next in the order above. The panorama leaves a 64 px strip between slices for the gap App Store Connect shows between screenshots, so slanted edges line up across it. `app-store/screenshots/index.html` builds it: a three.js iPhone model (loaded from jsDelivr) shows each app screenshot from `website/screenshots` with a clean 9:41 status bar, on the black and coral style of bankstats.app, over one neon spending line that runs across all six images. After changing a headline, a phone's position or a source screenshot, render them again with Google Chrome installed:
 
 ```sh
 bun scripts/render-app-store-screenshots.ts
