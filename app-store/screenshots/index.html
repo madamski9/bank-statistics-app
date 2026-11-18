@@ -13,7 +13,6 @@
     --muted: #aaa6a7;
     --line: #2b2728;
     --accent: #ff4d57;
-    --accent-warm: #ff8a65;
     --accent-soft: #31171b;
   }
 
@@ -66,42 +65,17 @@
     text-align: center;
   }
 
-  .eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 18px;
-    padding: 18px 34px;
-    border: 2px solid var(--line);
-    border-radius: 999px;
-    background: var(--surface);
-    color: var(--text);
-    font-size: 40px;
-    font-weight: 600;
-    margin-bottom: 52px;
-  }
-
-  .eyebrow .dot {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 24px var(--accent);
-  }
-
   h1 {
     color: var(--text);
-    font-size: 118px;
-    line-height: 1.04;
-    font-weight: 800;
-    letter-spacing: -3.5px;
+    font-size: 112px;
+    line-height: 1.06;
+    font-weight: 700;
+    letter-spacing: -2px;
   }
 
   h1 em {
     font-style: normal;
-    background: linear-gradient(100deg, var(--accent), var(--accent-warm));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: #8e898b;
   }
 
   .subtitle {
@@ -129,7 +103,7 @@
     padding: 72px 60px;
     border: 2px solid var(--line);
     border-radius: 72px;
-    background: linear-gradient(115deg, #1e1417, #111011);
+    background: var(--surface);
   }
 
   .feature .icon {
@@ -184,7 +158,6 @@
 
   const copy = {
     overview: {
-      eyebrow: { pl: 'Bez logowania do banku', en: 'No bank login' },
       title: { pl: 'Zobacz, na co idą<br><em>Twoje pieniądze</em>', en: 'See where<br><em>your money goes</em>' },
       subtitle: { pl: 'Wydatki, wpływy i bilans z powiadomień banku', en: 'Spending, income and net flow from bank notifications' },
     },
@@ -203,7 +176,6 @@
       },
     },
     report: {
-      eyebrow: { pl: 'Premium', en: 'Premium' },
       title: { pl: 'Raport<br><em>na koniec miesiąca</em>', en: 'A report<br><em>every month</em>' },
       subtitle: {
         pl: 'Średnia dzienna i kategorie, na które idzie najwięcej',
@@ -218,7 +190,6 @@
       },
     },
     privacy: {
-      eyebrow: { pl: 'Twoje dane', en: 'Your data' },
       title: { pl: 'Dane zostają<br><em>na Twoim telefonie</em>', en: 'Your data stays<br><em>on your phone</em>' },
       subtitle: {
         pl: 'BankStats nie łączy się z bankiem i nie sprzedaje danych',
@@ -229,7 +200,7 @@
 
   const panels = ['overview', 'transactions', 'spending', 'report', 'limits', 'privacy'];
 
-  const copyTops = { overview: 170, transactions: 200, spending: 200, report: 170, limits: 200, privacy: 260 };
+  const copyTops = { overview: 200, transactions: 200, spending: 200, report: 200, limits: 200, privacy: 200 };
 
   const phones = [
     { image: 'overview.png', x: 1300, y: 1980, height: 2150, rotation: { x: -0.16, y: 0.52, z: 0.24 } },
@@ -308,9 +279,7 @@
     element.className = 'copy';
     element.style.left = `${index * panelStride + 96}px`;
     element.style.top = `${copyTops[id]}px`;
-    element.innerHTML =
-      (text.eyebrow ? `<div class="eyebrow"><span class="dot"></span>${text.eyebrow[lang]}</div>` : '') +
-      `<h1>${text.title[lang]}</h1><p class="subtitle">${text.subtitle[lang]}</p>`;
+    element.innerHTML = `<h1>${text.title[lang]}</h1><p class="subtitle">${text.subtitle[lang]}</p>`;
     foreground.append(element);
   });
 
