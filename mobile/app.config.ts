@@ -55,7 +55,7 @@ const signedUpdates = {
 const config: ExpoConfig = {
   name: 'BankStats',
   slug: 'bank-statistics-app',
-  version: '1.1.6',
+  version: '1.1.7',
   runtimeVersion: {
     policy: 'appVersion',
   },
@@ -70,7 +70,7 @@ const config: ExpoConfig = {
   ios: {
     icon: './assets/expo.icon',
     bundleIdentifier: identity.bundleIdentifier,
-    deploymentTarget: '17.0',
+    deploymentTarget: '27.0',
     infoPlist: {
       CFBundleDisplayName: identity.displayName,
       ITSAppUsesNonExemptEncryption: false,
