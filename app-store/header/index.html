@@ -60,7 +60,7 @@
 
   const [width, height] = (new URLSearchParams(location.search).get('size') ?? '5244x2950').split('x').map(Number);
   const center = width / 2;
-  const unit = height / 2950;
+  const unit = Math.min(height / 2950, width / 5244);
 
   document.body.style.width = `${width}px`;
   document.body.style.height = `${height}px`;
