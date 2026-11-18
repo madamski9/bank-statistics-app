@@ -190,4 +190,12 @@ Answer "None" to every content question and "No" to unrestricted web access, gam
 
 ## Screenshots
 
-App Store Connect needs at least one set for the 6.9-inch iPhone display (1320 × 2868 or 1290 × 2796). The overview, spending, monthly report and shops screens in `website/screenshots` are the starting set; add a widget and a Premium screen.
+Upload `app-store/screenshots/pl` to the Polish localization and `app-store/screenshots/en` to the English one, in file order, as the 6.9-inch iPhone set (1320 × 2868). App Store Connect scales them down for smaller iPhones.
+
+They are composed by `app-store/screenshots/index.html` from the app screenshots in `website/screenshots`, with a clean 9:41 status bar. After changing a headline or a source screenshot, render them again with Google Chrome installed:
+
+```sh
+bun scripts/render-app-store-screenshots.ts
+```
+
+A subscription's review screenshot is a plain screenshot of the Premium screen from the device, not one of these.
