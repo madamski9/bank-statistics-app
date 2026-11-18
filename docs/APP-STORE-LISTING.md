@@ -57,7 +57,7 @@ TWOJE DANE
 • Bez reklam i bez sprzedawania danych
 
 JAK TO DZIAŁA
-Automatyczne zapisywanie płatności wymaga iOS 27 lub nowszego i automatyzacji w aplikacji Skróty. BankStats prowadzi przez jej konfigurację krok po kroku. Transakcje możesz też dodawać ręcznie i importować z wyciągu.
+BankStats wymaga iOS 27 lub nowszego. Płatności zapisują się automatycznie dzięki automatyzacji w aplikacji Skróty, a BankStats prowadzi przez jej konfigurację krok po kroku. Transakcje możesz też dodawać ręcznie i importować z wyciągu.
 
 BANKSTATS PREMIUM
 Podstawowe funkcje są bezpłatne. Premium dodaje raport miesięczny, analizy za ostatni rok i całą historię, wszystkie widżety, dowolną liczbę limitów, własne kategorie i reguły kategoryzacji oraz wydarzenia.
@@ -121,7 +121,7 @@ YOUR DATA
 • No ads and no selling of your data
 
 HOW IT WORKS
-Automatic capture needs iOS 27 or later and a Shortcuts automation. BankStats guides you through setting it up step by step. You can also add transactions by hand and import them from a statement.
+BankStats needs iOS 27 or later. Payments are saved automatically by a Shortcuts automation, and BankStats guides you through setting it up step by step. You can also add transactions by hand and import them from a statement.
 
 BANKSTATS PREMIUM
 The basic features are free. Premium adds the monthly report, insights for the last year and all time, every widget, unlimited limits, custom categories and categorization rules, and events.
