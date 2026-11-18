@@ -5,9 +5,10 @@ const chrome = process.env.CHROME_PATH ?? '/Applications/Google Chrome.app/Conte
 const root = resolve(import.meta.dir, '..');
 const panels = ['overview', 'transactions', 'spending', 'report', 'limits', 'privacy'];
 const languages = process.argv.slice(2).length > 0 ? process.argv.slice(2) : ['pl', 'en'];
-const headerSizes = [
-  [5244, 2950],
-  [3840, 1646],
+const headerAssets = [
+  ['header', 5244, 2950],
+  ['header', 3840, 1646],
+  ['search-results', 3840, 2560],
 ];
 
 const servedDirectories = [join(root, 'app-store'), join(root, 'website/screenshots')];
@@ -61,8 +62,8 @@ try {
 
   const headerDirectory = join(root, 'app-store/header');
 
-  for (const [width, height] of headerSizes) {
-    const output = join(headerDirectory, `header-${width}x${height}.png`);
+  for (const [name, width, height] of headerAssets) {
+    const output = join(headerDirectory, `${name}-${width}x${height}.png`);
     const chromeProcess = Bun.spawn([
       chrome,
       '--headless=new',
@@ -76,7 +77,7 @@ try {
     ], { stdout: 'ignore', stderr: 'pipe', timeout: 120_000 });
 
     if ((await chromeProcess.exited) !== 0) {
-      throw new Error(`Rendering the ${width} × ${height} header failed: ${await new Response(chromeProcess.stderr).text()}`);
+      throw new Error(`Rendering the ${width} × ${height} ${name} asset failed: ${await new Response(chromeProcess.stderr).text()}`);
     }
 
     console.log(output);
