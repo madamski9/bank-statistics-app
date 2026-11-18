@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
   s.license = 'MIT'
   s.author = 'BankStats'
   s.homepage = 'https://github.com/madamski9/bank-statistics-app'
-  s.platforms = { :ios => '17.0' }
+  s.platforms = { :ios => '27.0' }
   s.swift_version = '6.0'
   s.source = { :git => 'https://github.com/madamski9/bank-statistics-app.git' }
   s.static_framework = true

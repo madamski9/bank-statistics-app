@@ -70,7 +70,7 @@ const config: ExpoConfig = {
   ios: {
     icon: './assets/expo.icon',
     bundleIdentifier: identity.bundleIdentifier,
-    deploymentTarget: '17.0',
+    deploymentTarget: '27.0',
     infoPlist: {
       CFBundleDisplayName: identity.displayName,
       ITSAppUsesNonExemptEncryption: false,
