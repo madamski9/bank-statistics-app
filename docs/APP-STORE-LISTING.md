@@ -192,7 +192,7 @@ Answer "None" to every content question and "No" to unrestricted web access, gam
 
 Upload `app-store/screenshots/pl` to the Polish localization and `app-store/screenshots/en` to the English one, in file order, as the 6.9-inch iPhone set (1320 × 2868). App Store Connect scales them down for smaller iPhones.
 
-They are composed by `app-store/screenshots/index.html` from the app screenshots in `website/screenshots`, with a clean 9:41 status bar. After changing a headline or a source screenshot, render them again with Google Chrome installed:
+The six images are slices of one panorama, so the phones continue from one image into the next in the order above. `app-store/screenshots/index.html` builds it: a three.js iPhone model (loaded from jsDelivr) shows each app screenshot from `website/screenshots` with a clean 9:41 status bar, on the black and coral style of bankstats.app. After changing a headline, a phone's position or a source screenshot, render them again with Google Chrome installed:
 
 ```sh
 bun scripts/render-app-store-screenshots.ts
